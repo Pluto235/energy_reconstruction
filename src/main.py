@@ -45,7 +45,7 @@ def main():
      '''
    
 	 # ======== 读取数据文件夹 ========
-    root_path = "/home/server/mydisk/WCDA_split/nv_60_150/" # nv_150_500  nv_500_3000  nv_60_150
+    root_path = "/home/server/mydisk/WCDA_simulation/" # nv_150_500  nv_500_3000  nv_60_150
     file_path = []
     for filename in os.listdir(root_path):
            full_path = os.path.join(root_path, filename)
@@ -112,7 +112,7 @@ def main():
     )
     
     # ======== 构建 DataLoader ========
-    batch_size = 256
+    batch_size = 512
     print(f"Batch Size: {batch_size}")
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
@@ -145,7 +145,7 @@ def main():
 
 
     # ======== 训练模型 ========
-    save_path = "/home/server/projects/energy_reconstruction/best_model_60_150_1110.pt"
+    save_path = "/home/server/projects/energy_reconstruction/best_model_full_1113.pt"
 
     print("开始训练...")
     train_losses, val_losses, save_path = train_model(model, train_loader, val_loader, num_epochs=500, save_path=save_path)
@@ -162,14 +162,17 @@ def main():
 if __name__ == "__main__":
     model, pred, true, train_losses, val_losses = main()
 
+    from torchsummary import summary
+    summary(model, input_size=[(2, 500), (2, 500), (1, 500)]) 
+
     # 保存loss曲线
     import json
-    with open("loss_log_60_150_1110.json", "w") as f:
+    with open("loss_log_full_1113.json", "w") as f:
         json.dump({
             "train_loss": train_losses,
             "val_loss": val_losses
         }, f)
-    print("✅ 已保存训练日志到 loss_log_60_150_1110.json")
+    print("✅ 已保存训练日志到 loss_log_full_1113.json")
 
     # 或者立刻画图（可选）
     import matplotlib.pyplot as plt
@@ -183,5 +186,5 @@ if __name__ == "__main__":
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("/home/server/projects/energy_reconstruction/fig/loss_curve.png", dpi=300)
-    print("📈 已保存图像 loss_curve.png")
+    plt.savefig("/home/server/projects/energy_reconstruction/fig/loss_curve_full.png", dpi=300)
+    print("📈 已保存图像 loss_curve_full.png")

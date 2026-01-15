@@ -13,6 +13,7 @@ sys.path.append(os.path.abspath(".."))  # 添加上一级目录
 from src import utils
 from src.evaluate import evaluate_model
 from src.ParticleDataset import ParticleDataset
+from src.ParticleDataset_weak import ParticleDataset_weak
 from src.ParticleRegressor import ParticleNetRegressor
 import random
 # 主函数
@@ -53,7 +54,7 @@ def main():
    
     # # ======== 只构建test数据集 ========
     batch_size = 256
-    test_dataset = ParticleDataset(
+    test_dataset = ParticleDataset_weak(
         root_files=test_files,
         branches=branches,
         target_branch=target_branch,
@@ -125,10 +126,12 @@ def main():
 
     utils.plot_resolution(true_energies, predictions)
     utils.plot_pred_vs_true_heatmap(true_energies, predictions)
+    utils.plot_bias(true_energies, predictions)
+    utils.plot_log_RMSerror(true_energies, predictions)
 
     # true_logE, pred_logE 都是 log10(E/GeV)
-    stats1 = utils.plot_pred_distributions_in_true_bins(true_energies, predictions, use_delta=True)
-    stats2 = utils.plot_pred_distributions_in_true_bins68(true_energies, predictions, use_delta=True)  # 推荐：直接看分辨率
+    stats1 = utils.plot_pred_distributions_in_true_bins(true_energies, predictions, use_delta=False)
+    stats2 = utils.plot_pred_distributions_in_true_bins68(true_energies, predictions, use_delta=False)  # 推荐：直接看分辨率
     
     return stats1, stats2
 

@@ -27,227 +27,393 @@ def check_gpu_status():
     
     print("=" * 50)
 
-def plot_bias(ture_E, pred_E, bins=20, skip=0 ,save_name=None):
-    
 
-def plot_log_RMSerror(true_E, pred_E, bins=20, skip=0, save_name=None):
-    '''
-    输出的是log下的resolution: std(pred_E - true_E) in log scale
-    
-    :param true_E: 真实能量值log
-    :param pred_E: 预测能量值log
-    :param bins: 能量分bin
-    :param skip: 选择跳过前几个bin
-    :param save_name: 保存名字
-    '''
+import os
+from datetime import datetime
+
+_DEFAULT_FIG_DIR = "/home/server/projects/energy_reconstruction/fig/"
+
+def _resolve_save_path(out_dir, save_name, prefix):
+    save_dir = out_dir if out_dir is not None else _DEFAULT_FIG_DIR
+    os.makedirs(save_dir, exist_ok=True)
+
+    if save_name is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        save_name = f"{prefix}_{timestamp}.png"
+
+    return os.path.join(save_dir, save_name)
+
+import numpy as np
+
+def _weighted_mean(x, w):
+    w = np.asarray(w, dtype=np.float64)
+    x = np.asarray(x, dtype=np.float64)
+    s = np.sum(w)
+    if s <= 0:
+        return np.nan
+    return np.sum(w * x) / s
+
+def _weighted_var(x, w):
+    m = _weighted_mean(x, w)
+    if not np.isfinite(m):
+        return np.nan
+    w = np.asarray(w, dtype=np.float64)
+    x = np.asarray(x, dtype=np.float64)
+    s = np.sum(w)
+    if s <= 0:
+        return np.nan
+    return np.sum(w * (x - m) ** 2) / s
+
+def _weighted_std(x, w):
+    v = _weighted_var(x, w)
+    return np.sqrt(v) if np.isfinite(v) and v >= 0 else np.nan
+
+def _weighted_rms(x, w):
+    w = np.asarray(w, dtype=np.float64)
+    x = np.asarray(x, dtype=np.float64)
+    s = np.sum(w)
+    if s <= 0:
+        return np.nan
+    return np.sqrt(np.sum(w * x**2) / s)
+
+def plot_bias(true_E, pred_E, weights=None, bins=20, skip=0, save_name=None, out_dir=None, space="log"):
+    """
+    Energy bias:
+      b = < logE_pred - logE_true >   (per true-E bin)
+
+    weights:
+      - None: unweighted mean
+      - array: weighted mean in each bin
+    """
     import numpy as np
     import matplotlib.pyplot as plt
-    import os
-    from datetime import datetime
 
-    true_E = np.array(true_E)
-    pred_E = np.array(pred_E)
+    true_E = np.asarray(true_E).squeeze()
+    pred_E = np.asarray(pred_E).squeeze()
+    if weights is not None:
+        weights = np.asarray(weights).squeeze()
 
-    # 计算 log 能量 bin
-    bin_edges = np.logspace(np.log10(true_E.min()), np.log10(true_E.max()), bins + 1)
-    bin_centers = np.sqrt(bin_edges[:-1] * bin_edges[1:])
+    if space != "log":
+        raise ValueError("plot_bias currently implemented in log space. Use space='log' or implement linear branch.")
+
+    # valid
+    if weights is None:
+        m0 = np.isfinite(true_E) & np.isfinite(pred_E)
+    else:
+        m0 = np.isfinite(true_E) & np.isfinite(pred_E) & np.isfinite(weights) & (weights > 0)
+
+    true_E = true_E[m0]
+    pred_E = pred_E[m0]
+    if weights is not None:
+        weights = weights[m0]
+
+    bin_edges = np.linspace(true_E.min(), true_E.max(), bins + 1)
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+    bias = []
+    for i in range(bins):
+        m = (true_E >= bin_edges[i]) & (true_E < bin_edges[i + 1])
+        if m.sum() > 10:
+            residual = pred_E[m] - true_E[m]
+            if weights is None:
+                bias.append(float(np.mean(residual)))
+            else:
+                bias.append(float(_weighted_mean(residual, weights[m])))
+        else:
+            bias.append(np.nan)
+
+    bin_centers = bin_centers[skip:]
+    bias = np.asarray(bias)[skip:]
+
+    plt.figure(figsize=(6, 4))
+    plt.plot(bin_centers, bias, "o-", lw=1.8)
+    plt.axhline(0, color="gray", ls="--", lw=1)
+    plt.xlabel(r"True Energy $\log_{10}(E/\mathrm{GeV})$")
+    plt.ylabel("Bias")
+    title = "Energy Bias vs True Energy" + ("" if weights is None else " (mc-weighted)")
+    plt.title(title)
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+
+    prefix = "bias" if weights is None else "bias_weighted"
+    save_path = _resolve_save_path(out_dir, save_name, prefix=prefix)
+    plt.savefig(save_path, dpi=300)
+    plt.close()
+    print(f"✅ Bias 图像已保存到: {save_path}")
+
+
+def plot_resolution(true_E, pred_E, weights=None, bins=20, skip=0, save_name=None, out_dir=None, space="log"):
+    """
+    Energy resolution (your definition):
+      resolution = std(logE_pred)  (at fixed true energy)
+
+    weights:
+      - None: unweighted std
+      - array: weighted std in each bin
+    """
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    true_E = np.asarray(true_E).squeeze()
+    pred_E = np.asarray(pred_E).squeeze()
+    if weights is not None:
+        weights = np.asarray(weights).squeeze()
+
+    if space != "log":
+        raise ValueError("plot_resolution currently implemented in log space. Use space='log' or implement linear branch.")
+
+    if weights is None:
+        m0 = np.isfinite(true_E) & np.isfinite(pred_E)
+    else:
+        m0 = np.isfinite(true_E) & np.isfinite(pred_E) & np.isfinite(weights) & (weights > 0)
+
+    true_E = true_E[m0]
+    pred_E = pred_E[m0]
+    if weights is not None:
+        weights = weights[m0]
+
+    bin_edges = np.linspace(true_E.min(), true_E.max(), bins + 1)
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
 
     resolution = []
     for i in range(bins):
-        mask = (true_E >= bin_edges[i]) & (true_E < bin_edges[i + 1])
-        if mask.sum() > 10:
-            rel = pred_E[mask] - true_E[mask]
-            resolution.append(np.std(rel))
+        m = (true_E >= bin_edges[i]) & (true_E < bin_edges[i + 1])
+        if m.sum() > 10:
+            if weights is None:
+                resolution.append(float(np.std(pred_E[m])))
+            else:
+                resolution.append(float(_weighted_std(pred_E[m], weights[m])))
         else:
             resolution.append(np.nan)
 
-    # 剔除前 skip 个 bin
     bin_centers = bin_centers[skip:]
-    resolution = resolution[skip:]
+    resolution = np.asarray(resolution)[skip:]
 
-    # 绘图
     plt.figure(figsize=(6, 4))
-    plt.plot(bin_centers, resolution, 'o-')
-    plt.xlabel("True Energy (log scale)")
-    plt.ylabel("Resolution (std of residual)")
-    plt.title("Energy Resolution vs True Energy")
+    plt.plot(bin_centers, resolution, "o-", lw=1.8)
+    plt.xlabel(r"True Energy $\log_{10}(E/\mathrm{GeV})$")
+    plt.ylabel("Resolution")
+    title = "Energy Resolution vs True Energy" + ("" if weights is None else " (mc-weighted)")
+    plt.title(title)
+    plt.grid(alpha=0.3)
     plt.tight_layout()
 
-    # 保存图片
-    save_dir = "/home/server/projects/energy_reconstruction/fig/"
-    os.makedirs(save_dir, exist_ok=True)
-
-    if save_name is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        save_name = f"resolution_{timestamp}.png"
-
-    save_path = os.path.join(save_dir, save_name)
+    prefix = "resolution" if weights is None else "resolution_weighted"
+    save_path = _resolve_save_path(out_dir, save_name, prefix=prefix)
     plt.savefig(save_path, dpi=300)
+    plt.close()
     print(f"✅ Resolution 图像已保存到: {save_path}")
 
-    plt.show()
+def plot_log_RMSerror(true_E, pred_E, weights=None, bins=20, skip=0, save_name=None, out_dir=None, space="log"):
+    """
+    log RMS error:
+      rho = sqrt( < (logE_pred - logE_true)^2 > )  (per true-E bin)
 
-
-
-def plot_pred_vs_true(true, pred, log_scale=True, save_name=None):
-    import matplotlib.pyplot as plt
+    weights:
+      - None: unweighted RMS
+      - array: weighted RMS in each bin
+    """
     import numpy as np
-    import os
-    from datetime import datetime
+    import matplotlib.pyplot as plt
 
-    """
-    绘制预测能量与真实能量的散点对比图（支持 log–log 形式）
-    
-    参数:
-        true (array-like): 真实能量（或 logE）
-        pred (array-like): 预测能量（或 logE）
-        log_scale (bool): 是否使用对数坐标（默认 True）
-        title (str): 图标题
-        save_name (str): 文件名（例如 "pred_vs_true.png"），不含路径
-    """
-    true = np.array(true)
-    pred = np.array(pred)
+    true_E = np.asarray(true_E).squeeze()
+    pred_E = np.asarray(pred_E).squeeze()
+    if weights is not None:
+        weights = np.asarray(weights).squeeze()
 
-    true = 10 ** true
-    pred = 10 ** pred
+    if space != "log":
+        raise ValueError("plot_log_RMSerror currently implemented in log space. Use space='log' or implement linear branch.")
 
-    plt.figure(figsize=(6, 6))
-    plt.scatter(true, pred, s=6, alpha=0.4, label="Events")
+    if weights is None:
+        m0 = np.isfinite(true_E) & np.isfinite(pred_E)
+    else:
+        m0 = np.isfinite(true_E) & np.isfinite(pred_E) & np.isfinite(weights) & (weights > 0)
 
-    mn = min(true.min(), pred.min())
-    mx = max(true.max(), pred.max())
-    plt.plot([mn, mx], [mn, mx], 'r--', label='y = x')
+    true_E = true_E[m0]
+    pred_E = pred_E[m0]
+    if weights is not None:
+        weights = weights[m0]
 
-    if log_scale:
-        plt.xscale('log')
-        plt.yscale('log')
+    bin_edges = np.linspace(true_E.min(), true_E.max(), bins + 1)
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
 
-    plt.xlabel('True Energy [GeV]')
-    plt.ylabel('Predicted Energy [GeV]')
-    plt.legend()
-    plt.grid(True, which='both', ls='--', alpha=0.4)
-    plt.title("Predicted vs True Energy (log-log)")
+    log_rms = []
+    for i in range(bins):
+        m = (true_E >= bin_edges[i]) & (true_E < bin_edges[i + 1])
+        if m.sum() > 10:
+            residual = pred_E[m] - true_E[m]
+            if weights is None:
+                log_rms.append(float(np.sqrt(np.mean(residual ** 2))))
+            else:
+                log_rms.append(float(_weighted_rms(residual, weights[m])))
+        else:
+            log_rms.append(np.nan)
+
+    bin_centers = bin_centers[skip:]
+    log_rms = np.asarray(log_rms)[skip:]
+
+    plt.figure(figsize=(6, 4))
+    plt.plot(bin_centers, log_rms, "o-", lw=1.8)
+    plt.xlabel(r"True Energy $\log_{10}(E/\mathrm{GeV})$")
+    plt.ylabel("log RMS error")
+    title = "Log RMS Error vs True Energy" + ("" if weights is None else " (mc-weighted)")
+    plt.title(title)
+    plt.grid(alpha=0.3)
     plt.tight_layout()
 
-    # 自动保存路径
-    save_dir = "/home/server/projects/energy_reconstruction/fig/"
-    os.makedirs(save_dir, exist_ok=True)
-
-    if save_name is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        save_name = f"pred_vs_true_{timestamp}.png"
-
-    save_path = os.path.join(save_dir, save_name)
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    prefix = "logRMS" if weights is None else "logRMS_weighted"
+    save_path = _resolve_save_path(out_dir, save_name, prefix=prefix)
+    plt.savefig(save_path, dpi=300)
     plt.close()
-
-    print(f"✅ LogE_pred vs logE_true 图像已保存到: {save_path}")
-
+    print(f"✅ log RMS error 图像已保存到: {save_path}")
 
 
-def plot_pred_vs_true_heatmap(true, pred, bins=120, save_name=None):
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import os
-    from matplotlib.colors import LogNorm
-    from datetime import datetime
-
+def plot_pred_vs_true_heatmap(
+    true,
+    pred,
+    weights=None,
+    bins=120,
+    save_name=None,
+    out_dir=None,
+    space="log",):
     """
     使用二维直方图绘制 Pred vs True 能量响应矩阵（logE–logE）
-    true, pred: log10(E / GeV)
+
+    Parameters
+    ----------
+    true, pred : array-like
+        log10(E / GeV)
+    weights : array-like or None
+        事件权重（如 mc_weight）。
+        - None: 普通 counts heatmap（等权）
+        - array: 加权 heatmap（Crab 等效）
     """
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import LogNorm
 
-    true = np.asarray(true)
-    pred = np.asarray(pred)
+    true = np.asarray(true).squeeze()
+    pred = np.asarray(pred).squeeze()
 
-    # 可选：限制能量范围（防止极端outlier拉伸colorbar）
-    mask = np.isfinite(true) & np.isfinite(pred)
-    true = true[mask]
-    pred = pred[mask]
+    if weights is not None:
+        weights = np.asarray(weights).squeeze()
 
-    # 2D histogram（在 logE 空间）
+    # 目前 heatmap 只定义在 log space
+    if space != "log":
+        raise ValueError(
+            "plot_pred_vs_true_heatmap is implemented for log space only."
+        )
+
+    # ========= valid mask =========
+    if weights is None:
+        m = np.isfinite(true) & np.isfinite(pred)
+    else:
+        m = (
+            np.isfinite(true)
+            & np.isfinite(pred)
+            & np.isfinite(weights)
+            & (weights > 0)
+        )
+
+    true = true[m]
+    pred = pred[m]
+    if weights is not None:
+        weights = weights[m]
+
+    # ========= 2D histogram =========
     H, xedges, yedges = np.histogram2d(
-        true, pred,
-        bins=bins
+        true,
+        pred,
+        bins=bins,
+        weights=weights,  # None 或 mc_weight
     )
 
+    # 防止 LogNorm vmin=0
+    H_plot = H.copy()
+    H_plot[H_plot <= 0] = np.nan
+
+    # ========= plot =========
     plt.figure(figsize=(6, 6))
-
     im = plt.pcolormesh(
-        xedges, yedges, H.T,
-        norm=LogNorm(vmin=1, vmax=H.max()),
-        cmap="viridis"
+        xedges,
+        yedges,
+        H_plot.T,
+        norm=LogNorm(vmin=np.nanmin(H_plot), vmax=np.nanmax(H_plot)),
+        cmap="viridis",
     )
 
-    # y = x 参考线
     lo = min(true.min(), pred.min())
     hi = max(true.max(), pred.max())
     plt.plot([lo, hi], [lo, hi], "k--", lw=1)
 
     plt.xlabel(r"log$_{10}$(E$_{\mathrm{true}}$ / GeV)")
     plt.ylabel(r"log$_{10}$(E$_{\mathrm{pred}}$ / GeV)")
-    plt.title("Energy Response Matrix")
+
+    if weights is None:
+        plt.title("Energy Response Matrix (counts)")
+        cbar_label = "Counts"
+        prefix = "pred_vs_true_heatmap"
+    else:
+        plt.title("Energy Response Matrix (mc-weighted)")
+        cbar_label = "Weighted counts"
+        prefix = "pred_vs_true_heatmap_weighted"
 
     cbar = plt.colorbar(im)
-    cbar.set_label("Counts")
+    cbar.set_label(cbar_label)
 
     plt.grid(alpha=0.3)
     plt.tight_layout()
 
-    # 保存
-    save_dir = "/home/server/projects/energy_reconstruction/fig/"
-    os.makedirs(save_dir, exist_ok=True)
-
-    if save_name is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        save_name = f"pred_vs_true_heatmap_{timestamp}.png"
-
-    save_path = os.path.join(save_dir, save_name)
+    save_path = _resolve_save_path(
+        out_dir,
+        save_name,
+        prefix=prefix,
+    )
     plt.savefig(save_path, dpi=300)
     plt.close()
-
     print(f"✅ Energy response heatmap 已保存到: {save_path}")
-
 
 
 def plot_pred_distributions_in_true_bins(true_logE, pred_logE,
                                          Emin=1e2, Emax=1e6, nbins_true=10,
                                          bins_pred=60, use_delta=False,
-                                         save_name=None):
+                                         save_name=None, out_dir=None):
     """
     true_logE, pred_logE: log10(E/GeV)
-    nbins_true: true energy 分10个log bin（100-1e6 GeV）
+    nbins_true: true energy 分 nbins_true 个 log bin（Emin->Emax）
     use_delta:
         False -> 画 pred_logE 分布
-        True  -> 画 ΔlogE = pred_logE - true_logE 分布（更像高斯，直接给分辨率）
+        True  -> 画 ΔlogE = pred_logE - true_logE 分布
     运用所有数据
-        bias: mu 即mean(x)
-        resolution: sigma 即std(x)
+    if use_delta = False  x=pred_logE
+    if use_delta = True   x=ΔlogE
+        bias: mu 即mean(x) 同上面bias的定义
+        resolution: sigma 即std(x)  同上面的resolution的定义
+    返回 stats：每个true能量bin的均值/方差等
     """
     import numpy as np
     import matplotlib.pyplot as plt
     import os
     from datetime import datetime
 
-    true_logE = np.asarray(true_logE)
-    pred_logE = np.asarray(pred_logE)
+    true_logE = np.asarray(true_logE).squeeze()
+    pred_logE = np.asarray(pred_logE).squeeze()
     m = np.isfinite(true_logE) & np.isfinite(pred_logE)
     true_logE = true_logE[m]
     pred_logE = pred_logE[m]
 
-    # true energy 的log-bin边界：100->1e6 GeV 对应 log10: 2->6
+    # true energy 的log-bin边界：Emin->Emax
     edges_log = np.linspace(np.log10(Emin), np.log10(Emax), nbins_true + 1)
 
-    # 画图：每个bin一个子图
     ncols = 5
     nrows = int(np.ceil(nbins_true / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(3.6*ncols, 3.0*nrows), sharey=False)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(3.6 * ncols, 3.0 * nrows), sharey=False)
     axes = np.array(axes).reshape(-1)
 
-    stats = []  # 存每个bin的均值/方差等
+    stats = []
 
     for i in range(nbins_true):
-        lo, hi = edges_log[i], edges_log[i+1]
+        lo, hi = edges_log[i], edges_log[i + 1]
         sel = (true_logE >= lo) & (true_logE < hi)
         ax = axes[i]
 
@@ -258,68 +424,63 @@ def plot_pred_distributions_in_true_bins(true_logE, pred_logE,
             continue
 
         if use_delta:
-            x = pred_logE[sel] - true_logE[sel]          # ΔlogE
+            x = pred_logE[sel] - true_logE[sel]
             x_label = r"$\Delta \log_{10}E$  (pred-true)"
             ref = 0.0
         else:
-            x = pred_logE[sel]                           # pred_logE
+            x = pred_logE[sel]
             x_label = r"$\log_{10}(E_{\mathrm{pred}}/\mathrm{GeV})$"
-            ref = 0.5*(lo+hi)                            # 参考：bin中心(log)
+            ref = 0.5 * (lo + hi)
 
-        mu = np.mean(x)
-        sig = np.std(x)
+        mu = float(np.mean(x))
+        sig = float(np.std(x))
 
         ax.hist(x, bins=bins_pred, histtype="step", linewidth=1.5, density=True)
-        ax.axvline(mu, linestyle="--", linewidth=1) # 能量bin里预测能量的均值
-        ax.axvline(ref, linestyle=":", linewidth=1) # log下bin的中心
+        ax.axvline(mu, linestyle="--", linewidth=1)
+        ax.axvline(ref, linestyle=":", linewidth=1)
 
         ax.set_title(f"logE_true ∈ [{lo:.2f},{hi:.2f}]  N={sel.sum()}")
         ax.set_xlabel(x_label)
         ax.set_ylabel("PDF")
 
-        # 记录统计量
         stats.append({
-            "bin": i,
-            "logE_true_lo": lo,
-            "logE_true_hi": hi,
+            "bin": int(i),
+            "logE_true_lo": float(lo),
+            "logE_true_hi": float(hi),
             "N": int(sel.sum()),
-            "mu": float(mu),
-            "sigma": float(sig),
+            "mu": mu,
+            "sigma": sig,
             "ref": float(ref),
         })
 
-        # 在图上写数值
         ax.text(0.03, 0.95, f"μ={mu:.3f}\nσ={sig:.3f}",
                 transform=ax.transAxes, va="top")
 
-    # 多余子图关掉
     for j in range(nbins_true, len(axes)):
         axes[j].axis("off")
 
     fig.suptitle("Predicted energy distribution in true-energy bins", y=1.02)
     plt.tight_layout()
 
-    # 保存
-    save_dir = "/home/server/projects/energy_reconstruction/fig/"
-    os.makedirs(save_dir, exist_ok=True)
+    # ===== 保存（由 out_dir 控制）=====
+    if out_dir is not None:
+        os.makedirs(out_dir, exist_ok=True)
+        if save_name is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            tag = "delta" if use_delta else "predlogE"
+            save_name = f"pred_dist_in_true_bins_{tag}_{timestamp}.png"
+        save_path = os.path.join(out_dir, save_name)
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"✅ 分10能量bin的分布图已保存到: {save_path}")
 
-    if save_name is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        tag = "delta" if use_delta else "predlogE"
-        save_name = f"pred_dist_in_true_bins_{tag}_{timestamp}.png"
-
-    save_path = os.path.join(save_dir, save_name)
-    plt.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.close()
-
-    print(f"✅ 分布图已保存到: {save_path}")
     return stats
 
 
 def plot_pred_distributions_in_true_bins68(true_logE, pred_logE,
-                                         Emin=1e2, Emax=1e6, nbins_true=10,
-                                         bins_pred=60, use_delta=False,
-                                         save_name=None):
+                                           Emin=1e2, Emax=1e6, nbins_true=10,
+                                           bins_pred=60, use_delta=False,
+                                           save_name=None, out_dir=None):
     """
     true_logE, pred_logE: log10(E/GeV)
     nbins_true: true energy 分10个log bin（100-1e6 GeV）
@@ -335,25 +496,23 @@ def plot_pred_distributions_in_true_bins68(true_logE, pred_logE,
     import os
     from datetime import datetime
 
-    true_logE = np.asarray(true_logE)
-    pred_logE = np.asarray(pred_logE)
+    true_logE = np.asarray(true_logE).squeeze()
+    pred_logE = np.asarray(pred_logE).squeeze()
     m = np.isfinite(true_logE) & np.isfinite(pred_logE)
     true_logE = true_logE[m]
     pred_logE = pred_logE[m]
 
-    # true energy 的log-bin边界：100->1e6 GeV 对应 log10: 2->6
     edges_log = np.linspace(np.log10(Emin), np.log10(Emax), nbins_true + 1)
 
-    # 画图：每个bin一个子图
     ncols = 5
     nrows = int(np.ceil(nbins_true / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(3.6*ncols, 3.0*nrows), sharey=False)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(3.6 * ncols, 3.0 * nrows), sharey=False)
     axes = np.array(axes).reshape(-1)
 
     stats = []
 
     for i in range(nbins_true):
-        lo, hi = edges_log[i], edges_log[i+1]
+        lo, hi = edges_log[i], edges_log[i + 1]
         sel = (true_logE >= lo) & (true_logE < hi)
         ax = axes[i]
 
@@ -365,31 +524,21 @@ def plot_pred_distributions_in_true_bins68(true_logE, pred_logE,
             continue
 
         if use_delta:
-            x = pred_logE[sel] - true_logE[sel]          # ΔlogE
+            x = pred_logE[sel] - true_logE[sel]
             x_label = r"$\Delta \log_{10}E$  (pred-true)"
             ref = 0.0
         else:
-            x = pred_logE[sel]                           # pred_logE
+            x = pred_logE[sel]
             x_label = r"$\log_{10}(E_{\mathrm{pred}}/\mathrm{GeV})$"
-            ref = 0.5*(lo+hi)                            # true bin中心(log)
+            ref = 0.5 * (lo + hi)
 
-        # ====== 68% containment 统计量（鲁棒）======
-        # bias 用 median，resolution 用 (q84-q16)/2
         med = float(np.median(x))
         q16, q84 = np.percentile(x, [16, 84])
-        q16 = float(q16)
-        q84 = float(q84)
-        sig68 = 0.5 * (q84 - q16)
+        q16, q84 = float(q16), float(q84)
+        sig68 = float(0.5 * (q84 - q16))
 
-        # 画直方图
         ax.hist(x, bins=bins_pred, histtype="step", linewidth=1.5, density=True)
-
-        # 画参考线
-        # ax.axvline(med, linestyle="--", linewidth=1.2, label="median")
-        # ax.axvline(ref, linestyle=":", linewidth=1.2, label="ref")
         ax.axvspan(q16, q84, color="gray", alpha=0.3, label="68% containment")
-
-        # 画 68% containment 区间（可选但很直观）
         ax.axvline(q16, linestyle="-.", linewidth=1.0)
         ax.axvline(q84, linestyle="-.", linewidth=1.0)
 
@@ -397,47 +546,38 @@ def plot_pred_distributions_in_true_bins68(true_logE, pred_logE,
         ax.set_xlabel(x_label)
         ax.set_ylabel("PDF")
 
-        # 保存统计量（字段名沿用你之前的 mu/sigma，便于后续画曲线不改太多）
         stats.append({
-            "bin": i,
+            "bin": int(i),
             "logE_true_lo": float(lo),
             "logE_true_hi": float(hi),
             "N": N,
-
-            # 这里的 mu/sigma 现在是“鲁棒定义”
-            "mu": med,               # bias: median(x)
-            "sigma": float(sig68),   # resolution: 68% containment half-width
-
+            "mu": med,           # median
+            "sigma": sig68,      # 68% half-width
             "q16": q16,
             "q84": q84,
             "ref": float(ref),
         })
 
-        # 图中文字
         ax.text(0.03, 0.95, f"med={med:.3f}\nσ68={sig68:.3f}",
                 transform=ax.transAxes, va="top")
 
-    # 多余子图关掉
     for j in range(nbins_true, len(axes)):
         axes[j].axis("off")
 
     fig.suptitle("Predicted energy distribution in true-energy bins (68% containment)", y=1.02)
     plt.tight_layout()
 
-    # 保存
-    save_dir = "/home/server/projects/energy_reconstruction/fig/"
-    os.makedirs(save_dir, exist_ok=True)
+    # ===== 保存（由 out_dir 控制）=====
+    if out_dir is not None:
+        os.makedirs(out_dir, exist_ok=True)
+        if save_name is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            tag = "delta" if use_delta else "predlogE"
+            save_name = f"pred_dist_in_true_bins_{tag}_contain68_{timestamp}.png"
+        save_path = os.path.join(out_dir, save_name)
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"✅ 分10能量bin68%比例分布图已保存到: {save_path}")
 
-    if save_name is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        tag = "delta" if use_delta else "predlogE"
-        save_name = f"pred_dist_in_true_bins_{tag}_contain68_{timestamp}.png"
-
-    save_path = os.path.join(save_dir, save_name)
-    plt.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.close()
-
-    print(f"✅ 分布图已保存到: {save_path}")
     return stats
 
-  

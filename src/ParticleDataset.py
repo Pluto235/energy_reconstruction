@@ -54,8 +54,8 @@ class ParticleDataset(Dataset):
         self.processing_conditions = processing_conditions
         self.max_points = max_points
 
-        # 并行加载 ROOT 文件 增加了进程数到16或32
-        with Pool(min(32, os.cpu_count())) as pool:
+        # 并行加载 ROOT 文件 增加了进程数到16或32,64
+        with Pool(min(64, os.cpu_count())) as pool:
             
             self.data = pool.starmap(
                 self._load_file,
@@ -69,33 +69,69 @@ class ParticleDataset(Dataset):
 
     @staticmethod
     def _load_file(file_path, branches, target_branch, processing_conditions):
-        """从单个ROOT文件中提取数据"""
+        """从单个ROOT文件中提取数据, 并筛选vqsamp>0 hits + mc_energy>100"""
         try:
             with uproot.open(file_path) as f:
                 tree = f["t_eventout;1"]
+                
+                full_branches = [
+                "n", "nfit0", "nfit", "nfitb", "vnfit", "fitstat", "nrange",
+                "nv", "vflag", "vidmc", "vx", "vy", "vt", "vnpe", "vq",
+                "vqsamp", "theta", "phi", "xc", "yc", "dcedge", "dcedgepool",
+                "istationcore", "ccindex", "chi2", "rmds", "pincness",
+                "compactness", "f5w", "mc_weight", "mc_pid", "mc_energy",
+                "mc_theta", "mc_phi", "mc_xc", "mc_yc", "mc_dangle",
+                "mc_dcore"
+                  ]
     
                 # ✅ 增加读取 vqsamp 分支
-                read_branches = branches + target_branch + ["xc", "yc", "vqsamp"]
-                arrays = tree.arrays(read_branches, library="np")
+                #　read_branches = branches + target_branch + ["xc", "yc", "vqsamp"]
+                arrays = tree.arrays(full_branches, library="np")
+                
+                n_total = len(next(iter(arrays.values())))
+                if n_total == 0:
+                    print(f"⚠️ 文件 {file_path} 无事件，跳过。")
+                    return []
     
-                # ✅ 事件级筛选：仅保留 vqsamp > 0.5 的事件
-                if "vqsamp" in arrays:
-                    # 计算每个事件的非零击中比例
-                    vqsamp_nonzero_ratio = np.array([
-                        np.count_nonzero(v > 0) / len(v) if len(v) > 0 else 0
-                        for v in arrays["vqsamp"]
-                    ])
+                # ✅ 计算每个事件的 vqsamp 非零比例（忽略 0）
+                vqsamp_nonzero_ratio = np.array([
+                    np.count_nonzero(v > 0) / len(v) if len(v) > 0 else 0
+                    for v in arrays["vqsamp"]
+                ])
+    
+                # ✅ 取出 mc_energy（注意 target_branch 是列表）
+                mc_energy = arrays[target_branch[0]]
 
-                    mask_evt = vqsamp_nonzero_ratio > 0.5  # 例如要求超过50%的 PMT 有信号
-                    for key in arrays.keys():
-                         arrays[key] = arrays[key][mask_evt]
-                    
-                    print(f"🔹 {file_path}: 保留 {mask_evt.sum()}/{len(mask_evt)} 个事件 (nonzero hit ratio > 0.5)")
+                # 取出pincness
+                pincness = arrays["pincness"]
+                compactness = arrays["compactness"]
+
+                # 筛选重建芯位距离水池
+                dcedge = arrays["dcedge"]
+
+                # 筛选mc_dangle
+                mc_dangle = arrays["mc_dangle"]
+
+                # 筛选重建zenith 即 theta 
+                theta = arrays["theta"]
+    
+                # ✅ 构造联合筛选条件
+                mask_evt = (vqsamp_nonzero_ratio > 0.5) & (mc_energy > 100) & (pincness < 1.1)  & (dcedge >= 20) & (mc_dangle < 0.05236) & (theta<0.524)
+    
+                # ✅ 应用到所有分支
+                for key in arrays.keys():
+                    arrays[key] = arrays[key][mask_evt]
+    
+                n_kept = mask_evt.sum()
+                print(f"🔹 {file_path}: 保留 {n_kept}/{n_total} 个事件 (vqsamp>0.5 & E>100 & pincness<1.1 & dcedge 20m & mc_dangle 3° & theta 30°)")
 
                 n_events = len(next(iter(arrays.values())))
                 results = []
     
                 for i in range(n_events):  # 对每个event
+                    # 保存完整的原始信息
+                    raw_info = {key: arrays[key][i] for key in full_branches}
+
                     # (1) 原始特征矩阵
                     features = np.column_stack([arrays[b][i] for b in branches])
                     features = process_features(features, processing_conditions)  # 剔除离群值
@@ -116,7 +152,22 @@ class ParticleDataset(Dataset):
                     target = arrays["mc_energy"][i]
                     log_energy = np.log10(target) if target > 0 else 0.0
     
-                    results.append((points, norm_features, log_energy))
+                    # results.append((points, norm_features, log_energy))
+                    results.append({
+                        "file": file_path,
+                        "event_idx": i,
+                    
+                        # ===== 原始数据 =====
+                        "raw": raw_info,
+                    
+                        # ===== 预处理数据 =====
+                        "processed": {
+                            "points": points,
+                            "features": norm_features,
+                            "log_energy": log_energy
+                        }
+                    })
+
     
                 return results
     
@@ -130,7 +181,12 @@ class ParticleDataset(Dataset):
 
     def __getitem__(self, idx):
         real_idx = self.indices[idx]
-        points, features, log_energy = self.data[real_idx]
+        record = self.data[real_idx]
+
+        proc = record['processed'] # 只提取processed的返回
+        points = proc['points']
+        features = proc['features']
+        log_energy = proc['log_energy']
 
         n_points = len(points)
 

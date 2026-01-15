@@ -40,7 +40,7 @@ class ParticleNetRegressor(nn.Module):
     '''
     def __init__(self, input_dims: int, 
                  conv_params: List[Tuple[int, Tuple[int, ...]]] = [(16, (64, 64, 64)), (16, (128, 128, 128)), (16, (256, 256, 256))],
-                 fc_params: List[Tuple[int, float]] = [(128, 0.1)],
+                 fc_params: List[Tuple[int, float]] = [(256, 0.1), (128, 0.1)],
                  use_fusion: bool = True):
         super().__init__()
         self.use_fusion = use_fusion
@@ -60,38 +60,38 @@ class ParticleNetRegressor(nn.Module):
             self.fusion_block = nn.Sequential(
                 nn.Conv1d(fusion_in, 256, kernel_size=1, bias=False),
                 nn.BatchNorm1d(256),
-                nn.ReLU()
+                nn.ReLU() # 这个relu层没有可能出问题
             )
             fc_input_dim = 256
         else:
             fc_input_dim = conv_params[-1][1][-1]
         
-        # # 回归头(全连接层）
-        # fcs = []
-        # for idx, (out_dim, dropout) in enumerate(fc_params):
-        #     in_dim = fc_input_dim if idx == 0 else fc_params[idx-1][0]
-        #     fcs.extend([
-        #         nn.Linear(in_dim, out_dim),
-        #         nn.ReLU(),
-        #         nn.Dropout(dropout)
-        #     ])
-        # # 输出层 - 回归任务输出1个值（能量）
-        # fcs.append(nn.Linear(fc_params[-1][0], 1))
-        # self.fc = nn.Sequential(*fcs)
-
-        # 去除relu层
+        # 回归头(全连接层）
         fcs = []
         for idx, (out_dim, dropout) in enumerate(fc_params):
-            in_dim = fc_input_dim if idx == 0 else fc_params[idx - 1][0]
-            fcs.append(nn.Linear(in_dim, out_dim))
-            # 只在不是最后一层时添加激活
-            if idx != len(fc_params) - 1:
-                fcs.append(nn.ReLU())
-                fcs.append(nn.Dropout(dropout))
-        
-        # 最后一层线性输出 log10(E)
+            in_dim = fc_input_dim if idx == 0 else fc_params[idx-1][0]
+            fcs.extend([
+                nn.Linear(in_dim, out_dim),
+                nn.GELU(),
+                nn.Dropout(dropout)
+            ])
+        # 输出层 - 回归任务输出1个值（能量）
         fcs.append(nn.Linear(fc_params[-1][0], 1))
         self.fc = nn.Sequential(*fcs)
+
+        # # 去除relu层
+        # fcs = []
+        # for idx, (out_dim, dropout) in enumerate(fc_params):
+        #     in_dim = fc_input_dim if idx == 0 else fc_params[idx - 1][0]
+        #     fcs.append(nn.Linear(in_dim, out_dim))
+        #     # 只在不是最后一层时添加激活
+        #     if idx != len(fc_params) - 1:
+        #         fcs.append(nn.ReLU())
+        #         fcs.append(nn.Dropout(dropout))
+        
+        # # 最后一层线性输出 log10(E)
+        # fcs.append(nn.Linear(fc_params[-1][0], 1))
+        # self.fc = nn.Sequential(*fcs)
 
 
         # 权重初始化

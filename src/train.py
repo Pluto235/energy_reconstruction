@@ -12,8 +12,8 @@ def train_model(
     patience=10,
     min_delta=1e-4,
     grad_clip=5.0,
-    # alpha=0.7,       # 能量平衡权重强度
-    # beta=0.5,        # Huber loss 的 β
+    alpha=0.7,       # 能量平衡权重强度
+    beta=0.5,        # Huber loss 的 β
     save_path=None
 ):
     """
@@ -40,23 +40,53 @@ def train_model(
     print(f"   → μ = {mu:.4f}, σ = {sigma:.4f}")
 
     # ---------- 定义损失函数（带权重） ----------
-    #　criterion = nn.SmoothL1Loss(reduction='none', beta=beta)
-
-    # def weighted_huber_loss(pred, true):
+    # def weighted_mse(pred, true, mu, sigma, alpha=0.7):
     #     """
-    #     能量加权版 HuberLoss:
+    #     能量加权版:
     #     w = exp(α * (x - μ)^2 / (2σ^2))
-    #     可选项: 乘以 1/(E+1) 进一步强化低能样本
     #     """
-    #     base_loss = huber(pred, true)
     #     weights = torch.exp(alpha * ((true - mu) ** 2) / (2 * sigma ** 2))
-    #     E_true = torch.pow(10, true)
-    #     weights = weights * (1.0 / (E_true + 1.0))  # 低能样本加权 应该去掉这个功能，因为E很大，1/(E+1)很小，没意义
     #     weights = weights / weights.mean()  # 归一化
-    #     return (base_loss * weights).mean()
+    #     return (weights * (pred - true) **2).mean()
+
+    # ---------- 定义损失函数（基于直方图分布反权重） ----------
+    print("⚖️ 构建基于直方图的能量加权损失 ...")
+    
+    # 计算 logE 的统计直方图
+    hist, edges = np.histogram(all_logE, bins=50)
+    centers = 0.5 * (edges[:-1] + edges[1:])
+    prob = hist / np.sum(hist)
+    inv_prob = 1.0 / (prob + 1e-8)
+    inv_prob = inv_prob / np.mean(inv_prob)  # 归一化，使平均权重为 1
+    
+    # 转为 tensor 并放到设备上
+    centers_t = torch.tensor(centers, dtype=torch.float32, device=device)
+    inv_prob_t = torch.tensor(inv_prob, dtype=torch.float32, device=device)
+    
+    def histogram_weighted_mse(pred, true):
+        """
+        基于 logE 的直方图反频率加权均方误差损失
+        pred, true: log10(E)
+        """
+        x = true.squeeze(-1)
+        idx = torch.bucketize(x, centers_t)
+        idx = torch.clamp(idx, 1, len(centers_t) - 1)
+    
+        x0 = centers_t[idx - 1]
+        x1 = centers_t[idx]
+        y0 = inv_prob_t[idx - 1]
+        y1 = inv_prob_t[idx]
+    
+        # 线性插值获得权重
+        weights = y0 + (y1 - y0) * (x - x0) / (x1 - x0 + 1e-8)
+        weights = weights / (weights.mean() + 1e-8)  # 归一化
+    
+        return torch.mean(weights * (pred - true) ** 2)
+    
+    criterion = histogram_weighted_mse
 
     # ---------- 优化器与调度 ----------
-    criterion = nn.MSELoss()
+    # criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
     # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
     #     optimizer, patience=10, factor=0.5, verbose=True

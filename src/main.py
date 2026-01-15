@@ -52,7 +52,8 @@ def main():
            file_path.append(full_path)
     
 
-    root_files = random.sample(file_path, 1000) 
+    # root_files = random.sample(file_path, 5000) 
+    root_files = file_path[:8000]
     print(f"📁 本次使用 {len(root_files)} 个ROOT文件数据")
 
 	 # ======== 预处理条件 ========       
@@ -112,7 +113,7 @@ def main():
     )
     
     # ======== 构建 DataLoader ========
-    batch_size = 512
+    batch_size = 256
     print(f"Batch Size: {batch_size}")
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
@@ -122,7 +123,7 @@ def main():
     model = ParticleNetRegressor(
         input_dims=2,  # vq, vt 两个特征
         conv_params=[(16, (64, 64, 64)), (16, (128, 128, 128)), (16, (256, 256, 256))],
-        fc_params=[(256, 0.1)],
+        fc_params=[(256, 0.1), (128, 0.1)], # 两个全连接层
         use_fusion=True
     )
     
@@ -145,7 +146,7 @@ def main():
 
 
     # ======== 训练模型 ========
-    save_path = "/home/server/projects/energy_reconstruction/best_model_full_1113.pt"
+    save_path = "/home/server/projects/energy_reconstruction/best_model_full_0104.pt"
 
     print("开始训练...")
     train_losses, val_losses, save_path = train_model(model, train_loader, val_loader, num_epochs=500, save_path=save_path)
@@ -167,14 +168,14 @@ if __name__ == "__main__":
 
     # 保存loss曲线
     import json
-    with open("loss_log_full_1113.json", "w") as f:
+    with open("loss_log_full_0104.json", "w") as f:
         json.dump({
             "train_loss": train_losses,
             "val_loss": val_losses
         }, f)
-    print("✅ 已保存训练日志到 loss_log_full_1113.json")
+    print("✅ 已保存训练日志到 loss_log_full_0104.json")
 
-    # 或者立刻画图（可选）
+    # 画 loss 曲线
     import matplotlib.pyplot as plt
 
     plt.figure(figsize=(6,4))
@@ -186,5 +187,5 @@ if __name__ == "__main__":
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("/home/server/projects/energy_reconstruction/fig/loss_curve_full.png", dpi=300)
-    print("📈 已保存图像 loss_curve_full.png")
+    plt.savefig("/home/server/projects/energy_reconstruction/fig/loss_curve_full_0104.png", dpi=300)
+    print("📈 已保存图像 loss_curve_full_0104.png")

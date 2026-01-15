@@ -3,7 +3,7 @@ import copy
 import numpy as np
 from sklearn.metrics import r2_score
 import psutil
-from .utils import plot_resolution, plot_pred_vs_true
+from .utils import plot_resolution, plot_pred_vs_true, plot_pred_vs_true_heatmap
 
 # 直接加载best_model_2进行评估，不需要进行训练
 def evaluate_model(model, test_loader, checkpoint_path=None):
@@ -74,7 +74,7 @@ def evaluate_model(model, test_loader, checkpoint_path=None):
     if checkpoint_path is None:
         print("⚠️ 没有保存模型的路径")
     
-    plot_resolution(true_energies, predictions)
-    plot_pred_vs_true(true_energies, predictions)
+    # plot_resolution(true_energies, predictions)
+    plot_pred_vs_true_heatmap(true_energies, predictions)
 
     return predictions, true_energies # in log scale

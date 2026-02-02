@@ -64,6 +64,21 @@ def build_argparser():
 
     # ===== training =====
     p.add_argument("--epochs", type=int, default=500)
+    p.add_argument("--lr", type=float, default=1e-3)
+    p.add_argument("--patience", type=int, default=6)
+    p.add_argument("--min_delta", type=float, default=1e-4)
+    p.add_argument("--grad_clip", type=float, default=5.0)
+
+    # ===== imbalance weighting (bin weights) =====
+    p.add_argument("--bins_hist", type=int, default=50)
+    p.add_argument("--min_count", type=int, default=5)
+    p.add_argument("--max_weight", type=float, default=None, help="Optional clip for bin weights, e.g. 10.0")
+
+    # ===== loss mode =====
+    p.add_argument("--loss_mode", type=str, default="huber", choices=["mse", "huber", "rel"])
+    p.add_argument("--huber_delta", type=float, default=0.2)
+    p.add_argument("--rel_delta", type=float, default=0.3)
+    p.add_argument("--rel_squared", action="store_true", default=False)
 
     # ===== outputs =====
     p.add_argument("--run_dir", type=str, default=None,
@@ -94,7 +109,11 @@ def main(args):
     # ===== run_dir =====
     if args.run_dir is None:
         ts = time.strftime("%Y%m%d_%H%M%S")
-        run_id = f"{ts}_{args.tag}_bs{args.batch_size}_mp{args.max_points}_{args.norm_mode}_{args.sample_mode}_Emin{args.Emin}_seed{args.seed}"
+        run_id = (
+            f"{ts}_{args.tag}_bs{args.batch_size}_mp{args.max_points}_"
+            f"{args.norm_mode}_{args.sample_mode}_Emin{args.Emin}_seed{args.seed}_"
+            f"loss{args.loss_mode}"
+        )
         run_dir = os.path.join("/home/server/projects/energy_reconstruction/runs", run_id)
     else:
         run_dir = args.run_dir
@@ -104,7 +123,7 @@ def main(args):
     os.makedirs(ckpt_dir, exist_ok=True)
     os.makedirs(fig_dir, exist_ok=True)
 
-    # ===== save config (for sweep reproducibility) =====
+    # ===== save config =====
     with open(os.path.join(run_dir, "config.json"), "w") as f:
         json.dump(vars(args), f, indent=2)
 
@@ -117,9 +136,7 @@ def main(args):
         full_path = os.path.join(root_path, filename)
         file_path.append(full_path)
 
-    # stable ordering to reduce randomness across machines
     file_path.sort()
-
     root_files = file_path[: args.n_files]
     print(f"📁 本次使用 {len(root_files)} 个ROOT文件数据")
 
@@ -141,9 +158,9 @@ def main(args):
     train_files, test_files = train_test_split(root_files, test_size=args.test_size, random_state=args.seed)
     train_files, val_files = train_test_split(train_files, test_size=args.val_size, random_state=args.seed)
 
-    print(f"训练集文件数: {len(train_files)}") # 72%
-    print(f"验证集文件数: {len(val_files)}")   # 8%
-    print(f"测试集文件数: {len(test_files)}")  # 20%
+    print(f"训练集文件数: {len(train_files)}")  # 72%
+    print(f"验证集文件数: {len(val_files)}")    # 8%
+    print(f"测试集文件数: {len(test_files)}")   # 20%
 
     # ===== train cuts dict (degrees -> radians) =====
     cuts_train = dict(
@@ -151,8 +168,8 @@ def main(args):
         Emax=args.Emax,
         pinc_max=args.pinc_max,
         dcedge_min=args.dcedge_min,
-        dangle_max_rad=args.dangle_max_deg * 3.141592653589793 / 180.0,
-        theta_max_rad=args.theta_max_deg * 3.141592653589793 / 180.0,
+        dangle_max_rad=args.dangle_max_deg * np.pi / 180.0,
+        theta_max_rad=args.theta_max_deg * np.pi / 180.0,
         use_core_box=args.use_core_box,
         core_box=tuple(args.core_box),
         vqsamp_ratio_min=args.vqsamp_ratio_min,
@@ -161,7 +178,7 @@ def main(args):
     # ===== eval cuts dict (degrees -> radians) =====
     def _fallback(x, y):
         return y if x is None else x
-    
+
     cuts_eval = dict(
         Emin=_fallback(args.eval_Emin, args.Emin),
         Emax=_fallback(args.eval_Emax, args.Emax),
@@ -169,13 +186,12 @@ def main(args):
         dcedge_min=_fallback(args.eval_dcedge_min, args.dcedge_min),
         dangle_max_rad=_fallback(args.eval_dangle_max_deg, args.dangle_max_deg) * np.pi / 180.0,
         theta_max_rad=_fallback(args.eval_theta_max_deg, args.theta_max_deg) * np.pi / 180.0,
-        use_core_box=(args.eval_use_core_box or args.use_core_box),  # 逻辑：eval 指定就开，否则沿用 train
+        use_core_box=(args.eval_use_core_box or args.use_core_box),
         core_box=tuple(_fallback(args.eval_core_box, args.core_box)),
         vqsamp_ratio_min=_fallback(args.eval_vqsamp_ratio_min, args.vqsamp_ratio_min),
     )
 
     # ===== datasets =====
-    # train computes scaler if norm_mode='global'
     train_dataset = ParticleDataset(
         root_files=train_files,
         branches=branches,
@@ -254,7 +270,12 @@ def main(args):
     # ===== sanity forward =====
     print("测试GPU运行...")
     with torch.no_grad():
-        test_points, test_features, test_mask, test_energies, test_mc_weight= next(iter(train_loader))
+        batch = next(iter(train_loader))
+        if len(batch) == 5:
+            test_points, test_features, test_mask, test_energies, _w = batch
+        else:
+            test_points, test_features, test_mask, test_energies = batch
+
         test_points = test_points.to(device, non_blocking=True)
         test_features = test_features.to(device, non_blocking=True)
         test_mask = test_mask.to(device, non_blocking=True)
@@ -268,7 +289,18 @@ def main(args):
     train_losses, val_losses, save_path = train_model(
         model, train_loader, val_loader,
         num_epochs=args.epochs,
-        save_path=save_path
+        lr=args.lr,
+        patience=args.patience,
+        min_delta=args.min_delta,
+        grad_clip=args.grad_clip,
+        bins_hist=args.bins_hist,
+        min_count=args.min_count,
+        max_weight=args.max_weight,
+        save_path=save_path,
+        loss_mode=args.loss_mode,
+        huber_delta=args.huber_delta,
+        rel_delta=args.rel_delta,
+        rel_squared=args.rel_squared,
     )
 
     # ===== save loss json + loss fig =====
@@ -296,7 +328,7 @@ def main(args):
         model,
         test_loader,
         checkpoint_path=save_path,
-        out_dir=fig_dir,          # ✅ 所有评估图都进 run_dir/fig
+        out_dir=fig_dir,
         space=args.eval_space,
         save_arrays=args.save_arrays,
     )
@@ -310,7 +342,6 @@ if __name__ == "__main__":
 
     model, pred, true, train_losses, val_losses, run_dir = main(args)
 
-    # 可选：模型结构 summary（不建议在 Slurm 大规模扫参时开）
     try:
         from torchsummary import summary
         summary(model, input_size=[(2, args.max_points), (2, args.max_points), (1, args.max_points)])

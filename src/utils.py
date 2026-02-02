@@ -581,3 +581,221 @@ def plot_pred_distributions_in_true_bins68(true_logE, pred_logE,
     plt.close()
     return stats
 
+def plot_true_distributions_in_pred_bins68(true_logE, pred_logE,
+                                           Emin=1e2, Emax=1e6, nbins_pred=10,
+                                           bins_x=60, use_delta=False,
+                                           save_name=None, out_dir=None):
+    """
+    以预测能量 pred_logE 分 bin（Emin~Emax, nbins_pred 个 log bin），
+    在每个 pred bin 内看分布并用鲁棒 68% containment 统计：
+        bias = median(x)
+        resolution = (q84 - q16)/2
+
+    参数
+    ----
+    true_logE, pred_logE : array-like
+        log10(E/GeV)
+    nbins_pred : int
+        按 pred 能量分 bin 的数量
+    bins_x : int
+        直方图的 bins 数（每个子图内部）
+    use_delta :
+        False -> 画 true_logE 分布（在 pred bin 里）
+        True  -> 画 ΔlogE = pred_logE - true_logE 分布（在 pred bin 里）
+    """
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import os
+    from datetime import datetime
+
+    true_logE = np.asarray(true_logE).squeeze()
+    pred_logE = np.asarray(pred_logE).squeeze()
+    m = np.isfinite(true_logE) & np.isfinite(pred_logE)
+    true_logE = true_logE[m]
+    pred_logE = pred_logE[m]
+
+    edges_log = np.linspace(np.log10(Emin), np.log10(Emax), nbins_pred + 1)
+
+    ncols = 5
+    nrows = int(np.ceil(nbins_pred / ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(3.6 * ncols, 3.0 * nrows), sharey=False)
+    axes = np.array(axes).reshape(-1)
+
+    stats = []
+
+    for i in range(nbins_pred):
+        lo, hi = edges_log[i], edges_log[i + 1]
+        # ✅ 关键：按 pred_logE 分 bin
+        sel = (pred_logE >= lo) & (pred_logE < hi)
+        ax = axes[i]
+
+        N = int(sel.sum())
+        if N < 20:
+            ax.text(0.5, 0.5, f"Too few events\nN={N}",
+                    ha="center", va="center", transform=ax.transAxes)
+            ax.set_title(f"logE_pred ∈ [{lo:.2f},{hi:.2f}]")
+            continue
+
+        if use_delta:
+            x = pred_logE[sel] - true_logE[sel]
+            x_label = r"$\Delta \log_{10}E$  (pred-true)"
+            ref = 0.0
+        else:
+            # ✅ 在 pred bin 内看 true_logE 的分布（你也可以改成看 pred_logE 自己，但那就没意义了）
+            x = true_logE[sel]
+            x_label = r"$\log_{10}(E_{\mathrm{true}}/\mathrm{GeV})$"
+            ref = 0.5 * (lo + hi)   # ✅ 参考值用 pred bin 中心更合理
+
+        med = float(np.median(x))
+        q16, q84 = np.percentile(x, [16, 84])
+        q16, q84 = float(q16), float(q84)
+        sig68 = float(0.5 * (q84 - q16))
+
+        ax.hist(x, bins=bins_x, histtype="step", linewidth=1.5, density=True)
+        ax.axvspan(q16, q84, color="gray", alpha=0.3, label="68% containment")
+        ax.axvline(q16, linestyle="-.", linewidth=1.0)
+        ax.axvline(q84, linestyle="-.", linewidth=1.0)
+
+        ax.set_title(f"logE_pred ∈ [{lo:.2f},{hi:.2f}]  N={N}")
+        ax.set_xlabel(x_label)
+        ax.set_ylabel("PDF")
+
+        stats.append({
+            "bin": int(i),
+            "logE_pred_lo": float(lo),
+            "logE_pred_hi": float(hi),
+            "N": N,
+            "mu": med,           # median
+            "sigma": sig68,      # 68% half-width
+            "q16": q16,
+            "q84": q84,
+            "ref": float(ref),
+        })
+
+        ax.text(0.03, 0.95, f"med={med:.3f}\nσ68={sig68:.3f}",
+                transform=ax.transAxes, va="top")
+
+    for j in range(nbins_pred, len(axes)):
+        axes[j].axis("off")
+
+    fig.suptitle("True/Δ distributions in predicted-energy bins (68% containment)", y=1.02)
+    plt.tight_layout()
+
+    if out_dir is not None:
+        os.makedirs(out_dir, exist_ok=True)
+        if save_name is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            tag = "delta" if use_delta else "truelogE"
+            save_name = f"true_dist_in_pred_bins_{tag}_contain68_{timestamp}.png"
+        save_path = os.path.join(out_dir, save_name)
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"✅ 以预测能量分bin的68%分布图已保存到: {save_path}")
+
+    plt.close()
+    return stats
+
+
+def plot_true_distributions_in_pred_bins(true_logE, pred_logE,
+                                         Emin=1e2, Emax=1e6, nbins_pred=10,
+                                         bins_x=60, use_delta=False,
+                                         save_name=None, out_dir=None):
+    """
+    以预测能量 pred_logE 分 nbins_pred 个 log bin（Emin->Emax），在每个 pred bin 内画分布并统计均值/标准差。
+
+    use_delta:
+        False -> 画 true_logE 分布（条件：落在该 pred bin 内）
+        True  -> 画 ΔlogE = pred_logE - true_logE 分布（条件：落在该 pred bin 内）
+
+    统计量（使用所有数据，不用 68%）：
+        bias:  mu = mean(x)
+        resolution: sigma = std(x)
+
+    返回 stats：每个 pred 能量 bin 的均值/方差等
+    """
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import os
+    from datetime import datetime
+
+    true_logE = np.asarray(true_logE).squeeze()
+    pred_logE = np.asarray(pred_logE).squeeze()
+    m = np.isfinite(true_logE) & np.isfinite(pred_logE)
+    true_logE = true_logE[m]
+    pred_logE = pred_logE[m]
+
+    # ✅ pred energy 的log-bin边界：Emin->Emax
+    edges_log = np.linspace(np.log10(Emin), np.log10(Emax), nbins_pred + 1)
+
+    ncols = 5
+    nrows = int(np.ceil(nbins_pred / ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(3.6 * ncols, 3.0 * nrows), sharey=False)
+    axes = np.array(axes).reshape(-1)
+
+    stats = []
+
+    for i in range(nbins_pred):
+        lo, hi = edges_log[i], edges_log[i + 1]
+        # ✅ 关键：按 pred_logE 分 bin
+        sel = (pred_logE >= lo) & (pred_logE < hi)
+        ax = axes[i]
+
+        N = int(sel.sum())
+        if N < 10:
+            ax.text(0.5, 0.5, f"Too few events\nN={N}",
+                    ha="center", va="center", transform=ax.transAxes)
+            ax.set_title(f"logE_pred ∈ [{lo:.2f},{hi:.2f}]")
+            continue
+
+        if use_delta:
+            x = pred_logE[sel] - true_logE[sel]
+            x_label = r"$\Delta \log_{10}E$  (pred-true)"
+            ref = 0.0
+        else:
+            # ✅ 在 pred bin 内看 true_logE 的分布（更有意义；看 pred_logE 自己会“人为截断”）
+            x = true_logE[sel]
+            x_label = r"$\log_{10}(E_{\mathrm{true}}/\mathrm{GeV})$"
+            ref = 0.5 * (lo + hi)   # ✅ 参考用 pred bin 中心
+
+        mu = float(np.mean(x))
+        sig = float(np.std(x))  # 如需无偏估计可改 ddof=1
+
+        ax.hist(x, bins=bins_x, histtype="step", linewidth=1.5, density=True)
+        ax.axvline(mu, linestyle="--", linewidth=1)
+        ax.axvline(ref, linestyle=":", linewidth=1)
+
+        ax.set_title(f"logE_pred ∈ [{lo:.2f},{hi:.2f}]  N={N}")
+        ax.set_xlabel(x_label)
+        ax.set_ylabel("PDF")
+
+        stats.append({
+            "bin": int(i),
+            "logE_pred_lo": float(lo),
+            "logE_pred_hi": float(hi),
+            "N": N,
+            "mu": mu,
+            "sigma": sig,
+            "ref": float(ref),
+        })
+
+        ax.text(0.03, 0.95, f"μ={mu:.3f}\nσ={sig:.3f}",
+                transform=ax.transAxes, va="top")
+
+    for j in range(nbins_pred, len(axes)):
+        axes[j].axis("off")
+
+    fig.suptitle("True/Δ distributions in predicted-energy bins (mean/std)", y=1.02)
+    plt.tight_layout()
+
+    # ===== 保存（由 out_dir 控制）=====
+    if out_dir is not None:
+        os.makedirs(out_dir, exist_ok=True)
+        if save_name is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            tag = "delta" if use_delta else "truelogE"
+            save_name = f"true_dist_in_pred_bins_{tag}_{timestamp}.png"
+        save_path = os.path.join(out_dir, save_name)
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"✅ 以预测能量分bin的分布图已保存到: {save_path}")
+
+    plt.close()
+    return stats

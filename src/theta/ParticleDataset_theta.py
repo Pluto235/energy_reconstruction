@@ -284,7 +284,10 @@ class ParticleDataset(Dataset):
                 target = float(arrays["mc_energy"][i])
                 log_energy = float(np.log10(target)) if target > 0 else 0.0
 
-                # (5) costheta (theta in rad)
+                # (5) mc_weight 
+                mc_weight = float(arrays["mc_weight"][i])
+
+                # (6) costheta (theta in rad)
                 theta_evt = float(arrays["theta"][i])
                 costheta_evt = float(np.cos(theta_evt))
 
@@ -296,6 +299,7 @@ class ParticleDataset(Dataset):
                         "vq": vq,                # (Nhits,)
                         "vt": vt,                # (Nhits,)
                         "log_energy": log_energy,
+                        "mc_weight": mc_weight,
                         "costheta": costheta_evt,
                     }
                 }
@@ -439,6 +443,7 @@ class ParticleDataset(Dataset):
         vq = proc["vq"]             # (Nhits,)
         vt = proc["vt"]             # (Nhits,)
         log_energy = proc["log_energy"]
+        mc_weight = proc["mc_weight"]
         costheta = proc["costheta"]
 
         # Truncate strategy if too many hits
@@ -466,6 +471,7 @@ class ParticleDataset(Dataset):
         features_t = torch.tensor(features, dtype=torch.float32).T      # (2, N)
         mask_t = torch.tensor(mask, dtype=torch.float32).unsqueeze(0)   # (1, N)
         log_energy_t = torch.tensor(log_energy, dtype=torch.float32).unsqueeze(-1)  # (1,)
+        mc_weight_t = torch.tensor(mc_weight, dtype=torch.float32).unsqueeze(-1)  # (1,)
         costheta_t = torch.tensor(costheta, dtype=torch.float32).unsqueeze(-1)  # (1,)
         
-        return points_t, features_t, mask_t, costheta_t, log_energy_t
+        return points_t, features_t, mask_t, costheta_t, log_energy_t, mc_weight_t

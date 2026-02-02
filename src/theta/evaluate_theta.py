@@ -51,21 +51,22 @@ def evaluate_model(
 
     with torch.no_grad():
         for batch in test_loader:
-            # ✅ 兼容：既支持 (p,f,m,y,w) 也支持 (p,f,m,y)
-            if len(batch) == 5:
+            # ✅ 兼容：既支持 (p,f,m,c,y,w) 也支持 (p,f,m,y,w)
+            if len(batch) == 6:
+                points, features, mask, costheta, logE_true, mc_weight = batch
+            elif len(batch) == 5:
                 points, features, mask, logE_true, mc_weight = batch
-            elif len(batch) == 4:
-                points, features, mask, logE_true = batch
-                mc_weight = None
+                costheta = None
             else:
-                raise ValueError(f"Unexpected batch size: got {len(batch)} items, expect 4 or 5.")
+                raise ValueError(f"Unexpected batch size: got {len(batch)} items, expect 5 or 6.")
 
             points = points.to(device, non_blocking=True)
             features = features.to(device, non_blocking=True)
             mask = mask.to(device, non_blocking=True)
+            costheta = costheta.to(device, non_blocking=True)
             logE_true = logE_true.to(device, non_blocking=True)
 
-            logE_pred = model(points, features, mask)
+            logE_pred = model(points, features, mask, costheta)
 
             preds.append(logE_pred.detach().cpu().numpy())
             trues.append(logE_true.detach().cpu().numpy())
@@ -200,6 +201,7 @@ def evaluate_model(
                 E_true=E_true,
                 rel=rel,
                 dlogE=dlogE,
+                costheta=costheta,
                 mc_weight=w,   # ✅ 保存清理/归一化后的权重
             )
 

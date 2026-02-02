@@ -12,13 +12,16 @@ def train_model(
     patience=6,
     min_delta=1e-4,
     grad_clip=5.0,
-    alpha=0.7,       # 能量平衡权重强度
-    beta=0.5,        # Huber loss 的 β
+    bins_hist=50,
+    eps=1e-8,
     save_path=None
 ):
     """
-    ParticleNet 训练函数（带能量分布平衡权重 + 早停 + 学习率调度 + 梯度裁剪）
-    模型输入与输出均为 log10(E)
+    ParticleNet 训练函数
+    - 使用 mc_weight 构建 weighted histogram (Crab 等效能谱)
+    - loss 使用 inv_prob_weighted(logE_true) 作为权重（不再额外乘 mc_weight，避免双重加权爆炸）
+    - 修复 CosineAnnealingLR.step 用法
+    - 避免 batch 内归一化导致的权重抖动
     """
 
     # ---------- 初始化 ----------
@@ -30,68 +33,70 @@ def train_model(
         model = nn.DataParallel(model)
     model.to(device)
 
-    # ---------- 从训练数据估计 logE 分布 ----------
-    print("📊 估计训练集 log(E) 分布 ...")
+    # ---------- 从训练数据估计 logE 分布（用 mc_weight 做 weighted histogram） ----------
+    print("📊 估计训练集 log(E) 分布（mc_weight 加权 -> Crab 等效能谱）...")
+
     all_logE = []
-    for _, _, _, _, energies in train_loader: # 在整个train数据上的分布
-        all_logE.append(energies)
-    all_logE = torch.cat(all_logE, dim=0).cpu().numpy()
+    all_w = []
+    for batch in train_loader:
+        # batch: points, features, mask, costheta, log_energy, mc_weight
+        logE = batch[4]
+        w = batch[5]
+        all_logE.append(logE)
+        all_w.append(w)
+
+    all_logE = torch.cat(all_logE, dim=0).cpu().numpy().reshape(-1)
+    all_w    = torch.cat(all_w, dim=0).cpu().numpy().reshape(-1)
+
+    # 保险：去掉非正权重/NaN
+    valid = np.isfinite(all_logE) & np.isfinite(all_w) & (all_w > 0)
+    all_logE = all_logE[valid]
+    all_w    = all_w[valid]
+
     mu, sigma = np.mean(all_logE), np.std(all_logE)
-    print(f"   → μ = {mu:.4f}, σ = {sigma:.4f}")
+    print(f"   → μ = {mu:.4f}, σ = {sigma:.4f}, N(valid)={len(all_logE)}")
 
-    # ---------- 定义损失函数（带权重） ----------
-    # def weighted_mse(pred, true, mu, sigma, alpha=0.7):
-    #     """
-    #     能量加权版:
-    #     w = exp(α * (x - μ)^2 / (2σ^2))
-    #     """
-    #     weights = torch.exp(alpha * ((true - mu) ** 2) / (2 * sigma ** 2))
-    #     weights = weights / weights.mean()  # 归一化
-    #     return (weights * (pred - true) **2).mean()
+    # weighted histogram：用 mc_weight 当作 weights
+    hist_w, edges = np.histogram(all_logE, bins=bins_hist, weights=all_w)
+    prob_w = hist_w / (np.sum(hist_w) + eps)
 
-    # ---------- 定义损失函数（基于直方图分布反权重） ----------
-    print("⚖️ 构建基于直方图的能量加权损失 ...")
-    
-    # 计算 logE 的统计直方图
-    hist, edges = np.histogram(all_logE, bins=50)
-    centers = 0.5 * (edges[:-1] + edges[1:])
-    prob = hist / np.sum(hist)
-    inv_prob = 1.0 / (prob + 1e-8)
-    inv_prob = inv_prob / np.mean(inv_prob)  # 归一化，使平均权重为 1
-    
-    # 转为 tensor 并放到设备上
-    centers_t = torch.tensor(centers, dtype=torch.float32, device=device)
-    inv_prob_t = torch.tensor(inv_prob, dtype=torch.float32, device=device)
-    
-    def histogram_weighted_mse(pred, true):
+    # 反频率：稀有(在 Crab 等效谱里)的能段给更大权重
+    inv_prob_w = 1.0 / (prob_w + eps)
+
+    # 全局归一化：让平均权重约为 1（在“bin 概率意义”上）
+    inv_prob_w = inv_prob_w / (np.mean(inv_prob_w) + eps)
+
+    # 转 tensor
+    edges_t = torch.tensor(edges, dtype=torch.float32, device=device)            # (bins+1,)
+    inv_prob_t = torch.tensor(inv_prob_w, dtype=torch.float32, device=device)    # (bins,)
+
+    def inv_prob_weight_from_logE(logE_true: torch.Tensor) -> torch.Tensor:
         """
-        基于 logE 的直方图反频率加权均方误差损失
-        pred, true: log10(E)
+        根据 logE_true 在 weighted histogram 的 bin 中取 inv_prob 权重
+        logE_true: (B,1) or (B,)
+        return: (B,) 权重
         """
-        x = true.squeeze(-1)
-        idx = torch.bucketize(x, centers_t)
-        idx = torch.clamp(idx, 1, len(centers_t) - 1)
-    
-        x0 = centers_t[idx - 1]
-        x1 = centers_t[idx]
-        y0 = inv_prob_t[idx - 1]
-        y1 = inv_prob_t[idx]
-    
-        # 线性插值获得权重
-        weights = y0 + (y1 - y0) * (x - x0) / (x1 - x0 + 1e-8)
-        weights = weights / (weights.mean() + 1e-8)  # 归一化
-    
-        return torch.mean(weights * (pred - true) ** 2)
-    
-    criterion = histogram_weighted_mse
+        x = logE_true.squeeze(-1)  # (B,)
+        # bucketize 返回 [0..len(edges)]，我们要映射到 bin index [0..bins-1]
+        # torch.bucketize: index i 满足 edges[i-1] < x <= edges[i]
+        idx = torch.bucketize(x, edges_t) - 1  # 转成 bin index
+        idx = torch.clamp(idx, 0, inv_prob_t.numel() - 1)
+        return inv_prob_t[idx]
+
+    def histogram_weighted_mse_mcshape(pred: torch.Tensor, true: torch.Tensor) -> torch.Tensor:
+        """
+        loss = mean( w_bin(logE_true) * (pred-true)^2 )
+        w_bin 来自 mc_weight 加权后的能谱(等效 Crab)
+        """
+        w = inv_prob_weight_from_logE(true)  # (B,)
+        diff2 = (pred.squeeze(-1) - true.squeeze(-1)) ** 2
+        # 注意：不做 batch 内 w.mean() 归一化，避免抖动；全局已归一化过
+        return torch.mean(w * diff2)
+
+    criterion = histogram_weighted_mse_mcshape
 
     # ---------- 优化器与调度 ----------
-    # criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
-    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-    #     optimizer, patience=10, factor=0.5, verbose=True
-    # )
-    # 余弦学习率改进方案
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50, eta_min=1e-6)
 
     train_losses, val_losses = [], []
@@ -104,13 +109,15 @@ def train_model(
         model.train()
         train_loss = 0.0
 
-        for batch_idx, (points, features, mask, costheta, logE_true) in enumerate(train_loader):
+        for batch_idx, (points, features, mask, costheta, logE_true, mc_weight) in enumerate(train_loader):
             points, features, mask, costheta, logE_true = (
                 points.to(device, non_blocking=True),
                 features.to(device, non_blocking=True),
                 mask.to(device, non_blocking=True),
                 costheta.to(device, non_blocking=True),
                 logE_true.to(device, non_blocking=True),
+                # mc_weight 此处不进 loss（我们已经用它构建了等效能谱），留着不用也行
+                # mc_weight = mc_weight.to(device, non_blocking=True)
             )
 
             optimizer.zero_grad(set_to_none=True)
@@ -135,7 +142,7 @@ def train_model(
         model.eval()
         val_loss = 0.0
         with torch.no_grad():
-            for points, features, mask, costheta, logE_true in val_loader:
+            for points, features, mask, costheta, logE_true, mc_weight in val_loader:
                 points, features, mask, costheta, logE_true = (
                     points.to(device, non_blocking=True),
                     features.to(device, non_blocking=True),
@@ -151,7 +158,8 @@ def train_model(
         train_losses.append(train_loss)
         val_losses.append(val_loss)
 
-        scheduler.step() # 更新学习率
+        # ✅ 修复：CosineAnnealingLR 不吃 val_loss
+        scheduler.step()
         lr_now = optimizer.param_groups[0]["lr"]
 
         print(

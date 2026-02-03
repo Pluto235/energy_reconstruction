@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import copy
 import numpy as np
+
 
 def train_model(
     model,
@@ -12,90 +14,136 @@ def train_model(
     patience=6,
     min_delta=1e-4,
     grad_clip=5.0,
+
+    # ===== bin-weight for imbalance =====
     bins_hist=50,
     eps=1e-8,
-    save_path=None
+    min_count=5,            # 防止极低计数 bin 权重爆炸
+    max_weight=None,        # 可选：对 w_bin 做 clip，例如 10.0；None 不 clip
+
+    save_path=None,
+
+    # ===== loss mode =====
+    loss_mode="huber",      # "mse" | "huber" | "rel"
+    huber_delta=0.2,        # huber on logE 的 delta（logE误差量级常用 0.2~0.3）
+    rel_delta=0.3,          # huber on relative error 的 delta（rel 量级常用 0.2~0.5）
+    rel_squared=False,      # True: rel^2; False: huber(rel)
 ):
     """
-    ParticleNet 训练函数
-    - 使用 mc_weight 构建 weighted histogram (Crab 等效能谱)
-    - loss 使用 inv_prob_weighted(logE_true) 作为权重（不再额外乘 mc_weight，避免双重加权爆炸）
-    - 修复 CosineAnnealingLR.step 用法
-    - 避免 batch 内归一化导致的权重抖动
+    训练函数：先用训练集 logE_true 构建分bin逆频权重 w_bin（修正能谱不均），
+    再在此基础上选择不同的 loss 形式（mse / huber / rel）。
+
+    - histogram: unweighted counts on logE_true
+    - w_bin = 1 / P(bin)  (并做归一化，使概率意义下平均权重 ~ 1)
+    - loss = sum(w_bin * per_event_loss) / sum(w_bin)
+
+    注意：train_loader 若返回 (points, features, mask, logE_true, mc_weight)，mc_weight 在训练中忽略。
     """
 
-    # ---------- 初始化 ----------
+    # ---------- device & DP ----------
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"🖥️ 使用设备: {device}")
 
+    use_dp = False
     if torch.cuda.device_count() > 1:
-        print(f"🔸 使用 {torch.cuda.device_count()} 个GPU")
+        print(f"🔸 使用 {torch.cuda.device_count()} 个GPU (DataParallel)")
         model = nn.DataParallel(model)
+        use_dp = True
     model.to(device)
 
-    # ---------- 从训练数据估计 logE 分布（用 mc_weight 做 weighted histogram） ----------
-    print("📊 估计训练集 log(E) 分布（mc_weight 加权 -> Crab 等效能谱）...")
+    # ---------- build logE histogram weights ----------
+    print("📊 估计训练集 log(E) 分布（unweighted histogram）并构建分bin逆频权重...")
 
     all_logE = []
-    all_w = []
     for batch in train_loader:
-        # batch: points, features, mask, logE_true, mc_weight
         logE = batch[3]
-        w = batch[4]
         all_logE.append(logE)
-        all_w.append(w)
 
     all_logE = torch.cat(all_logE, dim=0).cpu().numpy().reshape(-1)
-    all_w    = torch.cat(all_w, dim=0).cpu().numpy().reshape(-1)
+    all_logE = all_logE[np.isfinite(all_logE)]
 
-    # 保险：去掉非正权重/NaN
-    valid = np.isfinite(all_logE) & np.isfinite(all_w) & (all_w > 0)
-    all_logE = all_logE[valid]
-    all_w    = all_w[valid]
+    if all_logE.size == 0:
+        raise RuntimeError("No valid logE in train_loader to build histogram weights.")
 
-    mu, sigma = np.mean(all_logE), np.std(all_logE)
-    print(f"   → μ = {mu:.4f}, σ = {sigma:.4f}, N(valid)={len(all_logE)}")
+    mu, sigma = float(np.mean(all_logE)), float(np.std(all_logE))
+    print(f"   → μ = {mu:.4f}, σ = {sigma:.4f}, N(valid)={int(all_logE.size)}")
 
-    # weighted histogram：用 mc_weight 当作 weights
-    hist_w, edges = np.histogram(all_logE, bins=bins_hist, weights=all_w)
-    prob_w = hist_w / (np.sum(hist_w) + eps)
+    hist, edges = np.histogram(all_logE, bins=bins_hist)
+    hist = hist.astype(np.float64)
 
-    # 反频率：稀有(在 Crab 等效谱里)的能段给更大权重
-    inv_prob_w = 1.0 / (prob_w + eps)
+    # clamp low-count bins to avoid huge weights
+    hist = np.maximum(hist, float(min_count))
 
-    # 全局归一化：让平均权重约为 1（在“bin 概率意义”上）
-    inv_prob_w = inv_prob_w / (np.mean(inv_prob_w) + eps)
+    prob = hist / (np.sum(hist) + eps)      # P(bin)
+    inv_prob = 1.0 / (prob + eps)           # 1/P(bin)
 
-    # 转 tensor
-    edges_t = torch.tensor(edges, dtype=torch.float32, device=device)            # (bins+1,)
-    inv_prob_t = torch.tensor(inv_prob_w, dtype=torch.float32, device=device)    # (bins,)
+    # normalize so that average weight in "probability sense" is ~1:
+    # E[w] = sum P(bin) * (1/P(bin)) = bins (if no eps/clamp). With eps/clamp, normalize explicitly.
+    mean_w = float(np.sum(prob * inv_prob))
+    if not np.isfinite(mean_w) or mean_w <= 0:
+        mean_w = 1.0
+    inv_prob = inv_prob / mean_w
 
-    def inv_prob_weight_from_logE(logE_true: torch.Tensor) -> torch.Tensor:
+    edges_t = torch.tensor(edges, dtype=torch.float32, device=device)          # (bins+1,)
+    inv_prob_t = torch.tensor(inv_prob, dtype=torch.float32, device=device)    # (bins,)
+
+    def w_bin_from_logE(logE_true: torch.Tensor) -> torch.Tensor:
         """
-        根据 logE_true 在 weighted histogram 的 bin 中取 inv_prob 权重
         logE_true: (B,1) or (B,)
-        return: (B,) 权重
+        return w_bin: (B,)
         """
-        x = logE_true.squeeze(-1)  # (B,)
-        # bucketize 返回 [0..len(edges)]，我们要映射到 bin index [0..bins-1]
-        # torch.bucketize: index i 满足 edges[i-1] < x <= edges[i]
-        idx = torch.bucketize(x, edges_t) - 1  # 转成 bin index
+        x = logE_true.squeeze(-1)
+        idx = torch.bucketize(x, edges_t) - 1
         idx = torch.clamp(idx, 0, inv_prob_t.numel() - 1)
-        return inv_prob_t[idx]
+        w = inv_prob_t[idx]
+        if max_weight is not None:
+            w = torch.clamp(w, max=float(max_weight))
+        return w
 
-    def histogram_weighted_mse_mcshape(pred: torch.Tensor, true: torch.Tensor) -> torch.Tensor:
+    def weighted_reduce(per_event: torch.Tensor, w: torch.Tensor) -> torch.Tensor:
+        return torch.sum(w * per_event) / (torch.sum(w) + 1e-12)
+
+    # ---------- choose loss ----------
+    loss_mode = str(loss_mode).lower().strip()
+    if loss_mode not in ["mse", "huber", "rel"]:
+        raise ValueError(f"loss_mode must be one of ['mse','huber','rel'], got: {loss_mode}")
+
+    print(f"🧪 loss_mode={loss_mode} | huber_delta={huber_delta} | rel_delta={rel_delta} | rel_squared={rel_squared}")
+    if max_weight is not None:
+        print(f"🧯 max_weight clip = {max_weight}")
+
+    def criterion(pred_logE: torch.Tensor, true_logE: torch.Tensor) -> torch.Tensor:
         """
-        loss = mean( w_bin(logE_true) * (pred-true)^2 )
-        w_bin 来自 mc_weight 加权后的能谱(等效 Crab)
+        pred_logE/true_logE: (B,1) or (B,)
         """
-        w = inv_prob_weight_from_logE(true)  # (B,)
-        diff2 = (pred.squeeze(-1) - true.squeeze(-1)) ** 2
-        # 注意：不做 batch 内 w.mean() 归一化，避免抖动；全局已归一化过
-        return torch.mean(w * diff2)
+        w = w_bin_from_logE(true_logE)
 
-    criterion = histogram_weighted_mse_mcshape
+        if loss_mode == "mse":
+            err = pred_logE.squeeze(-1) - true_logE.squeeze(-1)
+            per = err ** 2
+            return weighted_reduce(per, w)
 
-    # ---------- 优化器与调度 ----------
+        if loss_mode == "huber":
+            err = pred_logE.squeeze(-1) - true_logE.squeeze(-1)
+            per = F.smooth_l1_loss(err, torch.zeros_like(err), beta=huber_delta, reduction="none")
+            return weighted_reduce(per, w)
+
+        # loss_mode == "rel"
+        pred_logE_ = pred_logE.squeeze(-1)
+        true_logE_ = true_logE.squeeze(-1)
+        E_pred = torch.pow(10.0, pred_logE_)
+        E_true = torch.pow(10.0, true_logE_)
+
+        rel = (E_pred - E_true) / (E_true + 1e-12)  # relative error
+
+        if rel_squared:
+            per = rel ** 2
+        else:
+            per = F.smooth_l1_loss(rel, torch.zeros_like(rel), beta=rel_delta, reduction="none")
+
+        return weighted_reduce(per, w)
+
+    # ---------- optimizer & scheduler ----------
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50, eta_min=1e-6)
 
@@ -104,21 +152,25 @@ def train_model(
     best_model_wts = copy.deepcopy(model.state_dict())
     epochs_no_improve = 0
 
-    # ---------- 训练循环 ----------
+    # ---------- training loop ----------
     for epoch in range(1, num_epochs + 1):
         model.train()
         train_loss = 0.0
 
-        for batch_idx, (points, features, mask, logE_true, mc_weight) in enumerate(train_loader):
+        for batch_idx, batch in enumerate(train_loader):
+            if len(batch) == 5:
+                points, features, mask, logE_true, _ = batch
+            else:
+                points, features, mask, logE_true = batch
+
             points = points.to(device, non_blocking=True)
             features = features.to(device, non_blocking=True)
             mask = mask.to(device, non_blocking=True)
             logE_true = logE_true.to(device, non_blocking=True)
-            # mc_weight 此处不进 loss（我们已经用它构建了等效能谱），留着不用也行
-            # mc_weight = mc_weight.to(device, non_blocking=True)
 
             optimizer.zero_grad(set_to_none=True)
             logE_pred = model(points, features, mask)
+
             loss = criterion(logE_pred, logE_true)
             loss.backward()
 
@@ -134,11 +186,16 @@ def train_model(
                     f"TrainLoss: {loss.item():.6f}"
                 )
 
-        # ---------- 验证 ----------
+        # ---------- validation ----------
         model.eval()
         val_loss = 0.0
         with torch.no_grad():
-            for points, features, mask, logE_true, mc_weight in val_loader:
+            for batch in val_loader:
+                if len(batch) == 5:
+                    points, features, mask, logE_true, _ = batch
+                else:
+                    points, features, mask, logE_true = batch
+
                 points = points.to(device, non_blocking=True)
                 features = features.to(device, non_blocking=True)
                 mask = mask.to(device, non_blocking=True)
@@ -147,12 +204,11 @@ def train_model(
                 logE_pred = model(points, features, mask)
                 val_loss += criterion(logE_pred, logE_true).item()
 
-        train_loss /= len(train_loader)
-        val_loss /= len(val_loader)
+        train_loss /= max(len(train_loader), 1)
+        val_loss /= max(len(val_loader), 1)
         train_losses.append(train_loss)
         val_losses.append(val_loss)
 
-        # ✅ 修复：CosineAnnealingLR 不吃 val_loss
         scheduler.step()
         lr_now = optimizer.param_groups[0]["lr"]
 
@@ -161,14 +217,17 @@ def train_model(
             f"Train: {train_loss:.6f} | Val: {val_loss:.6f} | LR: {lr_now:.6e}"
         )
 
-        # ---------- Early Stopping ----------
+        # ---------- early stopping + save ----------
         if save_path is None:
-            print("⚠️ 没有正确传入保存路径！")
+            print("⚠️ 没有正确传入保存路径！(save_path=None)")
+
         if (save_path is not None) and (val_loss < best_val_loss - min_delta):
             best_val_loss = val_loss
             best_model_wts = copy.deepcopy(model.state_dict())
             epochs_no_improve = 0
-            torch.save(best_model_wts, save_path)
+
+            state_to_save = model.module.state_dict() if use_dp else model.state_dict()
+            torch.save(state_to_save, save_path)
             print(f"✅ Val loss improved to {val_loss:.6f}, model saved to '{save_path}'")
         else:
             epochs_no_improve += 1

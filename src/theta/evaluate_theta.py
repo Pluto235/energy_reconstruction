@@ -192,17 +192,22 @@ def evaluate_model(
         with open(os.path.join(out_dir, "metrics.json"), "w") as f:
             json.dump(metrics, f, indent=2)
 
+        def to_numpy(x):
+            if torch.is_torch(x):
+                return x.detach().cpu().numpy()
+            return x
+
         if save_arrays:
             np.savez(
                 os.path.join(out_dir, "preds.npz"),
-                logE_pred=logE_pred,
-                logE_true=logE_true,
-                E_pred=E_pred,
-                E_true=E_true,
-                rel=rel,
-                dlogE=dlogE,
-                costheta=costheta,
-                mc_weight=w,   # ✅ 保存清理/归一化后的权重
+                logE_pred=to_numpy(logE_pred),
+                logE_true=to_numpy(logE_true),
+                E_pred=to_numpy(E_pred),
+                E_true=to_numpy(E_true),
+                rel=to_numpy(rel),
+                dlogE=to_numpy(dlogE),
+                costheta=to_numpy(costheta),
+                mc_weight=to_numpy(w),   # ✅ 保存清理/归一化后的权重
             )
 
     # ===== plots: unweighted =====

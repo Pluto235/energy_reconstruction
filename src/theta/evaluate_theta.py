@@ -3,7 +3,7 @@ import json
 import torch
 import numpy as np
 from sklearn.metrics import r2_score
-from src import utils
+from src.common import utils
 
 
 def evaluate_model(
@@ -193,7 +193,7 @@ def evaluate_model(
             json.dump(metrics, f, indent=2)
 
         def to_numpy(x):
-            if torch.is_torch(x):
+            if torch.is_tensor(x):
                 return x.detach().cpu().numpy()
             return x
 

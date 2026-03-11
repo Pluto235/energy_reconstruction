@@ -7,13 +7,24 @@ __pycache__/
 *.pth
 *.pt
 *.h5
+*.parquet
 *.npz
 *.npy
 *.pkl
-data/
+/data/
 checkpoints/
 outputs/
 logs/
+runs/
+fig/
+archive/root_artifacts/
+archive/root_fig/
+archive/theta-old/.git
+archive/theta-old/.git.meta
+archive/theta-old/fig/
+archive/theta-old/*.png
+archive/theta-old/*.json
+archive/theta-old/model500.md
 
 # System
 *.swp

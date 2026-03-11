@@ -1,27 +1,8 @@
 import torch
-import numpy as np
-from torch.utils.data import Dataset, DataLoader
-from sklearn.preprocessing import StandardScaler
-import pandas as pd
-import torch
 import torch.nn as nn
-import torch.optim as optim
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-import os
-import torch.nn.functional as F
-import time
-import uproot
-from tqdm import tqdm
-import logging
-import argparse
-from sklearn.metrics import r2_score
 from typing import Tuple, List
-import copy
-from multiprocessing import Pool
-import psutil
 
-from ..EdgeConv import EdgeConvBlock
+from src.common.EdgeConv import EdgeConvBlock
 
 class ParticleNetRegressor(nn.Module):
     '''

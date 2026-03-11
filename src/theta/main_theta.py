@@ -13,7 +13,7 @@ from .ParticleDataset_theta import ParticleDataset
 from .ParticleRegressor_theta import ParticleNetRegressor
 from .train_theta import train_model
 from .evaluate_theta import evaluate_model
-from .. import utils
+from src.common import utils
 
 
 def build_argparser():
@@ -37,7 +37,7 @@ def build_argparser():
     p.add_argument("--io_workers", type=int, default=8)
 
     # ===== train cuts (event-level) =====
-    p.add_argument("--Emin", type=float, default=100.0, help="mc_energy lower bound (GeV), inclusive")
+    p.add_argument("--Emin", type=float, default=None, help="mc_energy lower bound (GeV), inclusive")
     p.add_argument("--Emax", type=float, default=None, help="mc_energy upper bound (GeV), exclusive; None means no upper bound")
     p.add_argument("--pinc_max", type=float, default=1.1)
     p.add_argument("--dcedge_min", type=float, default=20.0)

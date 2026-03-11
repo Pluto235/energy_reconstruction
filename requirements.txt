@@ -1,0 +1,8 @@
+torch
+numpy
+scikit-learn
+uproot
+matplotlib
+pandas
+tqdm
+psutil

@@ -7,7 +7,7 @@ import uproot
 from multiprocessing import Pool
 from typing import Dict, Any, Optional, List, Tuple
 
-from ..EdgeConv import process_features
+from src.common.EdgeConv import process_features
 
 
 def _safe_mean_std(x: np.ndarray) -> Tuple[float, float]:

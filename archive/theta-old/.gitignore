@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+
+# Data & models
+*.root
+*.pth
+*.pt
+*.h5
+*.npz
+*.npy
+*.pkl
+data/
+checkpoints/
+outputs/
+logs/
+
+# System
+*.swp
+.DS_Store
+.env

@@ -27,8 +27,11 @@ def main(run_dir):
 
     # ===== ROOT 文件 =====
     root_path = args["root_path"]
-    files = sorted(os.listdir(root_path))
-    files = [os.path.join(root_path, f) for f in files]
+    files = sorted(
+        os.path.join(root_path, f)
+        for f in os.listdir(root_path)
+        if f.endswith(".root") and os.path.isfile(os.path.join(root_path, f))
+    )
     root_files = files[: args["n_files"]]
 
     # ===== 保持和训练一致的 test split =====
@@ -49,6 +52,8 @@ def main(run_dir):
         use_core_box=args["use_core_box"],
         core_box=tuple(args["core_box"]),
         vqsamp_ratio_min=args["vqsamp_ratio_min"],
+        require_fitstat0=args.get("require_fitstat0", True),
+        fitstat_equals=args.get("fitstat_equals", 0),
     )
 
     # ===== dataset =====

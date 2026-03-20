@@ -16,6 +16,17 @@ from .evaluate_theta import evaluate_model
 from src.common import utils
 
 
+def _str2bool(value: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    lowered = value.strip().lower()
+    if lowered in {"1", "true", "t", "yes", "y", "on"}:
+        return True
+    if lowered in {"0", "false", "f", "no", "n", "off"}:
+        return False
+    raise argparse.ArgumentTypeError(f"Invalid boolean value: {value}")
+
+
 def build_argparser():
     p = argparse.ArgumentParser("WCDA Energy Reconstruction")
 
@@ -46,6 +57,8 @@ def build_argparser():
     p.add_argument("--use_core_box", action="store_true", default=False)
     p.add_argument("--core_box", type=float, nargs=4, default=[-130.0, 130.0, -110.0, 110.0])
     p.add_argument("--vqsamp_ratio_min", type=float, default=None) # events 层面的vqsamp剔除
+    p.add_argument("--require_fitstat0", type=_str2bool, default=True, help="Whether to keep only fitstat == 0 events")
+    p.add_argument("--fitstat_equals", type=int, default=0, help="Keep only events with this fitstat value")
 
     # ===== eval cuts (event-level) =====
     p.add_argument("--eval_Emin", type=float, default=None)
@@ -57,6 +70,8 @@ def build_argparser():
     p.add_argument("--eval_use_core_box", action="store_true", default=False)
     p.add_argument("--eval_core_box", type=float, nargs=4, default=None)
     p.add_argument("--eval_vqsamp_ratio_min", type=float, default=None)
+    p.add_argument("--eval_require_fitstat0", type=_str2bool, default=None)
+    p.add_argument("--eval_fitstat_equals", type=int, default=None)
 
     # ===== feature processing behavior =====
     p.add_argument("--norm_mode", type=str, default="per_event", choices=["per_event", "global", "none"])
@@ -137,8 +152,11 @@ def main(args):
     root_path = args.root_path
     file_path = []
     for filename in os.listdir(root_path):
+        if not filename.endswith(".root"):
+            continue
         full_path = os.path.join(root_path, filename)
-        file_path.append(full_path)
+        if os.path.isfile(full_path):
+            file_path.append(full_path)
 
     file_path.sort()
     root_files = file_path[: args.n_files]
@@ -165,6 +183,8 @@ def main(args):
     print(f"训练集文件数: {len(train_files)}")  # 72%
     print(f"验证集文件数: {len(val_files)}")    # 8%
     print(f"测试集文件数: {len(test_files)}")   # 20%
+    fitstat_desc = f"fitstat == {args.fitstat_equals}" if args.require_fitstat0 else "fitstat unrestricted"
+    print(f"事件筛选: {fitstat_desc}")
 
     # ===== train cuts dict (degrees -> radians) =====
     cuts_train = dict(
@@ -177,6 +197,8 @@ def main(args):
         use_core_box=args.use_core_box,
         core_box=tuple(args.core_box),
         vqsamp_ratio_min=args.vqsamp_ratio_min,
+        require_fitstat0=args.require_fitstat0,
+        fitstat_equals=args.fitstat_equals,
     )
 
     # ===== eval cuts dict (degrees -> radians) =====
@@ -193,6 +215,8 @@ def main(args):
         use_core_box=(args.eval_use_core_box or args.use_core_box),
         core_box=tuple(_fallback(args.eval_core_box, args.core_box)),
         vqsamp_ratio_min=_fallback(args.eval_vqsamp_ratio_min, args.vqsamp_ratio_min),
+        require_fitstat0=_fallback(args.eval_require_fitstat0, args.require_fitstat0),
+        fitstat_equals=_fallback(args.eval_fitstat_equals, args.fitstat_equals),
     )
 
     # ===== datasets =====

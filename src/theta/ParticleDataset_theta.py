@@ -10,6 +10,10 @@ from typing import Dict, Any, Optional, List, Tuple
 from src.common.EdgeConv import process_features
 
 
+class MissingRequiredBranchError(RuntimeError):
+    """Raised when a required ROOT branch for theta training is absent."""
+
+
 def _safe_mean_std(x: np.ndarray) -> Tuple[float, float]:
     """Return (mean, std) with numerical safety."""
     if x.size == 0:
@@ -35,6 +39,8 @@ def _default_cuts() -> Dict[str, Any]:
         use_core_box=False,
         core_box=(-130.0, 130.0, -110.0, 110.0),  # (xmin, xmax, ymin, ymax) for mc_xc, mc_yc
         vqsamp_ratio_min=None,   # e.g. 0.2
+        require_fitstat0=True,
+        fitstat_equals=0,
     )
 
 
@@ -176,6 +182,11 @@ class ParticleDataset(Dataset):
         try:
             with uproot.open(file_path) as f:
                 tree = f["t_eventout;1"]
+                available_branches = set(tree.keys())
+                if "fitstat" not in available_branches:
+                    raise MissingRequiredBranchError(
+                        f"Required branch 'fitstat' not found in ROOT tree for file: {file_path}"
+                    )
                 arrays = tree.arrays(full_branches, library="np")
 
             # n_total
@@ -192,6 +203,7 @@ class ParticleDataset(Dataset):
             theta = arrays["theta"]
             mc_xc = arrays["mc_xc"]
             mc_yc = arrays["mc_yc"]
+            fitstat = arrays["fitstat"]
 
             # vqsamp non-zero ratio (optional cut)
             vqsamp_ratio_min = cuts.get("vqsamp_ratio_min", None)
@@ -231,6 +243,11 @@ class ParticleDataset(Dataset):
             if dcedge_min is not None:
                 mask_evt &= (dcedge > float(dcedge_min))
 
+            require_fitstat0 = bool(cuts.get("require_fitstat0", True))
+            fitstat_equals = cuts.get("fitstat_equals", 0)
+            if require_fitstat0:
+                mask_evt &= (fitstat == int(fitstat_equals))
+
             use_core_box = bool(cuts.get("use_core_box", False))
             if use_core_box:
                 xmin, xmax, ymin, ymax = cuts.get("core_box", (-130.0, 130.0, -110.0, 110.0))
@@ -251,7 +268,8 @@ class ParticleDataset(Dataset):
                     f"🔹 {file_path}: kept {n_kept}/{n_total} "
                     f"(E>{cuts.get('Emin')} pinc<{cuts.get('pinc_max')} dcedge>{cuts.get('dcedge_min')} "
                     f"dangle<{cuts.get('dangle_max_rad')} theta<{cuts.get('theta_max_rad')} "
-                    f"core_box={cuts.get('use_core_box')} vqsamp_ratio>={cuts.get('vqsamp_ratio_min')})"
+                    f"fitstat={'0' if require_fitstat0 else 'ALL'} core_box={cuts.get('use_core_box')} "
+                    f"vqsamp_ratio>={cuts.get('vqsamp_ratio_min')})"
                 )
                 print(msg)
 
@@ -312,6 +330,8 @@ class ParticleDataset(Dataset):
 
             return records, stats
 
+        except MissingRequiredBranchError:
+            raise
         except Exception as e:
             stats["ok"] = False
             stats["error"] = str(e)

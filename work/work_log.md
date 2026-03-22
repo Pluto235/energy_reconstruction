@@ -1,5 +1,38 @@
 # Work Log
 
+## 2026-03-22 Update
+
+- All recent changes were made on the `dev` branch.
+- Switched the active theta dataset point centering from reconstructed core `(xc, yc)` to true MC core `(mc_xc, mc_yc)` in `src/theta/ParticleDataset_theta.py`.
+- Kept `use_core_box` on `mc_xc` / `mc_yc` and clarified the related dataset logging / stats output with `true_core_box` and `point_center` metadata.
+- Added a minimal no-core-limit smoke test Slurm script: `scripts/slurm/theta_truecore_points_smoketest.sbatch`.
+- Added a formal no-core-limit training Slurm script: `scripts/slurm/theta_truecore_points_edge0.sbatch`.
+- Submitted smoke test job `2732`; it completed successfully and produced config, dataset stats, checkpoint, loss curve, metrics, prediction arrays, and evaluation figures under `runs/theta_truecore_points_smoketest_2732`.
+- Submitted formal training job `2733`; it entered `RUNNING` and created `runs/theta_truecore_points_edge0_2733`.
+- Main caveat: using `mc_xc` / `mc_yc` injects truth-level core information, so these new runs are not directly comparable to older reco-core-centered runs.
+
+## 2026-03-22 Compare Update
+
+- Compared `runs/theta_truecore_points_edge0_2733` against `runs/no_core_cut_2724` as a true-core-points vs reco-core-points study.
+- Checked `config.json`, `metrics.json`, `preds.npz`, and dataset stats for both runs.
+- Training settings are effectively matched on the main control parameters: same root path, `n_files=10000`, `epochs=500`, `batch_size=512`, `max_points=500`, `sample_mode=weighted_q`, `dcedge_min=0`, `use_core_box=false`, `theta_embed_dim=16`, `loss_mode=huber`, and the same seed.
+- This is a reasonable mainline control experiment by training configuration, but not a perfectly strict one-variable rerun.
+- Caveats found during the check:
+  - the older `no_core_cut_2724` run predates explicit `fitstat` fields in `config.json`, so those settings are not fully recorded in the same schema
+  - `no_core_cut_2724` has `dataset_test_stats.json -> files.n_fail = 1`
+  - dataset event totals are not exactly identical between the two runs, so the underlying file set or readout was not perfectly frozen
+- Created notebook `notebook/truecore_vs_recocore_points_compare_2733_2724.ipynb`.
+- The notebook reads:
+  - `config.json`
+  - `fig/metrics.json`
+  - `fig/preds.npz`
+  - `dataset_train_stats.json`
+  - `dataset_test_stats.json`
+- Generated weighted comparison figures under `notebook/generated/truecore_vs_recocore_points_compare_2733_2724/`:
+  - `resolution_weighted_true_vs_reco_core_points.png`
+  - `bias_weighted_true_vs_reco_core_points.png`
+  - `logRMS_weighted_true_vs_reco_core_points.png`
+
 ## Timestamp
 
 - 2026-03-19 16:58:08 CST (+0800)

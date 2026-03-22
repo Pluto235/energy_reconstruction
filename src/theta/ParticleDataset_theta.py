@@ -268,7 +268,7 @@ class ParticleDataset(Dataset):
                     f"🔹 {file_path}: kept {n_kept}/{n_total} "
                     f"(E>{cuts.get('Emin')} pinc<{cuts.get('pinc_max')} dcedge>{cuts.get('dcedge_min')} "
                     f"dangle<{cuts.get('dangle_max_rad')} theta<{cuts.get('theta_max_rad')} "
-                    f"fitstat={'0' if require_fitstat0 else 'ALL'} core_box={cuts.get('use_core_box')} "
+                    f"fitstat={'0' if require_fitstat0 else 'ALL'} true_core_box={cuts.get('use_core_box')} "
                     f"vqsamp_ratio>={cuts.get('vqsamp_ratio_min')})"
                 )
                 print(msg)
@@ -289,10 +289,10 @@ class ParticleDataset(Dataset):
                 if features.shape[0] == 0:
                     continue
 
-                # (2) points: (vx,vy) centered by reconstructed (xc,yc)
+                # (2) points: (vx,vy) centered by true MC core (mc_xc, mc_yc)
                 vx, vy = features[:, 0], features[:, 1]
-                xc, yc = arrays["xc"][i], arrays["yc"][i]
-                points = np.column_stack([vx - xc, vy - yc]).astype(np.float32)
+                true_xc, true_yc = arrays["mc_xc"][i], arrays["mc_yc"][i]
+                points = np.column_stack([vx - true_xc, vy - true_yc]).astype(np.float32)
 
                 # (3) features: use (vq, vt) -> columns [3] and [2] in your current design
                 vq = features[:, 3].astype(np.float32)
@@ -389,6 +389,8 @@ class ParticleDataset(Dataset):
             files=dict(n_files=n_files, n_fail=n_fail),
             events=dict(n_total=n_total, n_kept=n_kept, keep_ratio=(float(n_kept) / float(n_total) if n_total > 0 else None)),
             log_energy=logE_stats,
+            point_center=dict(x="mc_xc", y="mc_yc"),
+            core_box_reference=dict(x="mc_xc", y="mc_yc"),
         )
 
         with open(save_path, "w") as f:

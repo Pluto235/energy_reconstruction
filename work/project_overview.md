@@ -46,7 +46,7 @@
 ### Input Representation
 
 - Event hits use `vx`, `vy`, `vt`, and `vq`.
-- Points are constructed from hit coordinates centered by reconstructed core `(xc, yc)`.
+- Points are constructed from hit coordinates centered by true MC core `(mc_xc, mc_yc)`.
 - Features are currently based on charge and time.
 - The regression target is `log10(mc_energy)`.
 

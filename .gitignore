@@ -16,6 +16,8 @@ checkpoints/
 outputs/
 logs/
 runs/
+work/
+tasks/
 fig/
 archive/root_artifacts/
 archive/root_fig/

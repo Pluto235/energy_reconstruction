@@ -73,6 +73,7 @@ def main(run_dir):
         cuts=cuts,
         norm_mode=args["norm_mode"],
         sample_mode=args["sample_mode"],
+        core_scale=(args.get("core_scale_x", 130.0), args.get("core_scale_y", 110.0)),
         io_workers=args["io_workers"],
         compute_scaler=False,
         seed=args["seed"],
@@ -99,6 +100,8 @@ def main(run_dir):
         use_fusion=True,
         theta_embed_dim=args["theta_embed_dim"],
         theta_embed_dropout=args["theta_embed_dropout"],
+        core_embed_dim=args.get("core_embed_dim", 0),
+        core_embed_dropout=args.get("core_embed_dropout", 0.0),
     )
 
     # ===== 评估 =====

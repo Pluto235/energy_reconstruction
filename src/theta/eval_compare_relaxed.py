@@ -126,6 +126,7 @@ def build_test_dataset(config, test_files, cuts):
         cuts=cuts,
         norm_mode=config["norm_mode"],
         sample_mode=config["sample_mode"],
+        core_scale=(config.get("core_scale_x", 130.0), config.get("core_scale_y", 110.0)),
         io_workers=config["io_workers"],
         compute_scaler=False,
         seed=config["seed"],
@@ -145,6 +146,8 @@ def build_model(config):
         use_fusion=True,
         theta_embed_dim=config["theta_embed_dim"],
         theta_embed_dropout=config["theta_embed_dropout"],
+        core_embed_dim=config.get("core_embed_dim", 0),
+        core_embed_dropout=config.get("core_embed_dropout", 0.0),
     )
 
 

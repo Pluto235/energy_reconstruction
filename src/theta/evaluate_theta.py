@@ -48,28 +48,42 @@ def evaluate_model(
     model.eval()
 
     preds, trues, ws = [], [], []
+    costheta_all, true_core_all = [], []
+
+    def _unpack_batch(batch):
+        if len(batch) == 7:
+            points, features, mask, costheta, true_core_xy, logE_true, mc_weight = batch
+        elif len(batch) == 6:
+            points, features, mask, costheta, logE_true, mc_weight = batch
+            true_core_xy = None
+        elif len(batch) == 5:
+            points, features, mask, logE_true, mc_weight = batch
+            costheta = None
+            true_core_xy = None
+        else:
+            raise ValueError(f"Unexpected batch size: got {len(batch)} items, expect 5, 6 or 7.")
+
+        return points, features, mask, costheta, true_core_xy, logE_true, mc_weight
 
     with torch.no_grad():
         for batch in test_loader:
-            # ✅ 兼容：既支持 (p,f,m,c,y,w) 也支持 (p,f,m,y,w)
-            if len(batch) == 6:
-                points, features, mask, costheta, logE_true, mc_weight = batch
-            elif len(batch) == 5:
-                points, features, mask, logE_true, mc_weight = batch
-                costheta = None
-            else:
-                raise ValueError(f"Unexpected batch size: got {len(batch)} items, expect 5 or 6.")
+            points, features, mask, costheta, true_core_xy, logE_true, mc_weight = _unpack_batch(batch)
 
             points = points.to(device, non_blocking=True)
             features = features.to(device, non_blocking=True)
             mask = mask.to(device, non_blocking=True)
-            costheta = costheta.to(device, non_blocking=True)
+            costheta = costheta.to(device, non_blocking=True) if costheta is not None else None
+            true_core_xy = true_core_xy.to(device, non_blocking=True) if true_core_xy is not None else None
             logE_true = logE_true.to(device, non_blocking=True)
 
-            logE_pred = model(points, features, mask, costheta)
+            logE_pred = model(points, features, mask, costheta, true_core_xy)
 
             preds.append(logE_pred.detach().cpu().numpy())
             trues.append(logE_true.detach().cpu().numpy())
+            if costheta is not None:
+                costheta_all.append(costheta.detach().cpu().numpy())
+            if true_core_xy is not None:
+                true_core_all.append(true_core_xy.detach().cpu().numpy())
 
             # mc_weight 可能是 torch tensor / numpy / list / None
             if mc_weight is None:
@@ -89,6 +103,8 @@ def evaluate_model(
     logE_pred = np.concatenate(preds, axis=0).squeeze()
     logE_true = np.concatenate(trues, axis=0).squeeze()
     w = np.concatenate(ws, axis=0).squeeze().astype(np.float64)
+    costheta_np = np.concatenate(costheta_all, axis=0).astype(np.float32).squeeze() if costheta_all else np.empty((0,), dtype=np.float32)
+    true_core_np = np.concatenate(true_core_all, axis=0).astype(np.float32) if true_core_all else np.empty((0, 2), dtype=np.float32)
 
     # ===== clean invalid =====
     valid = (
@@ -104,6 +120,10 @@ def evaluate_model(
     logE_pred = logE_pred[valid]
     logE_true = logE_true[valid]
     w = w[valid]
+    if costheta_np.size > 0:
+        costheta_np = costheta_np[valid]
+    if true_core_np.size > 0:
+        true_core_np = true_core_np[valid]
 
     if logE_true.size == 0:
         print("⚠️ 清理后无有效事件")
@@ -198,17 +218,18 @@ def evaluate_model(
             return x
 
         if save_arrays:
-            np.savez(
-                os.path.join(out_dir, "preds.npz"),
+            payload = dict(
                 logE_pred=to_numpy(logE_pred),
                 logE_true=to_numpy(logE_true),
                 E_pred=to_numpy(E_pred),
                 E_true=to_numpy(E_true),
                 rel=to_numpy(rel),
                 dlogE=to_numpy(dlogE),
-                costheta=to_numpy(costheta),
-                mc_weight=to_numpy(w),   # ✅ 保存清理/归一化后的权重
+                costheta=to_numpy(costheta_np),
+                true_core_xy=to_numpy(true_core_np),
+                mc_weight=to_numpy(w),
             )
+            np.savez(os.path.join(out_dir, "preds.npz"), **payload)
 
     # ===== plots: unweighted =====
     utils.plot_resolution(logE_true, logE_pred, space=space, out_dir=out_dir)

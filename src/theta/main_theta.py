@@ -107,6 +107,10 @@ def build_argparser():
     # ===== model: theta embedding =====
     p.add_argument("--theta_embed_dim", type=int, default=16, help="embedding dim for costheta (0 disables)")
     p.add_argument("--theta_embed_dropout", type=float, default=0.0, help="dropout in theta embedding MLP")
+    p.add_argument("--core_embed_dim", type=int, default=16, help="embedding dim for normalized true core (0 disables)")
+    p.add_argument("--core_embed_dropout", type=float, default=0.0, help="dropout in true-core embedding MLP")
+    p.add_argument("--core_scale_x", type=float, default=130.0, help="normalization scale for mc_xc")
+    p.add_argument("--core_scale_y", type=float, default=110.0, help="normalization scale for mc_yc")
 
     return p
 
@@ -229,6 +233,7 @@ def main(args):
         cuts=cuts_train,
         norm_mode=args.norm_mode,
         sample_mode=args.sample_mode,
+        core_scale=(args.core_scale_x, args.core_scale_y),
         io_workers=args.io_workers,
         compute_scaler=(args.norm_mode == "global"),
         save_stats_path=os.path.join(run_dir, "dataset_train_stats.json"),
@@ -245,6 +250,7 @@ def main(args):
         cuts=cuts_train,
         norm_mode=args.norm_mode,
         sample_mode=args.sample_mode,
+        core_scale=(args.core_scale_x, args.core_scale_y),
         io_workers=args.io_workers,
         scaler=train_dataset.scaler if args.norm_mode == "global" else None,
         save_stats_path=os.path.join(run_dir, "dataset_val_stats.json"),
@@ -261,6 +267,7 @@ def main(args):
         cuts=cuts_eval,
         norm_mode=args.norm_mode,
         sample_mode=args.sample_mode,
+        core_scale=(args.core_scale_x, args.core_scale_y),
         io_workers=args.io_workers,
         scaler=train_dataset.scaler if args.norm_mode == "global" else None,
         save_stats_path=os.path.join(run_dir, "dataset_test_stats.json"),
@@ -291,6 +298,8 @@ def main(args):
         use_fusion=True,
         theta_embed_dim=args.theta_embed_dim,
         theta_embed_dropout=args.theta_embed_dropout,
+        core_embed_dim=args.core_embed_dim,
+        core_embed_dropout=args.core_embed_dropout,
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -301,17 +310,22 @@ def main(args):
     print("测试GPU运行...")
     with torch.no_grad():
         batch = next(iter(train_loader))
-        if len(batch) == 6:
-            test_points, test_features, test_mask,test_costheta, test_energies, _w = batch
+        if len(batch) == 7:
+            test_points, test_features, test_mask, test_costheta, test_true_core, test_energies, _w = batch
+        elif len(batch) == 6:
+            test_points, test_features, test_mask, test_costheta, test_energies, _w = batch
+            test_true_core = None
         else:
-            test_points, test_features, test_mask,test_costheta, test_energies = batch
+            test_points, test_features, test_mask, test_costheta, test_energies = batch
+            test_true_core = None
 
         test_points = test_points.to(device, non_blocking=True)
         test_features = test_features.to(device, non_blocking=True)
         test_mask = test_mask.to(device, non_blocking=True)
-        test_costheta = test_costheta.to(device, non_blocking=True)
+        test_costheta = test_costheta.to(device, non_blocking=True) if test_costheta is not None else None
+        test_true_core = test_true_core.to(device, non_blocking=True) if test_true_core is not None else None
 
-        out = model(test_points, test_features, test_mask, test_costheta)
+        out = model(test_points, test_features, test_mask, test_costheta, test_true_core)
         print(f"测试输出形状: {out.shape}")
         print(f"测试输出值范围: {out.min().item():.4f} ~ {out.max().item():.4f}")
 
@@ -375,10 +389,20 @@ if __name__ == "__main__":
     model, pred, true, train_losses, val_losses, run_dir = main(args)
 
     # 可选：模型结构 summary（不建议在 Slurm 大规模扫参时开）
-    try:
-        from torchsummary import summary
-        summary(model, input_size=[(2, args.max_points), (2, args.max_points), (1, args.max_points)])
-    except Exception as e:
-        print(f"torchsummary skipped: {e}")
+    if args.theta_embed_dim > 0 or args.core_embed_dim > 0:
+        print("torchsummary skipped: heterogeneous event-level conditioning inputs are enabled.")
+    else:
+        try:
+            from torchsummary import summary
+            summary(
+                model,
+                input_size=[
+                    (2, args.max_points),
+                    (2, args.max_points),
+                    (1, args.max_points),
+                ],
+            )
+        except Exception as e:
+            print(f"torchsummary skipped: {e}")
 
     print(f"✅ 完成。所有输出已写入: {run_dir}")

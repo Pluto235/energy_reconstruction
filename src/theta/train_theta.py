@@ -37,7 +37,8 @@ def train_model(
     - w_bin = 1 / P(bin)  (并做归一化，使概率意义下平均权重 ~ 1)
     - loss = sum(w_bin * per_event_loss) / sum(w_bin)
 
-    注意：train_loader 若返回 (points, features, mask, logE_true, mc_weight)，mc_weight 在训练中忽略。
+    注意：兼容旧 batch 结构，也兼容新结构
+    (points, features, mask, costheta, true_core_xy, logE_true, mc_weight)。
     """
 
     # ---------- device & DP ----------
@@ -54,9 +55,24 @@ def train_model(
     # ---------- build logE histogram weights ----------
     print("📊 估计训练集 log(E) 分布（unweighted histogram）并构建分bin逆频权重...")
 
+    def _unpack_batch(batch):
+        if len(batch) == 7:
+            points, features, mask, costheta, true_core_xy, logE_true, mc_weight = batch
+        elif len(batch) == 6:
+            points, features, mask, costheta, logE_true, mc_weight = batch
+            true_core_xy = None
+        elif len(batch) == 5:
+            points, features, mask, logE_true, mc_weight = batch
+            costheta = None
+            true_core_xy = None
+        else:
+            raise ValueError(f"Unexpected batch size: got {len(batch)} items, expect 5, 6 or 7.")
+
+        return points, features, mask, costheta, true_core_xy, logE_true, mc_weight
+
     all_logE = []
-    for batch in train_loader: # batch: points, features, mask, costheta, log_energy, mc_weight
-        logE = batch[4]
+    for batch in train_loader:
+        logE = _unpack_batch(batch)[5]
         all_logE.append(logE)
 
     all_logE = torch.cat(all_logE, dim=0).cpu().numpy().reshape(-1)
@@ -157,20 +173,18 @@ def train_model(
         model.train()
         train_loss = 0.0
 
-        for batch_idx, batch in enumerate(train_loader): # batch: points, features, mask, costheta, log_energy, mc_weight
-            if len(batch) == 6:
-                points, features, mask, costheta, logE_true, _ = batch
-            else:
-                points, features, mask, costheta, logE_true = batch
+        for batch_idx, batch in enumerate(train_loader):
+            points, features, mask, costheta, true_core_xy, logE_true, _ = _unpack_batch(batch)
 
             points = points.to(device, non_blocking=True)
             features = features.to(device, non_blocking=True)
             mask = mask.to(device, non_blocking=True)
-            costheta = costheta.to(device, non_blocking=True)
+            costheta = costheta.to(device, non_blocking=True) if costheta is not None else None
+            true_core_xy = true_core_xy.to(device, non_blocking=True) if true_core_xy is not None else None
             logE_true = logE_true.to(device, non_blocking=True)
 
             optimizer.zero_grad(set_to_none=True)
-            logE_pred = model(points, features, mask, costheta)
+            logE_pred = model(points, features, mask, costheta, true_core_xy)
 
             loss = criterion(logE_pred, logE_true)
             loss.backward()
@@ -191,19 +205,17 @@ def train_model(
         model.eval()
         val_loss = 0.0
         with torch.no_grad():
-            for batch in val_loader:  # batch: points, features, mask, costheta, log_energy, mc_weight
-                if len(batch) == 6:
-                    points, features, mask, costheta, logE_true, _ = batch
-                else:
-                    points, features, mask, costheta, logE_true = batch
+            for batch in val_loader:
+                points, features, mask, costheta, true_core_xy, logE_true, _ = _unpack_batch(batch)
 
                 points = points.to(device, non_blocking=True)
                 features = features.to(device, non_blocking=True)
                 mask = mask.to(device, non_blocking=True)
-                costheta = costheta.to(device, non_blocking=True)
+                costheta = costheta.to(device, non_blocking=True) if costheta is not None else None
+                true_core_xy = true_core_xy.to(device, non_blocking=True) if true_core_xy is not None else None
                 logE_true = logE_true.to(device, non_blocking=True)
 
-                logE_pred = model(points, features, mask, costheta)
+                logE_pred = model(points, features, mask, costheta, true_core_xy)
                 val_loss += criterion(logE_pred, logE_true).item()
 
         train_loss /= max(len(train_loader), 1)
@@ -242,4 +254,3 @@ def train_model(
     model.load_state_dict(best_model_wts)
     print(f"🏁 Training completed. Best Val Loss: {best_val_loss:.6f}")
     return train_losses, val_losses, save_path
-

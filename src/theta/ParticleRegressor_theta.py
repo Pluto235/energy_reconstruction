@@ -9,7 +9,8 @@ class ParticleNetRegressor(nn.Module):
     主要网络
     input 
     - points(B, 2, N) features(B, C, N) mask(B, 1, N)
-    + costheta(B,) or (B,1)  # 新增：事件级全局变量
+    + costheta(B,) or (B,1)
+    + true_core_xy(B, 2)
     model:
     EdgeConv block *3
     fusion block
@@ -23,12 +24,15 @@ class ParticleNetRegressor(nn.Module):
                  conv_params: List[Tuple[int, Tuple[int, ...]]] = [(16, (64, 64, 64)), (16, (128, 128, 128)), (16, (256, 256, 256))],
                  fc_params: List[Tuple[int, float]] = [(256, 0.1), (128, 0.1)],
                  use_fusion: bool = True,
-                 theta_embed_dim: int = 16,          # <<< 新增：theta embedding 维度
-                 theta_embed_dropout: float = 0.0    # <<< 可选：theta embedding dropout
+                 theta_embed_dim: int = 16,
+                 theta_embed_dropout: float = 0.0,
+                 core_embed_dim: int = 16,
+                 core_embed_dropout: float = 0.0,
                  ):
         super().__init__()
         self.use_fusion = use_fusion
         self.theta_embed_dim = theta_embed_dim
+        self.core_embed_dim = core_embed_dim
 
         # 输入特征批归一化 input_dims=2 (vq, vt)
         self.bn_fts = nn.BatchNorm1d(input_dims)
@@ -51,20 +55,27 @@ class ParticleNetRegressor(nn.Module):
         else:
             base_fc_input_dim = conv_params[-1][1][-1]
 
-        # -----------------------------
-        # 新增：theta embedding 小网络
-        # 输入 costheta: (B,1) -> 输出: (B, theta_embed_dim)
-        # -----------------------------
+        # Event-level theta embedding
         if theta_embed_dim > 0:
             self.theta_mlp = nn.Sequential(
                 nn.Linear(1, theta_embed_dim),
                 nn.GELU(),
                 nn.Dropout(theta_embed_dropout),
             )
-            fc_input_dim = base_fc_input_dim + theta_embed_dim
         else:
             self.theta_mlp = None
-            fc_input_dim = base_fc_input_dim
+
+        # Event-level true-core embedding using normalized (mc_xc, mc_yc).
+        if core_embed_dim > 0:
+            self.core_mlp = nn.Sequential(
+                nn.Linear(2, core_embed_dim),
+                nn.GELU(),
+                nn.Dropout(core_embed_dropout),
+            )
+        else:
+            self.core_mlp = None
+
+        fc_input_dim = base_fc_input_dim + max(theta_embed_dim, 0) + max(core_embed_dim, 0)
 
         # 回归头(全连接层）
         fcs = []
@@ -92,7 +103,8 @@ class ParticleNetRegressor(nn.Module):
                 points: torch.Tensor,
                 features: torch.Tensor,
                 mask: torch.Tensor,
-                costheta: torch.Tensor = None  # <<< 新增：costheta 输入
+                costheta: torch.Tensor = None,
+                true_core_xy: torch.Tensor = None,
                 ):
         """
         前向传播
@@ -101,6 +113,7 @@ class ParticleNetRegressor(nn.Module):
             features: (B, C, N) - 特征 [电荷, 时间] (你这里 C=2)
             mask:     (B, 1, N) - 掩码
             costheta: (B,) or (B,1) - 事件级全局变量
+            true_core_xy: (B, 2) - 归一化后的真实芯位坐标
         输出:
             logE_pred: (B, 1) - 预测能量(log)
         """
@@ -130,17 +143,29 @@ class ParticleNetRegressor(nn.Module):
         # 全局平均池化 - 只对有效点求平均
         x = fts.sum(dim=-1) / mask.float().sum(dim=-1).clamp(min=1)  # (B, 256)
 
-        # -----------------------------
-        # 新增：拼接 theta embedding
-        # -----------------------------
+        cond_embeddings = []
+
         if self.theta_mlp is not None:
             if costheta is None:
                 raise ValueError("theta_embed_dim>0 but costheta is None. Please pass costheta to forward().")
             if costheta.dim() == 1:
                 costheta = costheta.unsqueeze(1)  # (B,1)
 
-            e_theta = self.theta_mlp(costheta.float())  # (B, k)
-            x = torch.cat([x, e_theta], dim=1)          # (B, 256+k)
+            cond_embeddings.append(self.theta_mlp(costheta.float()))
+
+        if self.core_mlp is not None:
+            if true_core_xy is None:
+                raise ValueError("core_embed_dim>0 but true_core_xy is None. Please pass true_core_xy to forward().")
+            if true_core_xy.dim() == 1:
+                true_core_xy = true_core_xy.unsqueeze(0)
+            true_core_xy = true_core_xy.reshape(true_core_xy.shape[0], -1)
+            if true_core_xy.shape[1] != 2:
+                raise ValueError(f"Expected true_core_xy with shape (B,2), got {tuple(true_core_xy.shape)}")
+
+            cond_embeddings.append(self.core_mlp(true_core_xy.float()))
+
+        if cond_embeddings:
+            x = torch.cat([x] + cond_embeddings, dim=1)
 
         # 回归预测
         logE_pred = self.fc(x)

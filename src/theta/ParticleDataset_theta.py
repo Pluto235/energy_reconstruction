@@ -53,6 +53,7 @@ class ParticleDataset(Dataset):
       - cuts: dict for event-level filtering
       - norm_mode: 'per_event' | 'global' | 'none'
       - sample_mode: 'random' | 'topk_q' | 'firstk' | 'weighted_q'
+      - core_scale: (sx, sy) used to normalize true core (mc_xc, mc_yc)
       - io_workers: multiprocessing workers for ROOT reading
       - keep_raw: store raw branches (VERY memory heavy, default False)
       - scaler: {'vq': {'mean':..., 'std':...}, 'vt': {...}} used for norm_mode='global'
@@ -73,6 +74,7 @@ class ParticleDataset(Dataset):
         cuts: Optional[Dict[str, Any]] = None,
         norm_mode: str = "per_event",
         sample_mode: str = "random",
+        core_scale: Tuple[float, float] = (130.0, 110.0),
         io_workers: Optional[int] = None,
         keep_raw: bool = False,
         scaler: Optional[Dict[str, Dict[str, float]]] = None,
@@ -97,6 +99,9 @@ class ParticleDataset(Dataset):
 
         self.rng = np.random.default_rng(seed)
         self.seed = seed
+        self.core_scale = (float(core_scale[0]), float(core_scale[1]))
+        if self.core_scale[0] <= 0 or self.core_scale[1] <= 0:
+            raise ValueError(f"core_scale must be positive, got: {self.core_scale}")
 
         # Global scaler for vq/vt
         self.scaler = scaler
@@ -109,7 +114,16 @@ class ParticleDataset(Dataset):
 
         # Load data in parallel
         load_args = [
-            (f, self.branches, self.target_branch, self.processing_conditions, self.cuts, self.keep_raw, self.verbose)
+            (
+                f,
+                self.branches,
+                self.target_branch,
+                self.processing_conditions,
+                self.cuts,
+                self.keep_raw,
+                self.verbose,
+                self.core_scale,
+            )
             for f in root_files
         ]
 
@@ -140,7 +154,7 @@ class ParticleDataset(Dataset):
 
         # Write dataset-level stats if requested
         if save_stats_path is not None:
-            self._save_dataset_stats(save_stats_path, stats_all, self.data)
+            self._save_dataset_stats(save_stats_path, stats_all, self.data, self.core_scale)
 
         if self.verbose:
             print(f"✅ Loaded {len(self.data)} events from {len(root_files)} files (io_workers={self.io_workers})")
@@ -154,6 +168,7 @@ class ParticleDataset(Dataset):
         cuts: Dict[str, Any],  # cut字典用来叠加数据筛选
         keep_raw: bool,
         verbose: bool,
+        core_scale: Tuple[float, float],
     ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         """
         Load a single ROOT file and return:
@@ -309,6 +324,15 @@ class ParticleDataset(Dataset):
                 theta_evt = float(arrays["theta"][i])
                 costheta_evt = float(np.cos(theta_evt))
 
+                # Keep true core as a separate 2D event-level condition.
+                true_core_xy = np.array(
+                    [
+                        float(arrays["mc_xc"][i]) / float(core_scale[0]),
+                        float(arrays["mc_yc"][i]) / float(core_scale[1]),
+                    ],
+                    dtype=np.float32,
+                )
+
                 record = {
                     "file": file_path,
                     "event_idx": i,
@@ -319,6 +343,7 @@ class ParticleDataset(Dataset):
                         "log_energy": log_energy,
                         "mc_weight": mc_weight,
                         "costheta": costheta_evt,
+                        "true_core_xy": true_core_xy,
                     }
                 }
 
@@ -364,7 +389,12 @@ class ParticleDataset(Dataset):
         }
 
     @staticmethod
-    def _save_dataset_stats(save_path: str, stats_all: List[Dict[str, Any]], data: List[Dict[str, Any]]) -> None:
+    def _save_dataset_stats(
+        save_path: str,
+        stats_all: List[Dict[str, Any]],
+        data: List[Dict[str, Any]],
+        core_scale: Tuple[float, float],
+    ) -> None:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
         n_files = len(stats_all)
@@ -389,6 +419,11 @@ class ParticleDataset(Dataset):
             files=dict(n_files=n_files, n_fail=n_fail),
             events=dict(n_total=n_total, n_kept=n_kept, keep_ratio=(float(n_kept) / float(n_total) if n_total > 0 else None)),
             log_energy=logE_stats,
+            point_center=dict(x="xc", y="yc"),
+            true_core_conditioning=dict(
+                source=["mc_xc", "mc_yc"],
+                scale={"x": float(core_scale[0]), "y": float(core_scale[1])},
+            ),
         )
 
         with open(save_path, "w") as f:
@@ -465,6 +500,7 @@ class ParticleDataset(Dataset):
         log_energy = proc["log_energy"]
         mc_weight = proc["mc_weight"]
         costheta = proc["costheta"]
+        true_core_xy = proc["true_core_xy"]
 
         # Truncate strategy if too many hits
         points, vq, vt = self._select_hits(points, vq, vt)
@@ -493,5 +529,6 @@ class ParticleDataset(Dataset):
         log_energy_t = torch.tensor(log_energy, dtype=torch.float32).unsqueeze(-1)  # (1,)
         mc_weight_t = torch.tensor(mc_weight, dtype=torch.float32).unsqueeze(-1)  # (1,)
         costheta_t = torch.tensor(costheta, dtype=torch.float32).unsqueeze(-1)  # (1,)
+        true_core_t = torch.tensor(true_core_xy, dtype=torch.float32)  # (2,)
         
-        return points_t, features_t, mask_t, costheta_t, log_energy_t, mc_weight_t
+        return points_t, features_t, mask_t, costheta_t, true_core_t, log_energy_t, mc_weight_t

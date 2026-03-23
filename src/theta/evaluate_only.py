@@ -77,6 +77,7 @@ def main(run_dir):
         compute_scaler=False,
         seed=args["seed"],
         verbose=False,
+        nv_scale=args.get("nv_scale", 3000.0),
     )
 
     test_loader = DataLoader(
@@ -99,6 +100,8 @@ def main(run_dir):
         use_fusion=True,
         theta_embed_dim=args["theta_embed_dim"],
         theta_embed_dropout=args["theta_embed_dropout"],
+        nv_embed_dim=args.get("nv_embed_dim", 0),
+        nv_embed_dropout=args.get("nv_embed_dropout", 0.0),
     )
 
     # ===== 评估 =====

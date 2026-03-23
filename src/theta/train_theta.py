@@ -5,6 +5,19 @@ import copy
 import numpy as np
 
 
+def _unpack_batch(batch):
+    if len(batch) == 7:
+        points, features, mask, costheta, nv, logE_true, mc_weight = batch
+        return points, features, mask, costheta, nv, logE_true, mc_weight
+    if len(batch) == 6:
+        points, features, mask, costheta, logE_true, mc_weight = batch
+        return points, features, mask, costheta, None, logE_true, mc_weight
+    if len(batch) == 5:
+        points, features, mask, logE_true, mc_weight = batch
+        return points, features, mask, None, None, logE_true, mc_weight
+    raise ValueError(f"Unexpected batch size: got {len(batch)} items, expect 5/6/7.")
+
+
 def train_model(
     model,
     train_loader,
@@ -56,7 +69,7 @@ def train_model(
 
     all_logE = []
     for batch in train_loader: # batch: points, features, mask, costheta, log_energy, mc_weight
-        logE = batch[4]
+        logE = _unpack_batch(batch)[5]
         all_logE.append(logE)
 
     all_logE = torch.cat(all_logE, dim=0).cpu().numpy().reshape(-1)
@@ -158,19 +171,19 @@ def train_model(
         train_loss = 0.0
 
         for batch_idx, batch in enumerate(train_loader): # batch: points, features, mask, costheta, log_energy, mc_weight
-            if len(batch) == 6:
-                points, features, mask, costheta, logE_true, _ = batch
-            else:
-                points, features, mask, costheta, logE_true = batch
+            points, features, mask, costheta, nv, logE_true, _ = _unpack_batch(batch)
 
             points = points.to(device, non_blocking=True)
             features = features.to(device, non_blocking=True)
             mask = mask.to(device, non_blocking=True)
-            costheta = costheta.to(device, non_blocking=True)
+            if costheta is not None:
+                costheta = costheta.to(device, non_blocking=True)
+            if nv is not None:
+                nv = nv.to(device, non_blocking=True)
             logE_true = logE_true.to(device, non_blocking=True)
 
             optimizer.zero_grad(set_to_none=True)
-            logE_pred = model(points, features, mask, costheta)
+            logE_pred = model(points, features, mask, costheta, nv)
 
             loss = criterion(logE_pred, logE_true)
             loss.backward()
@@ -192,18 +205,18 @@ def train_model(
         val_loss = 0.0
         with torch.no_grad():
             for batch in val_loader:  # batch: points, features, mask, costheta, log_energy, mc_weight
-                if len(batch) == 6:
-                    points, features, mask, costheta, logE_true, _ = batch
-                else:
-                    points, features, mask, costheta, logE_true = batch
+                points, features, mask, costheta, nv, logE_true, _ = _unpack_batch(batch)
 
                 points = points.to(device, non_blocking=True)
                 features = features.to(device, non_blocking=True)
                 mask = mask.to(device, non_blocking=True)
-                costheta = costheta.to(device, non_blocking=True)
+                if costheta is not None:
+                    costheta = costheta.to(device, non_blocking=True)
+                if nv is not None:
+                    nv = nv.to(device, non_blocking=True)
                 logE_true = logE_true.to(device, non_blocking=True)
 
-                logE_pred = model(points, features, mask, costheta)
+                logE_pred = model(points, features, mask, costheta, nv)
                 val_loss += criterion(logE_pred, logE_true).item()
 
         train_loss /= max(len(train_loader), 1)
@@ -242,4 +255,3 @@ def train_model(
     model.load_state_dict(best_model_wts)
     print(f"🏁 Training completed. Best Val Loss: {best_val_loss:.6f}")
     return train_losses, val_losses, save_path
-

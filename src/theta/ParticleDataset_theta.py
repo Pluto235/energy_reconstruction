@@ -80,6 +80,7 @@ class ParticleDataset(Dataset):
         save_stats_path: Optional[str] = None,
         seed: int = 42,
         verbose: bool = False,
+        nv_scale: float = 3000.0,
     ):
         self.branches = branches
         self.target_branch = target_branch
@@ -94,6 +95,9 @@ class ParticleDataset(Dataset):
         self.sample_mode = sample_mode  # 'random' | 'topk_q' | 'firstk' | 'weighted_q'
         self.keep_raw = keep_raw
         self.verbose = verbose
+        self.nv_scale = float(nv_scale)
+        if self.nv_scale <= 0:
+            raise ValueError("nv_scale must be positive.")
 
         self.rng = np.random.default_rng(seed)
         self.seed = seed
@@ -109,7 +113,16 @@ class ParticleDataset(Dataset):
 
         # Load data in parallel
         load_args = [
-            (f, self.branches, self.target_branch, self.processing_conditions, self.cuts, self.keep_raw, self.verbose)
+            (
+                f,
+                self.branches,
+                self.target_branch,
+                self.processing_conditions,
+                self.cuts,
+                self.keep_raw,
+                self.verbose,
+                self.nv_scale,
+            )
             for f in root_files
         ]
 
@@ -140,7 +153,7 @@ class ParticleDataset(Dataset):
 
         # Write dataset-level stats if requested
         if save_stats_path is not None:
-            self._save_dataset_stats(save_stats_path, stats_all, self.data)
+            self._save_dataset_stats(save_stats_path, stats_all, self.data, self.nv_scale)
 
         if self.verbose:
             print(f"✅ Loaded {len(self.data)} events from {len(root_files)} files (io_workers={self.io_workers})")
@@ -154,6 +167,7 @@ class ParticleDataset(Dataset):
         cuts: Dict[str, Any],  # cut字典用来叠加数据筛选
         keep_raw: bool,
         verbose: bool,
+        nv_scale: float,
     ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         """
         Load a single ROOT file and return:
@@ -309,6 +323,10 @@ class ParticleDataset(Dataset):
                 theta_evt = float(arrays["theta"][i])
                 costheta_evt = float(np.cos(theta_evt))
 
+                # Log-scale nv so the event-level count stays in a stable O(1) range.
+                nv_raw = max(float(arrays["nv"][i]), 0.0)
+                nv_evt = float(np.log1p(nv_raw) / np.log1p(nv_scale))
+
                 record = {
                     "file": file_path,
                     "event_idx": i,
@@ -319,6 +337,7 @@ class ParticleDataset(Dataset):
                         "log_energy": log_energy,
                         "mc_weight": mc_weight,
                         "costheta": costheta_evt,
+                        "nv": nv_evt,
                     }
                 }
 
@@ -364,7 +383,12 @@ class ParticleDataset(Dataset):
         }
 
     @staticmethod
-    def _save_dataset_stats(save_path: str, stats_all: List[Dict[str, Any]], data: List[Dict[str, Any]]) -> None:
+    def _save_dataset_stats(
+        save_path: str,
+        stats_all: List[Dict[str, Any]],
+        data: List[Dict[str, Any]],
+        nv_scale: float,
+    ) -> None:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
         n_files = len(stats_all)
@@ -389,6 +413,10 @@ class ParticleDataset(Dataset):
             files=dict(n_files=n_files, n_fail=n_fail),
             events=dict(n_total=n_total, n_kept=n_kept, keep_ratio=(float(n_kept) / float(n_total) if n_total > 0 else None)),
             log_energy=logE_stats,
+            nv_conditioning=dict(
+                source="nv",
+                transform=dict(kind="log1p_div_log1p_scale", scale=float(nv_scale)),
+            ),
         )
 
         with open(save_path, "w") as f:
@@ -465,6 +493,7 @@ class ParticleDataset(Dataset):
         log_energy = proc["log_energy"]
         mc_weight = proc["mc_weight"]
         costheta = proc["costheta"]
+        nv = proc["nv"]
 
         # Truncate strategy if too many hits
         points, vq, vt = self._select_hits(points, vq, vt)
@@ -493,5 +522,6 @@ class ParticleDataset(Dataset):
         log_energy_t = torch.tensor(log_energy, dtype=torch.float32).unsqueeze(-1)  # (1,)
         mc_weight_t = torch.tensor(mc_weight, dtype=torch.float32).unsqueeze(-1)  # (1,)
         costheta_t = torch.tensor(costheta, dtype=torch.float32).unsqueeze(-1)  # (1,)
+        nv_t = torch.tensor(nv, dtype=torch.float32).unsqueeze(-1)  # (1,)
         
-        return points_t, features_t, mask_t, costheta_t, log_energy_t, mc_weight_t
+        return points_t, features_t, mask_t, costheta_t, nv_t, log_energy_t, mc_weight_t

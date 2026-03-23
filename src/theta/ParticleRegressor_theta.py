@@ -24,11 +24,14 @@ class ParticleNetRegressor(nn.Module):
                  fc_params: List[Tuple[int, float]] = [(256, 0.1), (128, 0.1)],
                  use_fusion: bool = True,
                  theta_embed_dim: int = 16,          # <<< 新增：theta embedding 维度
-                 theta_embed_dropout: float = 0.0    # <<< 可选：theta embedding dropout
+                 theta_embed_dropout: float = 0.0,   # <<< 可选：theta embedding dropout
+                 nv_embed_dim: int = 0,
+                 nv_embed_dropout: float = 0.0,
                  ):
         super().__init__()
         self.use_fusion = use_fusion
         self.theta_embed_dim = theta_embed_dim
+        self.nv_embed_dim = nv_embed_dim
 
         # 输入特征批归一化 input_dims=2 (vq, vt)
         self.bn_fts = nn.BatchNorm1d(input_dims)
@@ -66,6 +69,16 @@ class ParticleNetRegressor(nn.Module):
             self.theta_mlp = None
             fc_input_dim = base_fc_input_dim
 
+        if nv_embed_dim > 0:
+            self.nv_mlp = nn.Sequential(
+                nn.Linear(1, nv_embed_dim),
+                nn.GELU(),
+                nn.Dropout(nv_embed_dropout),
+            )
+            fc_input_dim += nv_embed_dim
+        else:
+            self.nv_mlp = None
+
         # 回归头(全连接层）
         fcs = []
         for idx, (out_dim, dropout) in enumerate(fc_params):
@@ -92,7 +105,8 @@ class ParticleNetRegressor(nn.Module):
                 points: torch.Tensor,
                 features: torch.Tensor,
                 mask: torch.Tensor,
-                costheta: torch.Tensor = None  # <<< 新增：costheta 输入
+                costheta: torch.Tensor = None,  # <<< 新增：costheta 输入
+                nv: torch.Tensor = None,
                 ):
         """
         前向传播
@@ -141,6 +155,15 @@ class ParticleNetRegressor(nn.Module):
 
             e_theta = self.theta_mlp(costheta.float())  # (B, k)
             x = torch.cat([x, e_theta], dim=1)          # (B, 256+k)
+
+        if self.nv_mlp is not None:
+            if nv is None:
+                raise ValueError("nv_embed_dim>0 but nv is None. Please pass nv to forward().")
+            if nv.dim() == 1:
+                nv = nv.unsqueeze(1)
+
+            e_nv = self.nv_mlp(nv.float())
+            x = torch.cat([x, e_nv], dim=1)
 
         # 回归预测
         logE_pred = self.fc(x)

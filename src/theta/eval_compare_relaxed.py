@@ -130,6 +130,7 @@ def build_test_dataset(config, test_files, cuts):
         compute_scaler=False,
         seed=config["seed"],
         verbose=False,
+        nv_scale=config.get("nv_scale", 3000.0),
     )
 
 
@@ -145,6 +146,8 @@ def build_model(config):
         use_fusion=True,
         theta_embed_dim=config["theta_embed_dim"],
         theta_embed_dropout=config["theta_embed_dropout"],
+        nv_embed_dim=config.get("nv_embed_dim", 0),
+        nv_embed_dropout=config.get("nv_embed_dropout", 0.0),
     )
 
 

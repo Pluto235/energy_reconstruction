@@ -6,6 +6,19 @@ from sklearn.metrics import r2_score
 from src.common import utils
 
 
+def _unpack_batch(batch):
+    if len(batch) == 7:
+        points, features, mask, costheta, nv, logE_true, mc_weight = batch
+        return points, features, mask, costheta, nv, logE_true, mc_weight
+    if len(batch) == 6:
+        points, features, mask, costheta, logE_true, mc_weight = batch
+        return points, features, mask, costheta, None, logE_true, mc_weight
+    if len(batch) == 5:
+        points, features, mask, logE_true, mc_weight = batch
+        return points, features, mask, None, None, logE_true, mc_weight
+    raise ValueError(f"Unexpected batch size: got {len(batch)} items, expect 5/6/7.")
+
+
 def evaluate_model(
     model,
     test_loader,
@@ -48,28 +61,29 @@ def evaluate_model(
     model.eval()
 
     preds, trues, ws = [], [], []
+    costheta_all, nv_all = [], []
 
     with torch.no_grad():
         for batch in test_loader:
-            # ✅ 兼容：既支持 (p,f,m,c,y,w) 也支持 (p,f,m,y,w)
-            if len(batch) == 6:
-                points, features, mask, costheta, logE_true, mc_weight = batch
-            elif len(batch) == 5:
-                points, features, mask, logE_true, mc_weight = batch
-                costheta = None
-            else:
-                raise ValueError(f"Unexpected batch size: got {len(batch)} items, expect 5 or 6.")
+            points, features, mask, costheta, nv, logE_true, mc_weight = _unpack_batch(batch)
 
             points = points.to(device, non_blocking=True)
             features = features.to(device, non_blocking=True)
             mask = mask.to(device, non_blocking=True)
-            costheta = costheta.to(device, non_blocking=True)
+            if costheta is not None:
+                costheta = costheta.to(device, non_blocking=True)
+            if nv is not None:
+                nv = nv.to(device, non_blocking=True)
             logE_true = logE_true.to(device, non_blocking=True)
 
-            logE_pred = model(points, features, mask, costheta)
+            logE_pred = model(points, features, mask, costheta, nv)
 
             preds.append(logE_pred.detach().cpu().numpy())
             trues.append(logE_true.detach().cpu().numpy())
+            if costheta is not None:
+                costheta_all.append(costheta.detach().cpu().numpy())
+            if nv is not None:
+                nv_all.append(nv.detach().cpu().numpy())
 
             # mc_weight 可能是 torch tensor / numpy / list / None
             if mc_weight is None:
@@ -104,6 +118,12 @@ def evaluate_model(
     logE_pred = logE_pred[valid]
     logE_true = logE_true[valid]
     w = w[valid]
+    costheta_np = np.concatenate(costheta_all, axis=0).squeeze() if len(costheta_all) else None
+    nv_np = np.concatenate(nv_all, axis=0).squeeze() if len(nv_all) else None
+    if costheta_np is not None:
+        costheta_np = costheta_np[valid]
+    if nv_np is not None:
+        nv_np = nv_np[valid]
 
     if logE_true.size == 0:
         print("⚠️ 清理后无有效事件")
@@ -206,7 +226,8 @@ def evaluate_model(
                 E_true=to_numpy(E_true),
                 rel=to_numpy(rel),
                 dlogE=to_numpy(dlogE),
-                costheta=to_numpy(costheta),
+                costheta=to_numpy(costheta_np),
+                nv=to_numpy(nv_np),
                 mc_weight=to_numpy(w),   # ✅ 保存清理/归一化后的权重
             )
 

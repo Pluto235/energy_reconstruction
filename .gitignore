@@ -17,6 +17,7 @@ outputs/
 logs/
 runs/
 fig/
+notebook/generated/
 archive/root_artifacts/
 archive/root_fig/
 archive/theta-old/.git

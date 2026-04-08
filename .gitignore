@@ -18,6 +18,8 @@ logs/
 runs/
 fig/
 notebook/generated/
+apply/plot/
+apply/summary_selectedcuts/
 archive/root_artifacts/
 archive/root_fig/
 archive/theta-old/.git

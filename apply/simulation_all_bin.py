@@ -79,6 +79,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--reader-workers", type=int, default=0, help="CPU workers for file-level read/preprocess prefetch. 0 keeps sequential mode.")
     parser.add_argument("--prefetch-files", type=int, default=None, help="Maximum number of prepared files kept inflight. Defaults to 2 * reader_workers.")
     parser.add_argument("--reader-backend", type=str, default="thread", choices=["thread", "process"], help="Parallel backend for file prefetch/preprocess.")
+    parser.add_argument("--apply-event-cuts", action="store_true", default=False, help="Apply event-level cuts before inference.")
+    parser.add_argument("--cut-pinc-max", type=float, default=1.1)
+    parser.add_argument("--cut-dangle-max-deg", type=float, default=3.0)
+    parser.add_argument("--cut-theta-max-deg", type=float, default=30.0)
+    parser.add_argument("--cut-fitstat-equals", type=int, default=0)
     return parser.parse_args()
 
 
@@ -433,6 +438,32 @@ def _stack_or_empty(chunks: List[np.ndarray], shape: Tuple[int, ...], dtype: np.
     return np.empty(shape, dtype=dtype)
 
 
+def build_event_mask(
+    arrays: Dict[str, np.ndarray],
+    *,
+    apply_event_cuts: bool,
+    cut_pinc_max: float,
+    cut_dangle_max_deg: float,
+    cut_theta_max_deg: float,
+    cut_fitstat_equals: int,
+) -> np.ndarray:
+    n_events = len(next(iter(arrays.values())) if arrays else [])
+    mask = np.ones(n_events, dtype=bool)
+    if not apply_event_cuts or n_events == 0:
+        return mask
+
+    required = ["pincness", "mc_dangle", "fitstat", "theta"]
+    missing = [name for name in required if name not in arrays]
+    if missing:
+        raise KeyError(f"Missing required branches for event cuts: {missing}")
+
+    mask &= np.asarray(arrays["pincness"] < float(cut_pinc_max))
+    mask &= np.asarray(arrays["mc_dangle"] < (float(cut_dangle_max_deg) * np.pi / 180.0))
+    mask &= np.asarray(arrays["fitstat"] == int(cut_fitstat_equals))
+    mask &= np.asarray(arrays["theta"] < (float(cut_theta_max_deg) * np.pi / 180.0))
+    return mask
+
+
 def load_and_prepare_file(
     file_path: str,
     *,
@@ -441,12 +472,25 @@ def load_and_prepare_file(
     sample_mode: str,
     norm_mode: str,
     seed: int,
+    apply_event_cuts: bool,
+    cut_pinc_max: float,
+    cut_dangle_max_deg: float,
+    cut_theta_max_deg: float,
+    cut_fitstat_equals: int,
 ) -> Dict[str, object]:
     with uproot.open(file_path) as f:
         tree = f[f"{tree_name};1"] if f"{tree_name};1" in f else f[tree_name]
         arrays = tree.arrays(list(tree.keys()), library="np")
 
     n_events = len(next(iter(arrays.values())) if arrays else [])
+    mask_evt = build_event_mask(
+        arrays,
+        apply_event_cuts=apply_event_cuts,
+        cut_pinc_max=cut_pinc_max,
+        cut_dangle_max_deg=cut_dangle_max_deg,
+        cut_theta_max_deg=cut_theta_max_deg,
+        cut_fitstat_equals=cut_fitstat_equals,
+    )
     rng = np.random.default_rng(seed)
 
     prepared_points: List[np.ndarray] = []
@@ -457,7 +501,7 @@ def load_and_prepare_file(
     nhit_labels: List[str] = []
     is_formal_flags: List[bool] = []
 
-    for event_idx in range(n_events):
+    for event_idx in np.nonzero(mask_evt)[0].tolist():
         preprocessed = preprocess_event(
             arrays,
             event_idx,
@@ -484,6 +528,7 @@ def load_and_prepare_file(
         "file_path": file_path,
         "arrays": arrays,
         "total_events": int(n_events),
+        "selected_events": int(np.count_nonzero(mask_evt)),
         "points": _stack_or_empty(prepared_points, (0, 2, max_points), np.float32),
         "features": _stack_or_empty(prepared_features, (0, 2, max_points), np.float32),
         "mask": _stack_or_empty(prepared_mask, (0, 1, max_points), np.float32),
@@ -505,6 +550,11 @@ def iter_prepared_files(
     reader_workers: int,
     prefetch_files: Optional[int],
     reader_backend: str,
+    apply_event_cuts: bool,
+    cut_pinc_max: float,
+    cut_dangle_max_deg: float,
+    cut_theta_max_deg: float,
+    cut_fitstat_equals: int,
 ):
     if reader_workers <= 0:
         for idx, file_path in enumerate(root_files):
@@ -515,6 +565,11 @@ def iter_prepared_files(
                 sample_mode=sample_mode,
                 norm_mode=norm_mode,
                 seed=seed + idx,
+                apply_event_cuts=apply_event_cuts,
+                cut_pinc_max=cut_pinc_max,
+                cut_dangle_max_deg=cut_dangle_max_deg,
+                cut_theta_max_deg=cut_theta_max_deg,
+                cut_fitstat_equals=cut_fitstat_equals,
             )
         return
 
@@ -541,6 +596,11 @@ def iter_prepared_files(
                 sample_mode=sample_mode,
                 norm_mode=norm_mode,
                 seed=seed + next_submit,
+                apply_event_cuts=apply_event_cuts,
+                cut_pinc_max=cut_pinc_max,
+                cut_dangle_max_deg=cut_dangle_max_deg,
+                cut_theta_max_deg=cut_theta_max_deg,
+                cut_fitstat_equals=cut_fitstat_equals,
             )
             next_submit += 1
 
@@ -556,6 +616,11 @@ def iter_prepared_files(
                     sample_mode=sample_mode,
                     norm_mode=norm_mode,
                     seed=seed + next_submit,
+                    apply_event_cuts=apply_event_cuts,
+                    cut_pinc_max=cut_pinc_max,
+                    cut_dangle_max_deg=cut_dangle_max_deg,
+                    cut_theta_max_deg=cut_theta_max_deg,
+                    cut_fitstat_equals=cut_fitstat_equals,
                 )
                 next_submit += 1
             yield prepared
@@ -646,6 +711,11 @@ def run_file_loop(
     reader_workers: int,
     prefetch_files: Optional[int],
     reader_backend: str,
+    apply_event_cuts: bool,
+    cut_pinc_max: float,
+    cut_dangle_max_deg: float,
+    cut_theta_max_deg: float,
+    cut_fitstat_equals: int,
 ) -> Dict[str, object]:
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -682,6 +752,11 @@ def run_file_loop(
             reader_workers=reader_workers,
             prefetch_files=prefetch_files,
             reader_backend=reader_backend,
+            apply_event_cuts=apply_event_cuts,
+            cut_pinc_max=cut_pinc_max,
+            cut_dangle_max_deg=cut_dangle_max_deg,
+            cut_theta_max_deg=cut_theta_max_deg,
+            cut_fitstat_equals=cut_fitstat_equals,
         ),
         start=1,
     ):
@@ -788,6 +863,11 @@ def main() -> None:
             reader_workers=args.reader_workers,
             prefetch_files=args.prefetch_files,
             reader_backend=args.reader_backend,
+            apply_event_cuts=args.apply_event_cuts,
+            cut_pinc_max=args.cut_pinc_max,
+            cut_dangle_max_deg=args.cut_dangle_max_deg,
+            cut_theta_max_deg=args.cut_theta_max_deg,
+            cut_fitstat_equals=args.cut_fitstat_equals,
         )
         total_events = int(result["total_events"])
         inferred_events = int(result["inferred_events"])
@@ -819,6 +899,11 @@ def main() -> None:
                     reader_workers=args.reader_workers,
                     prefetch_files=args.prefetch_files,
                     reader_backend=args.reader_backend,
+                    apply_event_cuts=args.apply_event_cuts,
+                    cut_pinc_max=args.cut_pinc_max,
+                    cut_dangle_max_deg=args.cut_dangle_max_deg,
+                    cut_theta_max_deg=args.cut_theta_max_deg,
+                    cut_fitstat_equals=args.cut_fitstat_equals,
                 )
                 futures.append(executor.submit(run_shard_worker, worker_kwargs))
 

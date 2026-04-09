@@ -13,6 +13,8 @@ from .ParticleRegressor_theta import ParticleNetRegressor
 from .evaluate_theta import evaluate_model
 from src.common import utils
 
+_UNSET = object()
+
 
 def _str2bool(value: str) -> bool:
     if isinstance(value, bool):
@@ -25,8 +27,22 @@ def _str2bool(value: str) -> bool:
     raise argparse.ArgumentTypeError(f"Invalid boolean value: {value}")
 
 
-def _fallback(x, y):
-    return y if x is None else x
+def _float_or_none(value: str):
+    if value is None:
+        return None
+    lowered = value.strip().lower()
+    if lowered in {"none", "null"}:
+        return None
+    try:
+        return float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"Invalid float/None value: {value}") from exc
+
+
+def _resolve_override(override_value, config_eval_value, train_value):
+    if override_value is _UNSET:
+        return train_value if config_eval_value is None else config_eval_value
+    return override_value
 
 
 def build_argparser():
@@ -34,15 +50,15 @@ def build_argparser():
     p.add_argument("--run_dir", type=str, required=True)
     p.add_argument("--out_dir_name", type=str, required=True)
 
-    p.add_argument("--eval_Emin", type=float, default=None)
-    p.add_argument("--eval_Emax", type=float, default=None)
-    p.add_argument("--eval_pinc_max", type=float, default=None)
-    p.add_argument("--eval_dcedge_min", type=float, default=None)
-    p.add_argument("--eval_dangle_max_deg", type=float, default=None)
-    p.add_argument("--eval_theta_max_deg", type=float, default=None)
+    p.add_argument("--eval_Emin", type=_float_or_none, default=_UNSET)
+    p.add_argument("--eval_Emax", type=_float_or_none, default=_UNSET)
+    p.add_argument("--eval_pinc_max", type=_float_or_none, default=_UNSET)
+    p.add_argument("--eval_dcedge_min", type=_float_or_none, default=_UNSET)
+    p.add_argument("--eval_dangle_max_deg", type=_float_or_none, default=_UNSET)
+    p.add_argument("--eval_theta_max_deg", type=_float_or_none, default=_UNSET)
     p.add_argument("--eval_use_core_box", type=_str2bool, default=None)
     p.add_argument("--eval_core_box", type=float, nargs=4, default=None)
-    p.add_argument("--eval_vqsamp_ratio_min", type=float, default=None)
+    p.add_argument("--eval_vqsamp_ratio_min", type=_float_or_none, default=_UNSET)
     p.add_argument("--eval_require_fitstat0", type=_str2bool, default=None)
     p.add_argument("--eval_fitstat_equals", type=int, default=None)
 
@@ -72,21 +88,57 @@ def build_root_files(config):
 
 
 def build_eval_cuts(config, overrides):
-    eval_dangle_deg = _fallback(overrides.get("eval_dangle_max_deg"), _fallback(config.get("eval_dangle_max_deg"), config["dangle_max_deg"]))
-    eval_theta_deg = _fallback(overrides.get("eval_theta_max_deg"), _fallback(config.get("eval_theta_max_deg"), config["theta_max_deg"]))
+    eval_dangle_deg = _resolve_override(
+        overrides.get("eval_dangle_max_deg"),
+        config.get("eval_dangle_max_deg"),
+        config["dangle_max_deg"],
+    )
+    eval_theta_deg = _resolve_override(
+        overrides.get("eval_theta_max_deg"),
+        config.get("eval_theta_max_deg"),
+        config["theta_max_deg"],
+    )
 
     cuts = dict(
-        Emin=_fallback(overrides.get("eval_Emin"), _fallback(config.get("eval_Emin"), config["Emin"])),
-        Emax=_fallback(overrides.get("eval_Emax"), _fallback(config.get("eval_Emax"), config["Emax"])),
-        pinc_max=_fallback(overrides.get("eval_pinc_max"), _fallback(config.get("eval_pinc_max"), config["pinc_max"])),
-        dcedge_min=_fallback(overrides.get("eval_dcedge_min"), _fallback(config.get("eval_dcedge_min"), config["dcedge_min"])),
-        dangle_max_rad=eval_dangle_deg * np.pi / 180.0,
-        theta_max_rad=eval_theta_deg * np.pi / 180.0,
-        use_core_box=_fallback(overrides.get("eval_use_core_box"), bool(config.get("eval_use_core_box") or config["use_core_box"])),
-        core_box=tuple(_fallback(overrides.get("eval_core_box"), _fallback(config.get("eval_core_box"), config["core_box"]))),
-        vqsamp_ratio_min=_fallback(overrides.get("eval_vqsamp_ratio_min"), _fallback(config.get("eval_vqsamp_ratio_min"), config["vqsamp_ratio_min"])),
-        require_fitstat0=_fallback(overrides.get("eval_require_fitstat0"), _fallback(config.get("eval_require_fitstat0"), config.get("require_fitstat0", True))),
-        fitstat_equals=_fallback(overrides.get("eval_fitstat_equals"), _fallback(config.get("eval_fitstat_equals"), config.get("fitstat_equals", 0))),
+        Emin=_resolve_override(overrides.get("eval_Emin"), config.get("eval_Emin"), config["Emin"]),
+        Emax=_resolve_override(overrides.get("eval_Emax"), config.get("eval_Emax"), config["Emax"]),
+        pinc_max=_resolve_override(overrides.get("eval_pinc_max"), config.get("eval_pinc_max"), config["pinc_max"]),
+        dcedge_min=_resolve_override(overrides.get("eval_dcedge_min"), config.get("eval_dcedge_min"), config["dcedge_min"]),
+        dangle_max_rad=None if eval_dangle_deg is None else eval_dangle_deg * np.pi / 180.0,
+        theta_max_rad=None if eval_theta_deg is None else eval_theta_deg * np.pi / 180.0,
+        use_core_box=(
+            overrides.get("eval_use_core_box")
+            if overrides.get("eval_use_core_box") is not None
+            else bool(config.get("eval_use_core_box") or config["use_core_box"])
+        ),
+        core_box=tuple(
+            overrides.get("eval_core_box")
+            if overrides.get("eval_core_box") is not None
+            else (config.get("eval_core_box") if config.get("eval_core_box") is not None else config["core_box"])
+        ),
+        vqsamp_ratio_min=_resolve_override(
+            overrides.get("eval_vqsamp_ratio_min"),
+            config.get("eval_vqsamp_ratio_min"),
+            config["vqsamp_ratio_min"],
+        ),
+        require_fitstat0=(
+            overrides.get("eval_require_fitstat0")
+            if overrides.get("eval_require_fitstat0") is not None
+            else (
+                config.get("eval_require_fitstat0")
+                if config.get("eval_require_fitstat0") is not None
+                else config.get("require_fitstat0", True)
+            )
+        ),
+        fitstat_equals=(
+            overrides.get("eval_fitstat_equals")
+            if overrides.get("eval_fitstat_equals") is not None
+            else (
+                config.get("eval_fitstat_equals")
+                if config.get("eval_fitstat_equals") is not None
+                else config.get("fitstat_equals", 0)
+            )
+        ),
     )
 
     effective_eval_config = deepcopy(config)
@@ -96,8 +148,8 @@ def build_eval_cuts(config, overrides):
             "effective_eval_Emax": cuts["Emax"],
             "effective_eval_pinc_max": cuts["pinc_max"],
             "effective_eval_dcedge_min": cuts["dcedge_min"],
-            "effective_eval_dangle_max_deg": float(eval_dangle_deg),
-            "effective_eval_theta_max_deg": float(eval_theta_deg),
+            "effective_eval_dangle_max_deg": None if eval_dangle_deg is None else float(eval_dangle_deg),
+            "effective_eval_theta_max_deg": None if eval_theta_deg is None else float(eval_theta_deg),
             "effective_eval_use_core_box": bool(cuts["use_core_box"]),
             "effective_eval_core_box": list(cuts["core_box"]),
             "effective_eval_vqsamp_ratio_min": cuts["vqsamp_ratio_min"],
@@ -126,6 +178,7 @@ def build_test_dataset(config, test_files, cuts):
         cuts=cuts,
         norm_mode=config["norm_mode"],
         sample_mode=config["sample_mode"],
+        core_scale=(config.get("core_scale_x", 130.0), config.get("core_scale_y", 110.0)),
         io_workers=config["io_workers"],
         compute_scaler=False,
         seed=config["seed"],
@@ -145,6 +198,8 @@ def build_model(config):
         use_fusion=True,
         theta_embed_dim=config["theta_embed_dim"],
         theta_embed_dropout=config["theta_embed_dropout"],
+        core_embed_dim=config.get("core_embed_dim", 0),
+        core_embed_dropout=config.get("core_embed_dropout", 0.0),
     )
 
 

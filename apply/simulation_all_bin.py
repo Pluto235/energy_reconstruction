@@ -136,6 +136,8 @@ def build_model(config: Dict[str, object], checkpoint_path: str, device: torch.d
         use_fusion=True,
         theta_embed_dim=int(config.get("theta_embed_dim", 16)),
         theta_embed_dropout=float(config.get("theta_embed_dropout", 0.0)),
+        core_embed_dim=int(config.get("core_embed_dim", 0)),
+        core_embed_dropout=float(config.get("core_embed_dropout", 0.0)),
     )
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
     if isinstance(checkpoint, dict) and any(k.startswith("module.") for k in checkpoint.keys()):
@@ -201,6 +203,7 @@ def preprocess_event(
     max_points: int,
     sample_mode: str,
     norm_mode: str,
+    core_scale: Tuple[float, float],
     rng: np.random.Generator,
 ) -> Optional[Dict[str, np.ndarray]]:
     raw_features = np.column_stack([arrays[name][event_idx] for name in MODEL_BRANCHES])
@@ -235,12 +238,20 @@ def preprocess_event(
 
     theta = float(arrays["theta"][event_idx])
     costheta = np.float32(math.cos(theta))
+    reco_core_xy = np.array(
+        [
+            float(arrays["xc"][event_idx]) / float(core_scale[0]),
+            float(arrays["yc"][event_idx]) / float(core_scale[1]),
+        ],
+        dtype=np.float32,
+    )
 
     return {
         "points": points.T.astype(np.float32),
         "features": features.T.astype(np.float32),
         "mask": mask.reshape(1, max_points).astype(np.float32),
         "costheta": np.array([costheta], dtype=np.float32),
+        "reco_core_xy": reco_core_xy,
     }
 
 
@@ -251,14 +262,16 @@ def infer_batch(
     batch_features: np.ndarray,
     batch_mask: np.ndarray,
     batch_costheta: np.ndarray,
+    batch_reco_core_xy: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     points = torch.from_numpy(batch_points).to(device, non_blocking=True)
     features = torch.from_numpy(batch_features).to(device, non_blocking=True)
     mask = torch.from_numpy(batch_mask).to(device, non_blocking=True)
     costheta = torch.from_numpy(batch_costheta).to(device, non_blocking=True)
+    reco_core_xy = torch.from_numpy(batch_reco_core_xy).to(device, non_blocking=True) if batch_reco_core_xy is not None else None
 
     with torch.no_grad():
-        pred = model(points, features, mask, costheta)
+        pred = model(points, features, mask, costheta, reco_core_xy)
     return pred.detach().cpu().numpy().reshape(-1)
 
 
@@ -485,6 +498,7 @@ def load_and_prepare_file(
     cut_dangle_max_deg: float,
     cut_theta_max_deg: float,
     cut_fitstat_equals: int,
+    core_scale: Tuple[float, float],
     keep_nhit_bins: Optional[set] = None,
 ) -> Dict[str, object]:
     with uproot.open(file_path) as f:
@@ -506,6 +520,7 @@ def load_and_prepare_file(
     prepared_features: List[np.ndarray] = []
     prepared_mask: List[np.ndarray] = []
     prepared_costheta: List[np.ndarray] = []
+    prepared_reco_core: List[np.ndarray] = []
     event_indices: List[int] = []
     nhit_labels: List[str] = []
     is_formal_flags: List[bool] = []
@@ -522,6 +537,7 @@ def load_and_prepare_file(
             max_points=max_points,
             sample_mode=sample_mode,
             norm_mode=norm_mode,
+            core_scale=core_scale,
             rng=rng,
         )
         if preprocessed is None:
@@ -531,6 +547,7 @@ def load_and_prepare_file(
         prepared_features.append(preprocessed["features"])
         prepared_mask.append(preprocessed["mask"])
         prepared_costheta.append(preprocessed["costheta"])
+        prepared_reco_core.append(preprocessed["reco_core_xy"])
         event_indices.append(int(event_idx))
         nhit_labels.append(nhit_label)
         is_formal_flags.append(bool(is_formal_bin))
@@ -543,6 +560,7 @@ def load_and_prepare_file(
         "features": _stack_or_empty(prepared_features, (0, 2, max_points), np.float32),
         "mask": _stack_or_empty(prepared_mask, (0, 1, max_points), np.float32),
         "costheta": _stack_or_empty(prepared_costheta, (0, 1), np.float32),
+        "reco_core_xy": _stack_or_empty(prepared_reco_core, (0, 2), np.float32),
         "event_indices": np.asarray(event_indices, dtype=np.int64),
         "nhit_labels": np.asarray(nhit_labels, dtype=object),
         "is_formal_flags": np.asarray(is_formal_flags, dtype=np.bool_),
@@ -565,6 +583,7 @@ def iter_prepared_files(
     cut_dangle_max_deg: float,
     cut_theta_max_deg: float,
     cut_fitstat_equals: int,
+    core_scale: Tuple[float, float],
     keep_nhit_bins: Optional[set] = None,
 ):
     if reader_workers <= 0:
@@ -581,6 +600,7 @@ def iter_prepared_files(
                 cut_dangle_max_deg=cut_dangle_max_deg,
                 cut_theta_max_deg=cut_theta_max_deg,
                 cut_fitstat_equals=cut_fitstat_equals,
+                core_scale=core_scale,
                 keep_nhit_bins=keep_nhit_bins,
             )
         return
@@ -613,6 +633,7 @@ def iter_prepared_files(
                 cut_dangle_max_deg=cut_dangle_max_deg,
                 cut_theta_max_deg=cut_theta_max_deg,
                 cut_fitstat_equals=cut_fitstat_equals,
+                core_scale=core_scale,
                 keep_nhit_bins=keep_nhit_bins,
             )
             next_submit += 1
@@ -634,6 +655,7 @@ def iter_prepared_files(
                     cut_dangle_max_deg=cut_dangle_max_deg,
                     cut_theta_max_deg=cut_theta_max_deg,
                     cut_fitstat_equals=cut_fitstat_equals,
+                    core_scale=core_scale,
                     keep_nhit_bins=keep_nhit_bins,
                 )
                 next_submit += 1
@@ -657,6 +679,7 @@ def process_one_file(
     features_all = prepared["features"]
     mask_all = prepared["mask"]
     costheta_all = prepared["costheta"]
+    reco_core_all = prepared["reco_core_xy"]
     event_indices_all = prepared["event_indices"]
     nhit_labels_all = prepared["nhit_labels"]
     is_formal_all = prepared["is_formal_flags"]
@@ -678,6 +701,7 @@ def process_one_file(
             features_all[start:stop],
             mask_all[start:stop],
             costheta_all[start:stop],
+            reco_core_all[start:stop],
         )
         for local_idx, pred in enumerate(preds.tolist()):
             pos = start + local_idx
@@ -732,6 +756,7 @@ def run_file_loop(
     cut_dangle_max_deg: float,
     cut_theta_max_deg: float,
     cut_fitstat_equals: int,
+    core_scale: Tuple[float, float],
     keep_nhit_bins: Optional[set] = None,
 ) -> Dict[str, object]:
     torch.manual_seed(seed)
@@ -748,6 +773,10 @@ def run_file_loop(
     max_points = int(config["max_points"])
     sample_mode = str(config.get("sample_mode", "weighted_q"))
     norm_mode = str(config.get("norm_mode", "per_event"))
+    core_scale = (
+        float(config.get("core_scale_x", 130.0)),
+        float(config.get("core_scale_y", 110.0)),
+    )
     if norm_mode == "global":
         raise RuntimeError("Run config requests global normalization, but no persisted scaler artifact is available in this project.")
 
@@ -774,6 +803,7 @@ def run_file_loop(
             cut_dangle_max_deg=cut_dangle_max_deg,
             cut_theta_max_deg=cut_theta_max_deg,
             cut_fitstat_equals=cut_fitstat_equals,
+            core_scale=core_scale,
             keep_nhit_bins=keep_nhit_bins,
         ),
         start=1,
@@ -892,6 +922,10 @@ def main() -> None:
             cut_dangle_max_deg=args.cut_dangle_max_deg,
             cut_theta_max_deg=args.cut_theta_max_deg,
             cut_fitstat_equals=args.cut_fitstat_equals,
+            core_scale=(
+                float(config.get("core_scale_x", 130.0)),
+                float(config.get("core_scale_y", 110.0)),
+            ),
             keep_nhit_bins=keep_nhit_bins,
         )
         total_events = int(result["total_events"])
@@ -929,6 +963,10 @@ def main() -> None:
                     cut_dangle_max_deg=args.cut_dangle_max_deg,
                     cut_theta_max_deg=args.cut_theta_max_deg,
                     cut_fitstat_equals=args.cut_fitstat_equals,
+                    core_scale=(
+                        float(config.get("core_scale_x", 130.0)),
+                        float(config.get("core_scale_y", 110.0)),
+                    ),
                     keep_nhit_bins=keep_nhit_bins,
                 )
                 futures.append(executor.submit(run_shard_worker, worker_kwargs))

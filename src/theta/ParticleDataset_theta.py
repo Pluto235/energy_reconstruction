@@ -289,10 +289,9 @@ class ParticleDataset(Dataset):
                 if features.shape[0] == 0:
                     continue
 
-                # (2) points: (vx,vy) centered by reconstructed (xc,yc)
+                # (2) points: keep detector-frame hit coordinates directly
                 vx, vy = features[:, 0], features[:, 1]
-                xc, yc = arrays["xc"][i], arrays["yc"][i]
-                points = np.column_stack([vx - xc, vy - yc]).astype(np.float32)
+                points = np.column_stack([vx, vy]).astype(np.float32)
 
                 # (3) features: use (vq, vt) -> columns [3] and [2] in your current design
                 vq = features[:, 3].astype(np.float32)

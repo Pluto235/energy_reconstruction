@@ -33,6 +33,7 @@ archive/theta-old/model500.md
 *.swp
 .DS_Store
 .env
+.codex
 
 # Task runner outputs
 tasks/*.log

@@ -79,6 +79,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--reader-workers", type=int, default=0, help="CPU workers for file-level read/preprocess prefetch. 0 keeps sequential mode.")
     parser.add_argument("--prefetch-files", type=int, default=None, help="Maximum number of prepared files kept inflight. Defaults to 2 * reader_workers.")
     parser.add_argument("--reader-backend", type=str, default="thread", choices=["thread", "process"], help="Parallel backend for file prefetch/preprocess.")
+    parser.add_argument(
+        "--keep-nhit-bins",
+        type=str,
+        default=None,
+        help="Comma-separated nhit labels to keep on disk and pass through inference, e.g. '>=2000'. "
+        "If omitted, all nhit bins are processed as before.",
+    )
     return parser.parse_args()
 
 
@@ -441,6 +448,7 @@ def load_and_prepare_file(
     sample_mode: str,
     norm_mode: str,
     seed: int,
+    keep_nhit_bins: Optional[set] = None,
 ) -> Dict[str, object]:
     with uproot.open(file_path) as f:
         tree = f[f"{tree_name};1"] if f"{tree_name};1" in f else f[tree_name]
@@ -458,6 +466,11 @@ def load_and_prepare_file(
     is_formal_flags: List[bool] = []
 
     for event_idx in range(n_events):
+        nhit_value = get_nhit_value(arrays, event_idx)
+        nhit_label, is_formal_bin = nhit_bin_label(nhit_value)
+        if keep_nhit_bins is not None and nhit_label not in keep_nhit_bins:
+            continue
+
         preprocessed = preprocess_event(
             arrays,
             event_idx,
@@ -468,9 +481,6 @@ def load_and_prepare_file(
         )
         if preprocessed is None:
             continue
-
-        nhit_value = get_nhit_value(arrays, event_idx)
-        nhit_label, is_formal_bin = nhit_bin_label(nhit_value)
 
         prepared_points.append(preprocessed["points"])
         prepared_features.append(preprocessed["features"])
@@ -505,6 +515,7 @@ def iter_prepared_files(
     reader_workers: int,
     prefetch_files: Optional[int],
     reader_backend: str,
+    keep_nhit_bins: Optional[set] = None,
 ):
     if reader_workers <= 0:
         for idx, file_path in enumerate(root_files):
@@ -515,6 +526,7 @@ def iter_prepared_files(
                 sample_mode=sample_mode,
                 norm_mode=norm_mode,
                 seed=seed + idx,
+                keep_nhit_bins=keep_nhit_bins,
             )
         return
 
@@ -541,6 +553,7 @@ def iter_prepared_files(
                 sample_mode=sample_mode,
                 norm_mode=norm_mode,
                 seed=seed + next_submit,
+                keep_nhit_bins=keep_nhit_bins,
             )
             next_submit += 1
 
@@ -556,6 +569,7 @@ def iter_prepared_files(
                     sample_mode=sample_mode,
                     norm_mode=norm_mode,
                     seed=seed + next_submit,
+                    keep_nhit_bins=keep_nhit_bins,
                 )
                 next_submit += 1
             yield prepared
@@ -610,7 +624,9 @@ def process_one_file(
             file_inferred += 1
             if not is_formal_bin:
                 file_out_of_range += 1
-                continue
+                # Keep the high-nhit overflow bin on disk for downstream plots.
+                if nhit_label != ">=2000":
+                    continue
             bin_key = (nhit_label, pred_label)
             grouped_indices[bin_key].append(event_idx)
             grouped_preds[bin_key].append(float(pred))
@@ -646,6 +662,7 @@ def run_file_loop(
     reader_workers: int,
     prefetch_files: Optional[int],
     reader_backend: str,
+    keep_nhit_bins: Optional[set] = None,
 ) -> Dict[str, object]:
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -682,6 +699,7 @@ def run_file_loop(
             reader_workers=reader_workers,
             prefetch_files=prefetch_files,
             reader_backend=reader_backend,
+            keep_nhit_bins=keep_nhit_bins,
         ),
         start=1,
     ):
@@ -753,6 +771,12 @@ def main() -> None:
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
+    keep_nhit_bins = None
+    if args.keep_nhit_bins is not None and args.keep_nhit_bins.strip() != "":
+        keep_nhit_bins = {item.strip() for item in args.keep_nhit_bins.split(",") if item.strip()}
+        if not keep_nhit_bins:
+            raise ValueError("--keep-nhit-bins was provided but no valid nhit label was parsed.")
+
     run_dir = os.path.realpath(args.run_dir)
     output_root = os.path.realpath(args.output_root)
     summary_dir = os.path.join(output_root, args.summary_dirname)
@@ -788,6 +812,7 @@ def main() -> None:
             reader_workers=args.reader_workers,
             prefetch_files=args.prefetch_files,
             reader_backend=args.reader_backend,
+            keep_nhit_bins=keep_nhit_bins,
         )
         total_events = int(result["total_events"])
         inferred_events = int(result["inferred_events"])
@@ -819,6 +844,7 @@ def main() -> None:
                     reader_workers=args.reader_workers,
                     prefetch_files=args.prefetch_files,
                     reader_backend=args.reader_backend,
+                    keep_nhit_bins=keep_nhit_bins,
                 )
                 futures.append(executor.submit(run_shard_worker, worker_kwargs))
 

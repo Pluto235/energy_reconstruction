@@ -50,6 +50,7 @@ def build_argparser():
     # ===== train cuts (event-level) =====
     p.add_argument("--Emin", type=float, default=None, help="mc_energy lower bound (GeV), inclusive")
     p.add_argument("--Emax", type=float, default=None, help="mc_energy upper bound (GeV), exclusive; None means no upper bound")
+    p.add_argument("--pinc_min", type=float, default=None)
     p.add_argument("--pinc_max", type=float, default=1.1)
     p.add_argument("--dcedge_min", type=float, default=20.0)
     p.add_argument("--dangle_max_deg", type=float, default=3.0)
@@ -63,6 +64,7 @@ def build_argparser():
     # ===== eval cuts (event-level) =====
     p.add_argument("--eval_Emin", type=float, default=None)
     p.add_argument("--eval_Emax", type=float, default=None)
+    p.add_argument("--eval_pinc_min", type=float, default=None)
     p.add_argument("--eval_pinc_max", type=float, default=None)
     p.add_argument("--eval_dcedge_min", type=float, default=None)
     p.add_argument("--eval_dangle_max_deg", type=float, default=None)
@@ -194,6 +196,7 @@ def main(args):
     cuts_train = dict(
         Emin=args.Emin,
         Emax=args.Emax,
+        pinc_min=args.pinc_min,
         pinc_max=args.pinc_max,
         dcedge_min=args.dcedge_min,
         dangle_max_rad=args.dangle_max_deg * np.pi / 180.0,
@@ -212,6 +215,7 @@ def main(args):
     cuts_eval = dict(
         Emin=_fallback(args.eval_Emin, args.Emin),
         Emax=_fallback(args.eval_Emax, args.Emax),
+        pinc_min=_fallback(args.eval_pinc_min, args.pinc_min),
         pinc_max=_fallback(args.eval_pinc_max, args.pinc_max),
         dcedge_min=_fallback(args.eval_dcedge_min, args.dcedge_min),
         dangle_max_rad=_fallback(args.eval_dangle_max_deg, args.dangle_max_deg) * np.pi / 180.0,

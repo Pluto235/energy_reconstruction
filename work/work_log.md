@@ -601,3 +601,93 @@
     - `None`
 - At check time the main partition queue showed:
   - `5122` at the top of the pending list
+
+## 2026-04-12 21:58 CST (+0800)
+
+### Branch
+
+- Created:
+  - `proton-only`
+- Branch base:
+  - current `main` workspace
+
+### Proton-Only Training Definition
+
+- Operational definition for this branch:
+  - keep the maintained theta-embedding training setup
+  - change the event-quality selection from gamma-like to proton-like by requiring:
+    - `pincness > 1.1`
+  - keep other standard cuts unchanged:
+    - `Emin=100 GeV`
+    - `dcedge_min=20`
+    - `dangle_max_deg=3`
+    - `theta_max_deg=30`
+    - `fitstat == 0`
+- Implemented code support:
+  - added `pinc_min` to training-time cuts in `src/theta/main_theta.py`
+  - added `eval_pinc_min` pass-through for eval consistency
+  - added dataset-side `pincness > pinc_min` filtering in `src/theta/ParticleDataset_theta.py`
+  - updated `src/theta/evaluate_only.py`
+  - updated `src/theta/eval_compare_relaxed.py`
+
+### Slurm Scripts
+
+- Added smoke test:
+  - `scripts/slurm/proton_only_smoketest.sbatch`
+- Added formal training job:
+  - `scripts/slurm/proton_only_theta_embed.sbatch`
+
+### Speed / Dataset-Size Choice
+
+- Historical reference:
+  - recent 10000-file training runs used about `2980` train batches per epoch before early stopping
+- Quick proton-like sample check on the first `2` ROOT files under the standard non-pinc cuts:
+  - base-kept events: `1138`
+  - `pincness < 1.1`: `417`
+  - `pincness > 1.1`: `721`
+  - proton-like share in the base-kept sample: about `63.4%`
+- Decision:
+  - formal proton-only training uses `5000` files instead of `10000`
+  - reason:
+    - proton-like selected events are not sparse in this quick sample
+    - halving the file count should cut training steps per epoch by about half while keeping a large sample
+
+### Smoke Test
+
+- Job:
+  - `10876`
+- Result:
+  - completed successfully
+- Run directory:
+  - `runs/proton_only_smoketest_10876`
+- Smoke config:
+  - `n_files=20`
+  - `epochs=2`
+  - `batch_size=16`
+  - `max_points=128`
+  - `pinc_min=1.1`
+  - `pinc_max=9999`
+- Observed training/eval status:
+  - sanity forward passed
+  - training finished normally
+  - evaluation finished normally
+  - figures, metrics, preds, and checkpoint were written
+- Best validation loss:
+  - `0.178087`
+
+### Formal Training Submission
+
+- Submitted:
+  - `scripts/slurm/proton_only_theta_embed.sbatch`
+- Job id:
+  - `10877`
+- Main settings:
+  - `n_files=5000`
+  - `epochs=500`
+  - `batch_size=512`
+  - `max_points=500`
+  - `theta_embed_dim=16`
+  - `pinc_min=1.1`
+  - `pinc_max=9999`
+- State at submission check:
+  - `RUNNING`

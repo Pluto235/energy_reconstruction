@@ -45,6 +45,7 @@ def main(run_dir):
     cuts = dict(
         Emin=args["Emin"],
         Emax=args["Emax"],
+        pinc_min=args.get("pinc_min"),
         pinc_max=args["pinc_max"],
         dcedge_min=args["dcedge_min"],
         dangle_max_rad=args["dangle_max_deg"] * np.pi / 180.0,

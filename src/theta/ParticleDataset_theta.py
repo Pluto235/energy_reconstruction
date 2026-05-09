@@ -8,6 +8,7 @@ from multiprocessing import Pool
 from typing import Dict, Any, Optional, List, Tuple
 
 from src.common.EdgeConv import process_features
+from src.common.hit_coordinate_transform import build_hit_points
 
 
 class MissingRequiredBranchError(RuntimeError):
@@ -32,6 +33,7 @@ def _default_cuts() -> Dict[str, Any]:
     """
     return dict(
         Emin=100.0,
+        pinc_min=None,
         pinc_max=1.1,
         dangle_max_rad=0.05236,  # 3 deg
         theta_max_rad=0.524,     # 30 deg
@@ -242,6 +244,10 @@ class ParticleDataset(Dataset):
             if Emax is not None:
                 mask_evt &= (mc_energy < float(Emax))
 
+            pinc_min = cuts.get("pinc_min", None)
+            if pinc_min is not None:
+                mask_evt &= (pincness > float(pinc_min))
+
             pinc_max = cuts.get("pinc_max", None)
             if pinc_max is not None:
                 mask_evt &= (pincness < float(pinc_max))
@@ -281,7 +287,7 @@ class ParticleDataset(Dataset):
             if verbose:
                 msg = (
                     f"🔹 {file_path}: kept {n_kept}/{n_total} "
-                    f"(E>{cuts.get('Emin')} pinc<{cuts.get('pinc_max')} dcedge>{cuts.get('dcedge_min')} "
+                    f"(E>{cuts.get('Emin')} pinc>{cuts.get('pinc_min')} pinc<{cuts.get('pinc_max')} dcedge>{cuts.get('dcedge_min')} "
                     f"dangle<{cuts.get('dangle_max_rad')} theta<{cuts.get('theta_max_rad')} "
                     f"fitstat={'0' if require_fitstat0 else 'ALL'} core_box={cuts.get('use_core_box')} "
                     f"vqsamp_ratio>={cuts.get('vqsamp_ratio_min')})"
@@ -304,9 +310,13 @@ class ParticleDataset(Dataset):
                 if features.shape[0] == 0:
                     continue
 
-                # (2) points: keep detector-frame hit coordinates directly
-                vx, vy = features[:, 0], features[:, 1]
-                points = np.column_stack([vx, vy]).astype(np.float32)
+                # (2) points: map hit detector ids onto the detector-plane global coordinates
+                detector_ids = np.asarray(arrays["vidmc"][i], dtype=np.int64)
+                points = build_hit_points(
+                    features,
+                    detector_ids=detector_ids,
+                    coordinate_system="global",
+                )
 
                 # (3) features: use (vq, vt) -> columns [3] and [2] in your current design
                 vq = features[:, 3].astype(np.float32)
@@ -418,7 +428,7 @@ class ParticleDataset(Dataset):
             files=dict(n_files=n_files, n_fail=n_fail),
             events=dict(n_total=n_total, n_kept=n_kept, keep_ratio=(float(n_kept) / float(n_total) if n_total > 0 else None)),
             log_energy=logE_stats,
-            point_frame="detector",
+            point_frame="global_detector_plane",
             reco_core_conditioning=dict(
                 source=["xc", "yc"],
                 scale={"x": float(core_scale[0]), "y": float(core_scale[1])},

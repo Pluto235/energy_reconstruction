@@ -21,6 +21,7 @@ import torch
 import uproot
 
 from src.common.EdgeConv import process_features
+from src.common.hit_coordinate_transform import build_hit_points
 from src.theta.ParticleDataset_theta import _safe_mean_std
 from src.theta.ParticleRegressor_theta import ParticleNetRegressor
 
@@ -211,11 +212,14 @@ def preprocess_event(
     if processed.shape[0] == 0:
         return None
 
-    vx = processed[:, 0].astype(np.float32)
-    vy = processed[:, 1].astype(np.float32)
     vt = processed[:, 2].astype(np.float32)
     vq = processed[:, 3].astype(np.float32)
-    points = np.column_stack([vx, vy]).astype(np.float32)
+    detector_ids = np.asarray(arrays["vidmc"][event_idx], dtype=np.int64)
+    points = build_hit_points(
+        processed,
+        detector_ids=detector_ids,
+        coordinate_system="global",
+    )
 
     points, vq, vt = select_hits(
         points,

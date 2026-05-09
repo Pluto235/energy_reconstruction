@@ -52,6 +52,7 @@ def build_argparser():
 
     p.add_argument("--eval_Emin", type=_float_or_none, default=_UNSET)
     p.add_argument("--eval_Emax", type=_float_or_none, default=_UNSET)
+    p.add_argument("--eval_pinc_min", type=_float_or_none, default=_UNSET)
     p.add_argument("--eval_pinc_max", type=_float_or_none, default=_UNSET)
     p.add_argument("--eval_dcedge_min", type=_float_or_none, default=_UNSET)
     p.add_argument("--eval_dangle_max_deg", type=_float_or_none, default=_UNSET)
@@ -102,6 +103,7 @@ def build_eval_cuts(config, overrides):
     cuts = dict(
         Emin=_resolve_override(overrides.get("eval_Emin"), config.get("eval_Emin"), config["Emin"]),
         Emax=_resolve_override(overrides.get("eval_Emax"), config.get("eval_Emax"), config["Emax"]),
+        pinc_min=_resolve_override(overrides.get("eval_pinc_min"), config.get("eval_pinc_min"), config.get("pinc_min")),
         pinc_max=_resolve_override(overrides.get("eval_pinc_max"), config.get("eval_pinc_max"), config["pinc_max"]),
         dcedge_min=_resolve_override(overrides.get("eval_dcedge_min"), config.get("eval_dcedge_min"), config["dcedge_min"]),
         dangle_max_rad=None if eval_dangle_deg is None else eval_dangle_deg * np.pi / 180.0,
@@ -146,6 +148,7 @@ def build_eval_cuts(config, overrides):
         {
             "effective_eval_Emin": cuts["Emin"],
             "effective_eval_Emax": cuts["Emax"],
+            "effective_eval_pinc_min": cuts["pinc_min"],
             "effective_eval_pinc_max": cuts["pinc_max"],
             "effective_eval_dcedge_min": cuts["dcedge_min"],
             "effective_eval_dangle_max_deg": None if eval_dangle_deg is None else float(eval_dangle_deg),
@@ -213,6 +216,7 @@ def main():
     overrides = {
         "eval_Emin": args.eval_Emin,
         "eval_Emax": args.eval_Emax,
+        "eval_pinc_min": args.eval_pinc_min,
         "eval_pinc_max": args.eval_pinc_max,
         "eval_dcedge_min": args.eval_dcedge_min,
         "eval_dangle_max_deg": args.eval_dangle_max_deg,
@@ -244,6 +248,7 @@ def main():
         {
             "Emin": cuts["Emin"],
             "Emax": cuts["Emax"],
+            "pinc_min": cuts["pinc_min"],
             "pinc_max": cuts["pinc_max"],
             "dcedge_min": cuts["dcedge_min"],
             "dangle_max_deg": effective_eval_config["effective_eval_dangle_max_deg"],

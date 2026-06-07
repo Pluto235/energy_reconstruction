@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stage C Observation Reduction Report</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --panel: #161922;
+  --panel-2: #141821;
+  --fg: #e6e8eb;
+  --muted: #9aa3ad;
+  --accent: #4fb6ff;
+  --accent-2: #9be09b;
+  --warn: #f6c177;
+  --danger: #ff8a8a;
+  --border: #262b37;
+  --code: #11141b;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #fafbfc;
+    --panel: #ffffff;
+    --panel-2: #f6f8fa;
+    --fg: #1a1d24;
+    --muted: #5a6470;
+    --accent: #0969da;
+    --accent-2: #1a7f37;
+    --warn: #9a6700;
+    --danger: #cf222e;
+    --border: #d8dee4;
+    --code: #f3f4f6;
+  }
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
+}
+main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 56px 28px 88px;
+}
+header {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 36px;
+  padding-bottom: 24px;
+}
+.eyebrow {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+h1 {
+  margin: 8px 0 10px;
+  font-size: clamp(30px, 5vw, 44px);
+  line-height: 1.15;
+}
+.lead {
+  max-width: 860px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 17px;
+}
+h2 {
+  margin: 44px 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 24px;
+}
+h3 {
+  margin: 28px 0 10px;
+  color: var(--accent);
+  font-size: 18px;
+}
+p { margin: 12px 0; }
+ul { margin: 12px 0; padding-left: 24px; }
+li { margin: 6px 0; }
+code {
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--code);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 13px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+.metric {
+  min-height: 112px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.metric .label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.metric .value {
+  margin-top: 8px;
+  color: var(--fg);
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.metric .note {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.callout {
+  margin: 18px 0;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.callout.warn { border-left-color: var(--warn); }
+.callout.good { border-left-color: var(--accent-2); }
+.callout.danger { border-left-color: var(--danger); }
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin: 18px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+table {
+  width: 100%;
+  min-width: 940px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+th, td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  color: var(--fg);
+  background: var(--panel);
+  font-weight: 700;
+  white-space: nowrap;
+}
+tbody tr:nth-child(odd) td { background: var(--panel-2); }
+tbody tr:last-child td { border-bottom: 0; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.path-list li { overflow-wrap: anywhere; }
+.tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+}
+footer {
+  margin-top: 56px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}
+@media (max-width: 820px) {
+  main { padding: 36px 18px 64px; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">LHAASO-WCDA · Crab SED v1</div>
+    <h1>Stage C Observation Reduction Report</h1>
+    <p class="lead">本页记录当前 Stage C 的完整工作和正式结果：把 observation eval ROOT 与 recovered-time friend tree 合并，执行观测端正式 cuts，并规约成后续 Stage D 直接积分背景和 Stage E 信号提取可直接扫描的 v1 parquet 数据集。</p>
+  </header>
+
+  <section>
+    <h2>结论摘要</h2>
+    <div class="grid">
+      <div class="metric">
+        <div class="label">Run</div>
+        <div class="value">slurm_41959</div>
+        <div class="note">Slurm job 41959</div>
+      </div>
+      <div class="metric">
+        <div class="label">Input files</div>
+        <div class="value">1,258</div>
+        <div class="note">eval ROOT + time friend tree</div>
+      </div>
+      <div class="metric">
+        <div class="label">Input entries</div>
+        <div class="value">127,692,389</div>
+        <div class="note">quicklook 基线为 127,692,389</div>
+      </div>
+      <div class="metric">
+        <div class="label">Selected rows</div>
+        <div class="value">77,247,353</div>
+        <div class="note">最终 v1 parquet 事件数</div>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="metric">
+        <div class="label">Partitions</div>
+        <div class="value">2 months</div>
+        <div class="note">202201 和 202202</div>
+      </div>
+      <div class="metric">
+        <div class="label">Parquet size</div>
+        <div class="value">3.01 GiB</div>
+        <div class="note">1,258 part files</div>
+      </div>
+      <div class="metric">
+        <div class="label">Rough live time</div>
+        <div class="value">43.48 days</div>
+        <div class="note">Stage C 基础量，不是最终背景权重</div>
+      </div>
+      <div class="metric">
+        <div class="label">Elapsed</div>
+        <div class="value">7.23 min</div>
+        <div class="note">12 CPU workers on ETO</div>
+      </div>
+    </div>
+    <div class="callout good">
+      <strong>Stage C full run 已完成并 promoted 到 <code>apply/output/stage_c/current/</code>。</strong>
+      本次处理 1258 个输入文件，missing time 为 0，entry mismatch 为 0。parquet row count 与 metadata 一致，读回验证显示 <code>theta</code>、<code>dcedge</code> 和 <code>cell_id</code> 均满足正式规约口径。
+    </div>
+  </section>
+
+  <section>
+    <h2>为什么需要 Stage C</h2>
+    <p>Crab SED v1 流水线前两步都在 MC 侧：Stage A 计算二维探测器响应 <code>eta_b(E_true, theta)</code> 和有效面积，Stage B 在 Crab 赤纬带上给每个 v1 cell 计算 PSF 与积分半径。要把这些 MC 结果用于真实观测，必须先把观测数据整理成同样的观测空间单元 <code>b = (Nhit bin, log10 E_pred bin)</code>，并且给每个事件补上时间和天球坐标。</p>
+    <p>这正是 Stage C 的职责：它不是做源显著性，也不是做背景模型，而是把观测 eval ROOT 变成一个干净、列式、可复查的数据集。后面的 Stage D 会用这份数据重建直接积分法接收度和 rate 曲线；Stage E 会在每个 cell 的 on-region 内计数并和背景预测组合。</p>
+
+    <h3>和 quicklook 天图的区别</h3>
+    <p>此前的 <code>apply/plot_crab_cell_skymaps.py</code> 已经处理过同一批 1258 个观测文件，并画了 Crab 附近的 cell 天图。这一步很有价值，但它只是 Stage C/D/E 之间的诊断 quicklook：它只看 Crab 附近 ROI，少了正式路线要求的 <code>dcedge &gt; 20 m</code>，也没有输出月度 parquet 或 manifest。</p>
+    <p>当前 Stage C 则是正式数据规约：使用全天清洗后的 v1-cell 事件，不做 Crab ROI 过滤；输出 parquet 分区目录、manifest、metadata、source file 表、cutflow 和 cell counts。它为直接积分法背景保留了必要的时间、天球坐标和局部方向诊断列。</p>
+  </section>
+
+  <section>
+    <h2>输入、对齐与正式 Cuts</h2>
+    <ul>
+      <li>观测 eval ROOT：<code>/mnt/mydisk/WCDA_observation_eval/&lt;MMDD&gt;/Esg*.root</code>，读取 <code>t_eventout</code>。</li>
+      <li>时间恢复 friend tree：<code>/mnt/mydisk/WCDA_observation_eval/recovered_time/&lt;MMDD&gt;/*.time.root</code>，读取 <code>t_recovered_time</code>。</li>
+      <li>对齐方式：同名 eval ROOT 与 <code>.time.root</code> 按 entry 顺序对齐；正式 full run 默认 missing time 或 entry mismatch 即失败。</li>
+      <li>正式 cuts：<code>match_status == 0</code>、<code>pincness &lt; 1.1</code>、<code>fitstat == 0</code>、<code>theta &lt; 50 deg</code>、<code>dcedge &gt; 20 m</code>。</li>
+      <li>cell selection：用 <code>nv</code> 和 <code>ml_logE_pred</code> 映射到 <code>apply/config/cell_selection_v1.csv</code> 的 18 个 v1 physical-band cells；不在表内的事件丢弃。</li>
+    </ul>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Step</th><th>含义</th><th>条件</th><th class="num">Count</th><th class="num">输入保留率</th><th class="num">相对上一步</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>input_entries</code></td><td>输入 entries</td><td>所有 eval ROOT 与 time friend tree 对齐后的共同 entry 数</td><td class="num">127,692,389</td><td class="num">100.00%</td><td class="num">-</td></tr>
+          <tr><td><code>after_match_status</code></td><td>时间匹配成功</td><td>match_status == 0</td><td class="num">127,691,852</td><td class="num">100.00%</td><td class="num">100.00%</td></tr>
+          <tr><td><code>after_pincness</code></td><td>pincness cut</td><td>pincness &lt; 1.1</td><td class="num">127,691,852</td><td class="num">100.00%</td><td class="num">100.00%</td></tr>
+          <tr><td><code>after_fitstat</code></td><td>fitstat cut</td><td>fitstat == 0</td><td class="num">127,691,852</td><td class="num">100.00%</td><td class="num">100.00%</td></tr>
+          <tr><td><code>after_theta</code></td><td>theta cut</td><td>theta &lt; 50 deg</td><td class="num">127,691,852</td><td class="num">100.00%</td><td class="num">100.00%</td></tr>
+          <tr><td><code>after_dcedge</code></td><td>dcedge cut</td><td>dcedge &gt; 20 m</td><td class="num">90,835,802</td><td class="num">71.14%</td><td class="num">71.14%</td></tr>
+          <tr><td><code>after_finite</code></td><td>finite check</td><td>输出列和分箱列均 finite</td><td class="num">90,835,802</td><td class="num">71.14%</td><td class="num">100.00%</td></tr>
+          <tr><td><code>after_cell_selection</code></td><td>v1 cell selection</td><td>落入 18 个 v1 physical-band cells</td><td class="num">77,247,353</td><td class="num">60.49%</td><td class="num">85.04%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>这里 <code>pincness</code>、<code>fitstat</code> 和 <code>theta</code> 在本批 observation eval ROOT 中没有进一步减少事件；主要筛选发生在 <code>dcedge &gt; 20 m</code> 和 18-cell selection。最终 v1 parquet 保留输入 entry 的 60.49%，保留 dcedge cut 后事件的 85.04%。</p>
+  </section>
+
+  <section>
+    <h2>输出数据集</h2>
+    <p>Stage C 输出采用 Hive-style parquet 分区目录，月份来自文件名 <code>EsgYYYYMMDD_HH.root</code> 的 <code>YYYYMM</code>，而不是逐事件 MJD 重新拆分。这样每个输入 ROOT 对应一个 parquet part 文件，便于 Slurm 并行写入、失败定位和后续扫描。</p>
+    <ul class="path-list">
+      <li><code>apply/output/stage_c/current/obs_events/yyyymm=YYYYMM/part-*.parquet</code>：正式观测事件数据集。</li>
+      <li><code>apply/output/stage_c/current/obs_events_manifest.json</code>：dataset path、schema、partition 和 parquet 文件列表。</li>
+      <li><code>apply/output/stage_c/current/obs_events_metadata.json</code>：输入路径、cuts、cell selection、处理参数、MJD coverage、rough live-time basis 和 promotion 状态。</li>
+      <li><code>apply/output/stage_c/current/source_files.csv</code>：每个输入文件的 entry 数、输出 part、MJD span 和粗略 live-time 基础量。</li>
+      <li><code>apply/output/stage_c/current/obs_events_cutflow.csv</code>：global/month/file cutflow。</li>
+      <li><code>apply/output/stage_c/current/obs_events_cell_counts.csv</code>：global/month/file 的 18-cell 事件数。</li>
+      <li><code>apply/output/stage_c/current/obs_events_summary.md</code>：机器输出之外的简短摘要。</li>
+    </ul>
+
+    <h3>月度分区</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>yyyymm</th><th class="num">input / parquet files</th><th class="num">selected rows</th><th class="num">占比</th><th class="num">rough live-time days</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>202201</td><td class="num">658</td><td class="num">39,966,647</td><td class="num">51.74%</td><td class="num">22.7892</td></tr>
+          <tr><td>202202</td><td class="num">600</td><td class="num">37,280,706</td><td class="num">48.26%</td><td class="num">20.6871</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Parquet Schema</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Column</th><th>Type</th><th>用途</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>ra_mean_deg</code></td><td><code>float</code></td><td>recovered-time friend tree 恢复的赤经，单位 deg</td></tr>
+          <tr><td><code>dec_mean_deg</code></td><td><code>float</code></td><td>recovered-time friend tree 恢复的赤纬，单位 deg</td></tr>
+          <tr><td><code>mjd</code></td><td><code>double</code></td><td>recovered-time friend tree 中的 Modified Julian Date</td></tr>
+          <tr><td><code>theta</code></td><td><code>float</code></td><td>重建天顶角，单位 rad；cut 使用 theta &lt; 50 deg</td></tr>
+          <tr><td><code>phi</code></td><td><code>float</code></td><td>重建方位角，单位 rad，用于后续局部接收度诊断</td></tr>
+          <tr><td><code>cell_id</code></td><td><code>int16</code></td><td>v1 physical-band cell id，范围 1-18</td></tr>
+          <tr><td><code>nv</code></td><td><code>int32</code></td><td>有效 hit 数，用于 Nhit 分箱诊断</td></tr>
+          <tr><td><code>ml_logE_pred</code></td><td><code>float</code></td><td>ML 预测 log10(E/GeV)，用于 predicted-energy 分箱诊断</td></tr>
+          <tr><td><code>dcedge</code></td><td><code>float</code></td><td>重建 core 到边界距离，单位 m；float32 存储</td></tr>
+          <tr><td><code>source_file_id</code></td><td><code>int32</code></td><td>source_files.csv 中的 0-based 文件编号</td></tr>
+          <tr><td><code>entry</code></td><td><code>int64</code></td><td>源 eval ROOT tree 中的 0-based entry 编号</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>18 个 v1 Cell 的观测统计</h2>
+    <p>下表是 full Stage C 后的全局 cell counts。前三个低/中 Nhit、低 predicted-energy cells 占据主要统计量；高 Nhit 和高 predicted-energy cells 统计较少，但仍被保留供后续 Stage E 按 PSF 半径做 on-region 计数。</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>cell_id</th><th>Nhit bin</th><th>log10 E_pred bin</th><th class="num">selected events</th><th class="num">占比</th><th class="num">累计占比</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>[30,60)</td><td>[2,3)</td><td class="num">18,102,668</td><td class="num">23.43%</td><td class="num">23.43%</td></tr>
+          <tr><td>2</td><td>[60,100)</td><td>[2,3)</td><td class="num">23,097,824</td><td class="num">29.90%</td><td class="num">53.34%</td></tr>
+          <tr><td>3</td><td>[60,100)</td><td>[3,3.25)</td><td class="num">1,221,585</td><td class="num">1.58%</td><td class="num">54.92%</td></tr>
+          <tr><td>4</td><td>[100,200)</td><td>[2,3)</td><td class="num">23,642,432</td><td class="num">30.61%</td><td class="num">85.52%</td></tr>
+          <tr><td>5</td><td>[100,200)</td><td>[3,3.25)</td><td class="num">2,951,242</td><td class="num">3.82%</td><td class="num">89.34%</td></tr>
+          <tr><td>6</td><td>[200,300)</td><td>[2,3)</td><td class="num">3,511,356</td><td class="num">4.55%</td><td class="num">93.89%</td></tr>
+          <tr><td>7</td><td>[200,300)</td><td>[3,3.25)</td><td class="num">1,555,252</td><td class="num">2.01%</td><td class="num">95.90%</td></tr>
+          <tr><td>8</td><td>[300,500)</td><td>[3,3.25)</td><td class="num">1,191,475</td><td class="num">1.54%</td><td class="num">97.45%</td></tr>
+          <tr><td>9</td><td>[300,500)</td><td>[3.25,3.5)</td><td class="num">782,322</td><td class="num">1.01%</td><td class="num">98.46%</td></tr>
+          <tr><td>10</td><td>[500,800)</td><td>[3.25,3.5)</td><td class="num">477,133</td><td class="num">0.62%</td><td class="num">99.08%</td></tr>
+          <tr><td>11</td><td>[500,800)</td><td>[3.5,3.75)</td><td class="num">280,350</td><td class="num">0.36%</td><td class="num">99.44%</td></tr>
+          <tr><td>12</td><td>[500,800)</td><td>[3.75,4.0)</td><td class="num">90,323</td><td class="num">0.12%</td><td class="num">99.56%</td></tr>
+          <tr><td>13</td><td>[800,1100)</td><td>[3.5,3.75)</td><td class="num">122,657</td><td class="num">0.16%</td><td class="num">99.71%</td></tr>
+          <tr><td>14</td><td>[800,1100)</td><td>[3.75,4.0)</td><td class="num">74,431</td><td class="num">0.10%</td><td class="num">99.81%</td></tr>
+          <tr><td>15</td><td>[800,1100)</td><td>[4.0,4.25)</td><td class="num">23,556</td><td class="num">0.03%</td><td class="num">99.84%</td></tr>
+          <tr><td>16</td><td>[1100,2000)</td><td>[3.75,4.0)</td><td class="num">51,102</td><td class="num">0.07%</td><td class="num">99.91%</td></tr>
+          <tr><td>17</td><td>[1100,2000)</td><td>[4.0,4.25)</td><td class="num">46,341</td><td class="num">0.06%</td><td class="num">99.97%</td></tr>
+          <tr><td>18</td><td>[1100,2000)</td><td>[4.25,4.5)</td><td class="num">25,304</td><td class="num">0.03%</td><td class="num">100.00%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>验证结果</h2>
+    <div class="grid">
+      <div class="metric">
+        <div class="label">Parquet rows</div>
+        <div class="value">77,247,353</div>
+        <div class="note">与 metadata selected_rows 一致</div>
+      </div>
+      <div class="metric">
+        <div class="label">Part files</div>
+        <div class="value">1,258</div>
+        <div class="note">manifest 与实际文件数一致</div>
+      </div>
+      <div class="metric">
+        <div class="label">dcedge readback</div>
+        <div class="value">&ge; 20.0</div>
+        <div class="note">float32 读回无 < 20.0；2 行等于 20.0 来自存储舍入</div>
+      </div>
+      <div class="metric">
+        <div class="label">theta readback</div>
+        <div class="value">&lt; 50 deg</div>
+        <div class="note">theta_ge_cut = 0</div>
+      </div>
+    </div>
+    <ul>
+      <li><code>cell_id</code> 读回范围为 1 到 18，out-of-range rows = 0。</li>
+      <li><code>dcedge</code> 读回范围为 20 到 149.997 m，<code>dcedge &lt; 20</code> rows = 0。</li>
+      <li><code>theta</code> 读回最大值为 0.872664 rad，小于 <code>radians(50)</code> = 0.872665。</li>
+      <li>MJD coverage：matched [59579.7, 59638.7]，selected [59579.7, 59638.7]。</li>
+    </ul>
+    <div class="callout warn">
+      <strong>Live time 这里只是基础量，不是最终物理权重。</strong>
+      Stage C 用 match-status 通过的 MJD span 减去超过 60 秒的 gap，给出 rough live-time basis = 43.4764 days。Stage D 仍然负责按 cell、rate bin 和直接积分背景模型定义最终 rate/live-time weighting。
+    </div>
+  </section>
+
+  <section>
+    <h2>下一步</h2>
+    <p>Stage C 完成后，后续工作可以转向 Stage D：直接积分法背景估计。Stage D 应读取 <code>apply/output/stage_c/current/obs_events/</code>，按 <code>cell_id</code> 分组构建局部接收度图和 rate 曲线，并用 Stage B 的 <code>r_opt</code> 支持 Stage E 的 Crab on-region 计数。</p>
+    <p>本报告中的 quicklook 对照只用于解释为什么需要正式 Stage C；最终背景、excess 和 Li-Ma 显著性不应从 quicklook sideband 图读取，而应来自 Stage D/E 的正式输出。</p>
+  </section>
+
+  <footer>
+    Generated for internal review on 2026-06-05. Source facts: <code>apply/output/stage_c/current/obs_events_metadata.json</code>, manifest, source files, cutflow, cell counts, Slurm job 41959 log, and parquet readback checks.
+  </footer>
+</main>
+</body>
+</html>

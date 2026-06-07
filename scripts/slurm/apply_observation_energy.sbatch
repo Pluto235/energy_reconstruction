@@ -55,6 +55,7 @@ CMD=(
   --cut-pinc-max 1.1
   --cut-fitstat-equals 0
   --cut-theta-max-deg 50
+  --cut-dcedge-min 20
   --print-every 10
 )
 

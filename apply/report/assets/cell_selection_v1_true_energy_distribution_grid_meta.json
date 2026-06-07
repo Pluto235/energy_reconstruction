@@ -1,0 +1,178 @@
+{
+  "summary_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/summary_selectedcuts/bin_counts.csv",
+  "cell_selection_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selection_v1.csv",
+  "binned_root": "/mnt/mydisk/WCDA_simulation_binned_selectedcuts",
+  "pred_bins": [
+    "[2,3)",
+    "[3,3.25)",
+    "[3.25,3.5)",
+    "[3.5,3.75)",
+    "[3.75,4.0)",
+    "[4.0,4.25)",
+    "[4.25,4.5)"
+  ],
+  "nhit_letter_map": [
+    {
+      "letter": "a",
+      "nhit_bin": "[30,60)"
+    },
+    {
+      "letter": "b",
+      "nhit_bin": "[60,100)"
+    },
+    {
+      "letter": "c",
+      "nhit_bin": "[100,200)"
+    },
+    {
+      "letter": "d",
+      "nhit_bin": "[200,300)"
+    },
+    {
+      "letter": "e",
+      "nhit_bin": "[300,500)"
+    },
+    {
+      "letter": "f",
+      "nhit_bin": "[500,800)"
+    },
+    {
+      "letter": "g",
+      "nhit_bin": "[800,1100)"
+    },
+    {
+      "letter": "h",
+      "nhit_bin": "[1100,2000)"
+    }
+  ],
+  "num_cells_with_acceptable_data": 18,
+  "target_events_per_bin": 2000,
+  "per_cell": [
+    {
+      "nhit_letter": "a",
+      "nhit_bin": "[30,60)",
+      "predE_bin": "[2,3)",
+      "summary_count": 86609,
+      "events_used_for_plot": 2009
+    },
+    {
+      "nhit_letter": "b",
+      "nhit_bin": "[60,100)",
+      "predE_bin": "[2,3)",
+      "summary_count": 423777,
+      "events_used_for_plot": 2002
+    },
+    {
+      "nhit_letter": "b",
+      "nhit_bin": "[60,100)",
+      "predE_bin": "[3,3.25)",
+      "summary_count": 22631,
+      "events_used_for_plot": 2001
+    },
+    {
+      "nhit_letter": "c",
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[2,3)",
+      "summary_count": 935671,
+      "events_used_for_plot": 2059
+    },
+    {
+      "nhit_letter": "c",
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[3,3.25)",
+      "summary_count": 149327,
+      "events_used_for_plot": 2011
+    },
+    {
+      "nhit_letter": "d",
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[2,3)",
+      "summary_count": 258212,
+      "events_used_for_plot": 2030
+    },
+    {
+      "nhit_letter": "d",
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[3,3.25)",
+      "summary_count": 162827,
+      "events_used_for_plot": 2007
+    },
+    {
+      "nhit_letter": "e",
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3,3.25)",
+      "summary_count": 157484,
+      "events_used_for_plot": 2011
+    },
+    {
+      "nhit_letter": "e",
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3.25,3.5)",
+      "summary_count": 152731,
+      "events_used_for_plot": 2001
+    },
+    {
+      "nhit_letter": "f",
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.25,3.5)",
+      "summary_count": 89790,
+      "events_used_for_plot": 2011
+    },
+    {
+      "nhit_letter": "f",
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.5,3.75)",
+      "summary_count": 85249,
+      "events_used_for_plot": 2004
+    },
+    {
+      "nhit_letter": "f",
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.75,4.0)",
+      "summary_count": 34158,
+      "events_used_for_plot": 2003
+    },
+    {
+      "nhit_letter": "g",
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[3.5,3.75)",
+      "summary_count": 34552,
+      "events_used_for_plot": 2003
+    },
+    {
+      "nhit_letter": "g",
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[3.75,4.0)",
+      "summary_count": 28276,
+      "events_used_for_plot": 2002
+    },
+    {
+      "nhit_letter": "g",
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[4.0,4.25)",
+      "summary_count": 13829,
+      "events_used_for_plot": 2002
+    },
+    {
+      "nhit_letter": "h",
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[3.75,4.0)",
+      "summary_count": 24408,
+      "events_used_for_plot": 2002
+    },
+    {
+      "nhit_letter": "h",
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[4.0,4.25)",
+      "summary_count": 27355,
+      "events_used_for_plot": 2000
+    },
+    {
+      "nhit_letter": "h",
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[4.25,4.5)",
+      "summary_count": 13358,
+      "events_used_for_plot": 2000
+    }
+  ]
+}

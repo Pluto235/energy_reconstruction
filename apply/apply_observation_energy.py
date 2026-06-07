@@ -34,7 +34,7 @@ PROCESSING_CONDITIONS_WITH_NAMES = [
 ]
 PROCESSING_CONDITIONS = [{k: v for k, v in item.items() if k != "name"} for item in PROCESSING_CONDITIONS_WITH_NAMES]
 MODEL_BRANCHES = [item["name"] for item in PROCESSING_CONDITIONS_WITH_NAMES]
-REQUIRED_EVENT_BRANCHES = MODEL_BRANCHES + ["vidmc", "theta", "xc", "yc", "pincness", "fitstat"]
+REQUIRED_EVENT_BRANCHES = MODEL_BRANCHES + ["vidmc", "theta", "xc", "yc", "pincness", "fitstat", "dcedge"]
 DROP_BRANCHES = {"vx", "vy", "vq", "vt"}
 LEGACY_LAYOUT_PREFIX = "obs_filtered_"
 DAY_DIR_RE = re.compile(r"^\d{4}$")
@@ -86,6 +86,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cut-pinc-max", type=float, default=1.1)
     parser.add_argument("--cut-fitstat-equals", type=int, default=0)
     parser.add_argument("--cut-theta-max-deg", type=float, default=50.0)
+    parser.add_argument("--cut-dcedge-min", type=float, default=20.0)
     return parser.parse_args()
 
 
@@ -432,6 +433,7 @@ def filter_event_indices(
     cut_pinc_max: float,
     cut_fitstat_equals: int,
     cut_theta_max_deg: float,
+    cut_dcedge_min: float,
 ) -> np.ndarray:
     n_events = len(next(iter(arrays.values())) if arrays else [])
     if n_events == 0:
@@ -445,6 +447,7 @@ def filter_event_indices(
     mask &= np.asarray(arrays["pincness"] < float(cut_pinc_max))
     mask &= np.asarray(arrays["fitstat"] == int(cut_fitstat_equals))
     mask &= np.asarray(arrays["theta"] < (float(cut_theta_max_deg) * np.pi / 180.0))
+    mask &= np.asarray(arrays["dcedge"] > float(cut_dcedge_min))
     return np.flatnonzero(mask).astype(np.int64, copy=False)
 
 
@@ -577,6 +580,7 @@ def process_one_file(
     cut_pinc_max: float,
     cut_fitstat_equals: int,
     cut_theta_max_deg: float,
+    cut_dcedge_min: float,
     core_scale: Tuple[float, float],
     reader_workers: int,
     max_events_per_file: Optional[int],
@@ -623,6 +627,7 @@ def process_one_file(
                         cut_pinc_max=cut_pinc_max,
                         cut_fitstat_equals=cut_fitstat_equals,
                         cut_theta_max_deg=cut_theta_max_deg,
+                        cut_dcedge_min=cut_dcedge_min,
                     )
                     if remaining is not None:
                         if remaining <= 0:
@@ -709,6 +714,7 @@ def build_final_summary(
             "pincness_lt": float(args.cut_pinc_max),
             "fitstat_equals": int(args.cut_fitstat_equals),
             "theta_deg_lt": float(args.cut_theta_max_deg),
+            "dcedge_gt": float(args.cut_dcedge_min),
         },
         "run_config": {
             "max_points": max_points,
@@ -783,6 +789,7 @@ def run_file_loop(
     cut_pinc_max: float,
     cut_fitstat_equals: int,
     cut_theta_max_deg: float,
+    cut_dcedge_min: float,
 ) -> Dict[str, object]:
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -833,6 +840,7 @@ def run_file_loop(
                 cut_pinc_max=cut_pinc_max,
                 cut_fitstat_equals=cut_fitstat_equals,
                 cut_theta_max_deg=cut_theta_max_deg,
+                cut_dcedge_min=cut_dcedge_min,
                 core_scale=core_scale,
                 reader_workers=reader_workers,
                 max_events_per_file=max_events_per_file,
@@ -909,7 +917,8 @@ def main() -> None:
         "Cuts: "
         f"pincness<{args.cut_pinc_max}, "
         f"fitstat=={args.cut_fitstat_equals}, "
-        f"theta<{args.cut_theta_max_deg} deg"
+        f"theta<{args.cut_theta_max_deg} deg, "
+        f"dcedge>{args.cut_dcedge_min} m"
     )
     print(
         "Inference config: "
@@ -961,6 +970,7 @@ def main() -> None:
             cut_pinc_max=args.cut_pinc_max,
             cut_fitstat_equals=args.cut_fitstat_equals,
             cut_theta_max_deg=args.cut_theta_max_deg,
+            cut_dcedge_min=args.cut_dcedge_min,
         )
         merge_worker_summary(summary, result)
         print(f"Single-device elapsed seconds: {float(result['elapsed_seconds']):.2f}")
@@ -990,6 +1000,7 @@ def main() -> None:
                     cut_pinc_max=args.cut_pinc_max,
                     cut_fitstat_equals=args.cut_fitstat_equals,
                     cut_theta_max_deg=args.cut_theta_max_deg,
+                    cut_dcedge_min=args.cut_dcedge_min,
                 )
                 futures.append(executor.submit(run_shard_worker, worker_kwargs))
 

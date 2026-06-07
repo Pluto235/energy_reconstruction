@@ -1,0 +1,19 @@
+cell_id,nhit_bin,predE_bin,mc_count,formal_nhit_bin,statistics_level,selection_version,selection_reason
+1,"[30,60)","[2,3)",86609,True,acceptable,v1_physical_18,only acceptable cell in this nhit row
+2,"[60,100)","[2,3)",423777,True,acceptable,v1_physical_18,row top-2 physical band
+3,"[60,100)","[3,3.25)",22631,True,acceptable,v1_physical_18,row top-2 physical band
+4,"[100,200)","[2,3)",935671,True,acceptable,v1_physical_18,row top-2 physical band
+5,"[100,200)","[3,3.25)",149327,True,acceptable,v1_physical_18,row top-2 physical band
+6,"[200,300)","[2,3)",258212,True,acceptable,v1_physical_18,row top-2 physical band
+7,"[200,300)","[3,3.25)",162827,True,acceptable,v1_physical_18,row top-2 physical band
+8,"[300,500)","[3,3.25)",157484,True,acceptable,v1_physical_18,row top-2 physical band
+9,"[300,500)","[3.25,3.5)",152731,True,acceptable,v1_physical_18,row top-2 physical band
+10,"[500,800)","[3.25,3.5)",89790,True,acceptable,v1_physical_18,row top-2 plus high-energy shoulder
+11,"[500,800)","[3.5,3.75)",85249,True,acceptable,v1_physical_18,row top-2 plus high-energy shoulder
+12,"[500,800)","[3.75,4.0)",34158,True,acceptable,v1_physical_18,row top-2 plus high-energy shoulder
+13,"[800,1100)","[3.5,3.75)",34552,True,acceptable,v1_physical_18,row top-2 plus high-energy shoulder
+14,"[800,1100)","[3.75,4.0)",28276,True,acceptable,v1_physical_18,row top-2 plus high-energy shoulder
+15,"[800,1100)","[4.0,4.25)",13829,True,acceptable,v1_physical_18,row top-2 plus high-energy shoulder
+16,"[1100,2000)","[3.75,4.0)",24408,True,acceptable,v1_physical_18,highest nhit row top-3 physical band
+17,"[1100,2000)","[4.0,4.25)",27355,True,acceptable,v1_physical_18,highest nhit row top-3 physical band
+18,"[1100,2000)","[4.25,4.5)",13358,True,acceptable,v1_physical_18,highest nhit row top-3 physical band

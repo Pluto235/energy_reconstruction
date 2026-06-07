@@ -83,8 +83,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--apply-event-cuts", action="store_true", default=False, help="Apply event-level cuts before inference.")
     parser.add_argument("--cut-pinc-max", type=float, default=1.1)
     parser.add_argument("--cut-dangle-max-deg", type=float, default=3.0)
+    parser.add_argument("--no-cut-dangle", action="store_true", default=False, help="Disable the MC truth dangle cut.")
     parser.add_argument("--cut-theta-max-deg", type=float, default=30.0)
     parser.add_argument("--cut-fitstat-equals", type=int, default=0)
+    parser.add_argument("--cut-dcedge-min", type=float, default=None, help="Optional reconstructed core edge-distance cut.")
+    parser.add_argument(
+        "--core-box",
+        type=float,
+        nargs=4,
+        metavar=("X_MIN", "X_MAX", "Y_MIN", "Y_MAX"),
+        default=None,
+        help="Optional reconstructed core box cut on xc/yc.",
+    )
     parser.add_argument(
         "--keep-nhit-bins",
         type=str,
@@ -467,15 +477,23 @@ def filter_event_indices(
     *,
     apply_event_cuts: bool,
     cut_pinc_max: float,
-    cut_dangle_max_deg: float,
+    cut_dangle_max_deg: Optional[float],
     cut_theta_max_deg: float,
     cut_fitstat_equals: int,
+    cut_dcedge_min: Optional[float],
+    core_box: Optional[Tuple[float, float, float, float]],
 ) -> np.ndarray:
     n_events = len(next(iter(arrays.values())) if arrays else [])
     if not apply_event_cuts or n_events == 0:
         return np.arange(n_events, dtype=np.int64)
 
-    required = ["pincness", "mc_dangle", "fitstat", "theta"]
+    required = ["pincness", "fitstat", "theta"]
+    if cut_dangle_max_deg is not None:
+        required.append("mc_dangle")
+    if cut_dcedge_min is not None:
+        required.append("dcedge")
+    if core_box is not None:
+        required.extend(["xc", "yc"])
     missing = [name for name in required if name not in arrays]
     if missing:
         missing_str = ", ".join(missing)
@@ -483,9 +501,18 @@ def filter_event_indices(
 
     mask = np.ones(n_events, dtype=bool)
     mask &= np.asarray(arrays["pincness"] < float(cut_pinc_max))
-    mask &= np.asarray(arrays["mc_dangle"] < (float(cut_dangle_max_deg) * np.pi / 180.0))
     mask &= np.asarray(arrays["fitstat"] == int(cut_fitstat_equals))
     mask &= np.asarray(arrays["theta"] < (float(cut_theta_max_deg) * np.pi / 180.0))
+    if cut_dangle_max_deg is not None:
+        mask &= np.asarray(arrays["mc_dangle"] < (float(cut_dangle_max_deg) * np.pi / 180.0))
+    if cut_dcedge_min is not None:
+        mask &= np.asarray(arrays["dcedge"] > float(cut_dcedge_min))
+    if core_box is not None:
+        x_min, x_max, y_min, y_max = core_box
+        mask &= np.asarray(arrays["xc"] >= float(x_min))
+        mask &= np.asarray(arrays["xc"] <= float(x_max))
+        mask &= np.asarray(arrays["yc"] >= float(y_min))
+        mask &= np.asarray(arrays["yc"] <= float(y_max))
     return np.flatnonzero(mask).astype(np.int64, copy=False)
 
 
@@ -499,9 +526,11 @@ def load_and_prepare_file(
     seed: int,
     apply_event_cuts: bool,
     cut_pinc_max: float,
-    cut_dangle_max_deg: float,
+    cut_dangle_max_deg: Optional[float],
     cut_theta_max_deg: float,
     cut_fitstat_equals: int,
+    cut_dcedge_min: Optional[float],
+    core_box: Optional[Tuple[float, float, float, float]],
     core_scale: Tuple[float, float],
     keep_nhit_bins: Optional[set] = None,
 ) -> Dict[str, object]:
@@ -517,6 +546,8 @@ def load_and_prepare_file(
         cut_dangle_max_deg=cut_dangle_max_deg,
         cut_theta_max_deg=cut_theta_max_deg,
         cut_fitstat_equals=cut_fitstat_equals,
+        cut_dcedge_min=cut_dcedge_min,
+        core_box=core_box,
     )
     rng = np.random.default_rng(seed)
 
@@ -584,9 +615,11 @@ def iter_prepared_files(
     reader_backend: str,
     apply_event_cuts: bool,
     cut_pinc_max: float,
-    cut_dangle_max_deg: float,
+    cut_dangle_max_deg: Optional[float],
     cut_theta_max_deg: float,
     cut_fitstat_equals: int,
+    cut_dcedge_min: Optional[float],
+    core_box: Optional[Tuple[float, float, float, float]],
     core_scale: Tuple[float, float],
     keep_nhit_bins: Optional[set] = None,
 ):
@@ -604,6 +637,8 @@ def iter_prepared_files(
                 cut_dangle_max_deg=cut_dangle_max_deg,
                 cut_theta_max_deg=cut_theta_max_deg,
                 cut_fitstat_equals=cut_fitstat_equals,
+                cut_dcedge_min=cut_dcedge_min,
+                core_box=core_box,
                 core_scale=core_scale,
                 keep_nhit_bins=keep_nhit_bins,
             )
@@ -637,6 +672,8 @@ def iter_prepared_files(
                 cut_dangle_max_deg=cut_dangle_max_deg,
                 cut_theta_max_deg=cut_theta_max_deg,
                 cut_fitstat_equals=cut_fitstat_equals,
+                cut_dcedge_min=cut_dcedge_min,
+                core_box=core_box,
                 core_scale=core_scale,
                 keep_nhit_bins=keep_nhit_bins,
             )
@@ -659,6 +696,8 @@ def iter_prepared_files(
                     cut_dangle_max_deg=cut_dangle_max_deg,
                     cut_theta_max_deg=cut_theta_max_deg,
                     cut_fitstat_equals=cut_fitstat_equals,
+                    cut_dcedge_min=cut_dcedge_min,
+                    core_box=core_box,
                     core_scale=core_scale,
                     keep_nhit_bins=keep_nhit_bins,
                 )
@@ -757,9 +796,11 @@ def run_file_loop(
     reader_backend: str,
     apply_event_cuts: bool,
     cut_pinc_max: float,
-    cut_dangle_max_deg: float,
+    cut_dangle_max_deg: Optional[float],
     cut_theta_max_deg: float,
     cut_fitstat_equals: int,
+    cut_dcedge_min: Optional[float],
+    core_box: Optional[Tuple[float, float, float, float]],
     core_scale: Tuple[float, float],
     keep_nhit_bins: Optional[set] = None,
 ) -> Dict[str, object]:
@@ -807,6 +848,8 @@ def run_file_loop(
             cut_dangle_max_deg=cut_dangle_max_deg,
             cut_theta_max_deg=cut_theta_max_deg,
             cut_fitstat_equals=cut_fitstat_equals,
+            cut_dcedge_min=cut_dcedge_min,
+            core_box=core_box,
             core_scale=core_scale,
             keep_nhit_bins=keep_nhit_bins,
         ),
@@ -879,6 +922,8 @@ def main() -> None:
     args = parse_args()
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
+    cut_dangle_max_deg = None if args.no_cut_dangle else float(args.cut_dangle_max_deg)
+    core_box = tuple(args.core_box) if args.core_box is not None else None
 
     keep_nhit_bins = None
     if args.keep_nhit_bins is not None and args.keep_nhit_bins.strip() != "":
@@ -923,9 +968,11 @@ def main() -> None:
             reader_backend=args.reader_backend,
             apply_event_cuts=args.apply_event_cuts,
             cut_pinc_max=args.cut_pinc_max,
-            cut_dangle_max_deg=args.cut_dangle_max_deg,
+            cut_dangle_max_deg=cut_dangle_max_deg,
             cut_theta_max_deg=args.cut_theta_max_deg,
             cut_fitstat_equals=args.cut_fitstat_equals,
+            cut_dcedge_min=args.cut_dcedge_min,
+            core_box=core_box,
             core_scale=(
                 float(config.get("core_scale_x", 130.0)),
                 float(config.get("core_scale_y", 110.0)),
@@ -964,9 +1011,11 @@ def main() -> None:
                     reader_backend=args.reader_backend,
                     apply_event_cuts=args.apply_event_cuts,
                     cut_pinc_max=args.cut_pinc_max,
-                    cut_dangle_max_deg=args.cut_dangle_max_deg,
+                    cut_dangle_max_deg=cut_dangle_max_deg,
                     cut_theta_max_deg=args.cut_theta_max_deg,
                     cut_fitstat_equals=args.cut_fitstat_equals,
+                    cut_dcedge_min=args.cut_dcedge_min,
+                    core_box=core_box,
                     core_scale=(
                         float(config.get("core_scale_x", 130.0)),
                         float(config.get("core_scale_y", 110.0)),

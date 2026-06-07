@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stage B PSF Report</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --panel: #161922;
+  --panel-2: #141821;
+  --fg: #e6e8eb;
+  --muted: #9aa3ad;
+  --accent: #4fb6ff;
+  --accent-2: #9be09b;
+  --warn: #f6c177;
+  --danger: #ff8a8a;
+  --border: #262b37;
+  --code: #11141b;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #fafbfc;
+    --panel: #ffffff;
+    --panel-2: #f6f8fa;
+    --fg: #1a1d24;
+    --muted: #5a6470;
+    --accent: #0969da;
+    --accent-2: #1a7f37;
+    --warn: #9a6700;
+    --danger: #cf222e;
+    --border: #d8dee4;
+    --code: #f3f4f6;
+  }
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
+}
+main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 56px 28px 88px;
+}
+header {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 36px;
+  padding-bottom: 24px;
+}
+.eyebrow {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+h1 {
+  margin: 8px 0 10px;
+  font-size: clamp(30px, 5vw, 44px);
+  line-height: 1.15;
+}
+.lead {
+  max-width: 820px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 17px;
+}
+h2 {
+  margin: 44px 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 24px;
+}
+h3 {
+  margin: 28px 0 10px;
+  color: var(--accent);
+  font-size: 18px;
+}
+p { margin: 12px 0; }
+ul { margin: 12px 0; padding-left: 24px; }
+li { margin: 6px 0; }
+code {
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--code);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 13px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+.metric {
+  min-height: 112px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.metric .label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.metric .value {
+  margin-top: 8px;
+  color: var(--fg);
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.metric .note {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.callout {
+  margin: 18px 0;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.callout.warn { border-left-color: var(--warn); }
+.callout.good { border-left-color: var(--accent-2); }
+.callout.danger { border-left-color: var(--danger); }
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin: 18px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+th, td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  color: var(--fg);
+  background: var(--panel);
+  font-weight: 700;
+  white-space: nowrap;
+}
+tbody tr:nth-child(odd) td { background: var(--panel-2); }
+tbody tr:last-child td { border-bottom: 0; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.path-list li { overflow-wrap: anywhere; }
+.figure-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+figure {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+figure.wide { grid-column: 1 / -1; }
+img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+}
+figcaption {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+}
+footer {
+  margin-top: 56px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}
+@media (max-width: 820px) {
+  main { padding: 36px 18px 64px; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .figure-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">LHAASO-WCDA · Crab SED v1</div>
+    <h1>Stage B PSF Report</h1>
+    <p class="lead">本页记录当前 Stage B 的主要过程和结果：在 Crab 赤纬带上，为 18 个 v1 <code>(Nhit, log10 E_pred)</code> 单元构建 PSF 表，并给后续 Stage E 的 Crab on-region 积分半径提供 <code>r_opt</code>。</p>
+  </header>
+
+  <section>
+    <h2>结论摘要</h2>
+    <div class="grid">
+      <div class="metric">
+        <div class="label">Run</div>
+        <div class="value">slurm_41947</div>
+        <div class="note">已 promoted 到 <code>current</code></div>
+      </div>
+      <div class="metric">
+        <div class="label">v1 cells</div>
+        <div class="value">18</div>
+        <div class="note">和 Stage A cell list 一致</div>
+      </div>
+      <div class="metric">
+        <div class="label">sigma range</div>
+        <div class="value">0.137-0.857 deg</div>
+        <div class="note">3 deg core Rayleigh fit</div>
+      </div>
+      <div class="metric">
+        <div class="label">r_opt range</div>
+        <div class="value">0.217-1.355 deg</div>
+        <div class="note"><code>r_opt = 1.58 sigma</code></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="metric">
+        <div class="label">Events</div>
+        <div class="value">2,714,203</div>
+        <div class="note">18 cells 合计</div>
+      </div>
+      <div class="metric">
+        <div class="label">Full-tail sigma</div>
+        <div class="value">3.45-19.66 deg</div>
+        <div class="note">保留为诊断，不作 baseline</div>
+      </div>
+      <div class="metric">
+        <div class="label">Theta gap max</div>
+        <div class="value">8.31%</div>
+        <div class="note">低于 10% hard threshold</div>
+      </div>
+      <div class="metric">
+        <div class="label">Slurm</div>
+        <div class="value">1:09:12</div>
+        <div class="note">18 CPU, 32G request</div>
+      </div>
+    </div>
+
+    <div class="callout good">
+      <strong>当前 Stage B 已经完成。</strong>
+      作业 <code>41947</code> 成功结束，输出位于 <code>apply/output/stage_b/runs/slurm_41947/</code>，并已通过 <code>apply/output/stage_b/current</code> 和 <code>latest</code> 暴露给后续阶段。metadata 记录的 Stage A snapshot 为 <code>primary_thrown_response</code>、<code>absolute_effective_area_status = available</code>、<code>weighting = mc_weight_baseline</code>。
+    </div>
+  </section>
+
+  <section>
+    <h2>Stage B 做了什么</h2>
+    <p>Stage B 的目标不是重新构建有效面积，而是给每个 v1 观测单元提供 Crab 赤纬带上的角分辨率和积分半径。后续 Stage E 会用这里的 <code>r_opt</code> 在 Crab 位置统计 <code>N_on</code>，并与背景估计结合得到 excess 和 Li-Ma 显著性。</p>
+
+    <h3>输入和一致性检查</h3>
+    <ul>
+      <li>MC cell cache：<code>/mnt/mydisk/WCDA_simulation_binned_response_v1</code>。</li>
+      <li>Stage A metadata：<code>apply/output/stage_a/response_2d_metadata.json</code>。</li>
+      <li>v1 cell selection：<code>apply/config/cell_selection_v1.csv</code>，共 18 个 cells。</li>
+      <li>Stage B 会拒绝旧版 Stage A：要求 <code>response_type = primary_thrown_response</code>、<code>absolute_effective_area_status = available</code>、<code>weighting = mc_weight_baseline</code>。</li>
+      <li>真能量范围从 Stage A 继承：<code>log10(E_true / GeV) = [2, 6)</code>；天顶角范围为 <code>0-50 deg</code>。</li>
+    </ul>
+
+    <h3>权重和 PSF 模型</h3>
+    <ul>
+      <li>baseline 权重为 <code>mc_weight * crab_declination_theta_reweight</code>，只按 Crab 赤纬对应的天顶角分布重权，不引入 Crab 谱假设。</li>
+      <li>Crab 几何参数为 LHAASO 纬度 <code>29.45 deg</code>、Crab 赤纬 <code>22.01 deg</code>，用 uniform hour-angle samples 得到 <code>theta &lt; 50 deg</code> 条件下的 Crab 天顶角分布。</li>
+      <li>baseline <code>sigma_b</code> 用 <code>mc_dangle &lt;= 3 deg</code> 的 core events 做 Rayleigh MLE：<code>sqrt(sum(w r^2) / (2 sum(w)))</code>。</li>
+      <li>积分半径定义为 <code>r_opt = 1.58 sigma_b</code>。全分布 Rayleigh sigma、<code>r68/r90/r95</code>、tail weight fraction 只作为诊断保存。</li>
+    </ul>
+
+    <div class="callout warn">
+      <strong>为什么没有继续用全分布 MLE？</strong>
+      旧 Stage B 直接用全部 <code>mc_dangle</code> 做 Rayleigh MLE，低 Nhit 单元会被长尾拖到十几度甚至二十度以上，导致 <code>r_opt</code> 不适合作为 Crab on-region 半径。当前实现把 baseline 收缩到 3 deg core fit，同时把 full-tail sigma 和 tail fraction 放进报告，方便后续判断长尾是否需要更复杂的 PSF 模型。
+    </div>
+  </section>
+
+  <section>
+    <h2>主要结果</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>cell</th>
+            <th>Nhit bin</th>
+            <th>log10 E_pred bin</th>
+            <th class="num">events</th>
+            <th class="num">Neff</th>
+            <th class="num">core Neff</th>
+            <th class="num">sigma deg</th>
+            <th class="num">full sigma deg</th>
+            <th class="num">r_opt deg</th>
+            <th class="num">containment</th>
+            <th class="num">tail weight</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>[30,60)</td><td>[2,3)</td><td class="num">184894</td><td class="num">63552.1</td><td class="num">29193.2</td><td class="num">0.85732</td><td class="num">19.665</td><td class="num">1.3546</td><td class="num">0.2480</td><td class="num">0.6666</td></tr>
+          <tr><td>2</td><td>[60,100)</td><td>[2,3)</td><td class="num">490043</td><td class="num">125243.8</td><td class="num">139080.0</td><td class="num">0.68757</td><td class="num">15.600</td><td class="num">1.0864</td><td class="num">0.4874</td><td class="num">0.3692</td></tr>
+          <tr><td>3</td><td>[60,100)</td><td>[3,3.25)</td><td class="num">26973</td><td class="num">13749.0</td><td class="num">6829.0</td><td class="num">0.83848</td><td class="num">15.162</td><td class="num">1.3248</td><td class="num">0.3588</td><td class="num">0.5172</td></tr>
+          <tr><td>4</td><td>[100,200)</td><td>[2,3)</td><td class="num">931828</td><td class="num">148878.4</td><td class="num">215851.9</td><td class="num">0.50149</td><td class="num">12.675</td><td class="num">0.7924</td><td class="num">0.6311</td><td class="num">0.2000</td></tr>
+          <tr><td>5</td><td>[100,200)</td><td>[3,3.25)</td><td class="num">110139</td><td class="num">45907.3</td><td class="num">39893.7</td><td class="num">0.53100</td><td class="num">10.249</td><td class="num">0.8390</td><td class="num">0.6329</td><td class="num">0.2024</td></tr>
+          <tr><td>6</td><td>[200,300)</td><td>[2,3)</td><td class="num">273691</td><td class="num">11046.1</td><td class="num">29982.7</td><td class="num">0.35298</td><td class="num">13.187</td><td class="num">0.5577</td><td class="num">0.6482</td><td class="num">0.1720</td></tr>
+          <tr><td>7</td><td>[200,300)</td><td>[3,3.25)</td><td class="num">122642</td><td class="num">21172.2</td><td class="num">26629.5</td><td class="num">0.34612</td><td class="num">9.5679</td><td class="num">0.5469</td><td class="num">0.7029</td><td class="num">0.1106</td></tr>
+          <tr><td>8</td><td>[300,500)</td><td>[3,3.25)</td><td class="num">151506</td><td class="num">4796.2</td><td class="num">15669.4</td><td class="num">0.25069</td><td class="num">13.752</td><td class="num">0.3961</td><td class="num">0.6196</td><td class="num">0.1649</td></tr>
+          <tr><td>9</td><td>[300,500)</td><td>[3.25,3.5)</td><td class="num">112141</td><td class="num">11407.7</td><td class="num">15861.4</td><td class="num">0.26305</td><td class="num">9.4264</td><td class="num">0.4156</td><td class="num">0.7103</td><td class="num">0.0851</td></tr>
+          <tr><td>10</td><td>[500,800)</td><td>[3.25,3.5)</td><td class="num">89513</td><td class="num">740.5</td><td class="num">7463.5</td><td class="num">0.19668</td><td class="num">13.698</td><td class="num">0.3108</td><td class="num">0.5906</td><td class="num">0.1977</td></tr>
+          <tr><td>11</td><td>[500,800)</td><td>[3.5,3.75)</td><td class="num">68604</td><td class="num">2505.2</td><td class="num">5438.6</td><td class="num">0.20586</td><td class="num">10.016</td><td class="num">0.3253</td><td class="num">0.7030</td><td class="num">0.0759</td></tr>
+          <tr><td>12</td><td>[500,800)</td><td>[3.75,4.0)</td><td class="num">26703</td><td class="num">4809.2</td><td class="num">5104.4</td><td class="num">0.33743</td><td class="num">9.1850</td><td class="num">0.5331</td><td class="num">0.7525</td><td class="num">0.1410</td></tr>
+          <tr><td>13</td><td>[800,1100)</td><td>[3.5,3.75)</td><td class="num">32787</td><td class="num">771.7</td><td class="num">3874.0</td><td class="num">0.16597</td><td class="num">8.2570</td><td class="num">0.2622</td><td class="num">0.6843</td><td class="num">0.0605</td></tr>
+          <tr><td>14</td><td>[800,1100)</td><td>[3.75,4.0)</td><td class="num">22615</td><td class="num">1898.8</td><td class="num">2280.1</td><td class="num">0.18793</td><td class="num">6.1219</td><td class="num">0.2969</td><td class="num">0.7769</td><td class="num">0.0459</td></tr>
+          <tr><td>15</td><td>[800,1100)</td><td>[4.0,4.25)</td><td class="num">9020</td><td class="num">1581.0</td><td class="num">1703.6</td><td class="num">0.32538</td><td class="num">6.0350</td><td class="num">0.5141</td><td class="num">0.8465</td><td class="num">0.0607</td></tr>
+          <tr><td>16</td><td>[1100,2000)</td><td>[3.75,4.0)</td><td class="num">23726</td><td class="num">994.2</td><td class="num">1235.2</td><td class="num">0.13749</td><td class="num">3.6202</td><td class="num">0.2172</td><td class="num">0.7137</td><td class="num">0.0175</td></tr>
+          <tr><td>17</td><td>[1100,2000)</td><td>[4.0,4.25)</td><td class="num">23998</td><td class="num">1111.7</td><td class="num">2819.3</td><td class="num">0.14709</td><td class="num">6.6541</td><td class="num">0.2324</td><td class="num">0.7426</td><td class="num">0.0490</td></tr>
+          <tr><td>18</td><td>[1100,2000)</td><td>[4.25,4.5)</td><td class="num">13380</td><td class="num">4260.3</td><td class="num">4295.2</td><td class="num">0.18509</td><td class="num">3.4549</td><td class="num">0.2924</td><td class="num">0.8715</td><td class="num">0.0215</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>诊断图</h2>
+    <div class="figure-grid">
+      <figure>
+        <img src="../output/stage_b/current/psf_sigma_deg_grid.png" alt="Stage B sigma by cell">
+        <figcaption>3 deg core-fit baseline <code>sigma_b</code>。低 Nhit 单元更宽，高 Nhit 单元更窄。</figcaption>
+      </figure>
+      <figure>
+        <img src="../output/stage_b/current/psf_r_opt_deg_grid.png" alt="Stage B r opt by cell">
+        <figcaption>后续信号提取用的积分半径 <code>r_opt = 1.58 sigma_b</code>。</figcaption>
+      </figure>
+      <figure>
+        <img src="../output/stage_b/current/psf_containment_grid.png" alt="Stage B containment by cell">
+        <figcaption>在 core-fit <code>r_opt</code> 内对全分布的 containment。这里反映 core 模型和长尾之间的张力。</figcaption>
+      </figure>
+      <figure>
+        <img src="../output/stage_b/current/psf_effective_events_grid.png" alt="Stage B effective events by cell">
+        <figcaption>每个 cell 的有效统计量。最低 Neff 为 cell 10 的约 740.5，高于生产阈值 200。</figcaption>
+      </figure>
+      <figure class="wide">
+        <img src="../output/stage_b/current/psf_radial_profiles_grid.png" alt="Stage B radial profiles by cell">
+        <figcaption>加权径向分布、Rayleigh fit 和 <code>r_opt</code>。这张图是判断单高斯 core 近似是否足够的主要人工诊断。</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>输出文件</h2>
+    <ul class="path-list">
+      <li><code>apply/output/stage_b/current/psf_v1.npz</code>：正式 PSF 数组，包含 baseline sigma、r_opt、containment、full-tail diagnostics、theta reweight 和 radial profiles。</li>
+      <li><code>apply/output/stage_b/current/psf_v1_metadata.json</code>：运行参数、Stage A snapshot、每个 cell 的完整诊断、warning rows 和 promotion 状态。</li>
+      <li><code>apply/output/stage_b/current/psf_v1_summary.csv</code>：18 个 cells 的表格化汇总。</li>
+      <li><code>apply/output/stage_b/current/psf_v1_summary.md</code>：简短 Markdown 摘要。</li>
+      <li><code>apply/output/stage_b/current/*.png</code>：sigma、r_opt、containment、effective events 和 radial profile 诊断图。</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>需要再确认的地方</h2>
+    <div class="callout warn">
+      <strong>PSF 口径已经从 roadmap 的“v1 单高斯”细化为“3 deg core Rayleigh fit + full-tail diagnostics”。</strong>
+      这个改动是为避免长尾把积分半径拖到不现实的十几度。建议在 Stage E 之前确认：后续 on-region 是否正式采用 core-fit <code>r_opt</code>，还是需要引入经验优化半径或双成分 PSF。
+    </div>
+    <div class="callout warn">
+      <strong>两个 cell 有 Crab theta support 缺口。</strong>
+      cell 13 缺口概率质量为 0.0831，cell 16 为 0.0624；都低于 0.10 的失败阈值，但需要在 Stage E/F 解释它们对高 theta Crab 轨迹的覆盖不足。
+    </div>
+    <div class="callout warn">
+      <strong>六个 cell 有 containment warning。</strong>
+      cell 1、2、3、10 的 <code>r_opt</code> containment 显著低于 Rayleigh 期望，cell 15、18 高于期望。这说明 full distribution 不是理想 Rayleigh，后续拟合残差如果出现结构，应优先回看这些 cell。
+    </div>
+    <div class="callout danger">
+      <strong>旧根目录产物仍然存在。</strong>
+      <code>apply/output/stage_b/psf_v1.*</code> 是 2026-05-26 的旧结果，metadata snapshot 不是最新 Stage A。后续脚本应读取 <code>apply/output/stage_b/current/</code> 或 <code>latest</code>，不要直接读根目录旧文件。
+    </div>
+  </section>
+
+  <footer>
+    Generated for internal review on 2026-06-04. Source facts: Stage B metadata, Stage B summary, NPZ sanity checks, Slurm job 41947 log, and current diagnostic plots.
+  </footer>
+</main>
+</body>
+</html>

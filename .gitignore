@@ -20,6 +20,8 @@ fig/
 notebook/generated/
 apply/plot/
 apply/summary_selectedcuts/
+apply/output/
+apply/report/reference/
 archive/root_artifacts/
 archive/root_fig/
 archive/theta-old/.git

@@ -33,6 +33,12 @@ def parse_args() -> argparse.Namespace:
         default="apply/summary_selectedcuts/bin_counts.csv",
     )
     parser.add_argument(
+        "--cell-selection-csv",
+        type=str,
+        default=None,
+        help="Optional CSV with nhit_bin and predE_bin columns. If set, only these cells are plotted.",
+    )
+    parser.add_argument(
         "--output-dir",
         type=str,
         default="apply/plot",
@@ -96,12 +102,26 @@ def pred_dir_name(pred_bin: str) -> str:
     raise ValueError(f"Unsupported predE_bin label: {pred_bin}")
 
 
-def load_acceptable_rows(summary_csv: Path) -> List[Dict[str, object]]:
+def load_selected_cells(selection_csv: Path) -> set:
+    selected = set()
+    with selection_csv.open("r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            selected.add((row["nhit_bin"], row["predE_bin"]))
+    if not selected:
+        raise ValueError(f"No cells loaded from selection CSV: {selection_csv}")
+    return selected
+
+
+def load_acceptable_rows(summary_csv: Path, selected_cells: set = None) -> List[Dict[str, object]]:
     rows = []
     with summary_csv.open("r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             if row["statistics_level"] != "acceptable":
+                continue
+            key = (row["nhit_bin"], row["predE_bin"])
+            if selected_cells is not None and key not in selected_cells:
                 continue
             c = int(row["count"])
             if c <= 0:
@@ -166,11 +186,15 @@ def hist_density_for_bin(
 def main() -> None:
     args = parse_args()
     summary_csv = Path(args.summary_csv).resolve()
+    cell_selection_csv = Path(args.cell_selection_csv).resolve() if args.cell_selection_csv else None
     binned_root = Path(args.binned_root).resolve()
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    rows = load_acceptable_rows(summary_csv)
+    selected_cells = load_selected_cells(cell_selection_csv) if cell_selection_csv else None
+    rows = load_acceptable_rows(summary_csv, selected_cells=selected_cells)
+    if not rows:
+        raise ValueError("No rows selected for plotting.")
     pred_bins = sorted({r["predE_bin"] for r in rows}, key=pred_bin_key)
     nhit_bins = sorted({r["nhit_bin"] for r in rows}, key=nhit_bin_key)
     letter_map = {nh: chr(ord("a") + i) for i, nh in enumerate(nhit_bins)}
@@ -245,7 +269,8 @@ def main() -> None:
             if i == n_rows - 1:
                 ax.set_xlabel("log10(True E / GeV)", fontsize=8)
 
-    fig.suptitle("Acceptable Bins: Normalized True-Energy Distributions per (predE bin, nhit bin)", fontsize=12, y=0.995)
+    title_prefix = "Selected v1 Cells" if cell_selection_csv else "Acceptable Bins"
+    fig.suptitle(f"{title_prefix}: Normalized True-Energy Distributions per (predE bin, nhit bin)", fontsize=12, y=0.995)
     fig.tight_layout(rect=[0, 0, 1, 0.985])
 
     out_png = output_dir / args.output_name
@@ -257,6 +282,7 @@ def main() -> None:
         json.dump(
             {
                 "summary_csv": str(summary_csv),
+                "cell_selection_csv": str(cell_selection_csv) if cell_selection_csv else None,
                 "binned_root": str(binned_root),
                 "pred_bins": pred_bins,
                 "nhit_letter_map": [{"letter": letter_map[n], "nhit_bin": n} for n in nhit_bins],

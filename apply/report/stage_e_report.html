@@ -65,6 +65,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
 .figure-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 18px; }
 figure { margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+figure.wide { grid-column: 1 / -1; }
 figure img { display: block; width: 100%; height: auto; border-radius: 4px; background: #fff; }
 figcaption { margin-top: 9px; color: var(--muted); font-size: 13px; }
 footer { margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
@@ -97,7 +98,9 @@ footer { margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--border
     </div>
     <div class="callout good">
       <strong>质量门状态：<code>passed</code>。</strong>
-      当前配置要求总 formal sigma 位于 <code>[50, 200]</code> 之间。本次结果为 <code>79.9696</code>，通过质量门，可以作为 Stage F 的输入候选。
+      当前配置要求总 formal sigma 位于
+      <code>[50, 200]</code> 之间。本次结果为 <code>79.9696</code>，通过质量门，可以作为 Stage F 的输入候选。
+      
     </div>
   </section>
 
@@ -128,7 +131,7 @@ footer { margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--border
       <li>随后用球面角距离公式计算事件与 Crab 的夹角 <code>sep</code>，每个 cell 判断 <code>sep &lt;= r_opt_deg[cell]</code>。</li>
     </ul>
     <h3>2. 背景和统计量</h3>
-    <p>Stage D 输出的是 <code>direct_expectation</code>，也就是直接背景期望 <code>B_on</code>。它不是传统 off 区计数，因此本报告不把 <code>B_on</code> 强行拆成 <code>alpha × N_off</code>，表格里的 <code>N_off</code>、<code>alpha</code> 和 Li-Ma 都显示为 <code>n/a</code>。</p>
+    <p>Stage D 输出的是 <code>direct_expectation</code>，也就是直接背景期望 <code>B_on</code>。它不是传统 off 区计数，因此本报告不把 <code>B_on</code> 强行拆成 <code>alpha × N_off</code>，表格里的 Li-Ma 显示为 <code>n/a</code>。</p>
     <ul>
       <li><code>excess_b = N_on,b - B_on,b</code></li>
       <li>conservative 误差口径：<code>sqrt(N_on,b + B_on,b)</code></li>
@@ -153,14 +156,26 @@ footer { margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--border
     <p>例如 cell 1 和 cell 2 贡献了最多的绝对 excess；而 cell 16、17 这类高 Nhit cell 虽然计数少，但背景更低，known-B 诊断显著性仍然很强。整体上，正 excess 沿着高 Nhit 对应高 <code>log10 E_pred</code> 的物理带出现，这是我们希望看到的结构。</p>
   </section>
 
-  <section>
-    <h2>诊断图怎么看</h2>
-    <div class="figure-grid">
-      <figure><img src="../output/stage_e/current/formal_sigma_grid.png" alt="逐 cell 的正式诊断显著性"><figcaption><strong>逐 cell 的正式诊断显著性。</strong>这里的 formal sigma 在本次 direct expectation 背景下等同于 known-background Poisson 诊断，用来检查 Crab 信号是否沿物理带出现。</figcaption></figure><figure><img src="../output/stage_e/current/known_b_sigma_grid.png" alt="known-background 显著性诊断"><figcaption><strong>known-background 显著性诊断。</strong>逐 cell 比较 N_on 与 B_on。如果某个 cell 为正且较大，说明 Crab on-region 事件数超过背景期望。</figcaption></figure><figure><img src="../output/stage_e/current/excess_grid.png" alt="逐 cell excess"><figcaption><strong>逐 cell excess。</strong>excess = N_on - B_on。Stage F 会把这些 excess 与响应矩阵前向折叠出的预期信号数比较。</figcaption></figure><figure><img src="../output/stage_e/current/on_background_grid.png" alt="N_on 与 B_on 对照"><figcaption><strong>N_on 与 B_on 对照。</strong>左图是 Crab on-region 实际计数，右图是 Stage D 给出的同一孔径背景期望。</figcaption></figure><figure><img src="../output/stage_e/current/on_over_background_grid.png" alt="N_on / B_on 比值"><figcaption><strong>N_on / B_on 比值。</strong>比值大于 1 表示源区计数超过背景，越高通常说明该 cell 的信噪比越好。</figcaption></figure>
-    </div>
-  </section>
+	  <section>
+	    <h2>诊断图怎么看</h2>
+	    <div class="figure-grid">
+	      <figure><img src="../output/stage_e/runs/codex_stage_e_contract_full/formal_sigma_grid.png" alt="逐 cell 的正式诊断显著性"><figcaption><strong>逐 cell 的正式诊断显著性。</strong>本次 direct expectation 背景下，formal sigma 等同于 known-background Poisson 诊断。</figcaption></figure><figure><img src="../output/stage_e/runs/codex_stage_e_contract_full/known_b_sigma_grid.png" alt="known-background 显著性诊断"><figcaption><strong>known-background 显著性诊断。</strong>逐 cell 比较 N_on 与 B_on；正值说明 Crab 源区计数超过背景期望。</figcaption></figure><figure><img src="../output/stage_e/runs/codex_stage_e_contract_full/excess_grid.png" alt="逐 cell excess"><figcaption><strong>逐 cell excess。</strong>excess = N_on - B_on，是 Stage F 拟合直接使用的信号表。</figcaption></figure><figure><img src="../output/stage_e/runs/codex_stage_e_contract_full/on_background_grid.png" alt="N_on 与 B_on 对照"><figcaption><strong>N_on 与 B_on 对照。</strong>左图是 Crab on-region 实际计数，右图是 Stage D 给出的同一孔径背景期望。</figcaption></figure><figure><img src="../output/stage_e/runs/codex_stage_e_contract_full/on_over_background_grid.png" alt="N_on / B_on 比值"><figcaption><strong>N_on / B_on 比值。</strong>比值大于 1 表示源区计数超过背景。</figcaption></figure>
+	    </div>
+	  </section>
 
-  <section>
+	  <section>
+	    <h2>和 skymap quicklook 的关系</h2>
+	    <p>下面的 skymap 图不是 Stage E 的正式统计输入，而是帮助人眼检查 Crab 附近是否真的有源形态。它们和 Stage D/E 的正式背景都使用“同赤纬附近估计背景”的思想，但口径不同：quicklook 在平滑天图上用固定 sideband 做近似扣背景；Stage E 的正式 excess 则来自逐 cell 的 <code>N_on - B_on</code>，其中 <code>B_on</code> 由 Stage D 的 ROI-local Dec-sideband 合约给出。</p>
+	    <div class="callout warn">
+	      <strong>不要把 quicklook sigma 当成 Stage E formal sigma。</strong>
+	      quicklook 的近似公式是 <code>(smoothed_counts - smoothed_sideband_background) / sqrt(smoothed_sideband_background)</code>；Stage E 报告表格和上面的热图才是正式结果。
+	    </div>
+	    <div class="figure-grid">
+	      <figure class="wide"><img src="assets/crab-v1-cell-skymaps/crab_v1_approx_significance_grid.png" alt="Crab v1 skymap 近似去背景 quicklook"><figcaption><strong>Crab v1 skymap 近似去背景 quicklook。</strong>这张图来自同赤纬 sideband quicklook，用平滑后的 counts 减去平滑后的 sideband 背景；它只用于形态 sanity check，不是 Stage E 的正式 excess。</figcaption></figure><figure class="wide"><img src="assets/crab-v1-cell-skymaps/crab_v1_smoothed_counts_grid.png" alt="Crab v1 smoothed counts quicklook"><figcaption><strong>Crab v1 smoothed counts quicklook。</strong>这张图是 0.3 deg Gaussian 平滑后的观测计数，用来检查 Crab 附近的形态和中心位置。</figcaption></figure>
+	    </div>
+	  </section>
+
+	  <section>
     <h2>输出文件和下一步</h2>
     <ul>
       <li><code>apply/output/stage_e/current/signal_v1.npz</code>：Stage F 直接读取的数组，包含 <code>N_on</code>、<code>B_on</code>、<code>excess</code>、误差和显著性。</li>
@@ -179,7 +194,7 @@ footer { margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--border
   </section>
 
   <footer>
-    生成来源：<code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e/runs/codex_stage_e_contract_full/signal_v1_metadata.json</code> 和 <code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e/runs/codex_stage_e_contract_full/signal_v1_summary.csv</code>。本地报告文件：<code>/Users/luoji/Documents/projects/energy/apply/report/stage_e_report.html</code>。
+    生成来源：<code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e/runs/codex_stage_e_contract_full/signal_v1_metadata.json</code> 和 <code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e/runs/codex_stage_e_contract_full/signal_v1_summary.csv</code>。
   </footer>
 </main>
 </body>

@@ -166,6 +166,32 @@ tbody tr:nth-child(odd) td { background: var(--panel-2); }
 tbody tr:last-child td { border-bottom: 0; }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
 .path-list li { overflow-wrap: anywhere; }
+.figure-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin: 20px 0;
+}
+figure {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+figure.wide { grid-column: 1 / -1; }
+figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  background: #fff;
+}
+figcaption {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
 .tag {
   display: inline-block;
   margin-left: 6px;
@@ -185,6 +211,7 @@ footer {
 @media (max-width: 820px) {
   main { padding: 36px 18px 64px; }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .figure-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 520px) {
   .grid { grid-template-columns: 1fr; }
@@ -259,6 +286,16 @@ footer {
     <h3>和 quicklook 天图的区别</h3>
     <p>此前的 <code>apply/plot_crab_cell_skymaps.py</code> 已经处理过同一批 1258 个观测文件，并画了 Crab 附近的 cell 天图。这一步很有价值，但它只是 Stage C/D/E 之间的诊断 quicklook：它只看 Crab 附近 ROI，少了正式路线要求的 <code>dcedge &gt; 20 m</code>，也没有输出月度 parquet 或 manifest。</p>
     <p>当前 Stage C 则是正式数据规约：使用全天清洗后的 v1-cell 事件，不做 Crab ROI 过滤；输出 parquet 分区目录、manifest、metadata、source file 表、cutflow 和 cell counts。它为直接积分法背景保留了必要的时间、天球坐标和局部方向诊断列。</p>
+    <div class="figure-grid">
+      <figure>
+        <img src="assets/crab-v1-cell-skymaps/crab_v1_counts_grid.png" alt="Crab v1 raw counts skymap quicklook">
+        <figcaption><strong>Crab v1 raw counts skymap。</strong>这是 quicklook 脚本在 Crab 中心局部坐标中累计的原始计数图，用来观察 Stage C 前后同一批观测在 18 个 v1 cell 里的空间分布。</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/crab-v1-cell-skymaps/crab_v1_smoothed_counts_grid.png" alt="Crab v1 smoothed counts skymap quicklook">
+        <figcaption><strong>Crab v1 smoothed counts skymap。</strong>这是对 raw counts 做 <code>0.3 deg</code> Gaussian 平滑后的天图，只用于看 Crab 附近形态和中心位置，不是背景扣除结果。</figcaption>
+      </figure>
+    </div>
   </section>
 
   <section>

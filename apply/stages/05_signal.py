@@ -1073,6 +1073,28 @@ def write_report_html(path: Path, metadata: Dict[str, object], rows: Sequence[Di
                 f'<strong>{html.escape(title)}。</strong>{html.escape(caption)}</figcaption></figure>'
             )
 
+    skymap_items = [
+        (
+            "assets/crab-v1-cell-skymaps/crab_v1_approx_significance_grid.png",
+            "Crab v1 skymap 近似去背景 quicklook",
+            "这张图来自同赤纬 sideband quicklook，用平滑后的 counts 减去平滑后的 sideband 背景；它只用于形态 sanity check，不是 Stage E 的正式 excess。",
+        ),
+        (
+            "assets/crab-v1-cell-skymaps/crab_v1_smoothed_counts_grid.png",
+            "Crab v1 smoothed counts quicklook",
+            "这张图是 0.3 deg Gaussian 平滑后的观测计数，用来检查 Crab 附近的形态和中心位置。",
+        ),
+    ]
+    skymap_html: List[str] = []
+    for rel_path, title, caption in skymap_items:
+        target = path.parent / rel_path
+        if target.exists():
+            rel = html.escape(os.path.relpath(target.resolve(), start=path.parent))
+            skymap_html.append(
+                f'<figure class="wide"><img src="{rel}" alt="{html.escape(title)}"><figcaption>'
+                f'<strong>{html.escape(title)}。</strong>{html.escape(caption)}</figcaption></figure>'
+            )
+
     table_rows: List[str] = []
     for row in rows:
         table_rows.append(
@@ -1166,6 +1188,7 @@ tbody tr:last-child td {{ border-bottom: 0; }}
 .num {{ text-align: right; font-variant-numeric: tabular-nums; }}
 .figure-grid {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 18px; }}
 figure {{ margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }}
+figure.wide {{ grid-column: 1 / -1; }}
 figure img {{ display: block; width: 100%; height: auto; border-radius: 4px; background: #fff; }}
 figcaption {{ margin-top: 9px; color: var(--muted); font-size: 13px; }}
 footer {{ margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }}
@@ -1256,14 +1279,26 @@ footer {{ margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--borde
     <p>例如 cell 1 和 cell 2 贡献了最多的绝对 excess；而 cell 16、17 这类高 Nhit cell 虽然计数少，但背景更低，known-B 诊断显著性仍然很强。整体上，正 excess 沿着高 Nhit 对应高 <code>log10 E_pred</code> 的物理带出现，这是我们希望看到的结构。</p>
   </section>
 
-  <section>
-    <h2>诊断图怎么看</h2>
-    <div class="figure-grid">
-      {''.join(figure_html) if figure_html else '<p>本次运行没有生成诊断图。</p>'}
-    </div>
-  </section>
+	  <section>
+	    <h2>诊断图怎么看</h2>
+	    <div class="figure-grid">
+	      {''.join(figure_html) if figure_html else '<p>本次运行没有生成诊断图。</p>'}
+	    </div>
+	  </section>
 
-  <section>
+	  <section>
+	    <h2>和 skymap quicklook 的关系</h2>
+	    <p>下面的 skymap 图不是 Stage E 的正式统计输入，而是帮助人眼检查 Crab 附近是否真的有源形态。它们和 Stage D/E 的正式背景都使用“同赤纬附近估计背景”的思想，但口径不同：quicklook 在平滑天图上用固定 sideband 做近似扣背景；Stage E 的正式 excess 则来自逐 cell 的 <code>N_on - B_on</code>，其中 <code>B_on</code> 由 Stage D 的 ROI-local Dec-sideband 合约给出。</p>
+	    <div class="callout warn">
+	      <strong>不要把 quicklook sigma 当成 Stage E formal sigma。</strong>
+	      quicklook 的近似公式是 <code>(smoothed_counts - smoothed_sideband_background) / sqrt(smoothed_sideband_background)</code>；Stage E 报告表格和上面的热图才是正式结果。
+	    </div>
+	    <div class="figure-grid">
+	      {''.join(skymap_html) if skymap_html else '<p>本地没有找到 skymap quicklook 图。</p>'}
+	    </div>
+	  </section>
+
+	  <section>
     <h2>输出文件和下一步</h2>
     <ul>
       <li><code>apply/output/stage_e/current/signal_v1.npz</code>：Stage F 直接读取的数组，包含 <code>N_on</code>、<code>B_on</code>、<code>excess</code>、误差和显著性。</li>

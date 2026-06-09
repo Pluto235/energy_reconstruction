@@ -185,10 +185,10 @@ footer.page-foot {
 <p>WCDA 传统流水线（胡 2023, §6.2）只沿一个轴 <code>Nq05t30</code> 分箱，把假设的源能谱通过探测器响应 η(θ, E) 前向折叠成每个 Nhit 段的预期事例数。它不直接按重建能量分箱，<strong>根本原因是只靠水池重建出来的单事例能量分辨率太差，没有实际价值</strong>。</p>
 <p>现在 ML 回归器（<code>runs/theta_recoxy_position_embed_midenergy_8666</code>）给出每个事例一个 <code>log10(E_pred / GeV)</code>，它的分辨率足够好，可以作为有用的第二条分箱轴。把它作为第二维度加进去做了两件事：</p>
 <ol>
-<li><strong>在固定的 Nhit 段内</strong>，按 log E_pred 再切一刀，把原本混在一起、真能量不同的事例分开。这让响应矩阵更"陡"，给拟合提供了额外的谱形信息。</li>
+<li><strong>在固定的 Nhit 段内</strong>，按 log E_pred 再切一刀，把原本混在一起、真能量不同的事例分开。这让响应矩阵更&quot;陡&quot;，给拟合提供了额外的谱形信息。</li>
 <li><strong>Nhit 轴依然保留</strong>，因此分析仍然能直接和已发表的 WCDA 一期星表结果（胡 2023, 图 6-32）对比 — 把二维响应沿 log E_pred 轴 marginalise 回去就能恢复一维 Nhit-only 拟合。</li>
 </ol>
-<p>这种思路结构上和 IACT 把"重建能量"和"重建 gamma/hadron 判别值"分别作为独立分箱轴是一样的：第二条轴允许有噪声，响应矩阵会把它处理掉。</p>
+<p>这种思路结构上和 IACT 把&quot;重建能量&quot;和&quot;重建 gamma/hadron 判别值&quot;分别作为独立分箱轴是一样的：第二条轴允许有噪声，响应矩阵会把它处理掉。</p>
 <p>二维网格已经在 <code>apply/simulation_all_bin.py</code> 里做过原型，输出在 <code>apply/summary_selectedcuts/bin_counts.md</code>：</p>
 <ul>
 <li><strong>Nhit 分箱（8 段）：</strong> <code>[30,60), [60,100), [100,200), [200,300), [300,500), [500,800), [800,1100), [1100,2000)</code></li>
@@ -209,92 +209,92 @@ footer.page-foot {
 <table>
 <thead>
 <tr>
-<th>Nhit bin</th>
-<th>log₁₀ E_pred bins</th>
+  <th>Nhit bin</th>
+  <th>log₁₀ E_pred bins</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>[30,60)</code></td>
-<td><code>[2,3)</code></td>
+  <td><code>[30,60)</code></td>
+  <td><code>[2,3)</code></td>
 </tr>
 <tr>
-<td><code>[60,100)</code></td>
-<td><code>[2,3)</code>, <code>[3,3.25)</code></td>
+  <td><code>[60,100)</code></td>
+  <td><code>[2,3)</code>, <code>[3,3.25)</code></td>
 </tr>
 <tr>
-<td><code>[100,200)</code></td>
-<td><code>[2,3)</code>, <code>[3,3.25)</code></td>
+  <td><code>[100,200)</code></td>
+  <td><code>[2,3)</code>, <code>[3,3.25)</code></td>
 </tr>
 <tr>
-<td><code>[200,300)</code></td>
-<td><code>[2,3)</code>, <code>[3,3.25)</code></td>
+  <td><code>[200,300)</code></td>
+  <td><code>[2,3)</code>, <code>[3,3.25)</code></td>
 </tr>
 <tr>
-<td><code>[300,500)</code></td>
-<td><code>[3,3.25)</code>, <code>[3.25,3.5)</code></td>
+  <td><code>[300,500)</code></td>
+  <td><code>[3,3.25)</code>, <code>[3.25,3.5)</code></td>
 </tr>
 <tr>
-<td><code>[500,800)</code></td>
-<td><code>[3.25,3.5)</code>, <code>[3.5,3.75)</code>, <code>[3.75,4.0)</code></td>
+  <td><code>[500,800)</code></td>
+  <td><code>[3.25,3.5)</code>, <code>[3.5,3.75)</code>, <code>[3.75,4.0)</code></td>
 </tr>
 <tr>
-<td><code>[800,1100)</code></td>
-<td><code>[3.5,3.75)</code>, <code>[3.75,4.0)</code>, <code>[4.0,4.25)</code></td>
+  <td><code>[800,1100)</code></td>
+  <td><code>[3.5,3.75)</code>, <code>[3.75,4.0)</code>, <code>[4.0,4.25)</code></td>
 </tr>
 <tr>
-<td><code>[1100,2000)</code></td>
-<td><code>[3.75,4.0)</code>, <code>[4.0,4.25)</code>, <code>[4.25,4.5)</code></td>
+  <td><code>[1100,2000)</code></td>
+  <td><code>[3.75,4.0)</code>, <code>[4.0,4.25)</code>, <code>[4.25,4.5)</code></td>
 </tr>
 </tbody>
 </table>
 <p>下图把这 18 个 v1 单元放回原来的二维网格中。每个非灰色小面板显示对应 <code>(Nhit, log₁₀ E_pred)</code> 单元内 MC 真实能量 <code>log₁₀(E_true / GeV)</code> 的归一化分布，面板左上角的 <code>n</code> 是 <code>bin_counts.csv</code> 中该单元的 cut 后 MC 事例数。灰色 <code>N/A</code> 面板是 60 个 acceptable 候选池里没有进入 v1 拟合的单元。可以看到 v1 基本沿着高 Nhit ↔ 高预测能量的 physical band 取点，同时保留了最高 Nhit 端。</p>
-<p><img alt="v1 physical-band cells: normalized true-energy distributions" src="assets/cell_selection_v1_true_energy_distribution_grid.png" /></p>
+<p><img src="assets/cell_selection_v1_true_energy_distribution_grid.png" alt="v1 physical-band cells: normalized true-energy distributions" /></p>
 <hr />
 <h2>2. 现有原料</h2>
 <table>
 <thead>
 <tr>
-<th>资源</th>
-<th>路径</th>
-<th>用途</th>
+  <th>资源</th>
+  <th>路径</th>
+  <th>用途</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>观测 eval ROOT</td>
-<td><code>/mnt/mydisk/WCDA_observation_eval/&lt;MMDD&gt;/Esg*.root</code></td>
-<td>逐事例 <code>ml_logE_pred</code>, <code>nv</code>, <code>theta</code>, <code>dcedge</code>, <code>xc</code>, <code>yc</code>, <code>pincness</code>, <code>fitstat</code>, <code>irun/ies/iseq/ievent</code></td>
+  <td>观测 eval ROOT</td>
+  <td><code>/mnt/mydisk/WCDA_observation_eval/&lt;MMDD&gt;/Esg*.root</code></td>
+  <td>逐事例 <code>ml_logE_pred</code>, <code>nv</code>, <code>theta</code>, <code>dcedge</code>, <code>xc</code>, <code>yc</code>, <code>pincness</code>, <code>fitstat</code>, <code>irun/ies/iseq/ievent</code></td>
 </tr>
 <tr>
-<td>时间恢复 friend tree</td>
-<td><code>/mnt/mydisk/WCDA_observation_eval/recovered_time/&lt;MMDD&gt;/*.time.root</code></td>
-<td><code>mjd</code>, <code>ra_mean_deg</code>, <code>dec_mean_deg</code>, <code>match_status</code></td>
+  <td>时间恢复 friend tree</td>
+  <td><code>/mnt/mydisk/WCDA_observation_eval/recovered_time/&lt;MMDD&gt;/*.time.root</code></td>
+  <td><code>mjd</code>, <code>ra_mean_deg</code>, <code>dec_mean_deg</code>, <code>match_status</code></td>
 </tr>
 <tr>
-<td>训好的模型</td>
-<td><code>runs/theta_recoxy_position_embed_midenergy_8666</code></td>
-<td>和 eval ROOT 用的是同一个 checkpoint</td>
+  <td>训好的模型</td>
+  <td><code>runs/theta_recoxy_position_embed_midenergy_8666</code></td>
+  <td>和 eval ROOT 用的是同一个 checkpoint</td>
 </tr>
 <tr>
-<td>MC 模拟</td>
-<td><code>/home/server/mydisk/WCDA_simulation</code> + 模型预测</td>
-<td>构建 A_eff 和迁移矩阵</td>
+  <td>MC 模拟</td>
+  <td><code>/home/server/mydisk/WCDA_simulation</code> + 模型预测</td>
+  <td>构建 A_eff 和迁移矩阵</td>
 </tr>
 <tr>
-<td>二维分箱定义</td>
-<td><code>apply/simulation_all_bin.py</code></td>
-<td>权威网格</td>
+  <td>二维分箱定义</td>
+  <td><code>apply/simulation_all_bin.py</code></td>
+  <td>权威网格</td>
 </tr>
 <tr>
-<td>每个单元的统计量</td>
-<td><code>apply/summary_selectedcuts/bin_counts.md</code></td>
-<td>决定 60 个 acceptable 候选单元</td>
+  <td>每个单元的统计量</td>
+  <td><code>apply/summary_selectedcuts/bin_counts.md</code></td>
+  <td>决定 60 个 acceptable 候选单元</td>
 </tr>
 <tr>
-<td>v1 拟合单元</td>
-<td><code>apply/config/cell_selection_v1.csv</code></td>
-<td>18 个进入响应、观测规约和 χ² 拟合的单元</td>
+  <td>v1 拟合单元</td>
+  <td><code>apply/config/cell_selection_v1.csv</code></td>
+  <td>18 个进入响应、观测规约和 χ² 拟合的单元</td>
 </tr>
 </tbody>
 </table>
@@ -332,12 +332,12 @@ $$</p>
         │
         ▼
 ┌─────────────────────────────────────────────────────────┐
-│ Stage D — 背景估计（直接积分法）                        │
+│ Stage D — 背景估计（先判定 ROI 覆盖，再选背景口径）     │
 └─────────────────────────────────────────────────────────┘
         │
         ▼
 ┌─────────────────────────────────────────────────────────┐
-│ Stage E — 各单元 N_on, N_off, α, excess, Li-Ma σ        │
+│ Stage E — 各单元 N_on, B_on/αN_off, excess, σ           │
 └─────────────────────────────────────────────────────────┘
         │
         ▼
@@ -354,15 +354,19 @@ $$</p>
 <ul>
 <li>用<strong>和 eval ROOT 同一个 checkpoint</strong>对全 MC 样本（不仅是 test split）跑一遍 inference，导出每个事例的 <code>(E_true, θ_true, nv, log10 E_pred, passed_cuts)</code>。<code>apply/simulation_all_bin.py</code> 已经做了重活，需要扩一下让它同时保留 <code>E_true</code> 和 <code>θ_true</code>。</li>
 <li>事例 cut 必须和 Stage C 观测端<strong>完全一致</strong>：<code>pincness &lt; 1.1</code>、<code>fitstat == 0</code>、<code>θ &lt; 50°</code>、<code>dcedge &gt; 20 m</code>，以及模型 <code>config.json</code> 里训练时用的其它条件。</li>
-<li>对每个单元 b = (i_N, i_E) 和每个 (log₁₀ E_true, θ_true) 网格（Δlog₁₀ E = 0.1, Δθ = 1°，和胡 2023 一致）：</li>
+<li>对每个单元 b = (i_N, i_E) 和每个 (log₁₀ E_true, θ_true) 网格（Δlog₁₀ E = 0.1, Δθ = 1°，和胡 2023 一致）：<ul>
 <li><code>η_b(θ_k, E_j) = N_pass(b, E_j, θ_k) / N_thrown(E_j, θ_k)</code></li>
 <li>需要有效面积时再乘上 <code>S_0</code>。</li>
+</ul>
+</li>
 <li>这里的 <code>b</code> 是观测空间里的二维单元 <code>b = (Nhit bin, log₁₀ E_pred bin)</code>；<code>E_j</code> 和 <code>θ_k</code> 是 MC 真值空间里的条件。也就是说，<code>η_b(E_true, θ)</code> 表示：一个真实能量为 <code>E_true</code>、天顶角为 <code>θ</code> 的 gamma，经过探测器、cuts、AI 能量预测和二维分箱以后，最后落进观测单元 <code>b = (Nhit, E_pred)</code> 的概率。</li>
-<li>现有数据上的计算逻辑：</li>
+<li>现有数据上的计算逻辑：<ul>
 <li>分子 <code>N_pass(b, E_j, θ_k)</code> 从 <code>/mnt/mydisk/WCDA_simulation_binned_response_v1/nhit_*/predE_*/*.root</code> 来数。每个文件已经按 <code>nv × ml_logE_pred</code> 落进某个观测 cell，并保留 <code>mc_energy</code>、<code>mc_theta</code>、<code>mc_weight</code>；只需按 <code>log₁₀(mc_energy)</code> 和 <code>mc_theta</code> 再填二维真值直方图。</li>
 <li>分母 <code>N_thrown(E_j, θ_k)</code> 从 IHEP 原始 MC primary hist 汇总文件 <code>/mnt/mydisk/WCDA_simulation_primary_hist/primary_denominator_stage_a.npz</code> 来数；正式响应使用 <code>hntotmc</code> weighted thrown sumw，<code>hntotmc0</code> unweighted count 只作为诊断。</li>
 <li>分子和正式分母都用 <code>Σ mc_weight</code> / weighted primary sumw，避免裸 count 与生成谱权重混用。</li>
 <li>绝对有效面积同步输出：<code>A_eff,b(E,θ) = S_0 cosθ_center η_b(E,θ)</code>，其中 <code>S_0 = 40000 m²</code>，<code>θ_center</code> 为 1° 天顶角 bin 中心。</li>
+</ul>
+</li>
 <li>输出 <code>response_2d.npz</code>，shape 为 <code>(N_cells, N_E_true, N_theta)</code>，η 和 A_eff 都存。默认只保留 <code>apply/config/cell_selection_v1.csv</code> 中的 18 个 v1 单元；60 个 <code>acceptable</code> 单元只作为候选池和敏感性检查输入。</li>
 </ul>
 <h3>Stage B — Crab 赤纬带上各单元的 PSF</h3>
@@ -377,35 +381,41 @@ $$</p>
 <li>保留 <code>match_status == 0</code>、<code>pincness &lt; 1.1</code>、<code>fitstat == 0</code>、<code>theta &lt; 50°</code>、<code>dcedge &gt; 20 m</code> 的事例。</li>
 <li>从 <code>nv</code> 和 <code>ml_logE_pred</code> 算出单元 <code>b = (i_N, i_E)</code>。不在 <code>apply/config/cell_selection_v1.csv</code> 里的单元直接丢弃。</li>
 <li>每个事例携带 <code>(ra_mean_deg, dec_mean_deg, mjd, theta, b)</code> 往下传。</li>
+<li>Stage C metadata 必须记录天区覆盖诊断：以 Crab 为中心的 offset 半径 <code>ρ = sqrt(x² + y²)</code> 分布、按 cell 的 <code>ρ</code> profile、以及是否存在明显边缘截断。<code>apply/report/crab_v1_cell_skymaps.md</code> 的 10° half-width quicklook 显示 Crab 周围覆盖可能只有约 8° 量级，但这只是从天图肉眼读出的假设，不应在 Stage D 前当成定论。</li>
 </ol>
 <p>输出按月汇成单一 parquet <code>obs_events.parquet</code>（列存；~100M 事例 × ~6 列在磁盘和扫描速度上都很舒服）。每月一个文件，方便管理。</p>
 <p><strong>Live time</strong> 从 MJD 覆盖减掉 duty-cycle 空档算出。Handoff 给出 1258 个输入文件、共 127.69M 事例匹配成功 — 这是 live time 计数的母体。</p>
 <h3>Stage D — 背景估计</h3>
-<p>v1 baseline 直接用<strong>直接积分法</strong>（胡 2023, §6.1.5 — 一期星表选定的方法）。这里不再把等赤纬法作为先跑通方案；等赤纬法只保留为后续背景系统误差交叉检查。直接积分法的核心是用同一份观测数据在局部坐标中重建探测器接收度，再随地球自转把该接收度投影回赤道坐标，因此能自然吸收全天事例率和接收度随时间的慢变化。</p>
-<p>具体实现按单元 b 独立做：</p>
+<p>Stage D 的第一步不是直接套背景公式，而是先判定 Stage C 输入到底是什么天区口径。直接积分法要求输入近似为全视场、全天候的事件流；如果输入实际上只覆盖 Crab 周围局部 ROI，那么用它重建全天接收度 <code>G_b(x, y)</code> 会把 ROI 边界和源区选择误当成探测器接收度，背景会失真。当前 <code>crab_v1_cell_skymaps.md</code> 的 10° quicklook 提示有效覆盖可能在 Crab 附近约 8°，但这个半径需要由 Stage D 的 coverage 诊断定量确认。</p>
+<p>因此 Stage D 分成两个互斥口径：</p>
+<ol>
+<li><strong>全视场输入口径。</strong> 只有当 Stage C 被确认是全视场事件流时，才使用直接积分法（胡 2023, §6.1.5）。按 cell 独立在本地坐标或 hour-angle/declination 空间中重建 <code>G_b(x, y)</code>，mask Crab、Mrk 421、Mrk 501、Geminga、Cygnus 等强源，记录全天 <code>R_b(t)</code>，再沿 Crab 轨迹积分得到 <code>B_on,b</code>。这一路线必须输出 masked/unmasked 接收度、rate vs time、Crab 轨迹覆盖、mask 配置、live time 和 <code>B_on,b</code>。</li>
+<li><strong>Crab 局部 ROI 口径。</strong> 如果 Stage C 只覆盖 Crab 附近局部天区，则 v1 baseline 改为 ROI-local 背景，不再把直接积分法作为主背景。先把事件投影到 Crab tangent-plane：
+<code>x = wrap(ra_mean_deg - RA_Crab) cos(Dec_Crab)</code>，<code>y = dec_mean_deg - Dec_Crab</code>，<code>ρ = sqrt(x² + y²)</code>。
+由 coverage 诊断确认外边界后，默认采用内切 fiducial ROI <code>ρ &lt; 6°</code>，以避开疑似 8° 覆盖边缘；<code>6° &lt; ρ &lt; 8°</code> 只作为覆盖和边缘系统诊断，不进入 baseline on/off 统计。</li>
+</ol>
+<p>ROI-local baseline 的具体要求：</p>
 <ul>
-<li>输入只使用 Stage C 清洗后的事件，且先按 <code>b = (Nhit bin, logE_pred bin)</code> 分组。不同单元的 zenith/azimuth 接收度、事例率和死时间响应都不同，不能共用一张接收度图。</li>
-<li>在本地坐标或等价的 hour-angle/declination 参数空间中累计接收度图 <code>G_b(x, y)</code>。构图时 mask 掉 Crab 周围 2° 半径；为避免强源泄漏，Mrk 421、Mrk 501、Geminga、Cygnus 区也一并 mask。mask 只影响接收度训练样本，不影响之后对 Crab on-region 的计数。</li>
-<li>同时记录单元 b 的全天事件率 <code>R_b(t)</code>，时间粒度先取能稳定覆盖 rate 漂移的窗口（例如 10-30 min；最终由 rate 曲线诊断决定）。<code>R_b(t)</code> 用来描述阵列运行状态、天气和筛选后事件率的慢变化。</li>
-<li>对 Crab 位置的每个观测时刻，把目标赤经赤纬转换到局部坐标 <code>(x(t), y(t))</code>，从 <code>G_b</code> 读出该方向的相对接收度，并乘以 <code>R_b(t)</code>、live-time 权重和像素/孔径几何因子后积分：
-  <code>B_b(ra, dec) = ∫ G_b(x(t), y(t)) R_b(t) dt</code>。</li>
-<li>对 Stage E 的圆形 on-region，在同一积分半径 <code>r_b = 1.58 σ_b</code> 内把 <code>B_b(ra, dec)</code> 积起来，得到该单元的背景预测 <code>α_b N_off,b</code>。实现上可以直接输出背景期望 <code>B_on,b</code>，不强制保存传统 off 计数；但为了和 Li-Ma 诊断兼容，metadata 里要同时保存等效的 <code>alpha_b</code>、<code>N_off,b</code> 或清楚标记采用的是直接背景期望形式。</li>
-<li>每个单元输出接收度图、rate 曲线、mask 配置、live-time、<code>B_on,b</code> 和诊断图。诊断至少包括 masked/unmasked 接收度、rate vs time、Crab 轨迹覆盖、以及 18 个 v1 单元的背景预测表。</li>
+<li>输入仍按 18 个 v1 cell 独立处理。不同 cell 的 PSF、能量分布和背景梯度不同，不能共用一个归一化。</li>
+<li>Crab 源区 mask 至少取 2°；更严格时取 <code>max(2°, 2 r_b)</code> 做稳定性检查。源区 mask 只用于训练/估计背景，不影响 Stage E 的 on-region 计数。</li>
+<li>背景优先用等赤纬 sideband 或 ring/annulus 方法在 <code>ρ &lt; 6°</code> 内估计。等赤纬 sideband 要沿 <code>y</code> strip 建背景，排除 Crab mask，并避免使用靠近 <code>ρ=6°</code> 的边缘像素；ring 方法要显式做 ROI 几何面积修正。</li>
+<li>输出 <code>B_on,b</code>。如果背景来自实际 off 区计数，则同时输出 <code>N_off,b</code> 和 <code>alpha_b</code>，Stage E 可用 Li-Ma；如果背景来自平滑密度图或模型积分，则 metadata 必须明确标注为 direct expectation，Li-Ma 不适用，只输出 known-background diagnostic。</li>
+<li>诊断至少包括：per-cell <code>ρ</code> coverage profile、<code>ρ&lt;6°</code> 与外圈 <code>6°&lt;ρ&lt;8°</code> 的对照、源区 mask 图、sideband/ring off 区图、<code>N_on/B_on</code> 表、以及 fiducial 半径从 5.5°、6.0°、6.5° 变化时的稳定性。</li>
 </ul>
-<p>如果能拿到师兄的星表程序，可以复用其直接积分法实现；但路线记录为“直接积分法 baseline”，不是“先等赤纬再替换”。</p>
 <h3>Stage E — 信号提取</h3>
 <p>对每个单元 b：</p>
 <ul>
 <li>积分半径 <code>r_b = 1.58 σ_b</code>，来自 Stage B。</li>
-<li><code>N_on,b</code> = Crab on-region（圆心 RA=83.63°, Dec=22.01°，半径 r_b）落在单元 b 的事例数。</li>
-<li><code>N_off,b · α_b</code> = 同样积分孔径、同单元的直接积分法背景预测。</li>
-<li><code>excess_b = N_on,b − α_b N_off,b</code>，统计误差 <code>σ_b^stat = √(N_on,b + α_b² N_off,b)</code>。</li>
-<li>Li-Ma 显著性（胡 2023 公式 6-26）逐单元算，存下来用作诊断。</li>
+<li><code>N_on,b</code> = Crab on-region（圆心 RA=83.63°, Dec=22.01°，半径 r_b）落在单元 b 的事例数。若 Stage D 判定为 Crab 局部 ROI 口径，Stage E 必须只使用同一个 fiducial ROI 配置（默认 <code>ρ &lt; 6°</code>）和同一套 mask/edge 定义。</li>
+<li>背景输入来自 Stage D：可能是 <code>B_on,b</code> 直接期望，也可能是 <code>α_b N_off,b</code>。Stage E 不能自行把 direct expectation 强行解释成传统 off 计数。</li>
+<li>若有真实 off 计数，计算 <code>excess_b = N_on,b − α_b N_off,b</code>、<code>σ_b^stat = √(N_on,b + α_b² N_off,b)</code>，并按胡 2023 公式 6-26 输出 Li-Ma 显著性。</li>
+<li>若只有直接背景期望，计算 <code>excess_b = N_on,b − B_on,b</code>，显著性只标注为 known-background Poisson diagnostic；<code>alpha_b</code>、<code>N_off,b</code> 和 Li-Ma 必须留空或标注 <code>not_applicable</code>。</li>
 </ul>
 <p>诊断产出预期：</p>
 <ul>
-<li>二维显著性图（Nhit × log E_pred）— 应该看到一条正相关的对角带（高 Nhit ↔ 高 log E_pred），偏离对角线的"翼"告诉你 ML 这条轴在 Nhit 之外加了多少信息。</li>
+<li>二维显著性图（Nhit × log E_pred）— 应该看到一条正相关的对角带（高 Nhit ↔ 高 log E_pred），偏离对角线的&quot;翼&quot;告诉你 ML 这条轴在 Nhit 之外加了多少信息。</li>
 <li>v1 18 个拟合单元加起来的 Crab 总显著性；同时输出 60 个 acceptable 候选单元的总显著性作为诊断对照。</li>
+<li>如果 Stage E 显著性远超两个月 Crab 的量级预期，先检查 Stage C ROI 口径、fiducial 半径、off 区几何和边缘修正，不允许直接 promote 到 Stage F。</li>
 </ul>
 <h3>Stage F — Forward folding 拟合</h3>
 <p>这里的 <code>N_b^{exp}</code> 不是按 <code>E_pred</code> 反推真实能量，而是把假设的真实 Crab 能谱 <code>I(E; Θ_S)</code> 通过 Stage A 的 <code>η_b(E_true, θ)</code> 响应折叠到观测单元 <code>b = (Nhit, E_pred)</code> 后得到的预期信号数。</p>
@@ -427,9 +437,11 @@ $$</p>
 <li>固定 Stage F 拟出来的全局 Γ（或 α, β）。</li>
 <li>对每个 Nhit 段（或每个 i_E 段 — 两套都给）只重新拟归一化 N_0,bin，其他参数全部冻结。</li>
 <li>转换为微分通量 <code>E² dN/dE</code>，能量取该单元中位 true 能量（用最佳谱给响应加权算出）。</li>
-<li>直接对比：</li>
+<li>直接对比：<ul>
 <li>WCDA 一期 Crab（胡 2023 图 6-32）：N_0 = 2.114 × 10⁻¹³ cm⁻² s⁻¹ TeV⁻¹ @ 3 TeV，Γ = 2.69 ± 0.01。</li>
 <li>HAWC、HESS 已发表的 Crab SED 作为外部 sanity 参考。</li>
+</ul>
+</li>
 </ul>
 <p>一维 Nhit-only 的 SED 作为副产物：把响应沿 i_E marginalise，重新拟一遍 — <strong>这是和星表 apples-to-apples 的直接对比</strong>。</p>
 <hr />
@@ -440,7 +452,8 @@ $$</p>
 <li><strong>响应自检。</strong> 把模拟注入谱（Γ = −2.62）通过响应前向折叠，得到的各单元预期数应该和 <code>bin_counts.md</code> 里 cut 后实测 MC 数符合到 ≲ 1%。</li>
 <li><strong>Cell-drop 灵敏度。</strong> 默认拟合用 <code>v1_physical_18</code>。对照重跑 <code>top2_per_nhit_15</code> 和 <code>count_ge30000_19</code> 两套 selector；Crab 的 Γ 和 N_0 漂移应小于统计误差，且高 Nhit 端残差不能出现系统偏移。</li>
 <li><strong>Cut 灵敏度。</strong> 收紧到 <code>pincness &lt; 0.9</code> 重跑全套（响应和观测必须用<strong>同一个</strong>更紧的 cut）。拟出的 SED 应该在统计上一致。</li>
-<li><strong>背景方法灵敏度。</strong> 如果直接积分法和等赤纬法都实现了，分别拟一次，把差异作为背景方法系统列出来。</li>
+<li><strong>ROI 覆盖和边缘灵敏度。</strong> 先确认 Stage C 是否只覆盖 Crab 局部 ROI。若走 ROI-local 背景，分别用 <code>ρ &lt; 5.5°</code>、<code>ρ &lt; 6.0°</code>、<code>ρ &lt; 6.5°</code> 的 fiducial 区域重跑 Stage D/E，Crab 的 excess 和拟合谱不能对边缘半径产生不可解释的漂移。</li>
+<li><strong>背景方法灵敏度。</strong> ROI-local baseline 至少比较等赤纬 sideband 与 ring/annulus 两种背景；只有在确认 Stage C 是全视场事件流时，才把直接积分法加入背景系统对照。</li>
 </ol>
 <p>最终系统误差预算按胡 2023 §6.8.1 思路给：ML 结果相对 WCDA 一期星表的 ratio band，理想情况下 1–20 TeV 偏差应在 ±10% 以内。</p>
 <hr />
@@ -448,54 +461,54 @@ $$</p>
 <table>
 <thead>
 <tr>
-<th>文件</th>
-<th>内容</th>
+  <th>文件</th>
+  <th>内容</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>apply/stages/01_build_response.py</code></td>
-<td>Stage A — 扩 <code>apply/simulation_all_bin.py</code> 输出 η、A_eff</td>
+  <td><code>apply/stages/01_build_response.py</code></td>
+  <td>Stage A — 扩 <code>apply/simulation_all_bin.py</code> 输出 η、A_eff</td>
 </tr>
 <tr>
-<td><code>apply/stages/02_build_psf.py</code></td>
-<td>Stage B — Crab 赤纬带上各单元 PSF</td>
+  <td><code>apply/stages/02_build_psf.py</code></td>
+  <td>Stage B — Crab 赤纬带上各单元 PSF</td>
 </tr>
 <tr>
-<td><code>apply/stages/03_reduce_obs.py</code></td>
-<td>Stage C — 合并 eval ROOT + friend tree → <code>obs_events.parquet</code></td>
+  <td><code>apply/stages/03_reduce_obs.py</code></td>
+  <td>Stage C — 合并 eval ROOT + friend tree → <code>obs_events.parquet</code></td>
 </tr>
 <tr>
-<td><code>apply/stages/04_background.py</code></td>
-<td>Stage D — 直接积分法接收度 + 背景预测</td>
+  <td><code>apply/stages/04_background.py</code></td>
+  <td>Stage D — ROI 覆盖诊断 + ROI-local 或全视场背景预测</td>
 </tr>
 <tr>
-<td><code>apply/stages/05_signal.py</code></td>
-<td>Stage E — 各单元 N_on, N_off, excess, Li-Ma</td>
+  <td><code>apply/stages/05_signal.py</code></td>
+  <td>Stage E — 各单元 N_on, B_on/αN_off, excess, σ</td>
 </tr>
 <tr>
-<td><code>apply/stages/06_fit.py</code></td>
-<td>Stage F — <code>iminuit</code> forward folding 拟合器</td>
+  <td><code>apply/stages/06_fit.py</code></td>
+  <td>Stage F — <code>iminuit</code> forward folding 拟合器</td>
 </tr>
 <tr>
-<td><code>apply/stages/07_sed_points.py</code></td>
-<td>Stage G — 各段 SED 点 + 出图</td>
+  <td><code>apply/stages/07_sed_points.py</code></td>
+  <td>Stage G — 各段 SED 点 + 出图</td>
 </tr>
 <tr>
-<td><code>apply/config/cell_selection_v1.csv</code></td>
-<td>v1 的 18 个 physical-band 拟合单元</td>
+  <td><code>apply/config/cell_selection_v1.csv</code></td>
+  <td>v1 的 18 个 physical-band 拟合单元</td>
 </tr>
 <tr>
-<td><code>apply/output/crab_sed.json</code></td>
-<td>最终拟合参数 + SED 点</td>
+  <td><code>apply/output/crab_sed.json</code></td>
+  <td>最终拟合参数 + SED 点</td>
 </tr>
 <tr>
-<td><code>apply/output/figures/</code></td>
-<td>二维显著性图、SED 对比图、残差、响应切片</td>
+  <td><code>apply/output/figures/</code></td>
+  <td>二维显著性图、SED 对比图、残差、响应切片</td>
 </tr>
 <tr>
-<td><code>apply/report/roadmap.md</code></td>
-<td>本文档</td>
+  <td><code>apply/report/roadmap.md</code></td>
+  <td>本文档</td>
 </tr>
 </tbody>
 </table>
@@ -503,12 +516,13 @@ $$</p>
 <hr />
 <h2>7. v1 已定技术选择</h2>
 <ol>
-<li><strong>背景方法：直接积分法。</strong> v1 baseline 直接上直接积分法，和 WCDA 一期星表路线对齐。等赤纬法不作为主线 fallback，只作为后续背景方法系统误差检查。</li>
+<li><strong>背景方法：先判定输入天区口径。</strong> 如果 Stage C 是全视场事件流，v1 可使用直接积分法并和 WCDA 一期星表路线对齐；如果 Stage C 只覆盖 Crab 附近局部 ROI，v1 baseline 改为 <code>ρ &lt; 6°</code> fiducial ROI-local 背景，优先使用等赤纬 sideband 或 ring/annulus，并把疑似 8° 外边缘作为系统诊断而不是拟合输入。</li>
 <li><strong>Stage F 拟合后端：自写最小 <code>iminuit</code> 拟合器。</strong> 二维响应索引、18 个 cell 的选择、metadata 和诊断输出都需要按本项目组织；直接写一个小的 forward-folding χ² 拟合器更可控。师兄星表程序可参考背景和系统误差处理，但不作为拟合主框架。</li>
 <li><strong>PSF 参数化：v1 单高斯。</strong> 每个 cell 用 Crab 赤纬带的 MC 角分辨分布拟合一个 σ_b，并用 <code>1.58 σ_b</code> 定义积分半径。双高斯留到 containment 或残差诊断显示单高斯明显不够时再升级。</li>
 <li><strong>单元选择：18 个 physical-band cell。</strong> v1 只使用 <code>apply/config/cell_selection_v1.csv</code> 里的 18 个单元进入响应、背景、excess 和 χ² 拟合；60 个 <code>acceptable</code> 单元保留为候选池、显著性对照和系统检查，不进入 baseline 拟合。</li>
 </ol>
-<p>这四项是当前 v1 路线的固定选择，后续实现和报告 metadata 都应显式记录。</p>
+<p>这四项是当前 v1 路线的固定选择，后续实现和报告 metadata 都应显式记录。尤其 Stage D/E 必须记录采用的是 <code>full_field_direct_integration</code> 还是 <code>crab_roi_local</code>，以及 fiducial ROI 半径、边缘排除策略和背景形式。</p>
+
 <footer class="page-foot">
   Generated from <code>roadmap.md</code> · Pluto235/any-reports
 </footer>

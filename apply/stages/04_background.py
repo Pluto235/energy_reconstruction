@@ -68,8 +68,22 @@ class ScanResult:
     theta_check: Dict[str, object]
 
 
+@dataclass
+class RoiScanResult:
+    counts_flat: np.ndarray
+    cell_total_events: np.ndarray
+    cell_map_events: np.ndarray
+    cell_out_of_map_events: np.ndarray
+    cell_fiducial_events: np.ndarray
+    cell_edge_diagnostic_events: np.ndarray
+    rho_hist_total: np.ndarray
+    rho_hist_by_cell: np.ndarray
+    input_rows: int
+    processed_batches: int
+
+
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Stage D direct-integration background for Crab SED v1 cells.")
+    parser = argparse.ArgumentParser(description="Stage D background for Crab SED v1 cells.")
     parser.add_argument("--stage-c-dir", type=str, default=DEFAULT_STAGE_C_DIR)
     parser.add_argument("--psf-npz", type=str, default=DEFAULT_PSF_NPZ)
     parser.add_argument("--cell-selection-csv", type=str, default=DEFAULT_CELL_SELECTION)
@@ -94,6 +108,27 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lhaaso-lon-deg", type=float, default=DEFAULT_LHAASO_LON_DEG)
     parser.add_argument("--source-ra-deg", type=float, default=DEFAULT_SOURCE_RA_DEG)
     parser.add_argument("--source-dec-deg", type=float, default=DEFAULT_SOURCE_DEC_DEG)
+
+    parser.add_argument(
+        "--background-mode",
+        choices=["auto", "full_field_direct_integration", "crab_roi_local"],
+        default="auto",
+        help="Select the Stage D background model. 'auto' uses Stage C ROI coverage metadata.",
+    )
+    parser.add_argument(
+        "--roi-background-method",
+        choices=["dec-sideband"],
+        default="dec-sideband",
+        help="Background estimator for --background-mode crab_roi_local.",
+    )
+    parser.add_argument("--roi-fiducial-deg", type=float, default=6.0)
+    parser.add_argument("--roi-edge-diagnostic-deg", type=float, default=8.0)
+    parser.add_argument("--roi-grid-step-deg", type=float, default=0.1)
+    parser.add_argument("--roi-edge-margin-deg", type=float, default=0.25)
+    parser.add_argument("--roi-source-mask-deg", type=float, default=2.0)
+    parser.add_argument("--roi-source-mask-r-opt-factor", type=float, default=2.0)
+    parser.add_argument("--roi-coverage-max-deg", type=float, default=12.0)
+    parser.add_argument("--roi-coverage-bin-deg", type=float, default=0.1)
 
     parser.add_argument("--batch-size", type=int, default=500000)
     parser.add_argument("--workers", type=int, default=1, help="Reserved for Slurm resource accounting; scanning is vectorized.")
@@ -408,6 +443,74 @@ def finite_float(value: object) -> Optional[float]:
     return number
 
 
+def resolve_background_mode(args: argparse.Namespace, stage_c_metadata: Dict[str, object]) -> Tuple[str, Dict[str, object]]:
+    requested = str(args.background_mode)
+    roi = stage_c_metadata.get("roi_coverage") if isinstance(stage_c_metadata, dict) else None
+    roi_meta = roi if isinstance(roi, dict) else {}
+    if requested != "auto":
+        return requested, {
+            "requested": requested,
+            "resolved": requested,
+            "reason": "explicit --background-mode",
+            "stage_c_roi_coverage": roi_meta,
+        }
+
+    if not roi_meta:
+        raise ValueError(
+            "--background-mode auto requires Stage C roi_coverage metadata. "
+            "Use --background-mode full_field_direct_integration only if the Stage C input is confirmed full-field."
+        )
+
+    edge = finite_float(roi_meta.get("edge_radius_estimate_deg"))
+    fiducial = finite_float(roi_meta.get("fiducial_radius_recommendation_deg"))
+    fractions = roi_meta.get("counts_within_radius_fraction_of_total")
+    rho10_fraction = None
+    if isinstance(fractions, dict):
+        rho10_fraction = finite_float(fractions.get("rho_lt_10_deg"))
+
+    local_reasons: List[str] = []
+    if edge is not None and edge <= max(float(args.roi_edge_diagnostic_deg) + 1.0, float(args.roi_fiducial_deg) + 1.0):
+        local_reasons.append(f"Stage C edge_radius_estimate_deg={edge:.4g}")
+    if rho10_fraction is not None and rho10_fraction >= 0.10:
+        local_reasons.append(f"rho_lt_10 fraction is high ({rho10_fraction:.4g})")
+    if fiducial is not None and fiducial <= float(args.roi_edge_diagnostic_deg):
+        local_reasons.append(f"Stage C fiducial recommendation={fiducial:.4g} deg")
+
+    if local_reasons:
+        return "crab_roi_local", {
+            "requested": "auto",
+            "resolved": "crab_roi_local",
+            "reason": "; ".join(local_reasons),
+            "stage_c_roi_coverage": roi_meta,
+        }
+
+    raise ValueError(
+        "Stage C roi_coverage metadata is present but does not clearly indicate a Crab-local ROI. "
+        "Choose --background-mode crab_roi_local or --background-mode full_field_direct_integration explicitly."
+    )
+
+
+def crab_tangent_xy(
+    ra_deg: np.ndarray,
+    dec_deg: np.ndarray,
+    source_ra_deg: float,
+    source_dec_deg: float,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    dra = ((np.asarray(ra_deg, dtype=np.float64) - float(source_ra_deg) + 180.0) % 360.0) - 180.0
+    x = dra * math.cos(math.radians(float(source_dec_deg)))
+    y = np.asarray(dec_deg, dtype=np.float64) - float(source_dec_deg)
+    rho = np.hypot(x, y)
+    return x, y, rho
+
+
+def make_cell_index_by_id(cells: Sequence[CellSpec]) -> np.ndarray:
+    max_cell_id = max(cell.cell_id for cell in cells)
+    cell_index_by_id = np.full(max_cell_id + 1, -1, dtype=np.int16)
+    for cell in cells:
+        cell_index_by_id[cell.cell_id] = np.int16(cell.index)
+    return cell_index_by_id
+
+
 def build_time_edges(stage_c_dir: Path, metadata: Dict[str, object], time_bin_minutes: float) -> np.ndarray:
     if time_bin_minutes <= 0:
         raise ValueError("--time-bin-minutes must be positive")
@@ -661,6 +764,177 @@ def scan_stage_c_events(
         processed_batches=processed_batches,
         theta_check=theta_check,
     )
+
+
+def scan_stage_c_roi_events(
+    obs_events_dir: Path,
+    cells: Sequence[CellSpec],
+    *,
+    source_ra_deg: float,
+    source_dec_deg: float,
+    xy_edges_deg: np.ndarray,
+    rho_hist_edges_deg: np.ndarray,
+    roi_fiducial_deg: float,
+    roi_edge_diagnostic_deg: float,
+    batch_size: int,
+    max_batches: Optional[int],
+    print_every: int,
+) -> RoiScanResult:
+    dataset = ds.dataset(obs_events_dir, format="parquet", partitioning="hive")
+    columns = ["ra_mean_deg", "dec_mean_deg", "cell_id"]
+    scanner = dataset.scanner(columns=columns, batch_size=int(batch_size), use_threads=True)
+    n_cells = len(cells)
+    n_xy = xy_edges_deg.size - 1
+    n_map = n_xy * n_xy
+    flat_size = n_cells * n_map
+    cell_index_by_id = make_cell_index_by_id(cells)
+
+    counts_flat = np.zeros(flat_size, dtype=np.int64)
+    cell_total_events = np.zeros(n_cells, dtype=np.int64)
+    cell_map_events = np.zeros(n_cells, dtype=np.int64)
+    cell_out_of_map_events = np.zeros(n_cells, dtype=np.int64)
+    cell_fiducial_events = np.zeros(n_cells, dtype=np.int64)
+    cell_edge_diagnostic_events = np.zeros(n_cells, dtype=np.int64)
+    rho_hist_total = np.zeros(rho_hist_edges_deg.size - 1, dtype=np.int64)
+    rho_hist_by_cell = np.zeros((n_cells, rho_hist_edges_deg.size - 1), dtype=np.int64)
+
+    xy_min = float(xy_edges_deg[0])
+    xy_step = float(xy_edges_deg[1] - xy_edges_deg[0])
+    input_rows = 0
+    processed_batches = 0
+
+    for batch_idx, batch in enumerate(scanner.to_batches(), start=1):
+        if max_batches is not None and batch_idx > int(max_batches):
+            break
+        processed_batches += 1
+        input_rows += int(batch.num_rows)
+
+        ra = np.asarray(column_to_numpy(batch, "ra_mean_deg"), dtype=np.float64)
+        dec = np.asarray(column_to_numpy(batch, "dec_mean_deg"), dtype=np.float64)
+        cell_id = np.asarray(column_to_numpy(batch, "cell_id"), dtype=np.int32)
+
+        valid_id = (cell_id >= 0) & (cell_id < cell_index_by_id.size)
+        cell_idx = np.full(cell_id.shape, -1, dtype=np.int16)
+        cell_idx[valid_id] = cell_index_by_id[cell_id[valid_id]]
+        finite = (cell_idx >= 0) & np.isfinite(ra) & np.isfinite(dec)
+        if not np.any(finite):
+            continue
+
+        ra_v = ra[finite]
+        dec_v = dec[finite]
+        cell_v = np.asarray(cell_idx[finite], dtype=np.int64)
+        x, y, rho = crab_tangent_xy(ra_v, dec_v, source_ra_deg, source_dec_deg)
+
+        update_bincount(cell_total_events, cell_v, n_cells)
+        rho_hist_total += np.histogram(rho[np.isfinite(rho)], bins=rho_hist_edges_deg)[0]
+        rho_bin = np.searchsorted(rho_hist_edges_deg, rho, side="right") - 1
+        valid_rho_bin = np.isfinite(rho) & (rho_bin >= 0) & (rho_bin < rho_hist_edges_deg.size - 1)
+        if np.any(valid_rho_bin):
+            linear_rho = cell_v[valid_rho_bin] * (rho_hist_edges_deg.size - 1) + rho_bin[valid_rho_bin]
+            rho_hist_by_cell += np.bincount(
+                linear_rho,
+                minlength=n_cells * (rho_hist_edges_deg.size - 1),
+            ).reshape(n_cells, rho_hist_edges_deg.size - 1)
+
+        fiducial = rho < float(roi_fiducial_deg)
+        if np.any(fiducial):
+            update_bincount(cell_fiducial_events, cell_v[fiducial], n_cells)
+        edge_diag = (rho >= float(roi_fiducial_deg)) & (rho < float(roi_edge_diagnostic_deg))
+        if np.any(edge_diag):
+            update_bincount(cell_edge_diagnostic_events, cell_v[edge_diag], n_cells)
+
+        x_idx = np.floor((x - xy_min) / xy_step).astype(np.int64)
+        y_idx = np.floor((y - xy_min) / xy_step).astype(np.int64)
+        valid_map = (x_idx >= 0) & (x_idx < n_xy) & (y_idx >= 0) & (y_idx < n_xy)
+        if np.any(valid_map):
+            map_idx = y_idx[valid_map] * n_xy + x_idx[valid_map]
+            linear_map = cell_v[valid_map] * n_map + map_idx
+            update_bincount(counts_flat, linear_map, flat_size)
+            update_bincount(cell_map_events, cell_v[valid_map], n_cells)
+        out_of_map = ~valid_map
+        if np.any(out_of_map):
+            update_bincount(cell_out_of_map_events, cell_v[out_of_map], n_cells)
+
+        if print_every > 0 and (batch_idx % print_every == 0):
+            print(
+                f"[roi batch {batch_idx}] rows={input_rows:,} selected={int(cell_total_events.sum()):,}",
+                flush=True,
+            )
+
+    return RoiScanResult(
+        counts_flat=counts_flat,
+        cell_total_events=cell_total_events,
+        cell_map_events=cell_map_events,
+        cell_out_of_map_events=cell_out_of_map_events,
+        cell_fiducial_events=cell_fiducial_events,
+        cell_edge_diagnostic_events=cell_edge_diagnostic_events,
+        rho_hist_total=rho_hist_total,
+        rho_hist_by_cell=rho_hist_by_cell,
+        input_rows=input_rows,
+        processed_batches=processed_batches,
+    )
+
+
+def build_roi_masks(
+    xy_centers: np.ndarray,
+    r_opt_deg: np.ndarray,
+    *,
+    roi_fiducial_deg: float,
+    roi_edge_margin_deg: float,
+    roi_source_mask_deg: float,
+    source_mask_r_opt_factor: float,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    x_grid, y_grid = np.meshgrid(xy_centers, xy_centers)
+    rho_grid = np.hypot(x_grid, y_grid)
+    fiducial_mask = rho_grid < float(roi_fiducial_deg)
+    training_edge_limit = max(0.0, float(roi_fiducial_deg) - float(roi_edge_margin_deg))
+    edge_safe_mask = rho_grid < training_edge_limit
+    on_masks = np.zeros((r_opt_deg.size, xy_centers.size, xy_centers.size), dtype=bool)
+    source_masks = np.zeros_like(on_masks)
+    for idx, r_opt in enumerate(r_opt_deg):
+        on_masks[idx] = rho_grid <= float(r_opt)
+        source_radius = max(float(roi_source_mask_deg), float(source_mask_r_opt_factor) * float(r_opt))
+        source_masks[idx] = rho_grid <= source_radius
+    return rho_grid.astype(np.float32), fiducial_mask, edge_safe_mask, on_masks, source_masks
+
+
+def estimate_roi_dec_sideband_background(
+    counts_map: np.ndarray,
+    fiducial_mask: np.ndarray,
+    edge_safe_mask: np.ndarray,
+    on_masks: np.ndarray,
+    source_masks: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    n_cells, n_y, n_x = counts_map.shape
+    background_map = np.zeros((n_cells, n_y, n_x), dtype=np.float32)
+    training_mask = np.zeros((n_cells, n_y, n_x), dtype=bool)
+    off_counts = np.zeros(n_cells, dtype=np.float64)
+    off_pixels = np.zeros(n_cells, dtype=np.int64)
+    on_pixels = np.zeros(n_cells, dtype=np.int64)
+    b_on = np.zeros(n_cells, dtype=np.float64)
+
+    base_training = fiducial_mask & edge_safe_mask
+    for cell_idx in range(n_cells):
+        on_mask = on_masks[cell_idx] & fiducial_mask
+        train = base_training & (~source_masks[cell_idx])
+        training_mask[cell_idx] = train
+        on_pixels[cell_idx] = int(np.count_nonzero(on_mask))
+        off_pixels[cell_idx] = int(np.count_nonzero(train))
+        off_counts[cell_idx] = float(counts_map[cell_idx][train].sum()) if off_pixels[cell_idx] else 0.0
+
+        for y_idx in range(n_y):
+            row_train = train[y_idx]
+            row_on = on_mask[y_idx]
+            if not np.any(row_on):
+                continue
+            row_train_pixels = int(np.count_nonzero(row_train))
+            if row_train_pixels <= 0:
+                continue
+            row_density = float(counts_map[cell_idx, y_idx, row_train].sum()) / float(row_train_pixels)
+            background_map[cell_idx, y_idx, fiducial_mask[y_idx]] = np.float32(row_density)
+            b_on[cell_idx] += row_density * float(np.count_nonzero(row_on))
+
+    return b_on, background_map, training_mask, off_counts, off_pixels, on_pixels
 
 
 def build_weighted_mask_exposure(
@@ -1000,6 +1274,136 @@ def plot_mask_exposure(
     plt.close(fig)
 
 
+def plot_roi_counts_grid(
+    counts_map: np.ndarray,
+    cells: Sequence[CellSpec],
+    xy_edges: np.ndarray,
+    output_path: Path,
+    *,
+    title: str,
+    roi_fiducial_deg: float,
+) -> None:
+    plt = setup_matplotlib()
+    nhit_bins, pred_bins, by_key = prepare_grid(cells)
+    fig, axes = plt.subplots(
+        len(nhit_bins),
+        len(pred_bins),
+        figsize=(2.05 * len(pred_bins), 1.75 * len(nhit_bins)),
+        dpi=150,
+        sharex=True,
+        sharey=True,
+        squeeze=False,
+    )
+    extent = [float(xy_edges[0]), float(xy_edges[-1]), float(xy_edges[0]), float(xy_edges[-1])]
+    logged = log_map(counts_map.astype(np.float32))
+    finite = logged[np.isfinite(logged)]
+    vmin = float(np.percentile(finite, 5.0)) if finite.size else 0.0
+    vmax = float(np.percentile(finite, 99.5)) if finite.size else 1.0
+    if not np.isfinite(vmin) or not np.isfinite(vmax) or vmin >= vmax:
+        vmin, vmax = 0.0, 1.0
+    first_im = None
+    theta = np.linspace(0.0, 2.0 * np.pi, 240)
+    circle_x = float(roi_fiducial_deg) * np.cos(theta)
+    circle_y = float(roi_fiducial_deg) * np.sin(theta)
+    for i, nhit_bin in enumerate(nhit_bins):
+        for j, pred_bin in enumerate(pred_bins):
+            ax = axes[i, j]
+            cell = by_key.get((nhit_bin, pred_bin))
+            if cell is None:
+                ax.set_axis_off()
+                continue
+            im = ax.imshow(
+                logged[cell.index],
+                origin="lower",
+                extent=extent,
+                aspect="equal",
+                interpolation="nearest",
+                cmap="viridis",
+                vmin=vmin,
+                vmax=vmax,
+            )
+            if first_im is None:
+                first_im = im
+            ax.plot(circle_x, circle_y, color="white", linewidth=0.35, alpha=0.85)
+            ax.scatter([0.0], [0.0], marker="+", s=18, c="white", linewidths=0.6)
+            ax.set_title(f"cell {cell.cell_id}: {pred_bin}", fontsize=6.7)
+            ax.tick_params(labelsize=6, length=2)
+            if j == 0:
+                ax.set_ylabel(f"{nhit_bin}\ny (deg)", fontsize=6.7)
+            if i == len(nhit_bins) - 1:
+                ax.set_xlabel("x (deg)", fontsize=6.7)
+    fig.suptitle(title, fontsize=11, y=0.995)
+    fig.tight_layout(rect=[0.0, 0.0, 0.95, 0.982])
+    if first_im is not None:
+        cbar = fig.colorbar(first_im, ax=axes.ravel().tolist(), shrink=0.72, pad=0.01)
+        cbar.set_label("log10 counts", fontsize=8)
+        cbar.ax.tick_params(labelsize=7)
+    fig.savefig(output_path)
+    plt.close(fig)
+
+
+def plot_roi_mask_summary(
+    fiducial_mask: np.ndarray,
+    training_mask: np.ndarray,
+    on_masks: np.ndarray,
+    xy_edges: np.ndarray,
+    output_path: Path,
+    *,
+    cell_index: int = 0,
+) -> None:
+    plt = setup_matplotlib()
+    view = np.zeros(fiducial_mask.shape, dtype=np.float32)
+    view[fiducial_mask] = 1.0
+    view[training_mask[cell_index]] = 2.0
+    view[on_masks[cell_index]] = 3.0
+    fig, ax = plt.subplots(figsize=(6.2, 5.5), dpi=150)
+    im = ax.imshow(
+        view,
+        origin="lower",
+        extent=[float(xy_edges[0]), float(xy_edges[-1]), float(xy_edges[0]), float(xy_edges[-1])],
+        aspect="equal",
+        interpolation="nearest",
+        cmap="viridis",
+        vmin=0,
+        vmax=3,
+    )
+    ax.set_xlabel("x = ΔRA cos(Dec_Crab) (deg)")
+    ax.set_ylabel("y = ΔDec (deg)")
+    ax.set_title(f"Stage D ROI masks, cell index {cell_index}")
+    cbar = fig.colorbar(im, ax=ax, ticks=[0, 1, 2, 3])
+    cbar.ax.set_yticklabels(["outside", "fiducial", "training", "on"])
+    fig.tight_layout()
+    fig.savefig(output_path)
+    plt.close(fig)
+
+
+def plot_roi_coverage_profile(
+    rho_hist_total: np.ndarray,
+    rho_edges: np.ndarray,
+    output_path: Path,
+    *,
+    roi_fiducial_deg: float,
+    roi_edge_diagnostic_deg: float,
+) -> None:
+    plt = setup_matplotlib()
+    centers = 0.5 * (rho_edges[:-1] + rho_edges[1:])
+    widths = np.diff(rho_edges)
+    annulus_area = np.pi * (rho_edges[1:] ** 2 - rho_edges[:-1] ** 2)
+    density = np.divide(rho_hist_total, annulus_area, out=np.zeros_like(centers), where=annulus_area > 0)
+    fig, ax = plt.subplots(figsize=(7.0, 4.2), dpi=150)
+    ax.step(centers, density, where="mid", color="#1f4e79", linewidth=1.0)
+    ax.axvline(float(roi_fiducial_deg), color="#d62728", linestyle="--", linewidth=0.9, label=f"fiducial {roi_fiducial_deg:g} deg")
+    ax.axvline(float(roi_edge_diagnostic_deg), color="#7f7f7f", linestyle=":", linewidth=0.9, label=f"edge diag {roi_edge_diagnostic_deg:g} deg")
+    ax.set_xlabel("rho from Crab (deg)")
+    ax.set_ylabel("counts per deg^2")
+    ax.set_title("Stage D ROI coverage profile")
+    ax.grid(alpha=0.25, linewidth=0.4)
+    ax.legend(fontsize=8)
+    fig.tight_layout()
+    fig.savefig(output_path)
+    plt.close(fig)
+
+
 def write_summary_csv(path: Path, rows: Sequence[Dict[str, object]]) -> None:
     fieldnames = [
         "cell_id",
@@ -1017,7 +1421,16 @@ def write_summary_csv(path: Path, rows: Sequence[Dict[str, object]]) -> None:
         "sigma_deg",
         "containment_r_opt",
         "B_on",
+        "N_off",
+        "alpha",
         "max_p_on",
+        "on_pixels",
+        "off_pixels",
+        "off_counts",
+        "fiducial_events",
+        "edge_diagnostic_events",
+        "background_mode",
+        "background_method",
         "r_opt_large_warning",
         "r_opt_extreme_warning",
         "background_form",
@@ -1048,16 +1461,25 @@ def write_source_masks_csv(path: Path, sources: Sequence[SourceMask]) -> None:
 
 def write_summary_md(path: Path, metadata: Dict[str, object], rows: Sequence[Dict[str, object]]) -> None:
     with path.open("w", encoding="utf-8") as f:
-        f.write("# Stage D Direct-Integration Background Summary\n\n")
+        f.write("# Stage D Background Summary\n\n")
         f.write(f"- Run id: `{metadata['run_id']}`\n")
         f.write(f"- Stage C input: `{metadata['inputs']['stage_c_dir']}`\n")
         f.write(f"- PSF input: `{metadata['inputs']['psf_npz']}`\n")
+        f.write(f"- Background mode: `{metadata['background_model'].get('background_mode', 'n/a')}`\n")
+        f.write(f"- Background method: `{metadata['background_model'].get('method', 'n/a')}`\n")
         f.write(f"- Background form: `{metadata['background_model']['background_form']}`\n")
-        f.write(f"- Time bin: {metadata['time_binning']['time_bin_minutes']} min\n")
-        f.write(f"- Active time bins: {metadata['time_binning']['active_time_bins']}\n")
-        f.write(f"- Live time: {metadata['time_binning']['total_live_time_days']:.6g} days\n")
-        f.write(f"- Theta sanity p95 absdiff: {metadata['theta_coordinate_check'].get('p95_absdiff_deg', 'n/a')} deg\n\n")
-        f.write("| cell | Nhit bin | predE bin | events | masked frac | r_opt deg | B_on | median Hz | warnings |\n")
+        if "roi" in metadata:
+            f.write(f"- ROI fiducial radius: {metadata['roi'].get('fiducial_radius_deg', 'n/a')} deg\n")
+            f.write(f"- ROI edge diagnostic radius: {metadata['roi'].get('edge_diagnostic_radius_deg', 'n/a')} deg\n")
+        if "time_binning" in metadata:
+            f.write(f"- Time bin: {metadata['time_binning'].get('time_bin_minutes', 'n/a')} min\n")
+            f.write(f"- Active time bins: {metadata['time_binning'].get('active_time_bins', 'n/a')}\n")
+            live_days = finite_float(metadata["time_binning"].get("total_live_time_days"))
+            if live_days is not None:
+                f.write(f"- Live time: {live_days:.6g} days\n")
+        if "theta_coordinate_check" in metadata:
+            f.write(f"- Theta sanity p95 absdiff: {metadata['theta_coordinate_check'].get('p95_absdiff_deg', 'n/a')} deg\n")
+        f.write("\n| cell | Nhit bin | predE bin | events | masked frac | r_opt deg | B_on | off pixels | warnings |\n")
         f.write("| ---: | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |\n")
         for row in rows:
             warnings = []
@@ -1065,10 +1487,13 @@ def write_summary_md(path: Path, metadata: Dict[str, object], rows: Sequence[Dic
                 warnings.append("large_r_opt")
             if row["r_opt_extreme_warning"]:
                 warnings.append("extreme_r_opt")
+            extra_warnings = row.get("warnings")
+            if isinstance(extra_warnings, list):
+                warnings.extend(str(item) for item in extra_warnings)
             f.write(
                 f"| {row['cell_id']} | {row['nhit_bin']} | {row['predE_bin']} | "
                 f"{row['selected_events']} | {row['source_masked_fraction']:.4g} | "
-                f"{row['r_opt_deg']:.5g} | {row['B_on']:.6g} | {row['median_rate_hz']:.5g} | "
+                f"{row['r_opt_deg']:.5g} | {row['B_on']:.6g} | {row.get('off_pixels', '')} | "
                 f"{', '.join(warnings) if warnings else '-'} |\n"
             )
 
@@ -1092,6 +1517,384 @@ def json_ready(value):
 def write_json(path: Path, payload: Dict[str, object]) -> None:
     with path.open("w", encoding="utf-8") as f:
         json.dump(json_ready(payload), f, indent=2)
+
+
+def total_live_time_seconds_from_stage_c(metadata: Dict[str, object], source_files_csv: Path) -> float:
+    live = metadata.get("live_time_basis") if isinstance(metadata, dict) else None
+    if isinstance(live, dict):
+        value = finite_float(live.get("rough_live_time_seconds_sum_files"))
+        if value is not None:
+            return value
+    total = 0.0
+    if source_files_csv.exists():
+        with source_files_csv.open("r", encoding="utf-8", newline="") as f:
+            for row in csv.DictReader(f):
+                value = finite_float(row.get("rough_live_time_seconds"))
+                if value is not None:
+                    total += value
+    return total
+
+
+def run_crab_roi_local_background(
+    *,
+    args: argparse.Namespace,
+    start_time: float,
+    stage_c_dir: Path,
+    obs_events_dir: Path,
+    stage_c_metadata_path: Path,
+    stage_c_metadata: Dict[str, object],
+    source_files_csv: Path,
+    psf_npz: Path,
+    selection_csv: Path,
+    output_root: Path,
+    run_dir: Path,
+    run_id: str,
+    cells: Sequence[CellSpec],
+    r_opt_deg: np.ndarray,
+    sigma_deg: np.ndarray,
+    containment_r_opt: np.ndarray,
+    mode_resolution: Dict[str, object],
+) -> None:
+    if float(args.roi_fiducial_deg) <= 0:
+        raise ValueError("--roi-fiducial-deg must be positive")
+    if float(args.roi_edge_diagnostic_deg) <= float(args.roi_fiducial_deg):
+        raise ValueError("--roi-edge-diagnostic-deg must be greater than --roi-fiducial-deg")
+    if float(args.roi_grid_step_deg) <= 0:
+        raise ValueError("--roi-grid-step-deg must be positive")
+    if float(args.roi_coverage_bin_deg) <= 0:
+        raise ValueError("--roi-coverage-bin-deg must be positive")
+    if float(args.roi_coverage_max_deg) <= float(args.roi_edge_diagnostic_deg):
+        raise ValueError("--roi-coverage-max-deg must be greater than --roi-edge-diagnostic-deg")
+
+    xy_edges = make_edges(
+        -float(args.roi_edge_diagnostic_deg),
+        float(args.roi_edge_diagnostic_deg),
+        float(args.roi_grid_step_deg),
+    )
+    xy_centers = 0.5 * (xy_edges[:-1] + xy_edges[1:])
+    rho_hist_edges = make_edges(0.0, float(args.roi_coverage_max_deg), float(args.roi_coverage_bin_deg))
+
+    print("Stage D background mode: crab_roi_local", flush=True)
+    print(
+        f"ROI grid: {xy_edges.size - 1} x {xy_edges.size - 1}, "
+        f"fiducial rho<{float(args.roi_fiducial_deg):g} deg",
+        flush=True,
+    )
+
+    scan = scan_stage_c_roi_events(
+        obs_events_dir,
+        cells,
+        source_ra_deg=float(args.source_ra_deg),
+        source_dec_deg=float(args.source_dec_deg),
+        xy_edges_deg=xy_edges,
+        rho_hist_edges_deg=rho_hist_edges,
+        roi_fiducial_deg=float(args.roi_fiducial_deg),
+        roi_edge_diagnostic_deg=float(args.roi_edge_diagnostic_deg),
+        batch_size=int(args.batch_size),
+        max_batches=args.max_batches,
+        print_every=int(args.print_every),
+    )
+    print(f"Scanned rows: {scan.input_rows:,}", flush=True)
+
+    n_cells = len(cells)
+    n_xy = xy_edges.size - 1
+    counts_map = scan.counts_flat.reshape(n_cells, n_xy, n_xy)
+    rho_grid, fiducial_mask, edge_safe_mask, on_masks, source_masks = build_roi_masks(
+        xy_centers,
+        r_opt_deg.astype(np.float64),
+        roi_fiducial_deg=float(args.roi_fiducial_deg),
+        roi_edge_margin_deg=float(args.roi_edge_margin_deg),
+        roi_source_mask_deg=float(args.roi_source_mask_deg),
+        source_mask_r_opt_factor=float(args.roi_source_mask_r_opt_factor),
+    )
+    b_on, background_map, training_mask, off_counts, off_pixels, on_pixels = estimate_roi_dec_sideband_background(
+        counts_map,
+        fiducial_mask,
+        edge_safe_mask,
+        on_masks,
+        source_masks,
+    )
+    if not np.all(np.isfinite(b_on)) or np.any(b_on < 0.0):
+        raise RuntimeError("ROI-local background produced non-finite or negative B_on values")
+
+    total_live_time_sec = total_live_time_seconds_from_stage_c(stage_c_metadata, source_files_csv)
+    total_live_time_days = total_live_time_sec / 86400.0 if total_live_time_sec > 0 else 0.0
+
+    rows: List[Dict[str, object]] = []
+    for cell in cells:
+        idx = cell.index
+        selected_events = int(scan.cell_total_events[idx])
+        fiducial_events = int(scan.cell_fiducial_events[idx])
+        source_masked_events = int(counts_map[idx][source_masks[idx] & fiducial_mask].sum())
+        source_masked_fraction = float(source_masked_events) / float(fiducial_events) if fiducial_events > 0 else 0.0
+        warnings: List[str] = []
+        if off_pixels[idx] <= 0:
+            warnings.append("no_training_pixels")
+        if on_pixels[idx] <= 0:
+            warnings.append("no_on_pixels")
+        if b_on[idx] <= 0.0:
+            warnings.append("non_positive_B_on")
+        if scan.cell_fiducial_events[idx] <= 0:
+            warnings.append("no_fiducial_events")
+        rows.append(
+            {
+                "cell_index": int(idx),
+                "cell_id": int(cell.cell_id),
+                "nhit_bin": cell.nhit_bin,
+                "predE_bin": cell.predE_bin,
+                "selected_events": selected_events,
+                "grid_events": int(scan.cell_map_events[idx]),
+                "out_of_grid_events": int(scan.cell_out_of_map_events[idx]),
+                "source_masked_events": source_masked_events,
+                "source_masked_fraction": source_masked_fraction,
+                "fiducial_events": fiducial_events,
+                "edge_diagnostic_events": int(scan.cell_edge_diagnostic_events[idx]),
+                "live_time_days": total_live_time_days,
+                "median_rate_hz": 0.0,
+                "mean_rate_hz": float(selected_events / total_live_time_sec) if total_live_time_sec > 0 else 0.0,
+                "r_opt_deg": float(r_opt_deg[idx]),
+                "sigma_deg": float(sigma_deg[idx]),
+                "containment_r_opt": float(containment_r_opt[idx]),
+                "B_on": float(b_on[idx]),
+                "N_off": "",
+                "alpha": "",
+                "max_p_on": 0.0,
+                "on_pixels": int(on_pixels[idx]),
+                "off_pixels": int(off_pixels[idx]),
+                "off_counts": float(off_counts[idx]),
+                "r_opt_large_warning": bool(r_opt_deg[idx] > 10.0),
+                "r_opt_extreme_warning": bool(r_opt_deg[idx] > 20.0),
+                "background_form": "direct_expectation",
+                "background_mode": "crab_roi_local",
+                "background_method": "dec_sideband",
+                "warnings": warnings,
+            }
+        )
+
+    npz_path = run_dir / args.npz_name
+    summary_csv_path = run_dir / args.summary_csv_name
+    summary_md_path = run_dir / args.summary_md_name
+    metadata_path = run_dir / args.metadata_name
+    source_masks_csv_path = run_dir / "source_masks_v1.csv"
+
+    np.savez_compressed(
+        npz_path,
+        cell_id=np.asarray([cell.cell_id for cell in cells], dtype=np.int32),
+        nhit_bin=np.asarray([cell.nhit_bin for cell in cells], dtype="U32"),
+        predE_bin=np.asarray([cell.predE_bin for cell in cells], dtype="U32"),
+        x_edges_deg=xy_edges.astype(np.float32),
+        y_edges_deg=xy_edges.astype(np.float32),
+        x_centers_deg=xy_centers.astype(np.float32),
+        y_centers_deg=xy_centers.astype(np.float32),
+        rho_grid_deg=rho_grid.astype(np.float32),
+        fiducial_mask=fiducial_mask.astype(bool),
+        edge_safe_mask=edge_safe_mask.astype(bool),
+        on_mask=on_masks.astype(bool),
+        source_mask=source_masks.astype(bool),
+        training_mask=training_mask.astype(bool),
+        counts_map=counts_map.astype(np.int64),
+        background_map=background_map.astype(np.float32),
+        rho_hist_edges_deg=rho_hist_edges.astype(np.float32),
+        rho_hist_total=scan.rho_hist_total.astype(np.int64),
+        rho_hist_by_cell=scan.rho_hist_by_cell.astype(np.int64),
+        cell_total_events=scan.cell_total_events.astype(np.int64),
+        cell_map_events=scan.cell_map_events.astype(np.int64),
+        cell_fiducial_events=scan.cell_fiducial_events.astype(np.int64),
+        cell_edge_diagnostic_events=scan.cell_edge_diagnostic_events.astype(np.int64),
+        off_counts=off_counts.astype(np.float64),
+        off_pixels=off_pixels.astype(np.int64),
+        on_pixels=on_pixels.astype(np.int64),
+        alpha=np.full(n_cells, np.nan, dtype=np.float32),
+        N_off=np.full(n_cells, np.nan, dtype=np.float64),
+        source_ra_deg=np.asarray([float(args.source_ra_deg)], dtype=np.float32),
+        source_dec_deg=np.asarray([float(args.source_dec_deg)], dtype=np.float32),
+        source_name=np.asarray(["Crab"], dtype="U32"),
+        r_opt_deg=r_opt_deg.astype(np.float32),
+        sigma_deg=sigma_deg.astype(np.float32),
+        containment_r_opt=containment_r_opt.astype(np.float32),
+        B_on=b_on.astype(np.float64),
+    )
+
+    plot_outputs: Dict[str, str] = {}
+    if not args.no_plots:
+        plot_outputs = {
+            "roi_coverage_profile_png": str(run_dir / "roi_coverage_profile.png"),
+            "roi_counts_grid_png": str(run_dir / "roi_counts_grid.png"),
+            "roi_background_grid_png": str(run_dir / "roi_background_grid.png"),
+            "roi_mask_summary_png": str(run_dir / "roi_mask_summary.png"),
+            "background_prediction_png": str(run_dir / "background_prediction_grid.png"),
+        }
+        plot_roi_coverage_profile(
+            scan.rho_hist_total,
+            rho_hist_edges,
+            Path(plot_outputs["roi_coverage_profile_png"]),
+            roi_fiducial_deg=float(args.roi_fiducial_deg),
+            roi_edge_diagnostic_deg=float(args.roi_edge_diagnostic_deg),
+        )
+        plot_roi_counts_grid(
+            counts_map,
+            cells,
+            xy_edges,
+            Path(plot_outputs["roi_counts_grid_png"]),
+            title="Stage D ROI-local counts",
+            roi_fiducial_deg=float(args.roi_fiducial_deg),
+        )
+        plot_roi_counts_grid(
+            background_map,
+            cells,
+            xy_edges,
+            Path(plot_outputs["roi_background_grid_png"]),
+            title="Stage D ROI-local Dec-sideband background",
+            roi_fiducial_deg=float(args.roi_fiducial_deg),
+        )
+        plot_roi_mask_summary(
+            fiducial_mask,
+            training_mask,
+            on_masks,
+            xy_edges,
+            Path(plot_outputs["roi_mask_summary_png"]),
+            cell_index=0,
+        )
+        plot_background_grid(rows, cells, Path(plot_outputs["background_prediction_png"]))
+
+    severe_warnings = [
+        f"cell {row['cell_id']}: {','.join(row['warnings'])}"
+        for row in rows
+        if row.get("warnings")
+    ]
+    if args.max_batches is not None:
+        quality_status = "smoke_warning" if severe_warnings else "smoke"
+        promotable = False
+        quality_reason = "max_batches set; partial scans are smoke tests and are not promoted"
+    elif severe_warnings:
+        quality_status = "failed"
+        promotable = False
+        quality_reason = "ROI-local background has cells with invalid or fragile background estimates"
+    else:
+        quality_status = "ok"
+        promotable = True
+        quality_reason = "ROI-local background passed basic positivity and training-pixel checks"
+    metadata: Dict[str, object] = {
+        "description": "Stage D ROI-local background for v1 (Nhit, predicted logE) Crab SED cells.",
+        "run_id": run_id,
+        "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
+        "inputs": {
+            "stage_c_dir": str(stage_c_dir),
+            "obs_events_dir": str(obs_events_dir),
+            "stage_c_metadata_json": str(stage_c_metadata_path),
+            "source_files_csv": str(source_files_csv),
+            "psf_npz": str(psf_npz),
+            "cell_selection_csv": str(selection_csv),
+        },
+        "output_root": str(output_root),
+        "output_dir": str(run_dir),
+        "current_dir": str(output_root / "current"),
+        "latest": str(output_root / "latest"),
+        "background_mode_resolution": mode_resolution,
+        "roi": {
+            "source": "Crab",
+            "source_ra_deg": float(args.source_ra_deg),
+            "source_dec_deg": float(args.source_dec_deg),
+            "coordinate_system": "crab_tangent_plane_small_angle",
+            "x_formula": "wrap(ra_mean_deg - source_ra_deg) * cos(source_dec_deg)",
+            "y_formula": "dec_mean_deg - source_dec_deg",
+            "rho_formula": "sqrt(x^2 + y^2)",
+            "fiducial_radius_deg": float(args.roi_fiducial_deg),
+            "edge_diagnostic_radius_deg": float(args.roi_edge_diagnostic_deg),
+            "edge_margin_deg": float(args.roi_edge_margin_deg),
+            "source_mask_min_radius_deg": float(args.roi_source_mask_deg),
+            "source_mask_r_opt_factor": float(args.roi_source_mask_r_opt_factor),
+            "stage_c_roi_coverage": mode_resolution.get("stage_c_roi_coverage", {}),
+        },
+        "source_masks": [
+            {
+                "name": source.name,
+                "ra_deg": float(source.ra_deg),
+                "dec_deg": float(source.dec_deg),
+                "radius_deg": float(source.radius_deg),
+                "enabled_for_full_field_direct_integration": bool(source.enabled),
+                "enabled_for_crab_roi_local": bool(source.name == "Crab"),
+                "roi_local_note": (
+                    "used as the central training exclusion"
+                    if source.name == "Crab"
+                    else "not applied in the Crab-local tangent-plane baseline"
+                ),
+            }
+            for source in default_source_masks()
+        ],
+        "grid": {
+            "coordinate_system": "crab_tangent_plane",
+            "x_edges_deg": [float(xy_edges[0]), float(xy_edges[-1])],
+            "y_edges_deg": [float(xy_edges[0]), float(xy_edges[-1])],
+            "grid_step_deg": float(args.roi_grid_step_deg),
+            "shape": [int(n_xy), int(n_xy)],
+        },
+        "background_model": {
+            "background_mode": "crab_roi_local",
+            "method": "roi_dec_sideband",
+            "background_form": "direct_expectation",
+            "B_on_formula": "sum_y mean(counts in same y strip training pixels) * on_pixels_y",
+            "alpha_b": None,
+            "N_off_b": None,
+            "alpha_N_off_note": "ROI Dec-sideband v1 outputs direct background expectation B_on,b; traditional alpha/N_off is not defined.",
+            "on_region_radius_source": "Stage B psf_v1.npz r_opt_deg",
+        },
+        "processing": {
+            "input_rows_scanned": int(scan.input_rows),
+            "processed_batches": int(scan.processed_batches),
+            "batch_size": int(args.batch_size),
+            "max_batches": args.max_batches,
+            "workers_requested": int(args.workers),
+            "elapsed_seconds": float(time.perf_counter() - start_time),
+        },
+        "quality": {
+            "status": quality_status,
+            "promotable": promotable,
+            "reason": quality_reason,
+            "warnings": severe_warnings,
+        },
+        "cells": rows,
+        "promotion": {
+            "promote_current": not bool(args.no_promote_current),
+            "status": "pending",
+        },
+        "outputs": {
+            "npz": str(npz_path),
+            "metadata_json": str(metadata_path),
+            "summary_csv": str(summary_csv_path),
+            "summary_md": str(summary_md_path),
+            "source_masks_csv": str(source_masks_csv_path),
+            **plot_outputs,
+        },
+    }
+
+    write_summary_csv(summary_csv_path, rows)
+    write_source_masks_csv(source_masks_csv_path, [SourceMask("Crab", float(args.source_ra_deg), float(args.source_dec_deg), float(args.roi_source_mask_deg))])
+    write_summary_md(summary_md_path, metadata, rows)
+    write_json(metadata_path, metadata)
+
+    if not args.no_promote_current and promotable:
+        promote_successful_run(output_root, run_dir)
+        metadata["promotion"]["status"] = "promoted"  # type: ignore[index]
+        metadata["promotion"]["current_dir"] = str(output_root / "current")  # type: ignore[index]
+        metadata["promotion"]["latest"] = str(output_root / "latest")  # type: ignore[index]
+        write_json(metadata_path, metadata)
+    elif not args.no_promote_current:
+        metadata["promotion"]["status"] = "blocked_quality_gate"  # type: ignore[index]
+        metadata["promotion"]["reason"] = quality_reason  # type: ignore[index]
+        write_json(metadata_path, metadata)
+    else:
+        metadata["promotion"]["status"] = "skipped"  # type: ignore[index]
+        write_json(metadata_path, metadata)
+
+    print(f"Wrote {npz_path}", flush=True)
+    print(f"Wrote {summary_csv_path}", flush=True)
+    print(f"Wrote {summary_md_path}", flush=True)
+    print(f"Wrote {metadata_path}", flush=True)
+    if not args.no_promote_current and promotable:
+        print(f"Promoted current Stage D output to {output_root / 'current'}", flush=True)
+    elif not args.no_promote_current:
+        print(f"Stage D promotion blocked: {quality_reason}", flush=True)
 
 
 def main() -> None:
@@ -1123,6 +1926,31 @@ def main() -> None:
     r_opt_deg = np.asarray([psf_by_cell[cell.cell_id]["r_opt_deg"] for cell in cells], dtype=np.float32)
     sigma_deg = np.asarray([psf_by_cell[cell.cell_id]["sigma_deg"] for cell in cells], dtype=np.float32)
     containment_r_opt = np.asarray([psf_by_cell[cell.cell_id]["containment_r_opt"] for cell in cells], dtype=np.float32)
+
+    background_mode, mode_resolution = resolve_background_mode(args, stage_c_metadata)
+    if background_mode == "crab_roi_local":
+        run_crab_roi_local_background(
+            args=args,
+            start_time=start,
+            stage_c_dir=stage_c_dir,
+            obs_events_dir=obs_events_dir,
+            stage_c_metadata_path=stage_c_metadata_path,
+            stage_c_metadata=stage_c_metadata,
+            source_files_csv=source_files_csv,
+            psf_npz=psf_npz,
+            selection_csv=selection_csv,
+            output_root=output_root,
+            run_dir=run_dir,
+            run_id=run_id,
+            cells=cells,
+            r_opt_deg=r_opt_deg,
+            sigma_deg=sigma_deg,
+            containment_r_opt=containment_r_opt,
+            mode_resolution=mode_resolution,
+        )
+        return
+    if background_mode != "full_field_direct_integration":
+        raise ValueError(f"Unsupported resolved background mode: {background_mode}")
 
     ha_edges = make_edges(float(args.ha_min_deg), float(args.ha_max_deg), float(args.grid_step_deg))
     dec_edges = make_edges(float(args.dec_min_deg), float(args.dec_max_deg), float(args.grid_step_deg))
@@ -1314,7 +2142,7 @@ def main() -> None:
         plot_mask_exposure(available_time_bins, active_time_bins, ha_edges, dec_edges, Path(plot_outputs["mask_exposure_png"]))
 
     metadata: Dict[str, object] = {
-        "description": "Stage D direct-integration background for v1 (Nhit, predicted logE) Crab SED cells.",
+        "description": "Stage D full-field direct-integration background for v1 (Nhit, predicted logE) Crab SED cells.",
         "run_id": run_id,
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
         "inputs": {
@@ -1329,6 +2157,7 @@ def main() -> None:
         "output_dir": str(run_dir),
         "current_dir": str(output_root / "current"),
         "latest": str(output_root / "latest"),
+        "background_mode_resolution": mode_resolution,
         "site": {
             "latitude_deg": float(args.lhaaso_lat_deg),
             "longitude_east_deg": float(args.lhaaso_lon_deg),
@@ -1364,6 +2193,7 @@ def main() -> None:
             for source in sources
         ],
         "background_model": {
+            "background_mode": "full_field_direct_integration",
             "method": "direct_integration_acceptance_times_rate",
             "background_form": "direct_expectation",
             "B_on_formula": "sum_time N_cell,time * sum_grid acceptance_cell,grid * I(grid within Crab aperture at time)",

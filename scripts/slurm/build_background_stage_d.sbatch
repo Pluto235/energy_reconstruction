@@ -2,7 +2,7 @@
 #SBATCH -J build_bkg_d
 #SBATCH -p main
 #SBATCH --cpus-per-task=18
-#SBATCH --mem=64G
+#SBATCH --mem=16G
 #SBATCH -t 24:00:00
 
 #SBATCH -o /home/server/projects/energy_reconstruction/logs/slurm/%x_%j.out
@@ -33,12 +33,22 @@ RUN_ID=${RUN_ID:-slurm_${SLURM_JOB_ID}}
 MAX_BATCHES=${MAX_BATCHES:-}
 NO_PLOTS=${NO_PLOTS:-}
 
-echo "===== Start Stage D direct-integration background ====="
+BACKGROUND_MODE=${BACKGROUND_MODE:-auto}
+ROI_BACKGROUND_METHOD=${ROI_BACKGROUND_METHOD:-dec-sideband}
+ROI_FIDUCIAL_DEG=${ROI_FIDUCIAL_DEG:-6}
+ROI_EDGE_DIAGNOSTIC_DEG=${ROI_EDGE_DIAGNOSTIC_DEG:-8}
+ROI_GRID_STEP_DEG=${ROI_GRID_STEP_DEG:-0.1}
+
+echo "===== Start Stage D background ====="
 echo "Stage C dir: ${STAGE_C_DIR}"
 echo "PSF NPZ: ${PSF_NPZ}"
 echo "Cell selection: ${CELL_SELECTION}"
 echo "Output dir: ${OUTPUT_DIR}"
 echo "Run id: ${RUN_ID}"
+echo "Background mode: ${BACKGROUND_MODE}"
+echo "ROI method: ${ROI_BACKGROUND_METHOD}"
+echo "ROI fiducial deg: ${ROI_FIDUCIAL_DEG}"
+echo "ROI edge diagnostic deg: ${ROI_EDGE_DIAGNOSTIC_DEG}"
 echo "Max batches: ${MAX_BATCHES:-<all>}"
 
 CMD=(
@@ -59,6 +69,11 @@ CMD=(
   --lhaaso-lon-deg 100.14
   --source-ra-deg 83.63
   --source-dec-deg 22.01
+  --background-mode "${BACKGROUND_MODE}"
+  --roi-background-method "${ROI_BACKGROUND_METHOD}"
+  --roi-fiducial-deg "${ROI_FIDUCIAL_DEG}"
+  --roi-edge-diagnostic-deg "${ROI_EDGE_DIAGNOSTIC_DEG}"
+  --roi-grid-step-deg "${ROI_GRID_STEP_DEG}"
   --batch-size 500000
   --workers "${SLURM_CPUS_PER_TASK:-18}"
   --print-every 10
@@ -74,4 +89,4 @@ fi
 
 "${CMD[@]}"
 
-echo "Stage D direct-integration background finished"
+echo "Stage D background finished"

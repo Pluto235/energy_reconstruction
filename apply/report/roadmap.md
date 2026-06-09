@@ -110,12 +110,12 @@ $$
         │
         ▼
 ┌─────────────────────────────────────────────────────────┐
-│ Stage D — 背景估计（直接积分法）                        │
+│ Stage D — 背景估计（先判定 ROI 覆盖，再选背景口径）     │
 └─────────────────────────────────────────────────────────┘
         │
         ▼
 ┌─────────────────────────────────────────────────────────┐
-│ Stage E — 各单元 N_on, N_off, α, excess, Li-Ma σ        │
+│ Stage E — 各单元 N_on, B_on/αN_off, excess, σ           │
 └─────────────────────────────────────────────────────────┘
         │
         ▼
@@ -157,6 +157,7 @@ $$
 1. 保留 `match_status == 0`、`pincness < 1.1`、`fitstat == 0`、`theta < 50°`、`dcedge > 20 m` 的事例。
 2. 从 `nv` 和 `ml_logE_pred` 算出单元 `b = (i_N, i_E)`。不在 `apply/config/cell_selection_v1.csv` 里的单元直接丢弃。
 3. 每个事例携带 `(ra_mean_deg, dec_mean_deg, mjd, theta, b)` 往下传。
+4. Stage C metadata 必须记录天区覆盖诊断：以 Crab 为中心的 offset 半径 `ρ = sqrt(x² + y²)` 分布、按 cell 的 `ρ` profile、以及是否存在明显边缘截断。`apply/report/crab_v1_cell_skymaps.md` 的 10° half-width quicklook 显示 Crab 周围覆盖可能只有约 8° 量级，但这只是从天图肉眼读出的假设，不应在 Stage D 前当成定论。
 
 输出按月汇成单一 parquet `obs_events.parquet`（列存；~100M 事例 × ~6 列在磁盘和扫描速度上都很舒服）。每月一个文件，方便管理。
 
@@ -164,34 +165,38 @@ $$
 
 ### Stage D — 背景估计
 
-v1 baseline 直接用**直接积分法**（胡 2023, §6.1.5 — 一期星表选定的方法）。这里不再把等赤纬法作为先跑通方案；等赤纬法只保留为后续背景系统误差交叉检查。直接积分法的核心是用同一份观测数据在局部坐标中重建探测器接收度，再随地球自转把该接收度投影回赤道坐标，因此能自然吸收全天事例率和接收度随时间的慢变化。
+Stage D 的第一步不是直接套背景公式，而是先判定 Stage C 输入到底是什么天区口径。直接积分法要求输入近似为全视场、全天候的事件流；如果输入实际上只覆盖 Crab 周围局部 ROI，那么用它重建全天接收度 `G_b(x, y)` 会把 ROI 边界和源区选择误当成探测器接收度，背景会失真。当前 `crab_v1_cell_skymaps.md` 的 10° quicklook 提示有效覆盖可能在 Crab 附近约 8°，但这个半径需要由 Stage D 的 coverage 诊断定量确认。
 
-具体实现按单元 b 独立做：
+因此 Stage D 分成两个互斥口径：
 
-- 输入只使用 Stage C 清洗后的事件，且先按 `b = (Nhit bin, logE_pred bin)` 分组。不同单元的 zenith/azimuth 接收度、事例率和死时间响应都不同，不能共用一张接收度图。
-- 在本地坐标或等价的 hour-angle/declination 参数空间中累计接收度图 `G_b(x, y)`。构图时 mask 掉 Crab 周围 2° 半径；为避免强源泄漏，Mrk 421、Mrk 501、Geminga、Cygnus 区也一并 mask。mask 只影响接收度训练样本，不影响之后对 Crab on-region 的计数。
-- 同时记录单元 b 的全天事件率 `R_b(t)`，时间粒度先取能稳定覆盖 rate 漂移的窗口（例如 10-30 min；最终由 rate 曲线诊断决定）。`R_b(t)` 用来描述阵列运行状态、天气和筛选后事件率的慢变化。
-- 对 Crab 位置的每个观测时刻，把目标赤经赤纬转换到局部坐标 `(x(t), y(t))`，从 `G_b` 读出该方向的相对接收度，并乘以 `R_b(t)`、live-time 权重和像素/孔径几何因子后积分：
-  `B_b(ra, dec) = ∫ G_b(x(t), y(t)) R_b(t) dt`。
-- 对 Stage E 的圆形 on-region，在同一积分半径 `r_b = 1.58 σ_b` 内把 `B_b(ra, dec)` 积起来，得到该单元的背景预测 `α_b N_off,b`。实现上可以直接输出背景期望 `B_on,b`，不强制保存传统 off 计数；但为了和 Li-Ma 诊断兼容，metadata 里要同时保存等效的 `alpha_b`、`N_off,b` 或清楚标记采用的是直接背景期望形式。
-- 每个单元输出接收度图、rate 曲线、mask 配置、live-time、`B_on,b` 和诊断图。诊断至少包括 masked/unmasked 接收度、rate vs time、Crab 轨迹覆盖、以及 18 个 v1 单元的背景预测表。
+1. **全视场输入口径。** 只有当 Stage C 被确认是全视场事件流时，才使用直接积分法（胡 2023, §6.1.5）。按 cell 独立在本地坐标或 hour-angle/declination 空间中重建 `G_b(x, y)`，mask Crab、Mrk 421、Mrk 501、Geminga、Cygnus 等强源，记录全天 `R_b(t)`，再沿 Crab 轨迹积分得到 `B_on,b`。这一路线必须输出 masked/unmasked 接收度、rate vs time、Crab 轨迹覆盖、mask 配置、live time 和 `B_on,b`。
+2. **Crab 局部 ROI 口径。** 如果 Stage C 只覆盖 Crab 附近局部天区，则 v1 baseline 改为 ROI-local 背景，不再把直接积分法作为主背景。先把事件投影到 Crab tangent-plane：
+   `x = wrap(ra_mean_deg - RA_Crab) cos(Dec_Crab)`，`y = dec_mean_deg - Dec_Crab`，`ρ = sqrt(x² + y²)`。
+   由 coverage 诊断确认外边界后，默认采用内切 fiducial ROI `ρ < 6°`，以避开疑似 8° 覆盖边缘；`6° < ρ < 8°` 只作为覆盖和边缘系统诊断，不进入 baseline on/off 统计。
 
-如果能拿到师兄的星表程序，可以复用其直接积分法实现；但路线记录为“直接积分法 baseline”，不是“先等赤纬再替换”。
+ROI-local baseline 的具体要求：
+
+- 输入仍按 18 个 v1 cell 独立处理。不同 cell 的 PSF、能量分布和背景梯度不同，不能共用一个归一化。
+- Crab 源区 mask 至少取 2°；更严格时取 `max(2°, 2 r_b)` 做稳定性检查。源区 mask 只用于训练/估计背景，不影响 Stage E 的 on-region 计数。
+- 背景优先用等赤纬 sideband 或 ring/annulus 方法在 `ρ < 6°` 内估计。等赤纬 sideband 要沿 `y` strip 建背景，排除 Crab mask，并避免使用靠近 `ρ=6°` 的边缘像素；ring 方法要显式做 ROI 几何面积修正。
+- 输出 `B_on,b`。如果背景来自实际 off 区计数，则同时输出 `N_off,b` 和 `alpha_b`，Stage E 可用 Li-Ma；如果背景来自平滑密度图或模型积分，则 metadata 必须明确标注为 direct expectation，Li-Ma 不适用，只输出 known-background diagnostic。
+- 诊断至少包括：per-cell `ρ` coverage profile、`ρ<6°` 与外圈 `6°<ρ<8°` 的对照、源区 mask 图、sideband/ring off 区图、`N_on/B_on` 表、以及 fiducial 半径从 5.5°、6.0°、6.5° 变化时的稳定性。
 
 ### Stage E — 信号提取
 
 对每个单元 b：
 
 - 积分半径 `r_b = 1.58 σ_b`，来自 Stage B。
-- `N_on,b` = Crab on-region（圆心 RA=83.63°, Dec=22.01°，半径 r_b）落在单元 b 的事例数。
-- `N_off,b · α_b` = 同样积分孔径、同单元的直接积分法背景预测。
-- `excess_b = N_on,b − α_b N_off,b`，统计误差 `σ_b^stat = √(N_on,b + α_b² N_off,b)`。
-- Li-Ma 显著性（胡 2023 公式 6-26）逐单元算，存下来用作诊断。
+- `N_on,b` = Crab on-region（圆心 RA=83.63°, Dec=22.01°，半径 r_b）落在单元 b 的事例数。若 Stage D 判定为 Crab 局部 ROI 口径，Stage E 必须只使用同一个 fiducial ROI 配置（默认 `ρ < 6°`）和同一套 mask/edge 定义。
+- 背景输入来自 Stage D：可能是 `B_on,b` 直接期望，也可能是 `α_b N_off,b`。Stage E 不能自行把 direct expectation 强行解释成传统 off 计数。
+- 若有真实 off 计数，计算 `excess_b = N_on,b − α_b N_off,b`、`σ_b^stat = √(N_on,b + α_b² N_off,b)`，并按胡 2023 公式 6-26 输出 Li-Ma 显著性。
+- 若只有直接背景期望，计算 `excess_b = N_on,b − B_on,b`，显著性只标注为 known-background Poisson diagnostic；`alpha_b`、`N_off,b` 和 Li-Ma 必须留空或标注 `not_applicable`。
 
 诊断产出预期：
 
 - 二维显著性图（Nhit × log E_pred）— 应该看到一条正相关的对角带（高 Nhit ↔ 高 log E_pred），偏离对角线的"翼"告诉你 ML 这条轴在 Nhit 之外加了多少信息。
 - v1 18 个拟合单元加起来的 Crab 总显著性；同时输出 60 个 acceptable 候选单元的总显著性作为诊断对照。
+- 如果 Stage E 显著性远超两个月 Crab 的量级预期，先检查 Stage C ROI 口径、fiducial 半径、off 区几何和边缘修正，不允许直接 promote 到 Stage F。
 
 ### Stage F — Forward folding 拟合
 
@@ -236,7 +241,8 @@ $$
 2. **响应自检。** 把模拟注入谱（Γ = −2.62）通过响应前向折叠，得到的各单元预期数应该和 `bin_counts.md` 里 cut 后实测 MC 数符合到 ≲ 1%。
 3. **Cell-drop 灵敏度。** 默认拟合用 `v1_physical_18`。对照重跑 `top2_per_nhit_15` 和 `count_ge30000_19` 两套 selector；Crab 的 Γ 和 N_0 漂移应小于统计误差，且高 Nhit 端残差不能出现系统偏移。
 4. **Cut 灵敏度。** 收紧到 `pincness < 0.9` 重跑全套（响应和观测必须用**同一个**更紧的 cut）。拟出的 SED 应该在统计上一致。
-5. **背景方法灵敏度。** 如果直接积分法和等赤纬法都实现了，分别拟一次，把差异作为背景方法系统列出来。
+5. **ROI 覆盖和边缘灵敏度。** 先确认 Stage C 是否只覆盖 Crab 局部 ROI。若走 ROI-local 背景，分别用 `ρ < 5.5°`、`ρ < 6.0°`、`ρ < 6.5°` 的 fiducial 区域重跑 Stage D/E，Crab 的 excess 和拟合谱不能对边缘半径产生不可解释的漂移。
+6. **背景方法灵敏度。** ROI-local baseline 至少比较等赤纬 sideband 与 ring/annulus 两种背景；只有在确认 Stage C 是全视场事件流时，才把直接积分法加入背景系统对照。
 
 最终系统误差预算按胡 2023 §6.8.1 思路给：ML 结果相对 WCDA 一期星表的 ratio band，理想情况下 1–20 TeV 偏差应在 ±10% 以内。
 
@@ -249,8 +255,8 @@ $$
 | `apply/stages/01_build_response.py` | Stage A — 扩 `apply/simulation_all_bin.py` 输出 η、A_eff |
 | `apply/stages/02_build_psf.py` | Stage B — Crab 赤纬带上各单元 PSF |
 | `apply/stages/03_reduce_obs.py` | Stage C — 合并 eval ROOT + friend tree → `obs_events.parquet` |
-| `apply/stages/04_background.py` | Stage D — 直接积分法接收度 + 背景预测 |
-| `apply/stages/05_signal.py` | Stage E — 各单元 N_on, N_off, excess, Li-Ma |
+| `apply/stages/04_background.py` | Stage D — ROI 覆盖诊断 + ROI-local 或全视场背景预测 |
+| `apply/stages/05_signal.py` | Stage E — 各单元 N_on, B_on/αN_off, excess, σ |
 | `apply/stages/06_fit.py` | Stage F — `iminuit` forward folding 拟合器 |
 | `apply/stages/07_sed_points.py` | Stage G — 各段 SED 点 + 出图 |
 | `apply/config/cell_selection_v1.csv` | v1 的 18 个 physical-band 拟合单元 |
@@ -264,9 +270,9 @@ $$
 
 ## 7. v1 已定技术选择
 
-1. **背景方法：直接积分法。** v1 baseline 直接上直接积分法，和 WCDA 一期星表路线对齐。等赤纬法不作为主线 fallback，只作为后续背景方法系统误差检查。
+1. **背景方法：先判定输入天区口径。** 如果 Stage C 是全视场事件流，v1 可使用直接积分法并和 WCDA 一期星表路线对齐；如果 Stage C 只覆盖 Crab 附近局部 ROI，v1 baseline 改为 `ρ < 6°` fiducial ROI-local 背景，优先使用等赤纬 sideband 或 ring/annulus，并把疑似 8° 外边缘作为系统诊断而不是拟合输入。
 2. **Stage F 拟合后端：自写最小 `iminuit` 拟合器。** 二维响应索引、18 个 cell 的选择、metadata 和诊断输出都需要按本项目组织；直接写一个小的 forward-folding χ² 拟合器更可控。师兄星表程序可参考背景和系统误差处理，但不作为拟合主框架。
 3. **PSF 参数化：v1 单高斯。** 每个 cell 用 Crab 赤纬带的 MC 角分辨分布拟合一个 σ_b，并用 `1.58 σ_b` 定义积分半径。双高斯留到 containment 或残差诊断显示单高斯明显不够时再升级。
 4. **单元选择：18 个 physical-band cell。** v1 只使用 `apply/config/cell_selection_v1.csv` 里的 18 个单元进入响应、背景、excess 和 χ² 拟合；60 个 `acceptable` 单元保留为候选池、显著性对照和系统检查，不进入 baseline 拟合。
 
-这四项是当前 v1 路线的固定选择，后续实现和报告 metadata 都应显式记录。
+这四项是当前 v1 路线的固定选择，后续实现和报告 metadata 都应显式记录。尤其 Stage D/E 必须记录采用的是 `full_field_direct_integration` 还是 `crab_roi_local`，以及 fiducial ROI 半径、边缘排除策略和背景形式。

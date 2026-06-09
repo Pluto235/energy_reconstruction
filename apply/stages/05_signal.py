@@ -1015,18 +1015,31 @@ def format_float(value: object, digits: int = 4) -> str:
     return f"{number:.{digits}g}"
 
 
-def relative_path_for_html(target: str, report_path: Path) -> str:
+def existing_apply_path_for_html(target: str, report_path: Path) -> Optional[Path]:
     target_path = Path(target)
     report_resolved = report_path.resolve()
+    candidates: List[Path] = []
+    if target_path.is_absolute():
+        candidates.append(target_path)
+        parts = target_path.parts
+        if "apply" in parts:
+            apply_idx = len(parts) - 1 - parts[::-1].index("apply")
+            candidates.append(report_resolved.parents[1] / Path(*parts[apply_idx + 1 :]))
+    else:
+        candidates.append((report_resolved.parent / target_path).resolve())
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def relative_path_for_html(target: str, report_path: Path) -> str:
+    existing = existing_apply_path_for_html(target, report_path)
+    if existing is not None:
+        return os.path.relpath(existing.resolve(), start=report_path.resolve().parent)
+    target_path = Path(target)
     try:
-        if target_path.is_absolute():
-            parts = target_path.parts
-            if "apply" in parts:
-                apply_idx = len(parts) - 1 - parts[::-1].index("apply")
-                local_target = report_resolved.parents[1] / Path(*parts[apply_idx + 1 :])
-                if local_target.exists():
-                    return os.path.relpath(local_target, start=report_resolved.parent)
-        return os.path.relpath(target_path.resolve(), start=report_resolved.parent)
+        return os.path.relpath(target_path.resolve(), start=report_path.resolve().parent)
     except OSError:
         return target
 
@@ -1073,24 +1086,40 @@ def write_report_html(path: Path, metadata: Dict[str, object], rows: Sequence[Di
                 f'<strong>{html.escape(title)}。</strong>{html.escape(caption)}</figcaption></figure>'
             )
 
-    skymap_items = [
+    inputs = metadata.get("inputs", {})
+    stage_d_outputs: Dict[str, object] = {}
+    background_metadata_json = inputs.get("background_metadata_json") if isinstance(inputs, dict) else None
+    if background_metadata_json:
+        background_metadata_path = existing_apply_path_for_html(str(background_metadata_json), path)
+        if background_metadata_path is not None:
+            try:
+                background_metadata = load_json(background_metadata_path)
+                background_outputs = background_metadata.get("outputs")
+                if isinstance(background_outputs, dict):
+                    stage_d_outputs = background_outputs
+            except (OSError, json.JSONDecodeError):
+                stage_d_outputs = {}
+
+    stage_d_map_items = [
         (
-            "assets/crab-v1-cell-skymaps/crab_v1_approx_significance_grid.png",
-            "Crab v1 skymap 近似去背景 quicklook",
-            "这张图来自同赤纬 sideband quicklook，用平滑后的 counts 减去平滑后的 sideband 背景；它只用于形态 sanity check，不是 Stage E 的正式 excess。",
+            "roi_excess_grid_png",
+            "Stage D 正式去背景天图",
+            "逐像素 excess_map = counts_map - background_map；background_map 来自 Stage D ROI-local Dec-sideband direct expectation。",
         ),
         (
-            "assets/crab-v1-cell-skymaps/crab_v1_smoothed_counts_grid.png",
-            "Crab v1 smoothed counts quicklook",
-            "这张图是 0.3 deg Gaussian 平滑后的观测计数，用来检查 Crab 附近的形态和中心位置。",
+            "roi_known_b_sigma_grid_png",
+            "Stage D 正式 residual 天图",
+            "逐像素 known-background Poisson residual，使用同一个 Stage D background_map；它不是此前平滑 skymap 的 sideband 近似显著性。",
         ),
+        ("roi_counts_grid_png", "Stage D counts 天图", "Stage D 正式 ROI 网格里的原始 counts_map，没有 Gaussian smoothing。"),
+        ("roi_background_grid_png", "Stage D background 天图", "Stage D 正式 ROI-local Dec-sideband background_map，与去背景天图使用同一背景口径。"),
     ]
-    skymap_html: List[str] = []
-    for rel_path, title, caption in skymap_items:
-        target = path.parent / rel_path
-        if target.exists():
-            rel = html.escape(os.path.relpath(target.resolve(), start=path.parent))
-            skymap_html.append(
+    stage_d_map_html: List[str] = []
+    for key, title, caption in stage_d_map_items:
+        target = stage_d_outputs.get(key)
+        if target and existing_apply_path_for_html(str(target), path) is not None:
+            rel = html.escape(relative_path_for_html(str(target), path))
+            stage_d_map_html.append(
                 f'<figure class="wide"><img src="{rel}" alt="{html.escape(title)}"><figcaption>'
                 f'<strong>{html.escape(title)}。</strong>{html.escape(caption)}</figcaption></figure>'
             )
@@ -1287,14 +1316,14 @@ footer {{ margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--borde
 	  </section>
 
 	  <section>
-	    <h2>和 skymap quicklook 的关系</h2>
-	    <p>下面的 skymap 图不是 Stage E 的正式统计输入，而是帮助人眼检查 Crab 附近是否真的有源形态。它们和 Stage D/E 的正式背景都使用“同赤纬附近估计背景”的思想，但口径不同：quicklook 在平滑天图上用固定 sideband 做近似扣背景；Stage E 的正式 excess 则来自逐 cell 的 <code>N_on - B_on</code>，其中 <code>B_on</code> 由 Stage D 的 ROI-local Dec-sideband 合约给出。</p>
-	    <div class="callout warn">
-	      <strong>不要把 quicklook sigma 当成 Stage E formal sigma。</strong>
-	      quicklook 的近似公式是 <code>(smoothed_counts - smoothed_sideband_background) / sqrt(smoothed_sideband_background)</code>；Stage E 报告表格和上面的热图才是正式结果。
+	    <h2>和 Stage D 正式去背景天图的关系</h2>
+	    <p>下面几张图来自 Stage D 正式 ROI-local 背景输出，不再使用此前平滑 skymap 的 sideband 近似。它们直接读取 <code>background_v1.npz</code> 中的 <code>counts_map</code> 和 <code>background_map</code>：去背景天图是逐像素 <code>counts_map - background_map</code>，residual 天图是同一背景期望下的 Poisson 诊断量。</p>
+	    <div class="callout good">
+	      <strong>这组图和 Stage E 的背景口径一致。</strong>
+	      Stage E 表格中的 <code>B_on</code> 是把同一个 Stage D <code>background_map</code> 积分到每个 cell 的 Crab on-region 后得到的；这里的天图只是把同一个过程摊回 ROI 像素上，方便人眼检查源形态。
 	    </div>
 	    <div class="figure-grid">
-	      {''.join(skymap_html) if skymap_html else '<p>本地没有找到 skymap quicklook 图。</p>'}
+	      {''.join(stage_d_map_html) if stage_d_map_html else '<p>本地没有找到 Stage D 正式去背景天图。</p>'}
 	    </div>
 	  </section>
 

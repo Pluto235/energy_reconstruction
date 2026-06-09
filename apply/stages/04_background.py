@@ -1092,6 +1092,32 @@ def log_map(data: np.ndarray) -> np.ndarray:
     return out
 
 
+def known_background_sigma_map(
+    counts_map: np.ndarray,
+    background_map: np.ndarray,
+    fiducial_mask: np.ndarray,
+) -> np.ndarray:
+    counts = counts_map.astype(np.float64)
+    background = background_map.astype(np.float64)
+    term = np.zeros(counts.shape, dtype=np.float64)
+    valid = np.isfinite(counts) & np.isfinite(background) & (background > 0.0)
+    positive_counts = valid & (counts > 0.0)
+    term[positive_counts] = (
+        counts[positive_counts] * np.log(counts[positive_counts] / background[positive_counts])
+        - (counts[positive_counts] - background[positive_counts])
+    )
+    zero_counts = valid & (counts <= 0.0)
+    term[zero_counts] = background[zero_counts]
+    term = np.maximum(term, 0.0)
+    signed = np.sign(counts - background) * np.sqrt(2.0 * term)
+
+    sigma = np.full(counts.shape, np.nan, dtype=np.float32)
+    fiducial = fiducial_mask.astype(bool)[None, :, :]
+    keep = valid & fiducial
+    sigma[keep] = signed[keep].astype(np.float32)
+    return sigma
+
+
 def plot_acceptance_grid(
     acceptance: np.ndarray,
     cells: Sequence[CellSpec],
@@ -1337,6 +1363,81 @@ def plot_roi_counts_grid(
     if first_im is not None:
         cbar = fig.colorbar(first_im, ax=axes.ravel().tolist(), shrink=0.72, pad=0.01)
         cbar.set_label("log10 counts", fontsize=8)
+        cbar.ax.tick_params(labelsize=7)
+    fig.savefig(output_path)
+    plt.close(fig)
+
+
+def plot_roi_signed_grid(
+    values: np.ndarray,
+    cells: Sequence[CellSpec],
+    xy_edges: np.ndarray,
+    output_path: Path,
+    *,
+    title: str,
+    colorbar_label: str,
+    roi_fiducial_deg: float,
+    r_opt_deg: np.ndarray,
+    limit_percentile: float = 99.0,
+) -> None:
+    plt = setup_matplotlib()
+    from matplotlib.colors import TwoSlopeNorm
+
+    nhit_bins, pred_bins, by_key = prepare_grid(cells)
+    fig, axes = plt.subplots(
+        len(nhit_bins),
+        len(pred_bins),
+        figsize=(2.05 * len(pred_bins), 1.75 * len(nhit_bins)),
+        dpi=150,
+        sharex=True,
+        sharey=True,
+        squeeze=False,
+    )
+    extent = [float(xy_edges[0]), float(xy_edges[-1]), float(xy_edges[0]), float(xy_edges[-1])]
+    finite = values[np.isfinite(values)]
+    vmax = float(np.percentile(np.abs(finite), float(limit_percentile))) if finite.size else 1.0
+    if not np.isfinite(vmax) or vmax <= 0.0:
+        vmax = 1.0
+    norm = TwoSlopeNorm(vmin=-vmax, vcenter=0.0, vmax=vmax)
+    cmap = plt.get_cmap("RdBu_r").copy()
+    cmap.set_bad("#eeeeee")
+    first_im = None
+    theta = np.linspace(0.0, 2.0 * np.pi, 240)
+    fiducial_x = float(roi_fiducial_deg) * np.cos(theta)
+    fiducial_y = float(roi_fiducial_deg) * np.sin(theta)
+    for i, nhit_bin in enumerate(nhit_bins):
+        for j, pred_bin in enumerate(pred_bins):
+            ax = axes[i, j]
+            cell = by_key.get((nhit_bin, pred_bin))
+            if cell is None:
+                ax.set_axis_off()
+                continue
+            im = ax.imshow(
+                values[cell.index],
+                origin="lower",
+                extent=extent,
+                aspect="equal",
+                interpolation="nearest",
+                cmap=cmap,
+                norm=norm,
+            )
+            if first_im is None:
+                first_im = im
+            ax.plot(fiducial_x, fiducial_y, color="#222222", linewidth=0.35, alpha=0.8)
+            on_radius = float(r_opt_deg[cell.index])
+            ax.plot(on_radius * np.cos(theta), on_radius * np.sin(theta), color="#111111", linewidth=0.45, alpha=0.9)
+            ax.scatter([0.0], [0.0], marker="+", s=18, c="#111111", linewidths=0.6)
+            ax.set_title(f"cell {cell.cell_id}: {pred_bin}", fontsize=6.7)
+            ax.tick_params(labelsize=6, length=2)
+            if j == 0:
+                ax.set_ylabel(f"{nhit_bin}\ny (deg)", fontsize=6.7)
+            if i == len(nhit_bins) - 1:
+                ax.set_xlabel("x (deg)", fontsize=6.7)
+    fig.suptitle(title, fontsize=11, y=0.995)
+    fig.tight_layout(rect=[0.0, 0.0, 0.95, 0.982])
+    if first_im is not None:
+        cbar = fig.colorbar(first_im, ax=axes.ravel().tolist(), shrink=0.72, pad=0.01)
+        cbar.set_label(colorbar_label, fontsize=8)
         cbar.ax.tick_params(labelsize=7)
     fig.savefig(output_path)
     plt.close(fig)
@@ -1616,6 +1717,9 @@ def run_crab_roi_local_background(
     )
     if not np.all(np.isfinite(b_on)) or np.any(b_on < 0.0):
         raise RuntimeError("ROI-local background produced non-finite or negative B_on values")
+    excess_map = counts_map.astype(np.float32) - background_map.astype(np.float32)
+    excess_map[:, ~fiducial_mask] = np.nan
+    known_b_sigma_grid = known_background_sigma_map(counts_map, background_map, fiducial_mask)
 
     total_live_time_sec = total_live_time_seconds_from_stage_c(stage_c_metadata, source_files_csv)
     total_live_time_days = total_live_time_sec / 86400.0 if total_live_time_sec > 0 else 0.0
@@ -1694,6 +1798,8 @@ def run_crab_roi_local_background(
         training_mask=training_mask.astype(bool),
         counts_map=counts_map.astype(np.int64),
         background_map=background_map.astype(np.float32),
+        excess_map=excess_map.astype(np.float32),
+        known_b_sigma_map=known_b_sigma_grid.astype(np.float32),
         rho_hist_edges_deg=rho_hist_edges.astype(np.float32),
         rho_hist_total=scan.rho_hist_total.astype(np.int64),
         rho_hist_by_cell=scan.rho_hist_by_cell.astype(np.int64),
@@ -1721,6 +1827,8 @@ def run_crab_roi_local_background(
             "roi_coverage_profile_png": str(run_dir / "roi_coverage_profile.png"),
             "roi_counts_grid_png": str(run_dir / "roi_counts_grid.png"),
             "roi_background_grid_png": str(run_dir / "roi_background_grid.png"),
+            "roi_excess_grid_png": str(run_dir / "roi_excess_grid.png"),
+            "roi_known_b_sigma_grid_png": str(run_dir / "roi_known_b_sigma_grid.png"),
             "roi_mask_summary_png": str(run_dir / "roi_mask_summary.png"),
             "background_prediction_png": str(run_dir / "background_prediction_grid.png"),
         }
@@ -1746,6 +1854,26 @@ def run_crab_roi_local_background(
             Path(plot_outputs["roi_background_grid_png"]),
             title="Stage D ROI-local Dec-sideband background",
             roi_fiducial_deg=float(args.roi_fiducial_deg),
+        )
+        plot_roi_signed_grid(
+            excess_map,
+            cells,
+            xy_edges,
+            Path(plot_outputs["roi_excess_grid_png"]),
+            title="Stage D ROI-local counts minus Dec-sideband background",
+            colorbar_label="counts - background",
+            roi_fiducial_deg=float(args.roi_fiducial_deg),
+            r_opt_deg=r_opt_deg,
+        )
+        plot_roi_signed_grid(
+            known_b_sigma_grid,
+            cells,
+            xy_edges,
+            Path(plot_outputs["roi_known_b_sigma_grid_png"]),
+            title="Stage D ROI-local known-background residual",
+            colorbar_label="known-B sigma",
+            roi_fiducial_deg=float(args.roi_fiducial_deg),
+            r_opt_deg=r_opt_deg,
         )
         plot_roi_mask_summary(
             fiducial_mask,

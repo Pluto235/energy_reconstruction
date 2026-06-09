@@ -204,6 +204,14 @@ footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--border
 	        <img src="../output/stage_d/runs/slurm_42006/roi_background_grid.png" alt="Stage D ROI Dec-sideband background grid">
 	        <figcaption><strong>ROI Dec-sideband background。</strong>同一 y/Dec 条带训练像素平均后得到的背景密度图，是 Stage D 当前正式背景口径。</figcaption>
 	      </figure>
+	      <figure class="wide">
+	        <img src="../output/stage_d/runs/slurm_42006/roi_excess_grid.png" alt="Stage D formal ROI excess grid">
+	        <figcaption><strong>Stage D 正式去背景天图。</strong>逐像素 <code>counts_map - background_map</code>，其中 <code>background_map</code> 来自本 Stage 的 ROI-local Dec-sideband direct expectation；未使用 Gaussian smoothing，也不是此前平滑 skymap 的 sideband 近似。</figcaption>
+	      </figure>
+	      <figure class="wide">
+	        <img src="../output/stage_d/runs/slurm_42006/roi_known_b_sigma_grid.png" alt="Stage D formal known-background residual grid">
+	        <figcaption><strong>Stage D 正式 residual 天图。</strong>逐像素使用同一个 <code>background_map</code> 计算 known-background Poisson residual，用来检查 Crab 源区附近是否呈现正 excess 形态。</figcaption>
+	      </figure>
 	      <figure>
 	        <img src="../output/stage_d/runs/slurm_42006/roi_mask_summary.png" alt="Stage D ROI mask summary">
 	        <figcaption><strong>ROI mask summary。</strong>展示 fiducial ROI、source exclusion、on-region 和训练像素的相对位置，帮助检查背景训练区是否避开 Crab 信号。</figcaption>
@@ -216,10 +224,6 @@ footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--border
 	        <img src="../output/stage_d/runs/slurm_42006/background_prediction_grid.png" alt="Stage D background prediction grid">
 	        <figcaption><strong>Crab on-region B_on。</strong>18 个 v1 cell 的 Crab on-region 背景期望热图。Stage E 读取这些 <code>B_on</code> 与 <code>N_on</code> 相减。</figcaption>
 	      </figure>
-	      <figure class="wide">
-	        <img src="assets/crab-v1-cell-skymaps/crab_v1_approx_significance_grid.png" alt="Crab v1 approx significance quicklook">
-	        <figcaption><strong>skymap 近似去背景 quicklook。</strong>这张图也用了同赤纬 sideband 思路，但它在平滑天图上做近似扣背景，只能作为形态对照；不是 Stage D 正式 <code>B_on</code>，也不是 Stage E 正式 excess。</figcaption>
-	      </figure>
 	    </div>
 	  </section>
 
@@ -231,7 +235,7 @@ footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--border
 	      <li><code>apply/output/stage_d/current/background_v1_summary.csv</code>：18 个 cell 的表格汇总。</li>
 	      <li><code>apply/output/stage_d/current/background_v1_summary.md</code>：简短 Markdown 摘要。</li>
 	      <li><code>apply/output/stage_d/current/source_masks_v1.csv</code>：本次 source mask 配置。</li>
-	      <li><code>apply/output/stage_d/current/*.png</code>：ROI counts、ROI background、mask summary、coverage profile 和 background prediction 诊断图。</li>
+	      <li><code>apply/output/stage_d/current/*.png</code>：ROI counts、ROI background、正式去背景天图、正式 residual 天图、mask summary、coverage profile 和 background prediction 诊断图。</li>
     </ul>
   </section>
 

@@ -1,0 +1,32 @@
+cell_id,nhit_bin,predE_bin,mc_count,formal_nhit_bin,statistics_level,selection_version,selection_reason
+1,"[200,300)","[2,3)",258212,True,acceptable,v2_physical_31,nhit_ge_200 physical ridge low-energy anchor
+2,"[200,300)","[3,3.25)",162827,True,acceptable,v2_physical_31,nhit_ge_200 physical ridge
+3,"[200,300)","[3.25,3.5)",80983,True,acceptable,v2_physical_31,nhit_ge_200 physical ridge
+4,"[200,300)","[3.5,3.75)",43842,True,acceptable,v2_physical_31,nhit_ge_200 physical ridge
+5,"[200,300)","[3.75,4.0)",24555,True,acceptable,v2_physical_31,nhit_ge_200 high-energy shoulder
+6,"[300,500)","[3,3.25)",157484,True,acceptable,v2_physical_31,physical ridge
+7,"[300,500)","[3.25,3.5)",152731,True,acceptable,v2_physical_31,physical ridge
+8,"[300,500)","[3.5,3.75)",66096,True,acceptable,v2_physical_31,physical ridge
+9,"[300,500)","[3.75,4.0)",35732,True,acceptable,v2_physical_31,physical ridge high-energy shoulder
+10,"[300,500)","[4.0,4.25)",23752,True,acceptable,v2_physical_31,physical ridge high-energy shoulder
+11,"[500,800)","[3.25,3.5)",89790,True,acceptable,v2_physical_31,physical ridge
+12,"[500,800)","[3.5,3.75)",85249,True,acceptable,v2_physical_31,physical ridge
+13,"[500,800)","[3.75,4.0)",34158,True,acceptable,v2_physical_31,physical ridge
+14,"[500,800)","[4.0,4.25)",22437,True,acceptable,v2_physical_31,physical ridge high-energy shoulder
+15,"[500,800)","[4.25,4.5)",13314,True,acceptable,v2_physical_31,physical ridge high-energy shoulder
+16,"[800,1100)","[3.5,3.75)",34552,True,acceptable,v2_physical_31,physical ridge
+17,"[800,1100)","[3.75,4.0)",28276,True,acceptable,v2_physical_31,physical ridge
+18,"[800,1100)","[4.0,4.25)",13829,True,acceptable,v2_physical_31,physical ridge
+19,"[800,1100)","[4.25,4.5)",7962,True,acceptable,v2_physical_31,physical ridge high-energy shoulder
+20,"[800,1100)","[4.5,4.75)",4706,True,acceptable,v2_physical_31,physical ridge high-energy shoulder
+21,"[1100,2000)","[3.75,4.0)",24408,True,acceptable,v2_physical_31,physical ridge
+22,"[1100,2000)","[4.0,4.25)",27355,True,acceptable,v2_physical_31,physical ridge
+23,"[1100,2000)","[4.25,4.5)",13358,True,acceptable,v2_physical_31,physical ridge
+24,"[1100,2000)","[4.5,4.75)",6012,True,acceptable,v2_physical_31,extended high-energy ridge
+25,"[1100,2000)","[4.75,5.0)",2958,True,acceptable,v2_physical_31,extended high-energy ridge
+26,"[1100,2000)",">=5",3396,True,acceptable,v2_physical_31,open high-energy ridge
+27,"[2000,3000)","[4.0,4.25)",1114,True,acceptable,v2_physical_31,ge2000_reference_pending_v2_mc_split
+28,"[2000,3000)","[4.25,4.5)",2734,True,acceptable,v2_physical_31,ge2000_reference_pending_v2_mc_split
+29,"[2000,3000)","[4.5,4.75)",4972,True,acceptable,v2_physical_31,ge2000_reference_pending_v2_mc_split
+30,"[2000,3000)","[4.75,5.0)",5497,True,acceptable,v2_physical_31,ge2000_reference_pending_v2_mc_split
+31,"[2000,3000)",">=5",6211,True,acceptable,v2_physical_31,ge2000_reference_pending_v2_mc_split

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Low-Energy Cell Diagnostics</title>
+<style>
+body { margin:0; font-family: Arial, Helvetica, sans-serif; color:#1f2933; background:#f7f8fa; }
+main { max-width:1180px; margin:0 auto; padding:28px 18px 44px; }
+h1 { margin:0 0 8px; font-size:28px; }
+p { line-height:1.55; }
+.note { padding:12px 14px; border-left:4px solid #c9501a; background:#fff; border:1px solid #d9dee7; }
+img { display:block; max-width:100%; height:auto; margin:18px 0; border:1px solid #d9dee7; background:#fff; }
+table { width:100%; border-collapse:collapse; margin-top:16px; background:#fff; font-size:13px; }
+th, td { border:1px solid #d9dee7; padding:7px 8px; text-align:right; }
+th:nth-child(2), th:nth-child(3), th:nth-child(10), td:nth-child(2), td:nth-child(3), td:nth-child(10) { text-align:left; }
+th { background:#eef2f6; }
+code { background:#eef2f6; padding:2px 4px; border-radius:4px; }
+</style>
+</head>
+<body>
+<main>
+<h1>Low-Energy Cell Skymap / Sideband Diagnostics</h1>
+<p class="note">This diagnostic focuses on v1 cells 1-7 after the S0 unit fix. The sideband quicklook is diagnostic only and does not replace Stage D.</p>
+<p>Source-region quicklook: <code>rho &lt; 2 deg</code>. Sideband: same Dec strip, <code>rho &gt;= 2 deg</code>, <code>|x| &lt; 5 deg</code>.</p>
+<img src="../plot/low_energy_cell_diagnostics/low_energy_skymap_sideband_grid.png" alt="Low-energy skymap grid">
+<img src="../plot/low_energy_cell_diagnostics/low_energy_sideband_profiles.png" alt="Low-energy sideband profiles">
+<table>
+<thead><tr><th>cell</th><th>Nhit</th><th>predE</th><th>central excess-like</th><th>central approx sigma</th><th>sideband CV</th><th>left-right asym</th><th>Stage F excess/model</th><th>Stage F pull</th><th>flag</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>[30,60)</td><td>[2,3)</td><td>40619</td><td>63.73</td><td>0.5488</td><td>-0.04918</td><td>50.76</td><td>41.42</td><td>exclude_from_stage_g_baseline</td></tr>
+<tr><td>2</td><td>[60,100)</td><td>[2,3)</td><td>57214</td><td>64.85</td><td>0.5486</td><td>-0.005753</td><td>4.888</td><td>21.2</td><td>exclude_from_stage_g_baseline</td></tr>
+<tr><td>3</td><td>[60,100)</td><td>[3,3.25)</td><td>4365.3</td><td>20.75</td><td>0.5611</td><td>-0.06258</td><td>19.26</td><td>11.37</td><td>exclude_from_stage_g_baseline</td></tr>
+<tr><td>4</td><td>[100,200)</td><td>[2,3)</td><td>35320</td><td>36.87</td><td>0.6641</td><td>0.01079</td><td>0.544</td><td>-8.941</td><td>exclude_from_stage_g_baseline</td></tr>
+<tr><td>5</td><td>[100,200)</td><td>[3,3.25)</td><td>7704.4</td><td>19.97</td><td>0.6312</td><td>-0.001447</td><td>2.395</td><td>5.456</td><td>exclude_from_stage_g_baseline</td></tr>
+<tr><td>6</td><td>[200,300)</td><td>[2,3)</td><td>4743</td><td>13.03</td><td>0.7413</td><td>0.006002</td><td>0.7875</td><td>-4.866</td><td>exclude_from_stage_g_baseline</td></tr>
+<tr><td>7</td><td>[200,300)</td><td>[3,3.25)</td><td>2912.7</td><td>10.95</td><td>0.7156</td><td>0.005279</td><td>1.504</td><td>5.366</td><td>exclude_from_stage_g_baseline</td></tr>
+</tbody>
+</table>
+<p>Summary CSV: <code>/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/low_energy_cell_diagnostics/low_energy_cell_diagnostics.csv</code></p>
+</main>
+</body>
+</html>

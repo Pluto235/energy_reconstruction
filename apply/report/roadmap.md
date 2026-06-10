@@ -81,7 +81,7 @@ $$
 其中：
 
 - `η_b(θ, E_true) = (通过所有 cut 后落入单元 b 的加权事例数) / (投放 primary 的加权事例数)`，即**二维探测器响应**，从 MC 在和观测严格一致的 cut 条件下计算得到。
-- `S_0 = 40000 m²` 是模拟中的投点面积，来自上游 `injectionArea = 4.0e10 mm²`。
+- `S_0 = 4.0e6 m²` 是模拟中的投点面积，来自上游 `t_evth.v[48] injectionArea = 4.0e10 cm²`。注意这里的单位是 cm²，不是 mm²；`coreX_WL/coreY_WL` 除以 100 后对应 eventout 的 `mc_xc/mc_yc` 米坐标，几何是约 `[-1000,1000] m × [-1000,1000] m` 的方形投点区。
 - `f(θ)` 是源在观测窗口内归一化的天顶角分布。
 - `T_0` 是 live time。
 
@@ -141,7 +141,7 @@ $$
   - 分子 `N_pass(b, E_j, θ_k)` 从 `/mnt/mydisk/WCDA_simulation_binned_response_v1/nhit_*/predE_*/*.root` 来数。每个文件已经按 `nv × ml_logE_pred` 落进某个观测 cell，并保留 `mc_energy`、`mc_theta`、`mc_weight`；只需按 `log₁₀(mc_energy)` 和 `mc_theta` 再填二维真值直方图。
   - 分母 `N_thrown(E_j, θ_k)` 从 IHEP 原始 MC primary hist 汇总文件 `/mnt/mydisk/WCDA_simulation_primary_hist/primary_denominator_stage_a.npz` 来数；正式响应使用 `hntotmc` weighted thrown sumw，`hntotmc0` unweighted count 只作为诊断。
   - 分子和正式分母都用 `Σ mc_weight` / weighted primary sumw，避免裸 count 与生成谱权重混用。
-  - 绝对有效面积同步输出：`A_eff,b(E,θ) = S_0 cosθ_center η_b(E,θ)`，其中 `S_0 = 40000 m²`，`θ_center` 为 1° 天顶角 bin 中心。
+  - 绝对有效面积同步输出：`A_eff,b(E,θ) = S_0 cosθ_center η_b(E,θ)`，其中 `S_0 = 4.0e6 m²`，`θ_center` 为 1° 天顶角 bin 中心。旧口径把 `4.0e10 cm²` 误读成 `4.0e10 mm² = 40000 m²`，会把绝对有效面积压低 100 倍。
 - 输出 `response_2d.npz`，shape 为 `(N_cells, N_E_true, N_theta)`，η 和 A_eff 都存。默认只保留 `apply/config/cell_selection_v1.csv` 中的 18 个 v1 单元；60 个 `acceptable` 单元只作为候选池和敏感性检查输入。
 
 ### Stage B — Crab 赤纬带上各单元的 PSF
@@ -220,13 +220,15 @@ $$
 
 ### Stage G — SED 点
 
+当前 Stage G 先做 **diagnostic SED**，不作为正式发表版。S0 单位修正后，低 Nhit / 低 `E_pred` 的 cells 1–7 在 skymap/sideband quicklook 和 Stage F pull 上暴露出明显系统异常，其中 cells 1–3 是硬异常；正式 SED 不能直接把 cells 1–3 塞进去。临时高可信子集使用 `apply/config/cell_subset_cells8to18_stageg_diag.csv`，即 cells 8–18。`drop1to5` 只作为对照诊断：保留 cells 6–7 时 PL `chi2/ndof = 82.65/11`，仍然不可作为 Stage G baseline。
+
 按胡 2023 的标准做法：
 
 - 固定 Stage F 拟出来的全局 Γ（或 α, β）。
 - 对每个 Nhit 段（或每个 i_E 段 — 两套都给）只重新拟归一化 N_0,bin，其他参数全部冻结。
 - 转换为微分通量 `E² dN/dE`，能量取该单元中位 true 能量（用最佳谱给响应加权算出）。
 - 直接对比：
-  - WCDA 一期 Crab（胡 2023 图 6-32）：N_0 = 2.114 × 10⁻¹³ cm⁻² s⁻¹ TeV⁻¹ @ 3 TeV，Γ = 2.69 ± 0.01。
+  - WCDA 一期 Crab（胡 2023 图 6-32）：N_0 = 2.114 × 10⁻¹² cm⁻² s⁻¹ TeV⁻¹ @ 3 TeV，Γ = 2.69 ± 0.01。
   - HAWC、HESS 已发表的 Crab SED 作为外部 sanity 参考。
 
 一维 Nhit-only 的 SED 作为副产物：把响应沿 i_E marginalise，重新拟一遍 — **这是和星表 apples-to-apples 的直接对比**。
@@ -274,5 +276,6 @@ $$
 2. **Stage F 拟合后端：自写最小 `iminuit` 拟合器。** 二维响应索引、18 个 cell 的选择、metadata 和诊断输出都需要按本项目组织；直接写一个小的 forward-folding χ² 拟合器更可控。师兄星表程序可参考背景和系统误差处理，但不作为拟合主框架。
 3. **PSF 参数化：v1 单高斯。** 每个 cell 用 Crab 赤纬带的 MC 角分辨分布拟合一个 σ_b，并用 `1.58 σ_b` 定义积分半径。双高斯留到 containment 或残差诊断显示单高斯明显不够时再升级。
 4. **单元选择：18 个 physical-band cell。** v1 只使用 `apply/config/cell_selection_v1.csv` 里的 18 个单元进入响应、背景、excess 和 χ² 拟合；60 个 `acceptable` 单元保留为候选池、显著性对照和系统检查，不进入 baseline 拟合。
+5. **Stage G 诊断子集：临时使用 cells 8–18。** 在低能 sideband/background 与响应形状系统修好前，Stage G diagnostic 版本使用 `cells8to18_stageg_diag`。cells 1–3 不允许进入正式 SED；cells 4–7 也暂不进入 diagnostic baseline。
 
-这四项是当前 v1 路线的固定选择，后续实现和报告 metadata 都应显式记录。尤其 Stage D/E 必须记录采用的是 `full_field_direct_integration` 还是 `crab_roi_local`，以及 fiducial ROI 半径、边缘排除策略和背景形式。
+这五项是当前 v1 路线的固定选择，后续实现和报告 metadata 都应显式记录。尤其 Stage D/E 必须记录采用的是 `full_field_direct_integration` 还是 `crab_roi_local`，以及 fiducial ROI 半径、边缘排除策略和背景形式。

@@ -308,7 +308,7 @@ $$</p>
 <p>其中：</p>
 <ul>
 <li><code>η_b(θ, E_true) = (通过所有 cut 后落入单元 b 的加权事例数) / (投放 primary 的加权事例数)</code>，即<strong>二维探测器响应</strong>，从 MC 在和观测严格一致的 cut 条件下计算得到。</li>
-<li><code>S_0 = 40000 m²</code> 是模拟中的投点面积，来自上游 <code>injectionArea = 4.0e10 mm²</code>。</li>
+<li><code>S_0 = 4.0e6 m²</code> 是模拟中的投点面积，来自上游 <code>t_evth.v[48] injectionArea = 4.0e10 cm²</code>。注意这里的单位是 cm²，不是 mm²；<code>coreX_WL/coreY_WL</code> 除以 100 后对应 eventout 的 <code>mc_xc/mc_yc</code> 米坐标，几何是约 <code>[-1000,1000] m × [-1000,1000] m</code> 的方形投点区。</li>
 <li><code>f(θ)</code> 是源在观测窗口内归一化的天顶角分布。</li>
 <li><code>T_0</code> 是 live time。</li>
 </ul>
@@ -364,7 +364,7 @@ $$</p>
 <li>分子 <code>N_pass(b, E_j, θ_k)</code> 从 <code>/mnt/mydisk/WCDA_simulation_binned_response_v1/nhit_*/predE_*/*.root</code> 来数。每个文件已经按 <code>nv × ml_logE_pred</code> 落进某个观测 cell，并保留 <code>mc_energy</code>、<code>mc_theta</code>、<code>mc_weight</code>；只需按 <code>log₁₀(mc_energy)</code> 和 <code>mc_theta</code> 再填二维真值直方图。</li>
 <li>分母 <code>N_thrown(E_j, θ_k)</code> 从 IHEP 原始 MC primary hist 汇总文件 <code>/mnt/mydisk/WCDA_simulation_primary_hist/primary_denominator_stage_a.npz</code> 来数；正式响应使用 <code>hntotmc</code> weighted thrown sumw，<code>hntotmc0</code> unweighted count 只作为诊断。</li>
 <li>分子和正式分母都用 <code>Σ mc_weight</code> / weighted primary sumw，避免裸 count 与生成谱权重混用。</li>
-<li>绝对有效面积同步输出：<code>A_eff,b(E,θ) = S_0 cosθ_center η_b(E,θ)</code>，其中 <code>S_0 = 40000 m²</code>，<code>θ_center</code> 为 1° 天顶角 bin 中心。</li>
+<li>绝对有效面积同步输出：<code>A_eff,b(E,θ) = S_0 cosθ_center η_b(E,θ)</code>，其中 <code>S_0 = 4.0e6 m²</code>，<code>θ_center</code> 为 1° 天顶角 bin 中心。旧口径把 <code>4.0e10 cm²</code> 误读成 <code>4.0e10 mm² = 40000 m²</code>，会把绝对有效面积压低 100 倍。</li>
 </ul>
 </li>
 <li>输出 <code>response_2d.npz</code>，shape 为 <code>(N_cells, N_E_true, N_theta)</code>，η 和 A_eff 都存。默认只保留 <code>apply/config/cell_selection_v1.csv</code> 中的 18 个 v1 单元；60 个 <code>acceptable</code> 单元只作为候选池和敏感性检查输入。</li>
@@ -432,13 +432,14 @@ $$</p>
 </ol>
 <p>胡 2023 里模拟 Crab 用的注入谱是 −2.62、10 GeV–1 PeV。可以直接用同一套响应做前向折叠 — 响应是迁移矩阵，不是假设谱 — 但好的习惯是把拟合得到的最佳谱回代一次，给 A_eff 重新加权迭代一轮。</p>
 <h3>Stage G — SED 点</h3>
+<p>当前 Stage G 先做 <strong>diagnostic SED</strong>，不作为正式发表版。S0 单位修正后，低 Nhit / 低 <code>E_pred</code> 的 cells 1–7 在 skymap/sideband quicklook 和 Stage F pull 上暴露出明显系统异常，其中 cells 1–3 是硬异常；正式 SED 不能直接把 cells 1–3 塞进去。临时高可信子集使用 <code>apply/config/cell_subset_cells8to18_stageg_diag.csv</code>，即 cells 8–18。<code>drop1to5</code> 只作为对照诊断：保留 cells 6–7 时 PL <code>chi2/ndof = 82.65/11</code>，仍然不可作为 Stage G baseline。</p>
 <p>按胡 2023 的标准做法：</p>
 <ul>
 <li>固定 Stage F 拟出来的全局 Γ（或 α, β）。</li>
 <li>对每个 Nhit 段（或每个 i_E 段 — 两套都给）只重新拟归一化 N_0,bin，其他参数全部冻结。</li>
 <li>转换为微分通量 <code>E² dN/dE</code>，能量取该单元中位 true 能量（用最佳谱给响应加权算出）。</li>
 <li>直接对比：<ul>
-<li>WCDA 一期 Crab（胡 2023 图 6-32）：N_0 = 2.114 × 10⁻¹³ cm⁻² s⁻¹ TeV⁻¹ @ 3 TeV，Γ = 2.69 ± 0.01。</li>
+<li>WCDA 一期 Crab（胡 2023 图 6-32）：N_0 = 2.114 × 10⁻¹² cm⁻² s⁻¹ TeV⁻¹ @ 3 TeV，Γ = 2.69 ± 0.01。</li>
 <li>HAWC、HESS 已发表的 Crab SED 作为外部 sanity 参考。</li>
 </ul>
 </li>
@@ -520,8 +521,9 @@ $$</p>
 <li><strong>Stage F 拟合后端：自写最小 <code>iminuit</code> 拟合器。</strong> 二维响应索引、18 个 cell 的选择、metadata 和诊断输出都需要按本项目组织；直接写一个小的 forward-folding χ² 拟合器更可控。师兄星表程序可参考背景和系统误差处理，但不作为拟合主框架。</li>
 <li><strong>PSF 参数化：v1 单高斯。</strong> 每个 cell 用 Crab 赤纬带的 MC 角分辨分布拟合一个 σ_b，并用 <code>1.58 σ_b</code> 定义积分半径。双高斯留到 containment 或残差诊断显示单高斯明显不够时再升级。</li>
 <li><strong>单元选择：18 个 physical-band cell。</strong> v1 只使用 <code>apply/config/cell_selection_v1.csv</code> 里的 18 个单元进入响应、背景、excess 和 χ² 拟合；60 个 <code>acceptable</code> 单元保留为候选池、显著性对照和系统检查，不进入 baseline 拟合。</li>
+<li><strong>Stage G 诊断子集：临时使用 cells 8–18。</strong> 在低能 sideband/background 与响应形状系统修好前，Stage G diagnostic 版本使用 <code>cells8to18_stageg_diag</code>。cells 1–3 不允许进入正式 SED；cells 4–7 也暂不进入 diagnostic baseline。</li>
 </ol>
-<p>这四项是当前 v1 路线的固定选择，后续实现和报告 metadata 都应显式记录。尤其 Stage D/E 必须记录采用的是 <code>full_field_direct_integration</code> 还是 <code>crab_roi_local</code>，以及 fiducial ROI 半径、边缘排除策略和背景形式。</p>
+<p>这五项是当前 v1 路线的固定选择，后续实现和报告 metadata 都应显式记录。尤其 Stage D/E 必须记录采用的是 <code>full_field_direct_integration</code> 还是 <code>crab_roi_local</code>，以及 fiducial ROI 半径、边缘排除策略和背景形式。</p>
 
 <footer class="page-foot">
   Generated from <code>roadmap.md</code> · Pluto235/any-reports

@@ -1,0 +1,24 @@
+cell_id,nhit_bin,predE_bin,mc_count,formal_nhit_bin,statistics_level,selection_version,selection_reason,crab_roi_events_v2
+1,"[200,300)","[2,3)",258212,True,acceptable,v2p1_roi_ge5000_23,nhit_ge_200 physical ridge low-energy anchor; kept by Crab ROI >= 5000 in v2 skymap,1607188
+2,"[200,300)","[3,3.25)",162827,True,acceptable,v2p1_roi_ge5000_23,nhit_ge_200 physical ridge; kept by Crab ROI >= 5000 in v2 skymap,877841
+3,"[200,300)","[3.25,3.5)",80983,True,acceptable,v2p1_roi_ge5000_23,nhit_ge_200 physical ridge; kept by Crab ROI >= 5000 in v2 skymap,553094
+4,"[200,300)","[3.5,3.75)",43842,True,acceptable,v2p1_roi_ge5000_23,nhit_ge_200 physical ridge; kept by Crab ROI >= 5000 in v2 skymap,319727
+5,"[200,300)","[3.75,4.0)",24555,True,acceptable,v2p1_roi_ge5000_23,nhit_ge_200 high-energy shoulder; kept by Crab ROI >= 5000 in v2 skymap,151395
+6,"[300,500)","[3,3.25)",157484,True,acceptable,v2p1_roi_ge5000_23,physical ridge; kept by Crab ROI >= 5000 in v2 skymap,551891
+7,"[300,500)","[3.25,3.5)",152731,True,acceptable,v2p1_roi_ge5000_23,physical ridge; kept by Crab ROI >= 5000 in v2 skymap,450530
+8,"[300,500)","[3.5,3.75)",66096,True,acceptable,v2p1_roi_ge5000_23,physical ridge; kept by Crab ROI >= 5000 in v2 skymap,251808
+9,"[300,500)","[3.75,4.0)",35732,True,acceptable,v2p1_roi_ge5000_23,physical ridge high-energy shoulder; kept by Crab ROI >= 5000 in v2 skymap,130865
+10,"[300,500)","[4.0,4.25)",23752,True,acceptable,v2p1_roi_ge5000_23,physical ridge high-energy shoulder; kept by Crab ROI >= 5000 in v2 skymap,55180
+11,"[500,800)","[3.25,3.5)",89790,True,acceptable,v2p1_roi_ge5000_23,physical ridge; kept by Crab ROI >= 5000 in v2 skymap,211419
+12,"[500,800)","[3.5,3.75)",85249,True,acceptable,v2p1_roi_ge5000_23,physical ridge; kept by Crab ROI >= 5000 in v2 skymap,154719
+13,"[500,800)","[3.75,4.0)",34158,True,acceptable,v2p1_roi_ge5000_23,physical ridge; kept by Crab ROI >= 5000 in v2 skymap,66419
+14,"[500,800)","[4.0,4.25)",22437,True,acceptable,v2p1_roi_ge5000_23,physical ridge high-energy shoulder; kept by Crab ROI >= 5000 in v2 skymap,25017
+15,"[500,800)","[4.25,4.5)",13314,True,acceptable,v2p1_roi_ge5000_23,physical ridge high-energy shoulder; kept by Crab ROI >= 5000 in v2 skymap,8382
+16,"[800,1100)","[3.5,3.75)",34552,True,acceptable,v2p1_roi_ge5000_23,physical ridge; kept by Crab ROI >= 5000 in v2 skymap,55142
+17,"[800,1100)","[3.75,4.0)",28276,True,acceptable,v2p1_roi_ge5000_23,physical ridge; kept by Crab ROI >= 5000 in v2 skymap,37724
+18,"[800,1100)","[4.0,4.25)",13829,True,acceptable,v2p1_roi_ge5000_23,physical ridge; kept by Crab ROI >= 5000 in v2 skymap,12463
+21,"[1100,2000)","[3.75,4.0)",24408,True,acceptable,v2p1_roi_ge5000_23,physical ridge; kept by Crab ROI >= 5000 in v2 skymap,22040
+22,"[1100,2000)","[4.0,4.25)",27355,True,acceptable,v2p1_roi_ge5000_23,physical ridge; kept by Crab ROI >= 5000 in v2 skymap,19684
+23,"[1100,2000)","[4.25,4.5)",13358,True,acceptable,v2p1_roi_ge5000_23,physical ridge; kept by Crab ROI >= 5000 in v2 skymap,10212
+30,"[2000,3000)","[4.75,5.0)",5497,True,acceptable,v2p1_roi_ge5000_23,ge2000_reference_pending_v2_mc_split; kept by Crab ROI >= 5000 in v2 skymap,5164
+31,"[2000,3000)",">=5",6211,True,acceptable,v2p1_roi_ge5000_23,ge2000_reference_pending_v2_mc_split; kept by Crab ROI >= 5000 in v2 skymap,7907

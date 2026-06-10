@@ -18,6 +18,7 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import numpy as np
 import pyarrow as pa
+import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 import uproot
 
@@ -45,6 +46,18 @@ CUTFLOW_KEYS = [
     "after_finite",
     "after_cell_selection",
 ]
+
+ROI_SOURCE_NAME = "Crab"
+ROI_RA_DEG = 83.63
+ROI_DEC_DEG = 22.01
+ROI_COORDINATE = "tangent_plane_small_angle"
+ROI_HIST_MIN_DEG = 0.0
+ROI_HIST_MAX_DEG = 12.0
+ROI_HIST_BIN_WIDTH_DEG = 0.1
+ROI_COUNT_RADII_DEG = [2.0, 4.0, 5.5, 6.0, 6.5, 8.0, 10.0]
+ROI_FIDUCIAL_RADIUS_RECOMMENDATION_DEG = 6.0
+XY_QUANTILE_BIN_WIDTH_DEG = 0.02
+XY_QUANTILES = [0.001, 0.01, 0.05, 0.1, 0.5, 0.9, 0.95, 0.99, 0.995, 0.999]
 
 
 @dataclass(frozen=True)
@@ -120,6 +133,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cut-dcedge-min", type=float, default=20.0)
     parser.add_argument("--gap-threshold-sec", type=float, default=60.0)
     parser.add_argument("--compression", type=str, default="zstd", choices=["zstd", "snappy", "gzip", "brotli", "lz4", "none"])
+    parser.add_argument("--roi-batch-size", type=int, default=1000000)
+    parser.add_argument(
+        "--skip-roi-coverage",
+        action="store_true",
+        default=False,
+        help="Skip Crab-centered ROI coverage diagnostics. Intended only for debugging.",
+    )
+    parser.add_argument(
+        "--update-existing-run",
+        type=str,
+        default=None,
+        help="Only add/update metadata and summary diagnostics for an existing Stage C run directory.",
+    )
     return parser.parse_args()
 
 
@@ -796,6 +822,564 @@ def build_manifest(run_dir: Path, results: Sequence[Dict[str, object]]) -> Dict[
     }
 
 
+def radius_key(radius_deg: float) -> str:
+    label = f"{radius_deg:g}".replace(".", "p")
+    return f"rho_lt_{label}_deg"
+
+
+def wrap_ra_delta_deg(ra_deg: np.ndarray, center_ra_deg: float) -> np.ndarray:
+    return ((ra_deg - float(center_ra_deg) + 180.0) % 360.0) - 180.0
+
+
+def roi_xy_rho(ra_deg: np.ndarray, dec_deg: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    x_deg = wrap_ra_delta_deg(ra_deg, ROI_RA_DEG) * math.cos(math.radians(ROI_DEC_DEG))
+    y_deg = dec_deg - ROI_DEC_DEG
+    rho_deg = np.sqrt((x_deg * x_deg) + (y_deg * y_deg))
+    return x_deg, y_deg, rho_deg
+
+
+def make_roi_hist_edges() -> np.ndarray:
+    bins = int(round((ROI_HIST_MAX_DEG - ROI_HIST_MIN_DEG) / ROI_HIST_BIN_WIDTH_DEG))
+    return np.linspace(ROI_HIST_MIN_DEG, ROI_HIST_MAX_DEG, bins + 1, dtype=np.float64)
+
+
+def iter_roi_record_batches(run_dir: Path, batch_size: int) -> Iterable[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    dataset_path = run_dir / "obs_events"
+    if not dataset_path.exists():
+        raise FileNotFoundError(f"Stage C parquet dataset does not exist: {dataset_path}")
+
+    dataset = ds.dataset(dataset_path, format="parquet", partitioning="hive")
+    scanner = dataset.scanner(columns=["ra_mean_deg", "dec_mean_deg", "cell_id"], batch_size=batch_size, use_threads=True)
+    for batch in scanner.to_batches():
+        names = batch.schema.names
+        ra = np.asarray(batch.column(names.index("ra_mean_deg")).to_numpy(zero_copy_only=False), dtype=np.float64)
+        dec = np.asarray(batch.column(names.index("dec_mean_deg")).to_numpy(zero_copy_only=False), dtype=np.float64)
+        cell_id = np.asarray(batch.column(names.index("cell_id")).to_numpy(zero_copy_only=False), dtype=np.int16)
+        yield ra, dec, cell_id
+
+
+def make_xy_quantile_edges(min_value: float, max_value: float) -> np.ndarray:
+    if not np.isfinite(min_value) or not np.isfinite(max_value):
+        raise ValueError("Cannot build ROI x/y quantile bins from non-finite bounds")
+    if max_value <= min_value:
+        min_value -= 0.5
+        max_value += 0.5
+    bins = max(1, int(math.ceil((max_value - min_value) / XY_QUANTILE_BIN_WIDTH_DEG)))
+    return np.linspace(min_value, max_value, bins + 1, dtype=np.float64)
+
+
+def quantiles_from_histogram(counts: np.ndarray, edges: np.ndarray, quantiles: Sequence[float]) -> Dict[str, Optional[float]]:
+    total = int(counts.sum())
+    if total <= 0:
+        return {f"q{quantile:g}": None for quantile in quantiles}
+
+    cumulative = np.cumsum(counts, dtype=np.int64)
+    values: Dict[str, Optional[float]] = {}
+    for quantile in quantiles:
+        target = max(1, int(math.ceil(float(quantile) * total)))
+        idx = int(np.searchsorted(cumulative, target, side="left"))
+        idx = min(idx, len(counts) - 1)
+        previous = int(cumulative[idx - 1]) if idx > 0 else 0
+        bin_count = int(counts[idx])
+        if bin_count <= 0:
+            values[f"q{quantile:g}"] = float(edges[idx])
+            continue
+        fraction = (target - previous) / float(bin_count)
+        values[f"q{quantile:g}"] = float(edges[idx] + fraction * (edges[idx + 1] - edges[idx]))
+    return values
+
+
+def moving_average(values: np.ndarray, window: int) -> np.ndarray:
+    if values.size == 0:
+        return values.astype(np.float64)
+    window = max(1, int(window))
+    if window == 1:
+        return values.astype(np.float64)
+    kernel = np.ones(window, dtype=np.float64)
+    numerator = np.convolve(values.astype(np.float64), kernel, mode="same")
+    denominator = np.convolve(np.ones(values.size, dtype=np.float64), kernel, mode="same")
+    return numerator / np.maximum(denominator, 1.0)
+
+
+def percentile_radius_from_histogram(
+    counts: np.ndarray,
+    edges: np.ndarray,
+    percentile: float,
+) -> Optional[float]:
+    total = int(counts.sum())
+    if total <= 0:
+        return None
+    cumulative = np.cumsum(counts, dtype=np.int64)
+    target = max(1, int(math.ceil(float(percentile) * total)))
+    idx = int(np.searchsorted(cumulative, target, side="left"))
+    idx = min(idx, len(counts) - 1)
+    previous = int(cumulative[idx - 1]) if idx > 0 else 0
+    bin_count = int(counts[idx])
+    if bin_count <= 0:
+        return float(edges[idx])
+    fraction = (target - previous) / float(bin_count)
+    return float(edges[idx] + fraction * (edges[idx + 1] - edges[idx]))
+
+
+def estimate_roi_edge(
+    counts: np.ndarray,
+    edges: np.ndarray,
+    density_per_sqdeg: np.ndarray,
+) -> Dict[str, object]:
+    centers = 0.5 * (edges[:-1] + edges[1:])
+    smooth_density = moving_average(density_per_sqdeg, window=7)
+    cdf_99 = percentile_radius_from_histogram(counts, edges, 0.99)
+    cdf_995 = percentile_radius_from_histogram(counts, edges, 0.995)
+
+    plateau_mask = (centers >= 2.0) & (centers <= 5.5) & np.isfinite(smooth_density) & (smooth_density > 0)
+    plateau = float(np.median(smooth_density[plateau_mask])) if np.any(plateau_mask) else None
+
+    edge_radius: Optional[float] = None
+    method = "no_clear_density_edge; cdf99_and_cdf99p5_reported"
+    if plateau is not None and plateau > 0.0:
+        search_mask = (centers >= 5.5) & (centers <= ROI_HIST_MAX_DEG) & np.isfinite(smooth_density)
+        search_indices = np.flatnonzero(search_mask)
+        below = smooth_density < (0.5 * plateau)
+        for idx in search_indices:
+            stop = min(idx + 3, below.size)
+            if stop - idx >= 3 and bool(np.all(below[idx:stop])):
+                edge_radius = float(centers[idx])
+                method = "smoothed_annular_density_below_half_plateau_for_3_bins"
+                break
+
+    if edge_radius is None and cdf_995 is not None:
+        edge_radius = float(cdf_995)
+        method = "rho_cumulative_99p5_within_12deg_proxy_no_clear_density_edge"
+
+    return {
+        "edge_radius_estimate_deg": edge_radius,
+        "edge_radius_method": method,
+        "plateau_density_per_sqdeg": plateau,
+        "rho_percentile_99_deg_within_12deg": cdf_99,
+        "rho_percentile_99p5_deg_within_12deg": cdf_995,
+        "smoothed_density_per_sqdeg": [float(value) for value in smooth_density],
+    }
+
+
+def build_roi_warnings(
+    total_rows: int,
+    counts_within: Dict[str, int],
+    centers: np.ndarray,
+    smooth_density: np.ndarray,
+    plateau_density: Optional[float],
+    by_cell_within: np.ndarray,
+) -> List[str]:
+    warnings: List[str] = []
+    rho6 = int(counts_within[radius_key(6.0)])
+    rho8 = int(counts_within[radius_key(8.0)])
+    rho10 = int(counts_within[radius_key(10.0)])
+
+    if total_rows > 0 and (rho6 / float(total_rows)) < 0.001:
+        warnings.append("rho<6 deg events are below 0.1% of all selected Stage C events; Crab is a small local ROI in this all-sky dataset.")
+
+    if plateau_density is not None and plateau_density > 0.0:
+        pre6_mask = (centers >= 5.5) & (centers < 6.0) & np.isfinite(smooth_density)
+        if np.any(pre6_mask):
+            pre6_density = float(np.median(smooth_density[pre6_mask]))
+            if pre6_density < 0.5 * float(plateau_density):
+                warnings.append("Crab-centered rho profile is already below 50% of its 2-5.5 deg plateau before rho=6 deg.")
+
+    if rho10 > 0 and ((rho10 - rho8) / float(rho10)) < 0.05:
+        warnings.append("rho<8 and rho<10 counts differ by less than 5%; available Crab-centered coverage may be below 8 deg.")
+
+    idx6 = ROI_COUNT_RADII_DEG.index(6.0)
+    idx10 = ROI_COUNT_RADII_DEG.index(10.0)
+    denominators = by_cell_within[:, idx10]
+    usable = denominators >= 1000
+    if np.count_nonzero(usable) >= 2:
+        ratios = by_cell_within[usable, idx6].astype(np.float64) / denominators[usable].astype(np.float64)
+        min_ratio = float(np.min(ratios))
+        max_ratio = float(np.max(ratios))
+        if min_ratio > 0.0 and (max_ratio / min_ratio) > 2.0:
+            warnings.append("Per-cell rho<6/rho<10 ratios differ by more than a factor of 2 across cells with at least 1000 rho<10 events.")
+        elif (max_ratio - min_ratio) > 0.25:
+            warnings.append("Per-cell rho<6/rho<10 ratios span more than 0.25 across cells with at least 1000 rho<10 events.")
+
+    return warnings
+
+
+def write_roi_coverage_csv(
+    path: Path,
+    edges: np.ndarray,
+    counts: np.ndarray,
+    density_per_sqdeg: np.ndarray,
+) -> None:
+    cumulative = np.cumsum(counts, dtype=np.int64)
+    total_in_hist = int(cumulative[-1]) if cumulative.size else 0
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "rho_bin_low_deg",
+                "rho_bin_high_deg",
+                "rho_bin_center_deg",
+                "count",
+                "annulus_area_sqdeg",
+                "density_per_sqdeg",
+                "cumulative_count_within_12deg",
+                "cumulative_fraction_within_12deg",
+            ],
+        )
+        writer.writeheader()
+        for idx, count in enumerate(counts):
+            low = float(edges[idx])
+            high = float(edges[idx + 1])
+            area = math.pi * ((high * high) - (low * low))
+            fraction = (int(cumulative[idx]) / float(total_in_hist)) if total_in_hist > 0 else 0.0
+            writer.writerow(
+                {
+                    "rho_bin_low_deg": f"{low:.6g}",
+                    "rho_bin_high_deg": f"{high:.6g}",
+                    "rho_bin_center_deg": f"{0.5 * (low + high):.6g}",
+                    "count": int(count),
+                    "annulus_area_sqdeg": f"{area:.12g}",
+                    "density_per_sqdeg": f"{float(density_per_sqdeg[idx]):.12g}",
+                    "cumulative_count_within_12deg": int(cumulative[idx]),
+                    "cumulative_fraction_within_12deg": f"{fraction:.12g}",
+                }
+            )
+
+
+def write_roi_coverage_by_cell_csv(
+    path: Path,
+    cells: Sequence[CellSpec],
+    edges: np.ndarray,
+    by_cell_counts: np.ndarray,
+) -> None:
+    cumulative = np.cumsum(by_cell_counts, axis=1, dtype=np.int64)
+    totals = cumulative[:, -1] if cumulative.shape[1] > 0 else np.zeros(len(cells), dtype=np.int64)
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "cell_id",
+                "nhit_bin",
+                "predE_bin",
+                "rho_bin_low_deg",
+                "rho_bin_high_deg",
+                "rho_bin_center_deg",
+                "count",
+                "annulus_area_sqdeg",
+                "density_per_sqdeg",
+                "cumulative_count_within_12deg",
+                "cumulative_fraction_within_12deg",
+            ],
+        )
+        writer.writeheader()
+        for cell_idx, cell in enumerate(cells):
+            total = int(totals[cell_idx])
+            for bin_idx, count in enumerate(by_cell_counts[cell_idx]):
+                low = float(edges[bin_idx])
+                high = float(edges[bin_idx + 1])
+                area = math.pi * ((high * high) - (low * low))
+                fraction = (int(cumulative[cell_idx, bin_idx]) / float(total)) if total > 0 else 0.0
+                writer.writerow(
+                    {
+                        "cell_id": cell.cell_id,
+                        "nhit_bin": cell.nhit_bin,
+                        "predE_bin": cell.predE_bin,
+                        "rho_bin_low_deg": f"{low:.6g}",
+                        "rho_bin_high_deg": f"{high:.6g}",
+                        "rho_bin_center_deg": f"{0.5 * (low + high):.6g}",
+                        "count": int(count),
+                        "annulus_area_sqdeg": f"{area:.12g}",
+                        "density_per_sqdeg": f"{int(count) / area if area > 0 else 0.0:.12g}",
+                        "cumulative_count_within_12deg": int(cumulative[cell_idx, bin_idx]),
+                        "cumulative_fraction_within_12deg": f"{fraction:.12g}",
+                    }
+                )
+
+
+def write_roi_coverage_plot(
+    path: Path,
+    cells: Sequence[CellSpec],
+    edges: np.ndarray,
+    counts: np.ndarray,
+    density_per_sqdeg: np.ndarray,
+    smoothed_density_per_sqdeg: Sequence[float],
+    by_cell_counts: np.ndarray,
+    edge_radius_estimate_deg: Optional[float],
+) -> None:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    centers = 0.5 * (edges[:-1] + edges[1:])
+    cumulative = np.cumsum(counts, dtype=np.int64)
+    cumulative_fraction = cumulative / float(cumulative[-1]) if cumulative.size and cumulative[-1] > 0 else np.zeros_like(cumulative, dtype=np.float64)
+    annulus_area = math.pi * ((edges[1:] * edges[1:]) - (edges[:-1] * edges[:-1]))
+
+    fig, axes = plt.subplots(2, 1, figsize=(10, 8), constrained_layout=True)
+    axes[0].plot(centers, density_per_sqdeg, color="#3a6ea5", lw=1.0, label="annular density")
+    axes[0].plot(centers, np.asarray(smoothed_density_per_sqdeg, dtype=np.float64), color="#d95f02", lw=1.5, label="smoothed")
+    axes[0].axvline(ROI_FIDUCIAL_RADIUS_RECOMMENDATION_DEG, color="#2ca25f", ls="--", lw=1.2, label="fiducial 6 deg")
+    if edge_radius_estimate_deg is not None:
+        axes[0].axvline(float(edge_radius_estimate_deg), color="#b2182b", ls=":", lw=1.4, label="edge estimate")
+    axes[0].set_xlim(ROI_HIST_MIN_DEG, ROI_HIST_MAX_DEG)
+    axes[0].set_ylabel("events / deg^2")
+    axes[0].set_title("Crab-centered Stage C ROI coverage diagnostic")
+    axes[0].legend(loc="best", fontsize=8)
+    axes[0].grid(alpha=0.2)
+
+    for cell_idx, cell in enumerate(cells):
+        density = by_cell_counts[cell_idx].astype(np.float64) / np.maximum(annulus_area, 1.0e-12)
+        peak = float(np.nanmax(density)) if density.size else 0.0
+        if peak <= 0.0:
+            continue
+        axes[1].plot(centers, density / peak, lw=0.8, alpha=0.65, label=str(cell.cell_id))
+    axes[1].plot(centers, cumulative_fraction, color="black", lw=1.5, label="global cumulative fraction")
+    axes[1].axvline(ROI_FIDUCIAL_RADIUS_RECOMMENDATION_DEG, color="#2ca25f", ls="--", lw=1.2)
+    if edge_radius_estimate_deg is not None:
+        axes[1].axvline(float(edge_radius_estimate_deg), color="#b2182b", ls=":", lw=1.4)
+    axes[1].set_xlim(ROI_HIST_MIN_DEG, ROI_HIST_MAX_DEG)
+    axes[1].set_ylim(0.0, 1.05)
+    axes[1].set_xlabel("rho from Crab (deg)")
+    axes[1].set_ylabel("normalized per-cell density / cumulative")
+    axes[1].grid(alpha=0.2)
+    axes[1].legend(loc="upper left", ncol=6, fontsize=6, title="cell")
+
+    fig.savefig(path, dpi=160)
+    plt.close(fig)
+
+
+def build_roi_coverage_artifacts(
+    run_dir: Path,
+    cells: Sequence[CellSpec],
+    batch_size: int,
+) -> Dict[str, object]:
+    hist_edges = make_roi_hist_edges()
+    n_bins = hist_edges.size - 1
+    centers = 0.5 * (hist_edges[:-1] + hist_edges[1:])
+    annulus_area = math.pi * ((hist_edges[1:] * hist_edges[1:]) - (hist_edges[:-1] * hist_edges[:-1]))
+    hist_counts = np.zeros(n_bins, dtype=np.int64)
+    by_cell_counts = np.zeros((len(cells), n_bins), dtype=np.int64)
+    within_counts = {radius_key(radius): 0 for radius in ROI_COUNT_RADII_DEG}
+    by_cell_within = np.zeros((len(cells), len(ROI_COUNT_RADII_DEG)), dtype=np.int64)
+    cell_totals = np.zeros(len(cells), dtype=np.int64)
+
+    cell_ids = [int(cell.cell_id) for cell in cells]
+    max_cell_id = max(cell_ids) if cell_ids else 0
+    cell_lookup = np.full(max_cell_id + 1, -1, dtype=np.int16)
+    for idx, cell_id in enumerate(cell_ids):
+        cell_lookup[cell_id] = np.int16(idx)
+
+    total_rows = 0
+    rows_in_rho_histogram = 0
+    invalid_cell_id_count = 0
+    x_min = math.inf
+    x_max = -math.inf
+    y_min = math.inf
+    y_max = -math.inf
+
+    for ra, dec, parquet_cell_ids in iter_roi_record_batches(run_dir, batch_size):
+        if ra.size == 0:
+            continue
+        finite = np.isfinite(ra) & np.isfinite(dec)
+        if not bool(np.all(finite)):
+            bad = int(ra.size - np.count_nonzero(finite))
+            raise ValueError(f"Cannot compute Crab ROI coverage: found {bad} rows with non-finite RA/Dec")
+
+        x_deg, y_deg, rho_deg = roi_xy_rho(ra, dec)
+        total_rows += int(rho_deg.size)
+        x_min = min(x_min, float(np.min(x_deg)))
+        x_max = max(x_max, float(np.max(x_deg)))
+        y_min = min(y_min, float(np.min(y_deg)))
+        y_max = max(y_max, float(np.max(y_deg)))
+
+        batch_counts, _ = np.histogram(rho_deg, bins=hist_edges)
+        hist_counts += batch_counts.astype(np.int64)
+        rows_in_rho_histogram += int(batch_counts.sum())
+
+        for idx, radius in enumerate(ROI_COUNT_RADII_DEG):
+            mask = rho_deg < float(radius)
+            within_counts[radius_key(radius)] += int(np.count_nonzero(mask))
+
+        valid_cell_ids = (parquet_cell_ids >= 0) & (parquet_cell_ids < cell_lookup.size)
+        mapped_cell = np.full(parquet_cell_ids.shape, -1, dtype=np.int16)
+        mapped_cell[valid_cell_ids] = cell_lookup[parquet_cell_ids[valid_cell_ids]]
+        valid_cell = mapped_cell >= 0
+        invalid_cell_id_count += int(parquet_cell_ids.size - np.count_nonzero(valid_cell))
+        if np.any(valid_cell):
+            cell_totals += np.bincount(mapped_cell[valid_cell].astype(np.int64), minlength=len(cells))
+
+        bin_indices = np.searchsorted(hist_edges, rho_deg, side="right") - 1
+        valid_bin = (bin_indices >= 0) & (bin_indices < n_bins) & valid_cell
+        if np.any(valid_bin):
+            flat = (mapped_cell[valid_bin].astype(np.int64) * n_bins) + bin_indices[valid_bin].astype(np.int64)
+            by_cell_counts += np.bincount(flat, minlength=len(cells) * n_bins).reshape(len(cells), n_bins)
+
+        for idx, radius in enumerate(ROI_COUNT_RADII_DEG):
+            mask = (rho_deg < float(radius)) & valid_cell
+            if np.any(mask):
+                by_cell_within[:, idx] += np.bincount(mapped_cell[mask].astype(np.int64), minlength=len(cells))
+
+    if total_rows <= 0:
+        raise ValueError(f"Cannot compute Crab ROI coverage: no selected rows in {run_dir / 'obs_events'}")
+    if invalid_cell_id_count:
+        raise ValueError(f"Cannot compute Crab ROI coverage: found {invalid_cell_id_count} rows with cell_id outside selection table")
+
+    x_edges = make_xy_quantile_edges(x_min, x_max)
+    y_edges = make_xy_quantile_edges(y_min, y_max)
+    x_hist = np.zeros(x_edges.size - 1, dtype=np.int64)
+    y_hist = np.zeros(y_edges.size - 1, dtype=np.int64)
+    for ra, dec, _ in iter_roi_record_batches(run_dir, batch_size):
+        x_deg, y_deg, _ = roi_xy_rho(ra, dec)
+        x_hist += np.histogram(x_deg, bins=x_edges)[0].astype(np.int64)
+        y_hist += np.histogram(y_deg, bins=y_edges)[0].astype(np.int64)
+
+    density_per_sqdeg = hist_counts.astype(np.float64) / np.maximum(annulus_area, 1.0e-12)
+    edge = estimate_roi_edge(hist_counts, hist_edges, density_per_sqdeg)
+    smooth_density = np.asarray(edge["smoothed_density_per_sqdeg"], dtype=np.float64)
+    warnings = build_roi_warnings(
+        total_rows,
+        within_counts,
+        centers,
+        smooth_density,
+        edge["plateau_density_per_sqdeg"],  # type: ignore[arg-type]
+        by_cell_within,
+    )
+
+    coverage_csv = run_dir / "obs_events_roi_coverage.csv"
+    coverage_by_cell_csv = run_dir / "obs_events_roi_coverage_by_cell.csv"
+    coverage_json = run_dir / "obs_events_roi_coverage.json"
+    coverage_png = run_dir / "obs_events_roi_coverage.png"
+
+    write_roi_coverage_csv(coverage_csv, hist_edges, hist_counts, density_per_sqdeg)
+    write_roi_coverage_by_cell_csv(coverage_by_cell_csv, cells, hist_edges, by_cell_counts)
+    write_roi_coverage_plot(
+        coverage_png,
+        cells,
+        hist_edges,
+        hist_counts,
+        density_per_sqdeg,
+        smooth_density,
+        by_cell_counts,
+        edge["edge_radius_estimate_deg"],  # type: ignore[arg-type]
+    )
+
+    by_cell_counts_within: List[Dict[str, object]] = []
+    for cell_idx, cell in enumerate(cells):
+        row: Dict[str, object] = {
+            "cell_id": int(cell.cell_id),
+            "nhit_bin": cell.nhit_bin,
+            "predE_bin": cell.predE_bin,
+            "total_selected_events": int(cell_totals[cell_idx]),
+            "rho_histogram_events_0_to_12_deg": int(by_cell_counts[cell_idx].sum()),
+        }
+        for radius_idx, radius in enumerate(ROI_COUNT_RADII_DEG):
+            row[radius_key(radius)] = int(by_cell_within[cell_idx, radius_idx])
+        by_cell_counts_within.append(row)
+
+    cumulative = np.cumsum(hist_counts, dtype=np.int64)
+    total_in_hist = int(cumulative[-1]) if cumulative.size else 0
+    histogram_rows = []
+    for idx, count in enumerate(hist_counts):
+        histogram_rows.append(
+            {
+                "rho_bin_low_deg": float(hist_edges[idx]),
+                "rho_bin_high_deg": float(hist_edges[idx + 1]),
+                "rho_bin_center_deg": float(centers[idx]),
+                "count": int(count),
+                "annulus_area_sqdeg": float(annulus_area[idx]),
+                "density_per_sqdeg": float(density_per_sqdeg[idx]),
+                "smoothed_density_per_sqdeg": float(smooth_density[idx]),
+                "cumulative_count_within_12deg": int(cumulative[idx]),
+                "cumulative_fraction_within_12deg": (int(cumulative[idx]) / float(total_in_hist)) if total_in_hist > 0 else 0.0,
+            }
+        )
+
+    payload: Dict[str, object] = {
+        "source": ROI_SOURCE_NAME,
+        "ra_deg": ROI_RA_DEG,
+        "dec_deg": ROI_DEC_DEG,
+        "coordinate": ROI_COORDINATE,
+        "status": "diagnostic_only_no_cut_applied",
+        "run_dir": str(run_dir),
+        "dataset_path": str(run_dir / "obs_events"),
+        "total_selected_events": int(total_rows),
+        "rho_histogram_range_deg": [ROI_HIST_MIN_DEG, ROI_HIST_MAX_DEG],
+        "rho_histogram_bin_width_deg": ROI_HIST_BIN_WIDTH_DEG,
+        "rho_histogram_events_0_to_12_deg": int(rows_in_rho_histogram),
+        "rho_histogram_fraction_of_total": float(rows_in_rho_histogram / float(total_rows)),
+        "counts_within_radius": {key: int(value) for key, value in within_counts.items()},
+        "counts_within_radius_fraction_of_total": {
+            key: float(value / float(total_rows)) for key, value in within_counts.items()
+        },
+        "x_deg": {
+            "min": float(x_min),
+            "max": float(x_max),
+            "quantiles": quantiles_from_histogram(x_hist, x_edges, XY_QUANTILES),
+            "quantile_bin_width_deg": XY_QUANTILE_BIN_WIDTH_DEG,
+        },
+        "y_deg": {
+            "min": float(y_min),
+            "max": float(y_max),
+            "quantiles": quantiles_from_histogram(y_hist, y_edges, XY_QUANTILES),
+            "quantile_bin_width_deg": XY_QUANTILE_BIN_WIDTH_DEG,
+        },
+        "edge_radius_estimate_deg": edge["edge_radius_estimate_deg"],
+        "edge_radius_method": edge["edge_radius_method"],
+        "edge_diagnostics": {
+            "plateau_density_per_sqdeg": edge["plateau_density_per_sqdeg"],
+            "rho_percentile_99_deg_within_12deg": edge["rho_percentile_99_deg_within_12deg"],
+            "rho_percentile_99p5_deg_within_12deg": edge["rho_percentile_99p5_deg_within_12deg"],
+            "density_profile": "annulus-area-normalized counts, smoothed with a 7-bin moving average",
+        },
+        "fiducial_radius_recommendation_deg": ROI_FIDUCIAL_RADIUS_RECOMMENDATION_DEG,
+        "warnings": warnings,
+        "histogram": histogram_rows,
+        "counts_within_radius_by_cell": by_cell_counts_within,
+        "artifacts": {
+            "rho_histogram_json": str(coverage_json),
+            "coverage_csv": str(coverage_csv),
+            "coverage_by_cell_csv": str(coverage_by_cell_csv),
+            "coverage_plot_png": str(coverage_png),
+        },
+    }
+    write_json(coverage_json, payload)
+    return payload
+
+
+def roi_metadata_block(run_dir: Path, coverage: Dict[str, object]) -> Dict[str, object]:
+    artifacts = coverage["artifacts"]  # type: ignore[index]
+    return {
+        "source": ROI_SOURCE_NAME,
+        "ra_deg": ROI_RA_DEG,
+        "dec_deg": ROI_DEC_DEG,
+        "coordinate": ROI_COORDINATE,
+        "rho_histogram_json": str(artifacts["rho_histogram_json"]),  # type: ignore[index]
+        "coverage_csv": str(artifacts["coverage_csv"]),  # type: ignore[index]
+        "coverage_by_cell_csv": str(artifacts["coverage_by_cell_csv"]),  # type: ignore[index]
+        "coverage_plot_png": str(artifacts["coverage_plot_png"]),  # type: ignore[index]
+        "fiducial_radius_recommendation_deg": ROI_FIDUCIAL_RADIUS_RECOMMENDATION_DEG,
+        "edge_radius_estimate_deg": coverage.get("edge_radius_estimate_deg"),
+        "edge_radius_method": coverage.get("edge_radius_method"),
+        "counts_within_radius": coverage.get("counts_within_radius"),
+        "counts_within_radius_fraction_of_total": coverage.get("counts_within_radius_fraction_of_total"),
+        "warnings": coverage.get("warnings", []),
+        "status": "diagnostic_only_no_cut_applied",
+        "note": "Stage C does not apply a Crab ROI cut; these diagnostics are for Stage D fiducial-ROI decisions.",
+        "run_dir": str(run_dir),
+    }
+
+
+def attach_roi_coverage_to_metadata(run_dir: Path, metadata: Dict[str, object], coverage: Dict[str, object]) -> None:
+    metadata["roi_coverage"] = roi_metadata_block(run_dir, coverage)
+    outputs = metadata.setdefault("outputs", {})
+    if isinstance(outputs, dict):
+        artifacts = coverage["artifacts"]  # type: ignore[index]
+        outputs["roi_coverage_json"] = str(artifacts["rho_histogram_json"])  # type: ignore[index]
+        outputs["roi_coverage_csv"] = str(artifacts["coverage_csv"])  # type: ignore[index]
+        outputs["roi_coverage_by_cell_csv"] = str(artifacts["coverage_by_cell_csv"])  # type: ignore[index]
+        outputs["roi_coverage_png"] = str(artifacts["coverage_plot_png"])  # type: ignore[index]
+
+
 def build_metadata(
     args: argparse.Namespace,
     run_dir: Path,
@@ -908,6 +1492,10 @@ def build_metadata(
             "cutflow_csv": str(run_dir / "obs_events_cutflow.csv"),
             "cell_counts_csv": str(run_dir / "obs_events_cell_counts.csv"),
             "summary_md": str(run_dir / "obs_events_summary.md"),
+            "roi_coverage_json": str(run_dir / "obs_events_roi_coverage.json"),
+            "roi_coverage_csv": str(run_dir / "obs_events_roi_coverage.csv"),
+            "roi_coverage_by_cell_csv": str(run_dir / "obs_events_roi_coverage_by_cell.csv"),
+            "roi_coverage_png": str(run_dir / "obs_events_roi_coverage.png"),
         },
     }
 
@@ -915,6 +1503,18 @@ def build_metadata(
 def write_json(path: Path, payload: Dict[str, object]) -> None:
     with path.open("w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
+
+
+def format_optional_float(value: object, digits: int = 4) -> str:
+    if value is None:
+        return "n/a"
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return "n/a"
+    if not np.isfinite(number):
+        return "n/a"
+    return f"{number:.{digits}g}"
 
 
 def write_summary(path: Path, metadata: Dict[str, object]) -> None:
@@ -936,6 +1536,36 @@ def write_summary(path: Path, metadata: Dict[str, object]) -> None:
         for yyyymm, row in metadata["months"].items():  # type: ignore[union-attr]
             days = float(row["rough_live_time_seconds"]) / 86400.0
             f.write(f"| {yyyymm} | {row['input_files']} | {row['selected_rows']:,} | {days:.6g} |\n")
+
+        roi = metadata.get("roi_coverage")
+        if isinstance(roi, dict):
+            f.write("\n## Crab ROI coverage diagnostics\n\n")
+            f.write("Stage C does not apply a Crab ROI cut.\n")
+            f.write("These diagnostics only characterize available sky coverage for Stage D.\n")
+            f.write(
+                "Current downstream baseline expects Stage D to choose a fiducial ROI, "
+                "likely rho<6 deg if the coverage edge is around 8 deg.\n\n"
+            )
+            f.write(f"- Coordinate: {roi.get('coordinate', ROI_COORDINATE)} around Crab ({ROI_RA_DEG}, {ROI_DEC_DEG}) deg\n")
+            f.write(f"- Diagnostic status: {roi.get('status', 'diagnostic_only_no_cut_applied')}\n")
+            f.write(f"- Fiducial radius recommendation: {format_optional_float(roi.get('fiducial_radius_recommendation_deg'))} deg\n")
+            f.write(f"- Edge radius estimate: {format_optional_float(roi.get('edge_radius_estimate_deg'))} deg\n")
+            f.write(f"- Edge estimate method: {roi.get('edge_radius_method', 'n/a')}\n")
+            counts = roi.get("counts_within_radius")
+            fractions = roi.get("counts_within_radius_fraction_of_total")
+            if isinstance(counts, dict) and isinstance(fractions, dict):
+                f.write("\n| radius | count | fraction of selected rows |\n")
+                f.write("| ---: | ---: | ---: |\n")
+                for radius in ROI_COUNT_RADII_DEG:
+                    key = radius_key(radius)
+                    count = int(counts.get(key, 0))
+                    fraction = float(fractions.get(key, 0.0))
+                    f.write(f"| rho<{radius:g} deg | {count:,} | {fraction:.6g} |\n")
+            warnings = roi.get("warnings")
+            if isinstance(warnings, list) and warnings:
+                f.write("\nWarnings:\n")
+                for warning in warnings:
+                    f.write(f"- {warning}\n")
 
 
 def run_processing(
@@ -971,15 +1601,51 @@ def run_processing(
     return [results_by_id[idx] for idx in sorted(results_by_id)]
 
 
+def load_metadata(path: Path) -> Dict[str, object]:
+    with path.open("r", encoding="utf-8") as f:
+        payload = json.load(f)
+    if not isinstance(payload, dict):
+        raise ValueError(f"Metadata JSON is not an object: {path}")
+    return payload
+
+
+def update_existing_run(args: argparse.Namespace) -> None:
+    run_dir = Path(args.update_existing_run).resolve()
+    if not run_dir.exists():
+        raise FileNotFoundError(f"Stage C run directory does not exist: {run_dir}")
+    selection_csv = Path(args.cell_selection_csv).resolve()
+    cells = load_cells(selection_csv)
+    metadata_path = run_dir / "obs_events_metadata.json"
+    if not metadata_path.exists():
+        raise FileNotFoundError(f"Stage C metadata does not exist: {metadata_path}")
+    metadata = load_metadata(metadata_path)
+
+    if args.roi_batch_size <= 0:
+        raise ValueError("--roi-batch-size must be positive")
+    coverage = build_roi_coverage_artifacts(run_dir, cells, batch_size=int(args.roi_batch_size))
+    attach_roi_coverage_to_metadata(run_dir, metadata, coverage)
+    write_json(metadata_path, metadata)
+    write_summary(run_dir / "obs_events_summary.md", metadata)
+
+    print(f"Updated existing Stage C run: {run_dir}", flush=True)
+    print(f"Wrote ROI coverage: {run_dir / 'obs_events_roi_coverage.json'}", flush=True)
+    print(f"Edge radius estimate: {coverage.get('edge_radius_estimate_deg')}", flush=True)
+
+
 def main() -> None:
     args = parse_args()
     start = time.perf_counter()
+    if args.update_existing_run:
+        update_existing_run(args)
+        return
     if args.entries_per_chunk <= 0:
         raise ValueError("--entries-per-chunk must be positive")
     if args.workers <= 0:
         raise ValueError("--workers must be positive")
     if args.gap_threshold_sec <= 0:
         raise ValueError("--gap-threshold-sec must be positive")
+    if args.roi_batch_size <= 0:
+        raise ValueError("--roi-batch-size must be positive")
 
     obs_root = Path(args.obs_root).resolve()
     time_root = Path(args.time_root).resolve()
@@ -1020,6 +1686,9 @@ def main() -> None:
     write_source_files_csv(run_dir / "source_files.csv", results)
     write_cutflow_csv(run_dir / "obs_events_cutflow.csv", results)
     write_cell_counts_csv(run_dir / "obs_events_cell_counts.csv", results, cells)
+    if not args.skip_roi_coverage:
+        coverage = build_roi_coverage_artifacts(run_dir, cells, batch_size=int(args.roi_batch_size))
+        attach_roi_coverage_to_metadata(run_dir, metadata, coverage)
     write_json(run_dir / "obs_events_manifest.json", manifest)
     write_json(run_dir / "obs_events_metadata.json", metadata)
     write_summary(run_dir / "obs_events_summary.md", metadata)

@@ -272,9 +272,31 @@ footer {
         <div class="note">12 CPU workers on ETO</div>
       </div>
     </div>
+    <div class="grid">
+      <div class="metric">
+        <div class="label">Crab ROI</div>
+        <div class="value">diagnostic only</div>
+        <div class="note">Stage C 未应用 rho cut</div>
+      </div>
+      <div class="metric">
+        <div class="label">rho &lt; 6 deg</div>
+        <div class="value">16,945,305</div>
+        <div class="note">21.94% of selected rows</div>
+      </div>
+      <div class="metric">
+        <div class="label">rho &lt; 8 deg</div>
+        <div class="value">24,142,098</div>
+        <div class="note">31.25% of selected rows</div>
+      </div>
+      <div class="metric">
+        <div class="label">Edge estimate</div>
+        <div class="value">7.15 deg</div>
+        <div class="note">smoothed rho profile</div>
+      </div>
+    </div>
     <div class="callout good">
       <strong>Stage C full run 已完成并 promoted 到 <code>apply/output/stage_c/current/</code>。</strong>
-      本次处理 1258 个输入文件，missing time 为 0，entry mismatch 为 0。parquet row count 与 metadata 一致，读回验证显示 <code>theta</code>、<code>dcedge</code> 和 <code>cell_id</code> 均满足正式规约口径。
+      本次处理 1258 个输入文件，missing time 为 0，entry mismatch 为 0。parquet row count 与 metadata 一致，读回验证显示 <code>theta</code>、<code>dcedge</code> 和 <code>cell_id</code> 均满足正式规约口径。2026-06-09 已补充 Crab-centered ROI coverage diagnostics；这些诊断不改变 parquet 事件集。
     </div>
   </section>
 
@@ -283,20 +305,20 @@ footer {
     <p>Crab SED v1 流水线前两步都在 MC 侧：Stage A 计算二维探测器响应 <code>eta_b(E_true, theta)</code> 和有效面积，Stage B 在 Crab 赤纬带上给每个 v1 cell 计算 PSF 与积分半径。要把这些 MC 结果用于真实观测，必须先把观测数据整理成同样的观测空间单元 <code>b = (Nhit bin, log10 E_pred bin)</code>，并且给每个事件补上时间和天球坐标。</p>
     <p>这正是 Stage C 的职责：它不是做源显著性，也不是做背景模型，而是把观测 eval ROOT 变成一个干净、列式、可复查的数据集。后面的 Stage D 会用这份数据重建直接积分法接收度和 rate 曲线；Stage E 会在每个 cell 的 on-region 内计数并和背景预测组合。</p>
 
-    <h3>和 quicklook 天图的区别</h3>
-    <p>此前的 <code>apply/plot_crab_cell_skymaps.py</code> 已经处理过同一批 1258 个观测文件，并画了 Crab 附近的 cell 天图。这一步很有价值，但它只是 Stage C/D/E 之间的诊断 quicklook：它只看 Crab 附近 ROI，少了正式路线要求的 <code>dcedge &gt; 20 m</code>，也没有输出月度 parquet 或 manifest。</p>
-    <p>当前 Stage C 则是正式数据规约：使用全天清洗后的 v1-cell 事件，不做 Crab ROI 过滤；输出 parquet 分区目录、manifest、metadata、source file 表、cutflow 和 cell counts。它为直接积分法背景保留了必要的时间、天球坐标和局部方向诊断列。</p>
-    <div class="figure-grid">
-      <figure>
-        <img src="assets/crab-v1-cell-skymaps/crab_v1_counts_grid.png" alt="Crab v1 raw counts skymap quicklook">
-        <figcaption><strong>Crab v1 raw counts skymap。</strong>这是 quicklook 脚本在 Crab 中心局部坐标中累计的原始计数图，用来观察 Stage C 前后同一批观测在 18 个 v1 cell 里的空间分布。</figcaption>
-      </figure>
-      <figure>
-        <img src="assets/crab-v1-cell-skymaps/crab_v1_smoothed_counts_grid.png" alt="Crab v1 smoothed counts skymap quicklook">
-        <figcaption><strong>Crab v1 smoothed counts skymap。</strong>这是对 raw counts 做 <code>0.3 deg</code> Gaussian 平滑后的天图，只用于看 Crab 附近形态和中心位置，不是背景扣除结果。</figcaption>
-      </figure>
-    </div>
-  </section>
+	    <h3>和 quicklook 天图的区别</h3>
+	    <p>此前的 <code>apply/plot_crab_cell_skymaps.py</code> 已经处理过同一批 1258 个观测文件，并画了 Crab 附近的 cell 天图。这一步很有价值，但它只是 Stage C/D/E 之间的诊断 quicklook：它只看 Crab 附近 ROI，少了正式路线要求的 <code>dcedge &gt; 20 m</code>，也没有输出月度 parquet 或 manifest。</p>
+	    <p>当前 Stage C 则是正式数据规约：使用全天清洗后的 v1-cell 事件，不做 Crab ROI 过滤；输出 parquet 分区目录、manifest、metadata、source file 表、cutflow 和 cell counts。它为直接积分法背景保留了必要的时间、天球坐标和局部方向诊断列。</p>
+	    <div class="figure-grid">
+	      <figure>
+	        <img src="assets/crab-v1-cell-skymaps/crab_v1_counts_grid.png" alt="Crab v1 raw counts skymap quicklook">
+	        <figcaption><strong>Crab v1 raw counts skymap。</strong>这是 quicklook 脚本在 Crab 中心局部坐标中累计的原始计数图，用来观察 Stage C 前后同一批观测在 18 个 v1 cell 里的空间分布。</figcaption>
+	      </figure>
+	      <figure>
+	        <img src="assets/crab-v1-cell-skymaps/crab_v1_smoothed_counts_grid.png" alt="Crab v1 smoothed counts skymap quicklook">
+	        <figcaption><strong>Crab v1 smoothed counts skymap。</strong>这是对 raw counts 做 <code>0.3 deg</code> Gaussian 平滑后的天图，只用于看 Crab 附近形态和中心位置，不是背景扣除结果。</figcaption>
+	      </figure>
+	    </div>
+	  </section>
 
   <section>
     <h2>输入、对齐与正式 Cuts</h2>
@@ -338,6 +360,10 @@ footer {
       <li><code>apply/output/stage_c/current/source_files.csv</code>：每个输入文件的 entry 数、输出 part、MJD span 和粗略 live-time 基础量。</li>
       <li><code>apply/output/stage_c/current/obs_events_cutflow.csv</code>：global/month/file cutflow。</li>
       <li><code>apply/output/stage_c/current/obs_events_cell_counts.csv</code>：global/month/file 的 18-cell 事件数。</li>
+      <li><code>apply/output/stage_c/current/obs_events_roi_coverage.json</code>：Crab-centered ROI coverage 诊断，包括 rho histogram、半径内事件数、x/y 范围和边缘估计。</li>
+      <li><code>apply/output/stage_c/current/obs_events_roi_coverage.csv</code>：global rho histogram，0-12 deg，bin width 0.1 deg。</li>
+      <li><code>apply/output/stage_c/current/obs_events_roi_coverage_by_cell.csv</code>：per-cell rho histogram。</li>
+      <li><code>apply/output/stage_c/current/obs_events_roi_coverage.png</code>：rho profile 和 per-cell coverage quick diagnostic 图。</li>
       <li><code>apply/output/stage_c/current/obs_events_summary.md</code>：机器输出之外的简短摘要。</li>
     </ul>
 
@@ -410,6 +436,34 @@ footer {
   </section>
 
   <section>
+    <h2>Crab ROI Coverage Diagnostics</h2>
+    <p>Stage C does not apply a Crab ROI cut. These diagnostics only characterize available sky coverage for Stage D. Current downstream baseline expects Stage D to choose a fiducial ROI, likely <code>rho &lt; 6 deg</code> if the coverage edge is around 8 deg.</p>
+    <p>诊断坐标以 Crab 为中心：<code>x = wrap(ra_mean_deg - 83.63) * cos(22.01 deg)</code>，<code>y = dec_mean_deg - 22.01</code>，<code>rho = sqrt(x^2 + y^2)</code>。所有统计均来自 Stage C selected parquet 事件；没有在 Stage C 中裁掉 <code>rho &gt; 6 deg</code> 或 <code>rho &gt; 8 deg</code>。</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Radius</th><th class="num">Count</th><th class="num">Fraction of selected rows</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>rho &lt; 2 deg</code></td><td class="num">2,064,174</td><td class="num">2.672%</td></tr>
+          <tr><td><code>rho &lt; 4 deg</code></td><td class="num">8,001,201</td><td class="num">10.358%</td></tr>
+          <tr><td><code>rho &lt; 5.5 deg</code></td><td class="num">14,553,278</td><td class="num">18.840%</td></tr>
+          <tr><td><code>rho &lt; 6 deg</code></td><td class="num">16,945,305</td><td class="num">21.936%</td></tr>
+          <tr><td><code>rho &lt; 6.5 deg</code></td><td class="num">19,287,863</td><td class="num">24.969%</td></tr>
+          <tr><td><code>rho &lt; 8 deg</code></td><td class="num">24,142,098</td><td class="num">31.253%</td></tr>
+          <tr><td><code>rho &lt; 10 deg</code></td><td class="num">27,092,422</td><td class="num">35.072%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul>
+      <li>rho histogram: 0-12 deg，bin width 0.1 deg；0-12 deg 内共有 28,775,304 个 selected events，占 Stage C selected rows 的 37.25%。</li>
+      <li>边缘估计：<code>edge_radius_estimate_deg = 7.15</code>，方法为 <code>smoothed_annular_density_below_half_plateau_for_3_bins</code>。这是诊断量，不决定 Stage C cut。</li>
+      <li>x range: [-166.881, 166.881] deg；y range: [-42.759, 57.407] deg。完整 quantiles 写在 <code>obs_events_roi_coverage.json</code>。</li>
+      <li>质量警告：per-cell <code>rho&lt;6 / rho&lt;10</code> ratios 在可用统计量充足的 cells 之间跨度超过 0.25；Stage D 选择 fiducial ROI 时应检查 cell-dependent edge behavior。</li>
+    </ul>
+  </section>
+
+  <section>
     <h2>验证结果</h2>
     <div class="grid">
       <div class="metric">
@@ -438,6 +492,7 @@ footer {
       <li><code>dcedge</code> 读回范围为 20 到 149.997 m，<code>dcedge &lt; 20</code> rows = 0。</li>
       <li><code>theta</code> 读回最大值为 0.872664 rad，小于 <code>radians(50)</code> = 0.872665。</li>
       <li>MJD coverage：matched [59579.7, 59638.7]，selected [59579.7, 59638.7]。</li>
+      <li>ROI diagnostics readback：metadata 已包含 <code>roi_coverage.status = diagnostic_only_no_cut_applied</code>，并指向 JSON/CSV/per-cell CSV/PNG artifacts。</li>
     </ul>
     <div class="callout warn">
       <strong>Live time 这里只是基础量，不是最终物理权重。</strong>
@@ -452,7 +507,7 @@ footer {
   </section>
 
   <footer>
-    Generated for internal review on 2026-06-05. Source facts: <code>apply/output/stage_c/current/obs_events_metadata.json</code>, manifest, source files, cutflow, cell counts, Slurm job 41959 log, and parquet readback checks.
+    Generated for internal review on 2026-06-09. Source facts: <code>apply/output/stage_c/current/obs_events_metadata.json</code>, manifest, source files, cutflow, cell counts, ROI coverage artifacts, Slurm job 41959 log, and parquet readback checks.
   </footer>
 </main>
 </body>

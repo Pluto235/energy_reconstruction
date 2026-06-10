@@ -1,0 +1,19 @@
+cell_id,include,subset_version,subset_reason
+1,0,cell6_plus_8to18_stageg_probe,low-Nhit/low-predE sideband diagnostic outlier
+2,0,cell6_plus_8to18_stageg_probe,low-Nhit/low-predE sideband diagnostic outlier
+3,0,cell6_plus_8to18_stageg_probe,low-Nhit/low-predE sideband diagnostic outlier
+4,0,cell6_plus_8to18_stageg_probe,low-Nhit/low-predE response/background-shape outlier
+5,0,cell6_plus_8to18_stageg_probe,low-Nhit/low-predE response/background-shape outlier
+6,1,cell6_plus_8to18_stageg_probe,probe whether cell 6 can be retained with cells 8-18
+7,0,cell6_plus_8to18_stageg_probe,low-predE transition cell excluded from conservative diagnostic subset
+8,1,cell6_plus_8to18_stageg_probe,retained diagnostic high-confidence subset
+9,1,cell6_plus_8to18_stageg_probe,retained diagnostic high-confidence subset
+10,1,cell6_plus_8to18_stageg_probe,retained diagnostic high-confidence subset
+11,1,cell6_plus_8to18_stageg_probe,retained diagnostic high-confidence subset
+12,1,cell6_plus_8to18_stageg_probe,retained diagnostic high-confidence subset
+13,1,cell6_plus_8to18_stageg_probe,retained diagnostic high-confidence subset
+14,1,cell6_plus_8to18_stageg_probe,retained diagnostic high-confidence subset
+15,1,cell6_plus_8to18_stageg_probe,retained diagnostic high-confidence subset
+16,1,cell6_plus_8to18_stageg_probe,retained diagnostic high-confidence subset
+17,1,cell6_plus_8to18_stageg_probe,retained diagnostic high-confidence subset
+18,1,cell6_plus_8to18_stageg_probe,retained diagnostic high-confidence subset

@@ -210,7 +210,7 @@ footer {
       <div class="metric">
         <div class="label">A_eff status</div>
         <div class="value">available</div>
-        <div class="note">max A_eff = 367.22 m2</div>
+        <div class="note">max A_eff = 36,721.73 m2 after S0 unit fix</div>
       </div>
     </div>
 
@@ -225,7 +225,7 @@ footer {
     <p>Stage A 的目标是为后续 Crab SED forward folding 准备探测器响应。这里的观测单元不是传统的一维 Nhit bin，而是 v1 选择的二维单元 <code>b = (Nhit bin, log10 E_pred bin)</code>。响应函数定义为：</p>
     <p><code>eta_b(E_true, theta_true) = N_pass(b, E_true, theta_true) / N_thrown(E_true, theta_true)</code></p>
     <p>其中分子表示 MC 事件通过选择、完成 ML 能量预测并落入 cell <code>b</code> 的加权事例数；分母表示同一真实能量和真实天顶角 bin 内投放的 primary gamma 加权事例数。有效面积同步输出：</p>
-    <p><code>A_eff,b(E, theta) = S0 * cos(theta_true_bin_center) * eta_b(E, theta)</code>，其中 <code>S0 = 40000 m2</code>。</p>
+    <p><code>A_eff,b(E, theta) = S0 * cos(theta_true_bin_center) * eta_b(E, theta)</code>，其中 <code>S0 = 4.0e6 m2</code>。上游 <code>t_evth.v[48] injectionArea = 4.0e10 cm2</code>，不是 mm2；投点几何为约 <code>[-1000,1000] m x [-1000,1000] m</code> 的方形 core box。</p>
 
     <h3>输入与选择</h3>
     <ul>

@@ -25,6 +25,8 @@ from matplotlib.colors import Normalize, TwoSlopeNorm
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CELL_SELECTION = REPO_ROOT / "apply" / "config" / "cell_selection_v1.csv"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "apply" / "plot" / "crab_cell_skymaps"
+DEFAULT_ANALYSIS_VERSION = "v1"
+DEFAULT_OUTPUT_PREFIX = "crab_v1"
 
 
 @dataclass(frozen=True)
@@ -42,7 +44,7 @@ class Cell:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Build Crab-centered sky maps for the selected v1 (Nhit, predicted logE) cells "
+            "Build Crab-centered sky maps for selected (Nhit, predicted logE) cells "
             "from observation eval ROOT files and recovered-time friend trees."
         )
     )
@@ -50,6 +52,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--time-root", type=str, default="/mnt/mydisk/WCDA_observation_eval/recovered_time")
     parser.add_argument("--cell-selection-csv", type=str, default=str(DEFAULT_CELL_SELECTION))
     parser.add_argument("--output-dir", type=str, default=str(DEFAULT_OUTPUT_DIR))
+    parser.add_argument("--analysis-version", type=str, default=DEFAULT_ANALYSIS_VERSION)
+    parser.add_argument(
+        "--output-prefix",
+        type=str,
+        default=DEFAULT_OUTPUT_PREFIX,
+        help="Filename prefix for plots, maps, and metadata. Defaults to crab_v1.",
+    )
     parser.add_argument("--tree-name", type=str, default="t_eventout")
     parser.add_argument("--time-tree-name", type=str, default="t_recovered_time")
     parser.add_argument("--file-glob", type=str, default="Esg*.root")
@@ -82,7 +91,7 @@ def parse_args() -> argparse.Namespace:
         "--quicklook-input-npz",
         type=str,
         default=None,
-        help="Input maps NPZ for --quicklook-only. Defaults to <output-dir>/crab_v1_maps.npz.",
+        help="Input maps NPZ for --quicklook-only. Defaults to <output-dir>/<output-prefix>_maps.npz.",
     )
     parser.add_argument(
         "--quicklook-bg-max-abs-x-deg",
@@ -95,12 +104,19 @@ def parse_args() -> argparse.Namespace:
         "--profile-input-npz",
         type=str,
         default=None,
-        help="Input maps NPZ for --profiles-only. Defaults to <output-dir>/crab_v1_maps.npz.",
+        help="Input maps NPZ for --profiles-only. Defaults to <output-dir>/<output-prefix>_maps.npz.",
     )
     parser.add_argument("--profile-half-width-deg", type=float, default=1.0)
     parser.add_argument("--profile-sideband-min-deg", type=float, default=5.0)
     parser.add_argument("--profile-baseline-stat", choices=["median", "mean"], default="median")
     return parser.parse_args()
+
+
+def prefixed_path(output_dir: Path, args: argparse.Namespace, suffix: str) -> Path:
+    prefix = str(args.output_prefix).strip()
+    if not prefix:
+        raise ValueError("--output-prefix cannot be empty")
+    return output_dir / f"{prefix}_{suffix}"
 
 
 def open_root(path: Path):
@@ -619,10 +635,10 @@ def generate_profile_outputs(args: argparse.Namespace, *, input_npz: Path, outpu
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    ra_raw_png = output_dir / "crab_v1_ra_offset_profiles_grid.png"
-    dec_raw_png = output_dir / "crab_v1_dec_offset_profiles_grid.png"
-    ra_norm_png = output_dir / "crab_v1_ra_offset_profiles_normalized_grid.png"
-    dec_norm_png = output_dir / "crab_v1_dec_offset_profiles_normalized_grid.png"
+    ra_raw_png = prefixed_path(output_dir, args, "ra_offset_profiles_grid.png")
+    dec_raw_png = prefixed_path(output_dir, args, "dec_offset_profiles_grid.png")
+    ra_norm_png = prefixed_path(output_dir, args, "ra_offset_profiles_normalized_grid.png")
+    dec_norm_png = prefixed_path(output_dir, args, "dec_offset_profiles_normalized_grid.png")
 
     half_width = float(args.profile_half_width_deg)
     sideband = float(args.profile_sideband_min_deg)
@@ -770,7 +786,7 @@ def generate_quicklook_outputs(args: argparse.Namespace, *, input_npz: Path, out
     np.savez_compressed(input_npz, **arrays)
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    significance_png = output_dir / "crab_v1_approx_significance_grid.png"
+    significance_png = prefixed_path(output_dir, args, "approx_significance_grid.png")
     per_cell_roi_events = load_per_cell_roi_events(meta_path, counts)
     plot_grid(
         approx_sigma.astype(np.float32),
@@ -779,7 +795,7 @@ def generate_quicklook_outputs(args: argparse.Namespace, *, input_npz: Path, out
         y_edges,
         per_cell_roi_events,
         significance_png,
-        title=f"{args.source_name} v1 cell approx significance quicklook",
+        title=f"{args.source_name} {args.analysis_version} cell approx significance quicklook",
         cmap_name="RdBu_r",
         scale="global",
         vmax_percentile=float(args.counts_vmax_percentile),
@@ -946,10 +962,10 @@ def write_outputs(
     output_dir.mkdir(parents=True, exist_ok=True)
     per_cell_roi_events = np.asarray(metadata["per_cell_roi_events"], dtype=np.int64)
 
-    counts_png = output_dir / "crab_v1_counts_grid.png"
-    radec_counts_png = output_dir / "crab_v1_counts_radec_grid.png"
-    smoothed_png = output_dir / "crab_v1_smoothed_counts_grid.png"
-    significance_png = output_dir / "crab_v1_approx_significance_grid.png"
+    counts_png = prefixed_path(output_dir, args, "counts_grid.png")
+    radec_counts_png = prefixed_path(output_dir, args, "counts_radec_grid.png")
+    smoothed_png = prefixed_path(output_dir, args, "smoothed_counts_grid.png")
+    significance_png = prefixed_path(output_dir, args, "approx_significance_grid.png")
 
     plot_grid(
         counts.astype(np.float32),
@@ -958,7 +974,7 @@ def write_outputs(
         y_edges,
         per_cell_roi_events,
         counts_png,
-        title=f"{args.source_name} v1 cell counts map",
+        title=f"{args.source_name} {args.analysis_version} cell counts map",
         cmap_name="viridis",
         scale=args.counts_scale,
         vmax_percentile=float(args.counts_vmax_percentile),
@@ -972,7 +988,7 @@ def write_outputs(
         dec_edges,
         per_cell_roi_events,
         radec_counts_png,
-        title=f"{args.source_name} v1 cell RA/Dec counts map",
+        title=f"{args.source_name} {args.analysis_version} cell RA/Dec counts map",
         cmap_name="viridis",
         scale=args.counts_scale,
         vmax_percentile=float(args.counts_vmax_percentile),
@@ -990,7 +1006,7 @@ def write_outputs(
         y_edges,
         per_cell_roi_events,
         smoothed_png,
-        title=f"{args.source_name} v1 cell smoothed counts map, sigma={args.smooth_sigma_deg:g} deg",
+        title=f"{args.source_name} {args.analysis_version} cell smoothed counts map, sigma={args.smooth_sigma_deg:g} deg",
         cmap_name="viridis",
         scale=args.counts_scale,
         vmax_percentile=float(args.counts_vmax_percentile),
@@ -1004,7 +1020,7 @@ def write_outputs(
         y_edges,
         per_cell_roi_events,
         significance_png,
-        title=f"{args.source_name} v1 cell approx significance quicklook",
+        title=f"{args.source_name} {args.analysis_version} cell approx significance quicklook",
         cmap_name="RdBu_r",
         scale="global",
         vmax_percentile=float(args.counts_vmax_percentile),
@@ -1012,7 +1028,7 @@ def write_outputs(
         colorbar_label="approx sigma",
     )
 
-    npz_path = output_dir / "crab_v1_maps.npz"
+    npz_path = prefixed_path(output_dir, args, "maps.npz")
     np.savez_compressed(
         npz_path,
         counts=counts,
@@ -1031,9 +1047,14 @@ def write_outputs(
         predE_bin=np.asarray([c.predE_bin for c in cells]),
     )
 
-    meta_path = output_dir / "crab_v1_maps_meta.json"
+    meta_path = prefixed_path(output_dir, args, "maps_meta.json")
     meta_payload = {
-        "description": "Crab-centered v1-cell sky maps. Approx significance is a quicklook only, not the Stage-D background result.",
+        "description": (
+            f"Crab-centered {args.analysis_version}-cell sky maps. "
+            "Approx significance is a quicklook only, not the Stage-D background result."
+        ),
+        "analysis_version": str(args.analysis_version),
+        "output_prefix": str(args.output_prefix),
         "obs_root": str(Path(args.obs_root).resolve()),
         "time_root": str(Path(args.time_root).resolve()),
         "cell_selection_csv": str(Path(args.cell_selection_csv).resolve()),
@@ -1119,9 +1140,10 @@ def main() -> None:
     time_root = Path(args.time_root).resolve()
     cell_selection_csv = Path(args.cell_selection_csv).resolve()
     output_dir = Path(args.output_dir).resolve()
-    profile_input_npz = Path(args.profile_input_npz).resolve() if args.profile_input_npz else output_dir / "crab_v1_maps.npz"
-    quicklook_input_npz = Path(args.quicklook_input_npz).resolve() if args.quicklook_input_npz else output_dir / "crab_v1_maps.npz"
-    meta_path = output_dir / "crab_v1_maps_meta.json"
+    default_maps_npz = prefixed_path(output_dir, args, "maps.npz")
+    profile_input_npz = Path(args.profile_input_npz).resolve() if args.profile_input_npz else default_maps_npz
+    quicklook_input_npz = Path(args.quicklook_input_npz).resolve() if args.quicklook_input_npz else default_maps_npz
+    meta_path = prefixed_path(output_dir, args, "maps_meta.json")
 
     if args.quicklook_only:
         generate_quicklook_outputs(args, input_npz=quicklook_input_npz, output_dir=output_dir, meta_path=meta_path)
@@ -1190,7 +1212,7 @@ def main() -> None:
         metadata=metadata,
         args=args,
     )
-    generate_profile_outputs(args, input_npz=output_dir / "crab_v1_maps.npz", output_dir=output_dir, meta_path=meta_path)
+    generate_profile_outputs(args, input_npz=default_maps_npz, output_dir=output_dir, meta_path=meta_path)
 
 
 if __name__ == "__main__":

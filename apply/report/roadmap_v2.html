@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crab SED Roadmap v2</title>
+<style>
+:root {
+  --bg: #f7f8fa;
+  --fg: #18212a;
+  --muted: #5b6670;
+  --panel: #ffffff;
+  --border: #d9e0e7;
+  --accent: #0f766e;
+  --accent-2: #b45309;
+  --code: #eef2f5;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+  line-height: 1.68;
+}
+main {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 40px 22px 72px;
+}
+header {
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--border);
+}
+.eyebrow {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+h1 {
+  margin: 8px 0 12px;
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1.14;
+}
+h2 {
+  margin: 42px 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 24px;
+}
+h3 {
+  margin: 28px 0 10px;
+  font-size: 18px;
+}
+p, li {
+  color: var(--fg);
+}
+.lead {
+  max-width: 920px;
+  color: var(--muted);
+  font-size: 17px;
+}
+code {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--code);
+}
+pre {
+  overflow-x: auto;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #111827;
+  color: #eef2ff;
+}
+.callout {
+  margin: 18px 0;
+  padding: 15px 18px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.callout.warn {
+  border-left-color: var(--accent-2);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+.metric {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.metric .label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.metric .value {
+  margin-top: 7px;
+  font-size: 24px;
+  font-weight: 750;
+}
+.table-wrap {
+  overflow-x: auto;
+  margin: 16px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+th, td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f0f4f7;
+  font-weight: 700;
+}
+footer {
+  margin-top: 48px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="eyebrow">WCDA Crab SED</div>
+  <h1>Roadmap v2: raw65 ledger + frozen selector</h1>
+  <p class="lead">v2 的核心是把 cell 选择推迟到拟合阶段：Stage A-E 保留可追踪的原始 cell 和 metadata，Stage F/G 只使用预冻结 selector。任何 Crab on-source 结果只能作为诊断 flag，不能作为正式筛选规则。</p>
+</header>
+
+<section>
+  <h2>1. v2 设计原则</h2>
+  <div class="grid">
+    <div class="metric"><div class="label">Raw ledger</div><div class="value">65 cells</div></div>
+    <div class="metric"><div class="label">Baseline</div><div class="value">26 cells</div></div>
+    <div class="metric"><div class="label">v2.0</div><div class="value">Direct diagnostic</div></div>
+    <div class="metric"><div class="label">v2.1</div><div class="value">Off counts</div></div>
+  </div>
+  <ol>
+    <li>Stage A/B/C/D/E 都跑同一套 <code>v2_raw65</code> 非重叠 cell ledger。</li>
+    <li>Stage F/G 使用预冻结 selector；不能按 <code>N_on/B_on</code>、excess、significance、pull 或 SED residual 自动删 cell。</li>
+    <li>旧 <code>&gt;=2000</code> open Nhit bin 不进入 v2；高端使用 <code>[2000,3000)</code> 五个 cell。</li>
+    <li>v2.0 先完成 direct-expectation diagnostic 闭环；v2.1 升级到真实 <code>N_off/alpha</code> 和 Li-Ma。</li>
+  </ol>
+</section>
+
+<section>
+  <h2>2. Cell Ledger 与 Selector</h2>
+  <h3>2.1 raw ledger: v2_raw65</h3>
+  <p><code>v2_raw65</code> 定义为旧 acceptable pool 去掉旧 <code>&gt;=2000</code> open bin 后的 60 个 cell，再加入 v2 <code>[2000,3000)</code> 五个 high-Nhit cell，总计 65 个互斥 cell。</p>
+  <pre><code>apply/config/cell_ledger_v2_raw65.csv</code></pre>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>role</th><th>用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>baseline_fit</code></td><td>默认进入 Stage F/G baseline</td></tr>
+        <tr><td><code>transition_probe</code></td><td>不进 baseline，用于低能/边界 probe</td></tr>
+        <tr><td><code>diagnostic_legacy_low_nhit</code></td><td><code>[30,100)</code> legacy low-Nhit diagnostics，永久不进 v2 baseline</td></tr>
+        <tr><td><code>diagnostic_low_stat_high_energy</code></td><td>v2 high-energy 边界低统计 cells</td></tr>
+        <tr><td><code>diagnostic_response_tail</code></td><td>偏离 physical ridge 的 response-tail cells</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>2.2 baseline selector: v2_baseline26</h3>
+  <p>默认 Stage F/G baseline 是 26 个预冻结 cells：当前 <code>cell_selection_v2p1.csv</code> 的 23 个 cells，加上 <code>[100,200)</code> physical ridge 三格：<code>[2,3)</code>、<code>[3,3.25)</code>、<code>[3.25,3.5)</code>。</p>
+  <pre><code>apply/config/cell_selector_v2_baseline26.csv</code></pre>
+  <div class="callout warn">
+    <strong>禁止规则：</strong><code>N_on/B_on</code>、excess、per-cell significance、Stage F pull、Stage G residual 只能作为诊断列，不能作为正式 selector。
+  </div>
+</section>
+
+<section>
+  <h2>3. v2.0 Milestone: raw65 + direct expectation</h2>
+  <h3>Stage A/B</h3>
+  <p>Stage A 对 raw65 全部构建 response 和 <code>A_eff</code>，Stage B 对 raw65 全部构建 PSF、<code>r_opt</code> 和 quality flags。质量差的 cell 打 flag，不在上游删除。</p>
+  <h3>Stage C</h3>
+  <p>Stage C 用 raw65 规约观测 parquet，保留下游所需列，并在 metadata 中记录 out-of-ledger counts 与 Crab-centered ROI coverage。</p>
+  <h3>Stage D/E</h3>
+  <p>v2.0 默认 <code>background_mode = crab_roi_local</code>，<code>background_form = direct_expectation</code>。Stage D 输出 <code>B_on,b</code>，Stage E 对 raw65 全部输出 <code>N_on</code>、<code>B_on</code>、excess 和 known-background Poisson diagnostic。Li-Ma 标记为 not applicable。</p>
+  <h3>Stage F/G</h3>
+  <p>Stage F/G 读取 raw65 artifacts，但默认只 include <code>v2_baseline26</code>。报告必须记录 raw ledger version、selector version、included/excluded cell ids 和 excluded reasons。v2.0 SED 是 diagnostic SED。</p>
+</section>
+
+<section>
+  <h2>4. v2.1 Milestone: true off counts / Li-Ma</h2>
+  <p>v2.1 在 v2.0 闭环后升级 Stage D/E 的统计口径，在 <code>rho &lt; 6 deg</code> fiducial ROI 内定义真实 off regions。</p>
+  <ul>
+    <li>Stage D 输出 <code>N_off,b</code>、<code>alpha_b</code>、<code>B_on,b = alpha_b * N_off,b</code> 和 off geometry metadata。</li>
+    <li>Stage E 输出 <code>excess_b = N_on,b - alpha_b N_off,b</code>、<code>sqrt(N_on,b + alpha_b^2 N_off,b)</code> 和 Li-Ma significance。</li>
+    <li>Stage F/G 默认仍使用 <code>v2_baseline26</code>，保证 v2.0/v2.1 差异主要来自背景统计升级，而不是 selector 改变。</li>
+  </ul>
+</section>
+
+<section>
+  <h2>5. Systematics 与验证</h2>
+  <ol>
+    <li>raw65 completeness：Stage A-E 的 cell id、bin、role 必须一致。</li>
+    <li>selector freeze audit：Stage F/G 必须证明 selector 文件在 fit 前已存在，且未使用 source-result columns 自动筛选。</li>
+    <li>low-Nhit diagnostics：<code>[30,100)</code> 永久 diagnostic-only；<code>[100,200)</code> 只允许 physical ridge 三格进入 baseline。</li>
+    <li>high-energy diagnostics：<code>[2000,3000)</code> 五格保留在 raw65；默认 baseline 只纳入 v2p1 保留的两格。</li>
+    <li>ROI edge sensitivity：重跑 <code>rho &lt; 5.5</code>、<code>6.0</code>、<code>6.5 deg</code> 对照。</li>
+    <li>background method sensitivity：v2.1 至少比较 equal-Dec sideband 和 ring/annulus。</li>
+    <li>1D vs 2D consistency：二维响应 marginalise 后的一维 Nhit fit 应与二维 baseline fit 一致。</li>
+    <li>response closure：raw65 和 baseline26 都要给 closure summary。</li>
+  </ol>
+</section>
+
+<section>
+  <h2>6. 交付物</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>文件 / artifact</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr><td><code>apply/config/cell_ledger_v2_raw65.csv</code></td><td>65 个非重叠 raw cells + role metadata</td></tr>
+        <tr><td><code>apply/config/cell_selector_v2_baseline26.csv</code></td><td>26 个默认 Stage F/G baseline cells</td></tr>
+        <tr><td><code>apply/config/cell_selector_v2_transition_probes.csv</code></td><td><code>[100,200)</code> transition 和高能边界 probes</td></tr>
+        <tr><td><code>apply/output/stage_a</code> 到 <code>stage_e</code></td><td>raw65 artifacts + baseline26 summary</td></tr>
+        <tr><td><code>apply/output/stage_f</code> / <code>stage_g</code></td><td>selector-driven fits and SED points</td></tr>
+        <tr><td><code>apply/report/roadmap_v2.md</code></td><td>Markdown source</td></tr>
+        <tr><td><code>apply/report/roadmap_v2.html</code></td><td>HTML companion</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>7. 当前固定决策</h2>
+  <ol>
+    <li>v2 raw ledger 使用 65 个非重叠 cells。</li>
+    <li>Stage A/B/C/D/E 全部跑 raw65。</li>
+    <li><code>[30,100)</code> 保留在 raw ledger，但永久 diagnostic-only。</li>
+    <li>Stage F/G baseline 是 26 cells。</li>
+    <li><code>[100,200)</code> 不整行进入 baseline，只纳入 physical ridge 三格。</li>
+    <li><code>N_on/B_on</code> 等 on-source 结果不能作为正式剔除条件。</li>
+    <li>v2.0 与 v2.1 写在同一个 roadmap：先 direct diagnostic，再 Li-Ma upgrade。</li>
+  </ol>
+</section>
+
+<footer>
+  Synchronized with <code>apply/report/roadmap_v2.md</code>.
+</footer>
+</main>
+</body>
+</html>

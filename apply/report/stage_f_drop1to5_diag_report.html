@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stage F Forward-Folding Fit Report</title>
+<style>
+:root { --bg:#101418; --fg:#eef3f5; --muted:#a8b2b8; --panel:#171d22; --panel2:#1d242a; --border:#2e3942; --accent:#5fb3b3; --good:#52b788; --warn:#e9b44c; --code:#0b0f12; }
+@media (prefers-color-scheme: light) { :root { --bg:#f7f8f9; --fg:#1b2329; --muted:#56636b; --panel:#fff; --panel2:#f1f4f6; --border:#d7dee3; --code:#eef2f4; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; line-height:1.62; }
+main { max-width:1180px; margin:0 auto; padding:42px 20px 64px; }
+header { border-bottom:1px solid var(--border); margin-bottom:32px; padding-bottom:24px; }
+.eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.08em; font-size:12px; font-weight:700; }
+h1 { margin:8px 0 10px; font-size:clamp(30px,5vw,44px); line-height:1.15; }
+h2 { margin:38px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--border); font-size:24px; }
+p { margin:10px 0; }
+code { padding:2px 5px; border-radius:4px; background:var(--code); font-size:13px; }
+.lead { max-width:940px; color:var(--muted); font-size:17px; }
+.grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:18px 0; }
+.metric { min-height:104px; padding:16px; border:1px solid var(--border); border-radius:8px; background:var(--panel); }
+.label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.07em; }
+.value { margin-top:8px; font-size:24px; font-weight:700; overflow-wrap:anywhere; }
+.note { margin-top:7px; color:var(--muted); font-size:13px; }
+.callout { margin:18px 0; padding:16px 18px; border:1px solid var(--border); border-left:4px solid var(--accent); border-radius:8px; background:var(--panel); }
+.callout.good { border-left-color:var(--good); }
+.callout.warn { border-left-color:var(--warn); }
+.table-wrap { width:100%; overflow-x:auto; margin:18px 0; border:1px solid var(--border); border-radius:8px; background:var(--panel); }
+table { width:100%; min-width:1040px; border-collapse:collapse; font-size:14px; }
+th,td { padding:10px 12px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+th { background:var(--panel); font-weight:700; white-space:nowrap; }
+tbody tr:nth-child(odd) td { background:var(--panel2); }
+.num { text-align:right; font-variant-numeric:tabular-nums; }
+.figure-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-top:18px; }
+figure { margin:0; padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--panel); }
+figure img { display:block; width:100%; height:auto; border-radius:4px; background:#fff; }
+figcaption { margin-top:9px; color:var(--muted); font-size:13px; }
+footer { margin-top:54px; padding-top:18px; border-top:1px solid var(--border); color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
+@media (max-width:900px) { .grid,.figure-grid { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">LHAASO-WCDA · Crab SED v1</div>
+    <h1>Stage F Forward-Folding Fit Report</h1>
+    <p class="lead">This report folds PL and LogPar Crab spectra through the Stage A response and compares expected signal counts to the Stage E per-cell excess table.</p>
+  </header>
+  <section>
+    <h2>Conclusion</h2>
+    <p>The preferred conservative-error fit is <code>logpar</code>. Physical flux promotion is <code>True</code> because the reference-count preflight status is <code>passed</code>.</p>
+    <div class="grid">
+      <div class="metric"><div class="label">Run</div><div class="value">codex_stage_f_drop1to5_diag</div><div class="note">Stage F fit</div></div>
+      <div class="metric"><div class="label">Visible Exposure</div><div class="value">15.612 d</div><div class="note">Crab theta inside response grid</div></div>
+      <div class="metric"><div class="label">PL chi2/ndof</div><div class="value">82.651/11</div><div class="note">conservative error</div></div>
+      <div class="metric"><div class="label">LogPar chi2/ndof</div><div class="value">56.024/10</div><div class="note">natural-log beta</div></div>
+    </div>
+    <div class="callout good">
+      <strong>Reference-count preflight:</strong>
+      WCDA-1 Crab reference predicts <code>6411.82</code> counts, while Stage E excess is <code>8056</code>, so observed/expected is <code>1.25643</code>.
+    </div>
+  </section>
+  <section>
+    <h2>Fit Parameters</h2>
+    <ul>
+      <li>PL: <code>phi0=2.582098e-12</code>, <code>gamma=2.70978</code>, p-value <code>4.5220e-13</code>.</li>
+      <li>LogPar: <code>phi0=2.882846e-12</code>, <code>alpha=2.81338</code>, <code>beta=0.141157</code>, p-value <code>2.0315e-08</code>.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Per-Cell Residuals</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>cell</th><th>Nhit bin</th><th>log10 E_pred bin</th><th class="num">excess</th><th class="num">err</th><th class="num">PL model</th><th class="num">PL pull</th><th class="num">LogPar model</th><th class="num">LogPar pull</th></tr></thead>
+        <tbody><tr><td>6</td><td>[200,300)</td><td>[2,3)</td><td class="num">2549</td><td class="num">141.31</td><td class="num">3180.23</td><td class="num">-4.4669</td><td class="num">2829.54</td><td class="num">-1.9852</td></tr><tr><td>7</td><td>[200,300)</td><td>[3,3.25)</td><td class="num">1388.72</td><td class="num">86.748</td><td class="num">915.274</td><td class="num">5.4577</td><td class="num">950.264</td><td class="num">5.0544</td></tr><tr><td>8</td><td>[300,500)</td><td>[3,3.25)</td><td class="num">1510.7</td><td class="num">67.995</td><td class="num">1341.15</td><td class="num">2.4936</td><td class="num">1440.95</td><td class="num">1.0259</td></tr><tr><td>9</td><td>[300,500)</td><td>[3.25,3.5)</td><td class="num">799.135</td><td class="num">51.116</td><td class="num">737.363</td><td class="num">1.2085</td><td class="num">807.388</td><td class="num">-0.16145</td></tr><tr><td>10</td><td>[500,800)</td><td>[3.25,3.5)</td><td class="num">771.378</td><td class="num">39.225</td><td class="num">685.394</td><td class="num">2.1921</td><td class="num">764.37</td><td class="num">0.17868</td></tr><tr><td>11</td><td>[500,800)</td><td>[3.5,3.75)</td><td class="num">366.324</td><td class="num">27.417</td><td class="num">395.427</td><td class="num">-1.0615</td><td class="num">422.596</td><td class="num">-2.0525</td></tr><tr><td>12</td><td>[500,800)</td><td>[3.75,4.0)</td><td class="num">89.1309</td><td class="num">19.669</td><td class="num">99.675</td><td class="num">-0.53608</td><td class="num">94.239</td><td class="num">-0.2597</td></tr><tr><td>13</td><td>[800,1100)</td><td>[3.5,3.75)</td><td class="num">206.784</td><td class="num">18.794</td><td class="num">228.886</td><td class="num">-1.176</td><td class="num">236.247</td><td class="num">-1.5677</td></tr><tr><td>14</td><td>[800,1100)</td><td>[3.75,4.0)</td><td class="num">95.7297</td><td class="num">14.432</td><td class="num">115.485</td><td class="num">-1.3689</td><td class="num">106.773</td><td class="num">-0.76522</td></tr><tr><td>15</td><td>[800,1100)</td><td>[4.0,4.25)</td><td class="num">66.9559</td><td class="num">11.96</td><td class="num">26.4251</td><td class="num">3.3888</td><td class="num">20.7033</td><td class="num">3.8672</td></tr><tr><td>16</td><td>[1100,2000)</td><td>[3.75,4.0)</td><td class="num">111.432</td><td class="num">12.271</td><td class="num">127.918</td><td class="num">-1.3435</td><td class="num">107.647</td><td class="num">0.30852</td></tr><tr><td>17</td><td>[1100,2000)</td><td>[4.0,4.25)</td><td class="num">76.1351</td><td class="num">10.482</td><td class="num">83.9547</td><td class="num">-0.74603</td><td class="num">58.9128</td><td class="num">1.6431</td></tr><tr><td>18</td><td>[1100,2000)</td><td>[4.25,4.5)</td><td class="num">24.5676</td><td class="num">7.9644</td><td class="num">35.577</td><td class="num">-1.3823</td><td class="num">19.8416</td><td class="num">0.59339</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+  <section>
+    <h2>Diagnostics</h2>
+    <div class="figure-grid">
+      
+      
+      
+      
+    </div>
+  </section>
+  <footer>
+    Generated from <code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f/runs/codex_stage_f_drop1to5_diag/fit_v1_metadata.json</code>.
+  </footer>
+</main>
+</body>
+</html>

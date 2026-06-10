@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crab v2 Cell Sky Maps — ML 能量 × Nhit 单元天图诊断 · any-reports</title>
+<meta name="description" content="Crab v2/v2p1 cell counts, RA/Dec, profile, and sideband significance quicklook diagnostics.">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/highlight.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='14'%3E%F0%9F%93%A6%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+
+<header class="topbar">
+  <button class="topbar-toggle" aria-label="目录" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰ 目录</button>
+  <a class="topbar-brand" href="index.html">any-reports</a>
+  <nav class="topbar-nav">
+    <a href="index.html">Home</a>
+    <a href="https://github.com/Pluto235/any-reports" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+</header>
+
+<div class="layout">
+
+  <aside class="sidebar" id="sidebar">
+    <p class="sidebar-title">📑 目录</p>
+    <nav class="sidebar-nav">
+      <ol><li><a href="#1-输入与选择">1. 输入与选择</a></li><li><a href="#2-v2-cell-设计">2. v2 Cell 设计</a><ol><li><a href="#v21-roi-统计门槛">v2.1 ROI 统计门槛</a></li></ol></li><li><a href="#3-投影与图像参数">3. 投影与图像参数</a></li><li><a href="#4-全量运行统计">4. 全量运行统计</a></li><li><a href="#5-counts-map">5. Counts Map</a></li><li><a href="#6-radec-counts-map">6. RA/Dec Counts Map</a></li><li><a href="#7-smoothed-counts-map">7. Smoothed Counts Map</a></li><li><a href="#8-approx-sideband-significance-quicklook">8. Approx Sideband Significance Quicklook</a></li><li><a href="#9-profile-diagnostics">9. Profile Diagnostics</a><ol><li><a href="#raw-profiles">Raw Profiles</a></li><li><a href="#normalized-excess-like-profiles">Normalized Excess-like Profiles</a></li></ol></li><li><a href="#10-当前结论">10. 当前结论</a></li><li><a href="#11-下一步">11. 下一步</a></li><li><a href="#12-产物清单">12. 产物清单</a></li></ol>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <article>
+      <h1 id="crab-v2-cell-sky-maps--ml-能量--nhit-单元天图诊断">Crab v2 Cell Sky Maps — ML 能量 × Nhit 单元天图诊断<a class="headerlink" href="#crab-v2-cell-sky-maps--ml-能量--nhit-单元天图诊断" title="Permanent link">&para;</a></h1>
+<p><strong>日期：</strong> 2026-06-08<br />
+<strong>目标：</strong> 对 <code>apply/config/cell_selection_v2.csv</code> 中的 31 个 v2 <code>(Nhit, log10 E_pred)</code> cell，复刻 v1 sky-map 诊断流程，检查 Crab 附近观测事例在新 cell 设计下的空间分布、坐标对齐、中心亮斑和高能端统计。</p>
+<p>本报告只做 skymap quicklook 诊断，不代表正式 Stage D 直接积分法背景，也不替代后续 SED forward-folding。v2 的核心变化是：只保留 <code>Nhit &gt;= 200</code>，新增 <code>[2000,3000)</code> Nhit 行，并把高 Nhit 行的 <code>ml_logE_pred</code> 拓展到 <code>[4.75,5.0)</code> 和 <code>&gt;=5</code>。</p>
+<hr />
+<h2 id="1-输入与选择">1. 输入与选择<a class="headerlink" href="#1-输入与选择" title="Permanent link">&para;</a></h2>
+<p>本次运行使用全量 observation eval ROOT 与 recovered-time friend tree：</p>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>数值 / 路径</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>观测 eval ROOT</td>
+<td><code>/mnt/mydisk/WCDA_observation_eval/&lt;MMDD&gt;/Esg*.root</code></td>
+</tr>
+<tr>
+<td>recovered time ROOT</td>
+<td><code>/mnt/mydisk/WCDA_observation_eval/recovered_time/&lt;MMDD&gt;/*.time.root</code></td>
+</tr>
+<tr>
+<td>cell selection</td>
+<td><code>apply/config/cell_selection_v2.csv</code></td>
+</tr>
+<tr>
+<td>画图脚本</td>
+<td><code>apply/plot_crab_cell_skymaps.py</code></td>
+</tr>
+<tr>
+<td>输出目录</td>
+<td><code>apply/plot/crab_cell_skymaps_v2/</code></td>
+</tr>
+<tr>
+<td>输入文件对</td>
+<td>1258</td>
+</tr>
+<tr>
+<td>entry 对齐方式</td>
+<td>同名 ROOT 与 <code>.time.root</code> 按 entry 顺序对齐</td>
+</tr>
+<tr>
+<td>missing time files</td>
+<td>0</td>
+</tr>
+<tr>
+<td>entry mismatch files</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<p>事件选择：</p>
+<div class="codehilite"><pre><span></span><code>match_status == 0
+pincness &lt; 1.1
+fitstat == 0
+theta &lt; 50 deg
+</code></pre></div>
+
+<p>用于分 cell 的观测量：</p>
+<div class="codehilite"><pre><span></span><code>nv
+ml_logE_pred
+ra_mean_deg
+dec_mean_deg
+</code></pre></div>
+
+<p>Crab 坐标固定为：</p>
+<div class="codehilite"><pre><span></span><code>RA  = 83.63 deg
+Dec = 22.01 deg
+</code></pre></div>
+
+<hr />
+<h2 id="2-v2-cell-设计">2. v2 Cell 设计<a class="headerlink" href="#2-v2-cell-设计" title="Permanent link">&para;</a></h2>
+<p>v2 cell 不再使用 v1 中的低 Nhit 行：</p>
+<div class="codehilite"><pre><span></span><code>[30,60), [60,100), [100,200)
+</code></pre></div>
+
+<p>保留并扩展的 Nhit 行为：</p>
+<div class="codehilite"><pre><span></span><code>[200,300), [300,500), [500,800), [800,1100), [1100,2000), [2000,3000)
+</code></pre></div>
+
+<p><code>ml_logE_pred</code> 仍按 physical ridge 收束，而不是把所有 acceptable 高能长尾都纳入。低 Nhit 行只保留到较低预测能量，高 Nhit 行逐步拓展到 <code>&gt;=5</code>。<code>[2000,3000)</code> 的 <code>mc_count</code> 当前使用旧 <code>&gt;=2000</code> summary 作为参考，正式 MC 分箱后需要再确认。</p>
+<h3 id="v21-roi-统计门槛">v2.1 ROI 统计门槛<a class="headerlink" href="#v21-roi-统计门槛" title="Permanent link">&para;</a></h3>
+<p>根据本次 v2 skymap 的 Crab ROI 统计，新增一个更适合后续 baseline 的选择文件：</p>
+<div class="codehilite"><pre><span></span><code>apply/config/cell_selection_v2p1.csv
+</code></pre></div>
+
+<p>v2p1 使用硬门槛：</p>
+<div class="codehilite"><pre><span></span><code>Crab 10 deg ROI events &gt;= 5,000
+</code></pre></div>
+
+<p>因此从 31 个 v2 cell 中保留 23 个，剔除 8 个低统计 cell。v2p1 文件保留原 v2 <code>cell_id</code>，方便和本报告的 31-panel skymap 直接对照。</p>
+<p>剔除 cell 如下：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">cell</th>
+<th>Nhit bin</th>
+<th>log10 E_pred bin</th>
+<th style="text-align: right;">cut + match events</th>
+<th style="text-align: right;">Crab ROI events</th>
+<th>处理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">19</td>
+<td><code>[800,1100)</code></td>
+<td><code>[4.25,4.5)</code></td>
+<td style="text-align: right;">10,264</td>
+<td style="text-align: right;">3,006</td>
+<td>drop</td>
+</tr>
+<tr>
+<td style="text-align: right;">20</td>
+<td><code>[800,1100)</code></td>
+<td><code>[4.5,4.75)</code></td>
+<td style="text-align: right;">2,001</td>
+<td style="text-align: right;">545</td>
+<td>drop</td>
+</tr>
+<tr>
+<td style="text-align: right;">24</td>
+<td><code>[1100,2000)</code></td>
+<td><code>[4.5,4.75)</code></td>
+<td style="text-align: right;">11,716</td>
+<td style="text-align: right;">3,904</td>
+<td>drop</td>
+</tr>
+<tr>
+<td style="text-align: right;">25</td>
+<td><code>[1100,2000)</code></td>
+<td><code>[4.75,5.0)</code></td>
+<td style="text-align: right;">4,580</td>
+<td style="text-align: right;">1,510</td>
+<td>drop</td>
+</tr>
+<tr>
+<td style="text-align: right;">26</td>
+<td><code>[1100,2000)</code></td>
+<td><code>&gt;=5</code></td>
+<td style="text-align: right;">1,934</td>
+<td style="text-align: right;">546</td>
+<td>drop</td>
+</tr>
+<tr>
+<td style="text-align: right;">27</td>
+<td><code>[2000,3000)</code></td>
+<td><code>[4.0,4.25)</code></td>
+<td style="text-align: right;">391</td>
+<td style="text-align: right;">167</td>
+<td>drop</td>
+</tr>
+<tr>
+<td style="text-align: right;">28</td>
+<td><code>[2000,3000)</code></td>
+<td><code>[4.25,4.5)</code></td>
+<td style="text-align: right;">2,201</td>
+<td style="text-align: right;">799</td>
+<td>drop</td>
+</tr>
+<tr>
+<td style="text-align: right;">29</td>
+<td><code>[2000,3000)</code></td>
+<td><code>[4.5,4.75)</code></td>
+<td style="text-align: right;">7,251</td>
+<td style="text-align: right;">2,945</td>
+<td>drop</td>
+</tr>
+</tbody>
+</table>
+<p>保留 cell 为：</p>
+<div class="codehilite"><pre><span></span><code>1-18, 21-23, 30-31
+</code></pre></div>
+
+<p>这个规则的物理含义是：v2 skymap 仍展示完整 31-cell 设计，用于诊断高能端和边界 cell；v2p1 则作为后续响应、PSF、背景和拟合的更稳 baseline，避免把 Crab ROI 统计不足的 panel 带入正式链路。</p>
+<hr />
+<h2 id="3-投影与图像参数">3. 投影与图像参数<a class="headerlink" href="#3-投影与图像参数" title="Permanent link">&para;</a></h2>
+<p>局部天图使用 Crab 中心附近的近似 tangent-plane offset：</p>
+<div class="codehilite"><pre><span></span><code>x = wrap(ra_mean_deg - RA_Crab) * cos(Dec_Crab)
+y = dec_mean_deg - Dec_Crab
+</code></pre></div>
+
+<p>其中 <code>(0,0)</code> 是 Crab 位置，<code>x/y</code> 近似表示相对 Crab 的东西 / 南北方向角距离，单位都是 degree。<code>wrap</code> 用来处理 RA 的 0/360 deg 回绕。</p>
+<p>这里乘 <code>cos(Dec_Crab)</code> 是因为 RA 是沿赤纬圈量到的角度：同样的 RA 差，在实际天空上的横向角距离要乘以该赤纬圈半径相对赤道的比例 <code>cos(dec)</code>。Crab 的 Dec ≈ 22.01 deg，因此：</p>
+<div class="codehilite"><pre><span></span><code>1 deg RA at Crab Dec ≈ cos(22.01 deg) = 0.927 deg
+</code></pre></div>
+
+<p>offset 图适合看源区、PSF、centroid 偏移，以及按角距离定义源区 / 背景区半径。RA/Dec 图适合直观看绝对天球坐标，确认事件是否落在预期 RA/Dec 范围。</p>
+<p>默认图像参数：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th style="text-align: right;">数值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ROI half-width</td>
+<td style="text-align: right;">10 deg</td>
+</tr>
+<tr>
+<td>pixel size</td>
+<td style="text-align: right;">0.1 deg</td>
+</tr>
+<tr>
+<td>每个 cell map shape</td>
+<td style="text-align: right;">200 x 200</td>
+</tr>
+<tr>
+<td>smoothing sigma</td>
+<td style="text-align: right;">0.3 deg</td>
+</tr>
+<tr>
+<td>source exclusion radius for sideband quicklook</td>
+<td style="text-align: right;">2.0 deg</td>
+</tr>
+<tr>
+<td>sideband statistic</td>
+<td style="text-align: right;">mean per Dec strip</td>
+</tr>
+<tr>
+<td>quicklook sideband x range</td>
+<td style="text-align: right;"><code>|RA offset * cos(Crab Dec)| &lt; 5 deg</code></td>
+</tr>
+<tr>
+<td>RA/Dec counts RA range</td>
+<td style="text-align: right;">72.8439 deg 到 94.4161 deg</td>
+</tr>
+<tr>
+<td>RA/Dec counts Dec range</td>
+<td style="text-align: right;">12.0100 deg 到 32.0100 deg</td>
+</tr>
+<tr>
+<td>RA/Dec RA axis direction</td>
+<td style="text-align: right;">RA 递增向右</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-全量运行统计">4. 全量运行统计<a class="headerlink" href="#4-全量运行统计" title="Permanent link">&para;</a></h2>
+<p>全量命令：</p>
+<div class="codehilite"><pre><span></span><code>/home/server/anaconda3/envs/py310/bin/python<span class="w"> </span>apply/plot_crab_cell_skymaps.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--analysis-version<span class="w"> </span>v2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output-prefix<span class="w"> </span>crab_v2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--cell-selection-csv<span class="w"> </span>apply/config/cell_selection_v2.csv<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output-dir<span class="w"> </span>apply/plot/crab_cell_skymaps_v2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--print-every<span class="w"> </span><span class="m">100</span>
+</code></pre></div>
+
+<p>总体统计：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th style="text-align: right;">数值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>processed files</td>
+<td style="text-align: right;">1258 / 1258</td>
+</tr>
+<tr>
+<td>total entries seen</td>
+<td style="text-align: right;">127,692,389</td>
+</tr>
+<tr>
+<td>cut + match events</td>
+<td style="text-align: right;">127,691,852</td>
+</tr>
+<tr>
+<td>Crab 10 deg ROI events, all cells</td>
+<td style="text-align: right;">45,502,526</td>
+</tr>
+<tr>
+<td>Crab 10 deg ROI events, selected v2 cells</td>
+<td style="text-align: right;">5,599,233</td>
+</tr>
+<tr>
+<td>selected v2 cells / all ROI</td>
+<td style="text-align: right;">12.31%</td>
+</tr>
+<tr>
+<td>output map tensor shape</td>
+<td style="text-align: right;">31 x 200 x 200</td>
+</tr>
+</tbody>
+</table>
+<p>每个 v2 cell 的事例数：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">cell</th>
+<th>Nhit bin</th>
+<th>log10 E_pred bin</th>
+<th style="text-align: right;">cut + match events</th>
+<th style="text-align: right;">Crab ROI events</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">1</td>
+<td><code>[200,300)</code></td>
+<td><code>[2,3)</code></td>
+<td style="text-align: right;">4,025,524</td>
+<td style="text-align: right;">1,607,188</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td><code>[200,300)</code></td>
+<td><code>[3,3.25)</code></td>
+<td style="text-align: right;">2,376,396</td>
+<td style="text-align: right;">877,841</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td><code>[200,300)</code></td>
+<td><code>[3.25,3.5)</code></td>
+<td style="text-align: right;">1,587,585</td>
+<td style="text-align: right;">553,094</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td><code>[200,300)</code></td>
+<td><code>[3.5,3.75)</code></td>
+<td style="text-align: right;">953,366</td>
+<td style="text-align: right;">319,727</td>
+</tr>
+<tr>
+<td style="text-align: right;">5</td>
+<td><code>[200,300)</code></td>
+<td><code>[3.75,4.0)</code></td>
+<td style="text-align: right;">468,450</td>
+<td style="text-align: right;">151,395</td>
+</tr>
+<tr>
+<td style="text-align: right;">6</td>
+<td><code>[300,500)</code></td>
+<td><code>[3,3.25)</code></td>
+<td style="text-align: right;">1,400,831</td>
+<td style="text-align: right;">551,891</td>
+</tr>
+<tr>
+<td style="text-align: right;">7</td>
+<td><code>[300,500)</code></td>
+<td><code>[3.25,3.5)</code></td>
+<td style="text-align: right;">1,230,287</td>
+<td style="text-align: right;">450,530</td>
+</tr>
+<tr>
+<td style="text-align: right;">8</td>
+<td><code>[300,500)</code></td>
+<td><code>[3.5,3.75)</code></td>
+<td style="text-align: right;">741,698</td>
+<td style="text-align: right;">251,808</td>
+</tr>
+<tr>
+<td style="text-align: right;">9</td>
+<td><code>[300,500)</code></td>
+<td><code>[3.75,4.0)</code></td>
+<td style="text-align: right;">400,758</td>
+<td style="text-align: right;">130,865</td>
+</tr>
+<tr>
+<td style="text-align: right;">10</td>
+<td><code>[300,500)</code></td>
+<td><code>[4.0,4.25)</code></td>
+<td style="text-align: right;">172,853</td>
+<td style="text-align: right;">55,180</td>
+</tr>
+<tr>
+<td style="text-align: right;">11</td>
+<td><code>[500,800)</code></td>
+<td><code>[3.25,3.5)</code></td>
+<td style="text-align: right;">532,506</td>
+<td style="text-align: right;">211,419</td>
+</tr>
+<tr>
+<td style="text-align: right;">12</td>
+<td><code>[500,800)</code></td>
+<td><code>[3.5,3.75)</code></td>
+<td style="text-align: right;">424,891</td>
+<td style="text-align: right;">154,719</td>
+</tr>
+<tr>
+<td style="text-align: right;">13</td>
+<td><code>[500,800)</code></td>
+<td><code>[3.75,4.0)</code></td>
+<td style="text-align: right;">200,583</td>
+<td style="text-align: right;">66,419</td>
+</tr>
+<tr>
+<td style="text-align: right;">14</td>
+<td><code>[500,800)</code></td>
+<td><code>[4.0,4.25)</code></td>
+<td style="text-align: right;">80,068</td>
+<td style="text-align: right;">25,017</td>
+</tr>
+<tr>
+<td style="text-align: right;">15</td>
+<td><code>[500,800)</code></td>
+<td><code>[4.25,4.5)</code></td>
+<td style="text-align: right;">26,331</td>
+<td style="text-align: right;">8,382</td>
+</tr>
+<tr>
+<td style="text-align: right;">16</td>
+<td><code>[800,1100)</code></td>
+<td><code>[3.5,3.75)</code></td>
+<td style="text-align: right;">139,393</td>
+<td style="text-align: right;">55,142</td>
+</tr>
+<tr>
+<td style="text-align: right;">17</td>
+<td><code>[800,1100)</code></td>
+<td><code>[3.75,4.0)</code></td>
+<td style="text-align: right;">102,608</td>
+<td style="text-align: right;">37,724</td>
+</tr>
+<tr>
+<td style="text-align: right;">18</td>
+<td><code>[800,1100)</code></td>
+<td><code>[4.0,4.25)</code></td>
+<td style="text-align: right;">38,081</td>
+<td style="text-align: right;">12,463</td>
+</tr>
+<tr>
+<td style="text-align: right;">19</td>
+<td><code>[800,1100)</code></td>
+<td><code>[4.25,4.5)</code></td>
+<td style="text-align: right;">10,264</td>
+<td style="text-align: right;">3,006</td>
+</tr>
+<tr>
+<td style="text-align: right;">20</td>
+<td><code>[800,1100)</code></td>
+<td><code>[4.5,4.75)</code></td>
+<td style="text-align: right;">2,001</td>
+<td style="text-align: right;">545</td>
+</tr>
+<tr>
+<td style="text-align: right;">21</td>
+<td><code>[1100,2000)</code></td>
+<td><code>[3.75,4.0)</code></td>
+<td style="text-align: right;">55,576</td>
+<td style="text-align: right;">22,040</td>
+</tr>
+<tr>
+<td style="text-align: right;">22</td>
+<td><code>[1100,2000)</code></td>
+<td><code>[4.0,4.25)</code></td>
+<td style="text-align: right;">52,471</td>
+<td style="text-align: right;">19,684</td>
+</tr>
+<tr>
+<td style="text-align: right;">23</td>
+<td><code>[1100,2000)</code></td>
+<td><code>[4.25,4.5)</code></td>
+<td style="text-align: right;">28,669</td>
+<td style="text-align: right;">10,212</td>
+</tr>
+<tr>
+<td style="text-align: right;">24</td>
+<td><code>[1100,2000)</code></td>
+<td><code>[4.5,4.75)</code></td>
+<td style="text-align: right;">11,716</td>
+<td style="text-align: right;">3,904</td>
+</tr>
+<tr>
+<td style="text-align: right;">25</td>
+<td><code>[1100,2000)</code></td>
+<td><code>[4.75,5.0)</code></td>
+<td style="text-align: right;">4,580</td>
+<td style="text-align: right;">1,510</td>
+</tr>
+<tr>
+<td style="text-align: right;">26</td>
+<td><code>[1100,2000)</code></td>
+<td><code>&gt;=5</code></td>
+<td style="text-align: right;">1,934</td>
+<td style="text-align: right;">546</td>
+</tr>
+<tr>
+<td style="text-align: right;">27</td>
+<td><code>[2000,3000)</code></td>
+<td><code>[4.0,4.25)</code></td>
+<td style="text-align: right;">391</td>
+<td style="text-align: right;">167</td>
+</tr>
+<tr>
+<td style="text-align: right;">28</td>
+<td><code>[2000,3000)</code></td>
+<td><code>[4.25,4.5)</code></td>
+<td style="text-align: right;">2,201</td>
+<td style="text-align: right;">799</td>
+</tr>
+<tr>
+<td style="text-align: right;">29</td>
+<td><code>[2000,3000)</code></td>
+<td><code>[4.5,4.75)</code></td>
+<td style="text-align: right;">7,251</td>
+<td style="text-align: right;">2,945</td>
+</tr>
+<tr>
+<td style="text-align: right;">30</td>
+<td><code>[2000,3000)</code></td>
+<td><code>[4.75,5.0)</code></td>
+<td style="text-align: right;">13,339</td>
+<td style="text-align: right;">5,164</td>
+</tr>
+<tr>
+<td style="text-align: right;">31</td>
+<td><code>[2000,3000)</code></td>
+<td><code>&gt;=5</code></td>
+<td style="text-align: right;">22,973</td>
+<td style="text-align: right;">7,907</td>
+</tr>
+</tbody>
+</table>
+<p>最低统计 cell 是 <code>[2000,3000) x [4.0,4.25)</code>，Crab ROI 只有 <code>167</code> 个事件。这个 cell 在 counts map 中主要作为高 Nhit 低预测能量边界的诊断点，不应被当作稳定高贡献 cell。</p>
+<hr />
+<h2 id="5-counts-map">5. Counts Map<a class="headerlink" href="#5-counts-map" title="Permanent link">&para;</a></h2>
+<p>Counts map 只显示观测事例数：</p>
+<div class="codehilite"><pre><span></span><code>N_data(x, y | cell b)
+</code></pre></div>
+
+<p>它用于检查 v2 cell 下 Crab 附近观测数据的覆盖、坐标对齐、entry 对齐和异常结构。</p>
+<p><img alt="Crab v2 cell counts map" src="assets/crab-v2-cell-skymaps/crab_v2_counts_grid.png" /></p>
+<hr />
+<h2 id="6-radec-counts-map">6. RA/Dec Counts Map<a class="headerlink" href="#6-radec-counts-map" title="Permanent link">&para;</a></h2>
+<p>RA/Dec counts grid 和 offset counts map 使用完全相同的事件选择、ROI mask 和 31 个 v2 cell 分箱，只是填图时直接使用：</p>
+<div class="codehilite"><pre><span></span><code>x-axis = ra_mean_deg
+y-axis = dec_mean_deg
+</code></pre></div>
+
+<p>图像范围对应当前 Crab ROI：</p>
+<div class="codehilite"><pre><span></span><code>RA  = RA_Crab +/- half_width_deg / cos(Dec_Crab)
+Dec = Dec_Crab +/- half_width_deg
+</code></pre></div>
+
+<p>即 RA ≈ <code>[72.8439, 94.4161] deg</code>，Dec ≈ <code>[12.0100, 32.0100] deg</code>。每个 panel 中黑色 <code>+</code> 标记 Crab 位置 <code>(83.63, 22.01)</code>。</p>
+<p>这张图采用普通数学坐标方向：<strong>RA 递增向右</strong>。它没有采用部分天文图常见的 RA 递减向右画法。</p>
+<p><img alt="Crab v2 cell RA/Dec counts map" src="assets/crab-v2-cell-skymaps/crab_v2_counts_radec_grid.png" /></p>
+<hr />
+<h2 id="7-smoothed-counts-map">7. Smoothed Counts Map<a class="headerlink" href="#7-smoothed-counts-map" title="Permanent link">&para;</a></h2>
+<p>Smoothed counts map 对每个 cell 的 counts map 做 <code>sigma = 0.3 deg</code> 的 Gaussian smoothing。这个版本主要用于肉眼检查局部结构和潜在源点，不改变原始 counts map 的定义。</p>
+<p><img alt="Crab v2 cell smoothed counts map" src="assets/crab-v2-cell-skymaps/crab_v2_smoothed_counts_grid.png" /></p>
+<hr />
+<h2 id="8-approx-sideband-significance-quicklook">8. Approx Sideband Significance Quicklook<a class="headerlink" href="#8-approx-sideband-significance-quicklook" title="Permanent link">&para;</a></h2>
+<p>第三张图使用简单等赤纬 sideband 近似背景：</p>
+<ol>
+<li>对每个 cell 和每个 Dec strip，排除 Crab 中心 <code>2 deg</code> 内区域；</li>
+<li>只使用同一 strip 中 <code>r &gt;= 2 deg</code> 且 <code>|RA offset * cos(Crab Dec)| &lt; 5 deg</code> 的 RA-offset bins；</li>
+<li>对这些 bins 取 mean 作为该 Dec strip 的局部背景水平；</li>
+<li>不使用 <code>|RA offset * cos(Crab Dec)| &gt;= 5 deg</code> 的 ROI 边缘区域；</li>
+<li>对 counts 和 background 都做 <code>0.3 deg</code> smoothing；</li>
+<li>计算：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>approx_sigma = (smoothed_counts - smoothed_background) / sqrt(smoothed_background)
+</code></pre></div>
+
+<p>这不是直接积分法背景，也不是 Li-Ma significance。它只用于快速诊断源区是否在高贡献 cell 中出现，以及是否存在大尺度结构或明显 acceptance 问题。</p>
+<p><img alt="Crab v2 cell approx significance quicklook" src="assets/crab-v2-cell-skymaps/crab_v2_approx_significance_grid.png" /></p>
+<hr />
+<h2 id="9-profile-diagnostics">9. Profile Diagnostics<a class="headerlink" href="#9-profile-diagnostics" title="Permanent link">&para;</a></h2>
+<p>Profile 图从 raw counts map 投影得到，仍然包含背景和 acceptance 结构，不能解释为 Crab 的真实角直径。</p>
+<p>定义如下：</p>
+<div class="codehilite"><pre><span></span><code>RA-offset profile:
+  select |Dec offset| &lt; 1 deg
+  sum counts along y
+  plot counts vs x = RA offset * cos(Crab Dec)
+
+Dec-offset profile:
+  select |RA offset * cos(Crab Dec)| &lt; 1 deg
+  sum counts along x
+  plot counts vs y = Dec offset
+</code></pre></div>
+
+<p>Raw profile 用来看统计量、背景水平和 acceptance 梯度；normalized profile 用来把不同 cell 的峰值拉到同一尺度，方便比较中心 excess 的宽度。它们主要回答：</p>
+<ol>
+<li>中心 excess 是否在 <code>(0,0)</code> 附近；</li>
+<li>RA-offset 和 Dec-offset 两个方向是否大致对称；</li>
+<li>高 Nhit / 高预测能量 cell 的中心结构是否有变窄趋势；</li>
+<li>某些 cell 是否出现异常偏心、宽尾或大尺度背景结构。</li>
+</ol>
+<h3 id="raw-profiles">Raw Profiles<a class="headerlink" href="#raw-profiles" title="Permanent link">&para;</a></h3>
+<p><img alt="Crab v2 RA-offset raw profiles" src="assets/crab-v2-cell-skymaps/crab_v2_ra_offset_profiles_grid.png" /></p>
+<p><img alt="Crab v2 Dec-offset raw profiles" src="assets/crab-v2-cell-skymaps/crab_v2_dec_offset_profiles_grid.png" /></p>
+<h3 id="normalized-excess-like-profiles">Normalized Excess-like Profiles<a class="headerlink" href="#normalized-excess-like-profiles" title="Permanent link">&para;</a></h3>
+<p><img alt="Crab v2 RA-offset normalized profiles" src="assets/crab-v2-cell-skymaps/crab_v2_ra_offset_profiles_normalized_grid.png" /></p>
+<p><img alt="Crab v2 Dec-offset normalized profiles" src="assets/crab-v2-cell-skymaps/crab_v2_dec_offset_profiles_normalized_grid.png" /></p>
+<hr />
+<h2 id="10-当前结论">10. 当前结论<a class="headerlink" href="#10-当前结论" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>数据连接仍然干净。</strong> 1258 对 eval ROOT 与 recovered-time ROOT 全部找到，<code>t_eventout</code> 与 <code>t_recovered_time</code> 没有 entry mismatch。</li>
+<li><strong>v2 显著压缩了低 Nhit 背景。</strong> v1 selected cells 覆盖 Crab ROI 的 <code>83.56%</code>，v2 selected cells 覆盖 <code>12.31%</code>，因为 v2 删除了 <code>[30,200)</code> 的大背景行。</li>
+<li><strong>高能端统计差异很大。</strong> v2 最高统计 cell 有 <code>1,607,188</code> 个 Crab ROI 事件，但最低 cell 只有 <code>167</code> 个；因此已新增 <code>cell_selection_v2p1.csv</code>，用 <code>Crab ROI &gt;= 5,000</code> 剔除 8 个低统计 cell。</li>
+<li><strong>offset 和 RA/Dec 图提供互补检查。</strong> offset 图适合看源区、PSF 和 centroid；RA/Dec 图适合确认绝对天球坐标范围。</li>
+<li><strong>quicklook significance 和 profiles 仍只是诊断。</strong> 这些图没有替代 Stage D 直接积分法背景，不能用于最终 SED 或物理显著性声明。</li>
+</ol>
+<hr />
+<h2 id="11-下一步">11. 下一步<a class="headerlink" href="#11-下一步" title="Permanent link">&para;</a></h2>
+<ol>
+<li>用 v2 Nhit 分箱重新跑 MC binned cache，正式拆出 <code>[2000,3000)</code>，确认 v2p1 cell 的 MC count 和响应稳定性。</li>
+<li>基于 <code>cell_selection_v2p1.csv</code> 重跑 Stage A response、Stage B PSF、Stage C observation reduction 和 Stage D background。</li>
+<li>用 Stage D 背景输出正式 excess map 和 Li-Ma significance map。</li>
+</ol>
+<hr />
+<h2 id="12-产物清单">12. 产物清单<a class="headerlink" href="#12-产物清单" title="Permanent link">&para;</a></h2>
+<p>本次诊断生成的本地文件：</p>
+<div class="codehilite"><pre><span></span><code>apply/config/cell_selection_v2.csv
+apply/config/cell_selection_v2p1.csv
+apply/plot_crab_cell_skymaps.py
+apply/plot/crab_cell_skymaps_v2/crab_v2_counts_grid.png
+apply/plot/crab_cell_skymaps_v2/crab_v2_counts_radec_grid.png
+apply/plot/crab_cell_skymaps_v2/crab_v2_smoothed_counts_grid.png
+apply/plot/crab_cell_skymaps_v2/crab_v2_approx_significance_grid.png
+apply/plot/crab_cell_skymaps_v2/crab_v2_ra_offset_profiles_grid.png
+apply/plot/crab_cell_skymaps_v2/crab_v2_dec_offset_profiles_grid.png
+apply/plot/crab_cell_skymaps_v2/crab_v2_ra_offset_profiles_normalized_grid.png
+apply/plot/crab_cell_skymaps_v2/crab_v2_dec_offset_profiles_normalized_grid.png
+apply/plot/crab_cell_skymaps_v2/crab_v2_maps.npz
+apply/plot/crab_cell_skymaps_v2/crab_v2_maps_meta.json
+</code></pre></div>
+
+<p>报告源文件：</p>
+<div class="codehilite"><pre><span></span><code>apply/report/crab_v2_cell_skymaps.md
+</code></pre></div>
+    </article>
+    <footer class="page-footer">
+      <span>更新于 2026-06-09</span>
+      <a href="https://github.com/Pluto235/any-reports" target="_blank" rel="noopener">View on GitHub →</a>
+    </footer>
+  </main>
+
+  <aside class="anchors" id="anchors">
+    <p class="anchors-title">本页章节</p>
+    <ul>
+      <li><a href="#1-输入与选择">1. 输入与选择</a></li><li><a href="#2-v2-cell-设计">2. v2 Cell 设计</a></li><li><a href="#3-投影与图像参数">3. 投影与图像参数</a></li><li><a href="#4-全量运行统计">4. 全量运行统计</a></li><li><a href="#5-counts-map">5. Counts Map</a></li><li><a href="#6-radec-counts-map">6. RA/Dec Counts Map</a></li><li><a href="#7-smoothed-counts-map">7. Smoothed Counts Map</a></li><li><a href="#8-approx-sideband-significance-quicklook">8. Approx Sideband Significance Quicklook</a></li><li><a href="#9-profile-diagnostics">9. Profile Diagnostics</a></li><li><a href="#10-当前结论">10. 当前结论</a></li><li><a href="#11-下一步">11. 下一步</a></li><li><a href="#12-产物清单">12. 产物清单</a></li>
+    </ul>
+  </aside>
+
+</div>
+
+<script>
+// Scroll-spy：高亮当前可视区的章节
+(function () {
+  const navLinks = document.querySelectorAll('.sidebar-nav a, .anchors a');
+  if (!navLinks.length) return;
+
+  const idToLinks = new Map();
+  navLinks.forEach(a => {
+    const id = decodeURIComponent((a.getAttribute('href') || '').replace(/^#/, ''));
+    if (!id) return;
+    if (!idToLinks.has(id)) idToLinks.set(id, []);
+    idToLinks.get(id).push(a);
+  });
+
+  const headings = Array.from(document.querySelectorAll('.content h1, .content h2, .content h3, .content h4'))
+    .filter(h => h.id && idToLinks.has(h.id));
+  if (!headings.length) return;
+
+  let current = null;
+  function setActive(id) {
+    if (current === id) return;
+    if (current && idToLinks.has(current)) {
+      idToLinks.get(current).forEach(a => a.classList.remove('active'));
+    }
+    current = id;
+    if (id && idToLinks.has(id)) {
+      idToLinks.get(id).forEach(a => {
+        a.classList.add('active');
+        // 滚动到 nav 中可视区
+        const sb = a.closest('.sidebar, .anchors');
+        if (sb) {
+          const ar = a.getBoundingClientRect();
+          const sr = sb.getBoundingClientRect();
+          if (ar.top < sr.top || ar.bottom > sr.bottom) {
+            a.scrollIntoView({ block: 'nearest' });
+          }
+        }
+      });
+    }
+  }
+
+  function update() {
+    const offset = 80;
+    let active = headings[0].id;
+    for (const h of headings) {
+      if (h.getBoundingClientRect().top - offset <= 0) {
+        active = h.id;
+      } else {
+        break;
+      }
+    }
+    setActive(active);
+  }
+
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('hashchange', update);
+  update();
+
+  // 移动端：点 nav 后关掉抽屉
+  document.querySelectorAll('.sidebar-nav a').forEach(a => {
+    a.addEventListener('click', () => {
+      document.querySelector('.sidebar')?.classList.remove('open');
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

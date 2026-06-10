@@ -27,7 +27,11 @@ DEFAULT_CELL_SELECTION = "apply/config/cell_selection_v1.csv"
 DEFAULT_OUTPUT_DIR = "apply/output/stage_a"
 DEFAULT_TREE_NAME = "t_eventout"
 DEFAULT_PRIMARY_DENOMINATOR_NPZ = "/mnt/mydisk/WCDA_simulation_primary_hist/primary_denominator_stage_a.npz"
-DEFAULT_S0_M2 = 40000.0
+DEFAULT_INJECTION_AREA_CM2 = 4.0e10
+CM2_PER_M2 = 1.0e4
+DEFAULT_S0_M2 = DEFAULT_INJECTION_AREA_CM2 / CM2_PER_M2
+DEFAULT_THROWN_GEOMETRY = "square_core_box"
+DEFAULT_THROWN_CORE_RANGE_M = [-1000.0, 1000.0]
 
 
 @dataclass(frozen=True)
@@ -38,6 +42,10 @@ class CellSpec:
     mc_count: int
     selection_version: str
     selection_reason: str
+    raw_ledger_version: str
+    cell_role: str
+    role_reason: str
+    source_pool: str
 
 
 def parse_args() -> argparse.Namespace:
@@ -146,6 +154,10 @@ def load_cells(selection_csv: Path) -> List[CellSpec]:
                     mc_count=int(row.get("mc_count") or 0),
                     selection_version=row.get("selection_version", ""),
                     selection_reason=row.get("selection_reason", ""),
+                    raw_ledger_version=row.get("raw_ledger_version", ""),
+                    cell_role=row.get("cell_role", ""),
+                    role_reason=row.get("role_reason", ""),
+                    source_pool=row.get("source_pool", ""),
                 )
             )
     if not cells:
@@ -643,6 +655,23 @@ def effective_area(eta: np.ndarray, theta_edges_deg: np.ndarray, s0_m2: float) -
     return float(s0_m2) * eta * cos_theta[None, None, :], theta_centers_deg
 
 
+def thrown_area_metadata(s0_m2: float) -> Dict[str, object]:
+    return {
+        "s0_m2": float(s0_m2),
+        "s0_cm2": float(s0_m2) * CM2_PER_M2,
+        "injection_area_value": float(DEFAULT_INJECTION_AREA_CM2),
+        "injection_area_unit": "cm^2",
+        "geometry": DEFAULT_THROWN_GEOMETRY,
+        "core_x_range_m": list(DEFAULT_THROWN_CORE_RANGE_M),
+        "core_y_range_m": list(DEFAULT_THROWN_CORE_RANGE_M),
+        "source_evidence": (
+            "IHEP upstream t_evth.v[48] injectionArea=4.0e10; "
+            "coreX_WL/coreY_WL are in cm and map to eventout mc_xc/mc_yc after division by 100."
+        ),
+        "unit_note": "4.0e10 is cm^2 = 4.0e6 m^2, not mm^2 = 4.0e4 m^2.",
+    }
+
+
 def finite_summary(name: str, values: np.ndarray) -> Dict[str, object]:
     finite = values[np.isfinite(values)]
     if finite.size == 0:
@@ -717,6 +746,14 @@ def write_markdown_summary(
         f.write(f"- Absolute effective area status: `{metadata['absolute_effective_area_status']}`\n")
         if metadata.get("s0_m2") is not None:
             f.write(f"- S0: {metadata['s0_m2']} m^2\n")
+        thrown_area = metadata.get("thrown_area")
+        if isinstance(thrown_area, dict):
+            f.write(
+                "- Injection area: "
+                f"{thrown_area.get('injection_area_value')} {thrown_area.get('injection_area_unit')} "
+                f"= {thrown_area.get('s0_m2')} m^2\n"
+            )
+            f.write(f"- Thrown geometry: `{thrown_area.get('geometry')}`\n")
         f.write(f"- Empty denominator bins: {empty_denominator_bins}\n")
         f.write(f"- Denominator bins with count < 10: {low_denominator_bins}\n")
         f.write(f"- NPZ: `{metadata['npz_path']}`\n\n")
@@ -848,6 +885,10 @@ def main() -> None:
                 "mc_count_reference": int(cell.mc_count),
                 "selection_version": cell.selection_version,
                 "selection_reason": cell.selection_reason,
+                "raw_ledger_version": cell.raw_ledger_version,
+                "cell_role": cell.cell_role,
+                "role_reason": cell.role_reason,
+                "source_pool": cell.source_pool,
             }
             for idx, cell in enumerate(cells)
         ],
@@ -855,6 +896,7 @@ def main() -> None:
         "theta_true_edges_deg": theta_edges_deg.tolist(),
         "theta_true_centers_deg": theta_centers_deg.tolist(),
         "s0_m2": float(args.s0_m2),
+        "thrown_area": thrown_area_metadata(float(args.s0_m2)),
         "effective_area_formula": "a_eff_m2 = s0_m2 * cos(theta_true_bin_center) * eta",
         "cos_theta_source": "theta_true_bin_center",
         "cuts": {

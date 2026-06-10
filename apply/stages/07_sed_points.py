@@ -40,6 +40,7 @@ DEFAULT_EXPECTED_GAMMA = 2.84847
 DEFAULT_EXPECTED_CHI2 = 17.831
 DEFAULT_EXPECTED_NDOF = 9
 M2_TO_CM2 = 1.0e4
+ERG_TO_TEV = 0.6241509074460763
 REQUIRED_CELL_IDS = list(range(8, 19))
 EXCLUDED_CELL_IDS = list(range(1, 8))
 
@@ -116,6 +117,86 @@ WCDA1_POOL1_TABLE1_POINTS = [
         "dnde": 6.91e-14,
         "dnde_err": 1.0e-14,
     },
+]
+
+EXTERNAL_CRAB_SED_REFERENCE_SOURCES = {
+    "magic_joint_crab": {
+        "label": "MAGIC",
+        "source": "open-gamma-ray-astro/joint-crab data/other/crab_mwl.fits.gz, paper=magic, component=nebula",
+        "paper": "VHE gamma-ray observation of the Crab Nebula and its pulsar with the MAGIC telescope",
+        "doi": "10.1086/525270",
+        "url": "https://github.com/open-gamma-ray-astro/joint-crab",
+        "notes": "Albert et al. 2008 table points, mirrored by naima CrabNebula_spectrum.ecsv; energy flux values converted from erg cm^-2 s^-1 to TeV cm^-2 s^-1. MAGIC 2015 reaches close to 30 TeV, but no public original flux-point table was found, so it is not mixed into this diagnostic plot.",
+    },
+    "hess_2024_stereo": {
+        "label": "H.E.S.S.",
+        "source": "H.E.S.S. 2024 official auxiliary data, Crab2024_flux_points_hess_stereo.ecsv",
+        "paper": "The Crab Nebula with H.E.S.S.: long-term measurements of the TeV spectrum",
+        "doi": "10.1051/0004-6361/202348651",
+        "url": "https://hess-experiment.eu/publications/2024/06/PUB25655/",
+        "notes": "Stereo CT1-4 flux points; e_ref in TeV and E^2 dN/dE in TeV cm^-2 s^-1.",
+    },
+    "hawc_2019_nn": {
+        "label": "HAWC NN",
+        "source": "HAWC 2019 ApJ Table 4, neural-network estimator flux points",
+        "paper": "Measurement of the Crab Nebula Spectrum Past 100 TeV with HAWC",
+        "doi": "10.3847/1538-4357/ab2f7d",
+        "url": "https://doi.org/10.3847/1538-4357/ab2f7d",
+        "notes": "Flux points are E^2 dN/dE at simulated median energy; statistical errors only. The final 177-316 TeV upper limit is recorded but not plotted as a detection point.",
+    },
+}
+
+EXTERNAL_CRAB_SED_REFERENCE_POINTS = [
+    # MAGIC nebula points from joint-crab crab_mwl.fits.gz, converted from erg to TeV.
+    {"dataset": "magic_joint_crab", "label": "MAGIC", "energy_tev": 0.1270122520, "e2_dnde": 9.4321e-11 * ERG_TO_TEV, "e2_dnde_err": 9.8190e-12 * ERG_TO_TEV, "is_upper_limit": False},
+    {"dataset": "magic_joint_crab", "label": "MAGIC", "energy_tev": 0.2100127280, "e2_dnde": 9.9625e-11 * ERG_TO_TEV, "e2_dnde_err": 6.3570e-12 * ERG_TO_TEV, "is_upper_limit": False},
+    {"dataset": "magic_joint_crab", "label": "MAGIC", "energy_tev": 0.3459757157, "e2_dnde": 8.3819e-11 * ERG_TO_TEV, "e2_dnde_err": 4.4115e-12 * ERG_TO_TEV, "is_upper_limit": False},
+    {"dataset": "magic_joint_crab", "label": "MAGIC", "energy_tev": 0.5699616255, "e2_dnde": 6.8712e-11 * ERG_TO_TEV, "e2_dnde_err": 3.6440e-12 * ERG_TO_TEV, "is_upper_limit": False},
+    {"dataset": "magic_joint_crab", "label": "MAGIC", "energy_tev": 0.9400384471, "e2_dnde": 5.0257e-11 * ERG_TO_TEV, "e2_dnde_err": 3.2560e-12 * ERG_TO_TEV, "is_upper_limit": False},
+    {"dataset": "magic_joint_crab", "label": "MAGIC", "energy_tev": 1.5500496750, "e2_dnde": 3.8030e-11 * ERG_TO_TEV, "e2_dnde_err": 2.8485e-12 * ERG_TO_TEV, "is_upper_limit": False},
+    {"dataset": "magic_joint_crab", "label": "MAGIC", "energy_tev": 2.5541453979, "e2_dnde": 2.8113e-11 * ERG_TO_TEV, "e2_dnde_err": 3.0310e-12 * ERG_TO_TEV, "is_upper_limit": False},
+    {"dataset": "magic_joint_crab", "label": "MAGIC", "energy_tev": 4.2115854476, "e2_dnde": 1.9328e-11 * ERG_TO_TEV, "e2_dnde_err": 3.1265e-12 * ERG_TO_TEV, "is_upper_limit": False},
+    {"dataset": "magic_joint_crab", "label": "MAGIC", "energy_tev": 6.9429752385, "e2_dnde": 8.8818e-12 * ERG_TO_TEV, "e2_dnde_err": 4.09325e-12 * ERG_TO_TEV, "is_upper_limit": False},
+    # H.E.S.S. 2024 official stereo CT1-4 points.
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 0.604296, "e2_dnde": 5.35379e-11, "e2_dnde_err": 1.85923e-12, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 0.697831, "e2_dnde": 4.64278e-11, "e2_dnde_err": 1.59802e-12, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 0.805842, "e2_dnde": 4.35452e-11, "e2_dnde_err": 1.21373e-12, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 0.930572, "e2_dnde": 3.91649e-11, "e2_dnde_err": 1.11401e-12, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 1.074608, "e2_dnde": 4.04877e-11, "e2_dnde_err": 1.12521e-12, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 1.240938, "e2_dnde": 3.50196e-11, "e2_dnde_err": 1.04690e-12, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 1.433013, "e2_dnde": 3.08425e-11, "e2_dnde_err": 1.01445e-12, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 1.654817, "e2_dnde": 3.12016e-11, "e2_dnde_err": 1.01792e-12, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 1.910953, "e2_dnde": 2.80055e-11, "e2_dnde_err": 9.82036e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 2.206734, "e2_dnde": 2.41370e-11, "e2_dnde_err": 9.39879e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 2.548297, "e2_dnde": 2.19319e-11, "e2_dnde_err": 9.05813e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 2.942727, "e2_dnde": 2.03277e-11, "e2_dnde_err": 9.05041e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 3.398208, "e2_dnde": 1.83761e-11, "e2_dnde_err": 8.91022e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 3.924190, "e2_dnde": 1.68535e-11, "e2_dnde_err": 9.02180e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 4.531584, "e2_dnde": 1.48915e-11, "e2_dnde_err": 9.08973e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 5.232991, "e2_dnde": 1.28440e-11, "e2_dnde_err": 8.90167e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 6.042964, "e2_dnde": 1.13493e-11, "e2_dnde_err": 8.69630e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 6.978306, "e2_dnde": 9.19252e-12, "e2_dnde_err": 8.29273e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 8.058422, "e2_dnde": 9.40529e-12, "e2_dnde_err": 8.79785e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 9.305720, "e2_dnde": 7.94134e-12, "e2_dnde_err": 8.59018e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 10.746078, "e2_dnde": 7.09065e-12, "e2_dnde_err": 8.57280e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 12.409378, "e2_dnde": 5.89561e-12, "e2_dnde_err": 8.24987e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 14.330126, "e2_dnde": 7.32941e-12, "e2_dnde_err": 1.01742e-12, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 16.548171, "e2_dnde": 3.79896e-12, "e2_dnde_err": 7.68070e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 19.109530, "e2_dnde": 4.45865e-12, "e2_dnde_err": 8.53717e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 22.067341, "e2_dnde": 2.84261e-12, "e2_dnde_err": 7.49676e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 25.482968, "e2_dnde": 2.12588e-12, "e2_dnde_err": 6.89630e-13, "is_upper_limit": False},
+    {"dataset": "hess_2024_stereo", "label": "H.E.S.S.", "energy_tev": 29.427272, "e2_dnde": 1.67246e-12, "e2_dnde_err": 6.53365e-13, "is_upper_limit": False},
+    # HAWC 2019 Table 4, neural-network estimator, already in TeV cm^-2 s^-1.
+    {"dataset": "hawc_2019_nn", "label": "HAWC NN", "energy_tev": 1.04, "energy_range_tev": "1.00-1.78", "ts": 2734.0, "e2_dnde": 3.63e-11, "e2_dnde_err": 0.08e-11, "is_upper_limit": False},
+    {"dataset": "hawc_2019_nn", "label": "HAWC NN", "energy_tev": 1.83, "energy_range_tev": "1.78-3.16", "ts": 4112.0, "e2_dnde": 2.67e-11, "e2_dnde_err": 0.05e-11, "is_upper_limit": False},
+    {"dataset": "hawc_2019_nn", "label": "HAWC NN", "energy_tev": 3.24, "energy_range_tev": "3.16-5.62", "ts": 4678.0, "e2_dnde": 1.92e-11, "e2_dnde_err": 0.04e-11, "is_upper_limit": False},
+    {"dataset": "hawc_2019_nn", "label": "HAWC NN", "energy_tev": 5.84, "energy_range_tev": "5.62-10.0", "ts": 3683.0, "e2_dnde": 1.24e-11, "e2_dnde_err": 0.03e-11, "is_upper_limit": False},
+    {"dataset": "hawc_2019_nn", "label": "HAWC NN", "energy_tev": 10.66, "energy_range_tev": "10.0-17.8", "ts": 2259.0, "e2_dnde": 8.15e-12, "e2_dnde_err": 0.31e-12, "is_upper_limit": False},
+    {"dataset": "hawc_2019_nn", "label": "HAWC NN", "energy_tev": 19.6, "energy_range_tev": "17.8-31.6", "ts": 1237.0, "e2_dnde": 5.23e-12, "e2_dnde_err": 0.29e-12, "is_upper_limit": False},
+    {"dataset": "hawc_2019_nn", "label": "HAWC NN", "energy_tev": 36.1, "energy_range_tev": "31.6-56.2", "ts": 572.0, "e2_dnde": 3.26e-12, "e2_dnde_err": 0.28e-12, "is_upper_limit": False},
+    {"dataset": "hawc_2019_nn", "label": "HAWC NN", "energy_tev": 66.8, "energy_range_tev": "56.2-100", "ts": 105.0, "e2_dnde": 1.23e-12, "e2_dnde_err": 0.24e-12, "is_upper_limit": False},
+    {"dataset": "hawc_2019_nn", "label": "HAWC NN", "energy_tev": 118.0, "energy_range_tev": "100-177", "ts": 28.8, "e2_dnde": 8.37e-13, "e2_dnde_err": 2.91e-13, "is_upper_limit": False},
+    {"dataset": "hawc_2019_nn", "label": "HAWC NN", "energy_tev": 204.0, "energy_range_tev": "177-316", "ts": 0.14, "e2_dnde": 8.14e-13, "e2_dnde_err": None, "is_upper_limit": True},
 ]
 
 
@@ -742,6 +823,20 @@ def pool1_reference_points() -> List[Dict[str, object]]:
     return out
 
 
+def external_reference_points(*, include_upper_limits: bool = True) -> List[Dict[str, object]]:
+    out: List[Dict[str, object]] = []
+    for point in EXTERNAL_CRAB_SED_REFERENCE_POINTS:
+        if bool(point.get("is_upper_limit")) and not include_upper_limits:
+            continue
+        row = dict(point)
+        source = EXTERNAL_CRAB_SED_REFERENCE_SOURCES.get(str(row["dataset"]), {})
+        row["source"] = source.get("source")
+        row["source_url"] = source.get("url")
+        row["source_doi"] = source.get("doi")
+        out.append(row)
+    return out
+
+
 def build_group_specs(stage_f: Dict[str, np.ndarray]) -> List[Tuple[str, str, np.ndarray]]:
     specs: List[Tuple[str, str, np.ndarray]] = []
     nhit_labels = sorted({str(v) for v in stage_f["nhit_bin"]}, key=interval_key)
@@ -958,6 +1053,28 @@ def write_pool1_reference_csv(path: Path) -> None:
             writer.writerow({name: row.get(name, "") for name in fieldnames})
 
 
+def write_external_reference_csv(path: Path) -> None:
+    fieldnames = [
+        "dataset",
+        "label",
+        "energy_tev",
+        "energy_range_tev",
+        "e2_dnde",
+        "e2_dnde_err",
+        "is_upper_limit",
+        "ts",
+        "source",
+        "source_doi",
+        "source_url",
+    ]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for point in external_reference_points(include_upper_limits=True):
+            writer.writerow({name: point.get(name, "") for name in fieldnames})
+
+
 def write_summary_md(path: Path, metadata: Dict[str, object], points: Sequence[SedPoint]) -> None:
     frozen = metadata["frozen_spectrum"]  # type: ignore[index]
     validation = metadata["validation"]  # type: ignore[index]
@@ -1016,6 +1133,16 @@ def write_summary_md(path: Path, metadata: Dict[str, object], points: Sequence[S
                 f"{format_float(point['significance_sigma'], 4)} |\n"
             )
         f.write("\n")
+        f.write("## External Crab SED reference points\n\n")
+        f.write("| dataset | E [TeV] | E2 dN/dE | err | upper limit |\n")
+        f.write("| --- | ---: | ---: | ---: | --- |\n")
+        for point in external_reference_points(include_upper_limits=True):
+            f.write(
+                f"| {point['label']} | {format_float(point['energy_tev'], 5)} | "
+                f"{format_float(point['e2_dnde'], 6)} | {format_float(point.get('e2_dnde_err'), 4)} | "
+                f"{bool(point.get('is_upper_limit'))} |\n"
+            )
+        f.write("\n")
 
 
 def write_npz(path: Path, points: Sequence[SedPoint], stage_f: Dict[str, np.ndarray], frozen_counts: np.ndarray) -> None:
@@ -1060,6 +1187,33 @@ def write_npz(path: Path, points: Sequence[SedPoint], stage_f: Dict[str, np.ndar
         "pool1_reference_E2_dnde_err": np.asarray(
             [row["E2_dnde_err"] for row in pool1_reference_points()],
             dtype=np.float64,
+        ),
+        "external_reference_dataset": np.asarray(
+            [str(row["dataset"]) for row in external_reference_points(include_upper_limits=True)],
+            dtype="U32",
+        ),
+        "external_reference_label": np.asarray(
+            [str(row["label"]) for row in external_reference_points(include_upper_limits=True)],
+            dtype="U32",
+        ),
+        "external_reference_energy_tev": np.asarray(
+            [row["energy_tev"] for row in external_reference_points(include_upper_limits=True)],
+            dtype=np.float64,
+        ),
+        "external_reference_E2_dnde": np.asarray(
+            [row["e2_dnde"] for row in external_reference_points(include_upper_limits=True)],
+            dtype=np.float64,
+        ),
+        "external_reference_E2_dnde_err": np.asarray(
+            [
+                row["e2_dnde_err"] if row.get("e2_dnde_err") is not None else np.nan
+                for row in external_reference_points(include_upper_limits=True)
+            ],
+            dtype=np.float64,
+        ),
+        "external_reference_is_upper_limit": np.asarray(
+            [bool(row["is_upper_limit"]) for row in external_reference_points(include_upper_limits=True)],
+            dtype=bool,
         ),
         "stage_f_cell_id": np.asarray(stage_f["cell_id"], dtype=np.int32),
         "stage_f_pl_model_counts": np.asarray(frozen_counts, dtype=np.float64),
@@ -1140,6 +1294,29 @@ def plot_sed_points(
         lw=0.9,
         label="WCDA-1 Pool-1 Table 1",
     )
+    external_styles = {
+        "magic_joint_crab": {"fmt": "v", "color": "#9467bd", "label": "MAGIC"},
+        "hess_2024_stereo": {"fmt": "D", "color": "#8c564b", "label": "H.E.S.S."},
+        "hawc_2019_nn": {"fmt": "P", "color": "#17becf", "label": "HAWC NN"},
+    }
+    for dataset, style in external_styles.items():
+        selected = [
+            p
+            for p in external_reference_points(include_upper_limits=False)
+            if str(p["dataset"]) == dataset and float(p["energy_tev"]) > 0.0 and float(p["e2_dnde"]) > 0.0
+        ]
+        if not selected:
+            continue
+        ax.errorbar(
+            [float(p["energy_tev"]) for p in selected],
+            [float(p["e2_dnde"]) for p in selected],
+            yerr=[float(p["e2_dnde_err"]) for p in selected],
+            capsize=2,
+            ms=4,
+            lw=0.7,
+            alpha=0.72,
+            **style,
+        )
     styles = {
         "nhit": {"fmt": "o", "color": "#d62728", "label": "Nhit grouped"},
         "predE": {"fmt": "s", "color": "#2ca02c", "label": "predE grouped"},
@@ -1261,6 +1438,7 @@ def write_report_html(path: Path, metadata: Dict[str, object], points: Sequence[
     frozen = metadata["frozen_spectrum"]  # type: ignore[index]
     reference = metadata["reference_spectrum"]  # type: ignore[index]
     pool1_reference = metadata.get("wcda1_pool1_reference", {})
+    external_reference = metadata.get("external_crab_sed_references", {})
     baseline_name = str(validation.get("baseline", "diagnostic")) if isinstance(validation, dict) else "diagnostic"
     included_cells = validation.get("required_cell_ids", []) if isinstance(validation, dict) else []
     if not included_cells:
@@ -1308,6 +1486,20 @@ def write_report_html(path: Path, metadata: Dict[str, object], points: Sequence[
             "</tr>"
         )
 
+    external_rows: List[str] = []
+    for point in external_reference_points(include_upper_limits=True):
+        external_rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(point['label']))}</td>"
+            f"<td class=\"num\">{format_float(point['energy_tev'], 5)}</td>"
+            f"<td>{html.escape(str(point.get('energy_range_tev', '')))}</td>"
+            f"<td class=\"num\">{format_float(point['e2_dnde'], 6)}</td>"
+            f"<td class=\"num\">{format_float(point.get('e2_dnde_err'), 4)}</td>"
+            f"<td>{'yes' if point.get('is_upper_limit') else 'no'}</td>"
+            f"<td>{html.escape(str(point.get('source_doi') or ''))}</td>"
+            "</tr>"
+        )
+
     html_text = f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -1336,6 +1528,7 @@ code {{ padding:2px 5px; border-radius:4px; background:var(--code); font-size:13
 .table-wrap {{ width:100%; overflow-x:auto; margin:18px 0; border:1px solid var(--border); border-radius:8px; background:var(--panel); }}
 table {{ width:100%; min-width:1120px; border-collapse:collapse; font-size:14px; }}
 table.pool1 {{ min-width:860px; }}
+table.external {{ min-width:960px; }}
 th,td {{ padding:10px 12px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }}
 th {{ background:var(--panel); font-weight:700; white-space:nowrap; }}
 tbody tr:nth-child(odd) td {{ background:var(--panel2); }}
@@ -1373,6 +1566,7 @@ footer {{ margin-top:54px; padding-top:18px; border-top:1px solid var(--border);
     <p>输入来自 Stage A response、Stage E signal 和 Stage F current fit。脚本验证 Stage F run 为 <code>{html.escape(str(validation['stage_f_run_id']))}</code>，并确认 included cells 为 <code>{html.escape(format_cell_list(included_cells))}</code>。</p>
     <p>冻结谱形为 <code>phi0={format_float(frozen['phi0'], 6)}</code>、<code>gamma={format_float(frozen['gamma'], 6)}</code>、pivot <code>{format_float(frozen['pivot_tev'], 4)} TeV</code>。PL 曲线参考为 <code>{html.escape(str(reference['name']))}</code>：<code>phi0={format_float(reference['phi0'], 6)}</code>、<code>gamma={format_float(reference['gamma'], 4)}</code>。</p>
     <p>本版新增 <code>{html.escape(str(pool1_reference.get('name', 'WCDA-1 Pool-1 Table 1 SED points')) if isinstance(pool1_reference, dict) else 'WCDA-1 Pool-1 Table 1 SED points')}</code> 作为逐点参考。它来自 2021 年 WCDA-1 Crab 标准烛光论文 Table 1，代表一号水池/Pool-1 结果；它不是胡 2023 图 6-32 的全阵列紫色逐点数据。</p>
+    <p>同时叠加 MAGIC、H.E.S.S. 和 HAWC 的 Crab SED 参考点，只作为跨实验视觉对照。MAGIC 点来自 <code>open-gamma-ray-astro/joint-crab</code> 的多波段 FITS 表，对应 Albert et al. 2008 的公开表格点；MAGIC 2015 虽然报告接近 30 TeV 的谱测量，但未找到可直接引用的公开逐点数表，因此没有混入本图。H.E.S.S. 点来自 2024 官方辅助 ECSV 的 stereo CT1-4 flux points；HAWC 点来自 2019 ApJ Table 4 的 neural-network estimator。</p>
   </section>
   <section>
     <h2>SED 点结果</h2>
@@ -1395,9 +1589,20 @@ footer {{ margin-top:54px; padding-top:18px; border-top:1px solid var(--border);
     <p>来源：<code>{html.escape(str(pool1_reference.get('paper', '') if isinstance(pool1_reference, dict) else ''))}</code>，DOI <code>{html.escape(str(pool1_reference.get('doi', '') if isinstance(pool1_reference, dict) else ''))}</code>。</p>
   </section>
   <section>
+    <h2>其他望远镜参考点</h2>
+    <p>下表统一使用 <code>E^2 dN/dE [TeV cm^-2 s^-1]</code>。MAGIC 原表为 <code>erg cm^-2 s^-1</code>，这里按 <code>1 erg = {format_float(ERG_TO_TEV, 7)} TeV</code> 转换，误差为公开表格中的统计误差；H.E.S.S. 2024 ECSV 和 HAWC 表本身即为 TeV 单位。HAWC 最后一行是 95% upper limit，记录在表里但不作为普通探测点绘制。</p>
+    <div class="table-wrap">
+      <table class="external">
+        <thead><tr><th>dataset</th><th class="num">E [TeV]</th><th>E range</th><th class="num">E2 dN/dE</th><th class="num">err</th><th>UL</th><th>DOI</th></tr></thead>
+        <tbody>{''.join(external_rows)}</tbody>
+      </table>
+    </div>
+    <p>外部参考数据集数量：<code>{len(external_reference.get('sources', {}) if isinstance(external_reference, dict) else {})}</code>；参考点总数：<code>{len(external_reference_points(include_upper_limits=True))}</code>。</p>
+  </section>
+  <section>
     <h2>对比图</h2>
     <div class="figure-grid">
-      {img('sed_png', 'E^2 dN/dE SED points + Stage F PL + 1LHAASO full-array PL + WCDA-1 Pool-1 points')}
+      {img('sed_png', 'E^2 dN/dE SED points + Stage F PL + LHAASO/WCDA-1/MAGIC/H.E.S.S./HAWC references')}
       {img('ratio_png', '每点相对 Stage F PL、1LHAASO full-array PL 和 WCDA-1 Pool-1 points 的 ratio')}
       {img('cell_counts_png', '每个 SED 点使用的 cell 数量')}
     </div>
@@ -1421,6 +1626,7 @@ def make_summary_json(metadata: Dict[str, object], points: Sequence[SedPoint]) -
         "frozen_spectrum": metadata["frozen_spectrum"],
         "reference_spectrum": metadata["reference_spectrum"],
         "wcda1_pool1_reference": metadata["wcda1_pool1_reference"],
+        "external_crab_sed_references": metadata["external_crab_sed_references"],
         "validation": metadata["validation"],
         "points": [point_to_dict(point) for point in points],
         "points_by_grouping": {
@@ -1509,6 +1715,12 @@ def make_metadata(
         "wcda1_pool1_reference": {
             **WCDA1_POOL1_TABLE1_SOURCE,
             "points": pool1_reference_points(),
+        },
+        "external_crab_sed_references": {
+            "description": "External Crab SED points added for visual comparison only; they are not used by Stage G fitting.",
+            "unit": "E^2 dN/dE in TeV cm^-2 s^-1",
+            "sources": EXTERNAL_CRAB_SED_REFERENCE_SOURCES,
+            "points": external_reference_points(include_upper_limits=True),
         },
         "groupings": {
             "nhit": {
@@ -1626,6 +1838,7 @@ def main() -> None:
     summary_json_path = run_dir / args.summary_json_name
     summary_md_path = run_dir / args.summary_md_name
     pool1_reference_csv_path = run_dir / "wcda1_pool1_table1_reference.csv"
+    external_reference_csv_path = run_dir / "external_crab_sed_references.csv"
     plot_outputs: Dict[str, str] = {}
     if not args.no_plots:
         plot_outputs = {
@@ -1653,6 +1866,7 @@ def main() -> None:
         "summary_json": str(summary_json_path),
         "summary_md": str(summary_md_path),
         "pool1_reference_csv": str(pool1_reference_csv_path),
+        "external_reference_csv": str(external_reference_csv_path),
         "report_html": str(Path(args.report_html).resolve()) if args.report_html else None,
         **plot_outputs,
     }
@@ -1682,6 +1896,7 @@ def main() -> None:
     write_npz(npz_path, points, stage_f, frozen_counts)
     write_summary_csv(summary_csv_path, points)
     write_pool1_reference_csv(pool1_reference_csv_path)
+    write_external_reference_csv(external_reference_csv_path)
     write_summary_md(summary_md_path, metadata, points)
     write_json(summary_json_path, summary_json)
     write_json(metadata_path, metadata)
@@ -1714,6 +1929,7 @@ def main() -> None:
     print(f"Wrote {npz_path}", flush=True)
     print(f"Wrote {summary_csv_path}", flush=True)
     print(f"Wrote {pool1_reference_csv_path}", flush=True)
+    print(f"Wrote {external_reference_csv_path}", flush=True)
     print(f"Wrote {summary_json_path}", flush=True)
     print(f"Wrote {summary_md_path}", flush=True)
     print(f"Wrote {metadata_path}", flush=True)

@@ -1,10 +1,10 @@
 {
-  "description": "Stage D counts_map maps for cells included in the fit selector.",
-  "map_key": "counts_map",
+  "description": "Stage D excess_map maps for cells included in the fit selector.",
+  "map_key": "excess_map",
   "selector_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v2_baseline24.csv",
   "stage_d_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v2_raw65/runs/v2_stage_d_slurm_42014/background_v2_raw65.npz",
   "stage_d_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v2_raw65/runs/v2_stage_d_slurm_42014/background_v2_raw65_metadata.json",
-  "output_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/crab-v2-baseline24-fit-cell-skymaps/crab_v2_baseline24_fit_counts_grid.png",
+  "output_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/crab-v2-baseline24-fit-cell-skymaps/crab_v2_baseline24_fit_excess_grid.png",
   "included_cell_ids": [
     7,
     8,
@@ -205,7 +205,7 @@
   "plotting": {
     "counts_scale": "per-panel",
     "vmax_percentile": 99.3,
-    "normalization": "Normalize from 0",
+    "normalization": "TwoSlopeNorm centered at 0",
     "marker": "Crab nominal center at (0,0)"
   }
 }

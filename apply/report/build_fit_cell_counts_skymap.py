@@ -19,7 +19,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
+from matplotlib.colors import Normalize, TwoSlopeNorm
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -35,14 +35,15 @@ class Cell:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Plot Stage D counts maps for cells included in a fit selector.")
+    parser = argparse.ArgumentParser(description="Plot Stage D maps for cells included in a fit selector.")
     parser.add_argument("--stage-d-npz", type=str, default="apply/output/stage_d_v2_raw65/runs/v2_stage_d_slurm_42014/background_v2_raw65.npz")
     parser.add_argument("--stage-d-metadata", type=str, default="apply/output/stage_d_v2_raw65/runs/v2_stage_d_slurm_42014/background_v2_raw65_metadata.json")
     parser.add_argument("--selector-csv", type=str, default="apply/config/cell_selector_v2_baseline24.csv")
+    parser.add_argument("--map-key", choices=["counts_map", "excess_map"], default="counts_map")
     parser.add_argument("--output-png", type=str, default="apply/report/assets/crab-v2-baseline24-fit-cell-skymaps/crab_v2_baseline24_fit_counts_grid.png")
     parser.add_argument("--output-metadata", type=str, default="apply/report/assets/crab-v2-baseline24-fit-cell-skymaps/crab_v2_baseline24_fit_counts_grid_meta.json")
     parser.add_argument("--title", type=str, default="v2_baseline24 fit-cell Stage D counts maps")
-    parser.add_argument("--counts-vmax-percentile", type=float, default=99.3)
+    parser.add_argument("--vmax-percentile", type=float, default=99.3)
     return parser.parse_args()
 
 
@@ -121,7 +122,17 @@ def prepare_grid(cells: Sequence[Cell]) -> Tuple[List[str], List[str], Dict[Tupl
     return nhit_bins, pred_bins, by_key
 
 
-def plot_counts_grid(
+def robust_abs_vmax(values: np.ndarray, percentile: float) -> float:
+    finite = values[np.isfinite(values)]
+    if finite.size == 0:
+        return 1.0
+    vmax = float(np.percentile(np.abs(finite), percentile))
+    if not np.isfinite(vmax) or vmax <= 0:
+        vmax = float(np.max(np.abs(finite)))
+    return max(vmax, 1.0e-6)
+
+
+def plot_grid(
     *,
     maps: np.ndarray,
     cells: Sequence[Cell],
@@ -131,6 +142,7 @@ def plot_counts_grid(
     title: str,
     vmax_percentile: float,
     per_cell_roi_events: Dict[int, int],
+    map_key: str,
 ) -> None:
     nhit_bins, pred_bins, by_key = prepare_grid(cells)
     first_visible_col_by_row = {
@@ -147,7 +159,10 @@ def plot_counts_grid(
         squeeze=False,
     )
     extent = [float(x_edges[0]), float(x_edges[-1]), float(y_edges[0]), float(y_edges[-1])]
-    cmap = plt.get_cmap("viridis").copy()
+    if map_key == "excess_map":
+        cmap = plt.get_cmap("RdBu_r").copy()
+    else:
+        cmap = plt.get_cmap("viridis").copy()
     cmap.set_bad("#eeeeee")
 
     for i, nhit_bin in enumerate(nhit_bins):
@@ -159,7 +174,11 @@ def plot_counts_grid(
                 continue
 
             image = maps[cell.source_index].astype(np.float64)
-            norm = Normalize(vmin=0.0, vmax=robust_vmax(image, vmax_percentile))
+            if map_key == "excess_map":
+                vmax = robust_abs_vmax(image, vmax_percentile)
+                norm = TwoSlopeNorm(vcenter=0.0, vmin=-vmax, vmax=vmax)
+            else:
+                norm = Normalize(vmin=0.0, vmax=robust_vmax(image, vmax_percentile))
             ax.imshow(
                 image,
                 origin="lower",
@@ -170,7 +189,9 @@ def plot_counts_grid(
                 norm=norm,
             )
             ax.plot([0.0], [0.0], marker="+", markersize=7, markeredgewidth=1.2, color="black")
-            roi_events = per_cell_roi_events.get(cell.cell_id, int(np.sum(image)))
+            roi_events = per_cell_roi_events.get(cell.cell_id)
+            if roi_events is None:
+                roi_events = int(np.nansum(maps[cell.source_index]))
             ax.set_title(f"cell {cell.cell_id}: {pred_bin}\nN={roi_events:,}", fontsize=6.9)
             ax.tick_params(labelsize=6.2, length=2)
             ax.grid(color="white", alpha=0.22, linewidth=0.32)
@@ -208,7 +229,7 @@ def main() -> None:
     output_metadata = resolve(args.output_metadata)
 
     data = np.load(stage_d_npz)
-    required = {"cell_id", "nhit_bin", "predE_bin", "x_edges_deg", "y_edges_deg", "counts_map"}
+    required = {"cell_id", "nhit_bin", "predE_bin", "x_edges_deg", "y_edges_deg", args.map_key}
     missing = required - set(data.files)
     if missing:
         raise ValueError(f"{stage_d_npz} is missing arrays: {sorted(missing)}")
@@ -216,20 +237,22 @@ def main() -> None:
     included_ids = selector_included_ids(selector_csv)
     cells = load_cells(data, included_ids)
     per_cell_roi_events = metadata_cell_events(stage_d_metadata)
-    plot_counts_grid(
-        maps=data["counts_map"],
+    plot_grid(
+        maps=data[args.map_key],
         cells=cells,
         x_edges=data["x_edges_deg"],
         y_edges=data["y_edges_deg"],
         output_png=output_png,
         title=str(args.title),
-        vmax_percentile=float(args.counts_vmax_percentile),
+        vmax_percentile=float(args.vmax_percentile),
         per_cell_roi_events=per_cell_roi_events,
+        map_key=str(args.map_key),
     )
 
     output_metadata.parent.mkdir(parents=True, exist_ok=True)
     metadata = {
-        "description": "Stage D counts maps for cells included in the fit selector.",
+        "description": f"Stage D {args.map_key} maps for cells included in the fit selector.",
+        "map_key": str(args.map_key),
         "selector_csv": str(selector_csv),
         "stage_d_npz": str(stage_d_npz),
         "stage_d_metadata": str(stage_d_metadata),
@@ -248,7 +271,8 @@ def main() -> None:
         ],
         "plotting": {
             "counts_scale": "per-panel",
-            "counts_vmax_percentile": float(args.counts_vmax_percentile),
+            "vmax_percentile": float(args.vmax_percentile),
+            "normalization": "TwoSlopeNorm centered at 0" if args.map_key == "excess_map" else "Normalize from 0",
             "marker": "Crab nominal center at (0,0)",
         },
     }

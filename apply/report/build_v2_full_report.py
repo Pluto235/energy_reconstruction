@@ -39,6 +39,16 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="",
     )
+    parser.add_argument(
+        "--fit-cell-ra-profile",
+        type=str,
+        default="",
+    )
+    parser.add_argument(
+        "--fit-cell-dec-profile",
+        type=str,
+        default="",
+    )
     parser.add_argument("--raw-ledger-csv", type=str, default="apply/config/cell_ledger_v2_raw65.csv")
     parser.add_argument("--baseline-selector-csv", type=str, default="apply/config/cell_selector_v2_baseline26.csv")
     parser.add_argument("--baseline-name", type=str, default="v2_baseline26")
@@ -364,6 +374,18 @@ def main() -> None:
             f"{baseline_name} fit-cell Stage D excess skymap",
         )
         if args.fit_cell_excess_skymap
+        else "",
+        wide_figure(
+            REPO_ROOT / args.fit_cell_ra_profile,
+            f"{baseline_name} normalized RA-offset excess profiles",
+        )
+        if args.fit_cell_ra_profile
+        else "",
+        wide_figure(
+            REPO_ROOT / args.fit_cell_dec_profile,
+            f"{baseline_name} normalized Dec-offset excess profiles",
+        )
+        if args.fit_cell_dec_profile
         else "",
         figure(stage_f_dir / "model_counts_vs_excess.png", "Stage F model counts vs excess"),
         figure(

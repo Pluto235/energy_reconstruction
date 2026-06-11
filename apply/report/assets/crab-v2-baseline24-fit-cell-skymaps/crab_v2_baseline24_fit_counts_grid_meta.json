@@ -32,6 +32,11 @@
     57
   ],
   "included_cell_count": 24,
+  "crop": {
+    "enabled": false,
+    "crop_radius_deg": null,
+    "circular_roi_mask": false
+  },
   "cells": [
     {
       "cell_id": 7,
@@ -206,6 +211,7 @@
     "counts_scale": "per-panel",
     "vmax_percentile": 99.3,
     "normalization": "Normalize from 0",
-    "marker": "Crab nominal center at (0,0)"
+    "marker": "Crab nominal center at (0,0)",
+    "roi_circle_deg": 6.0
   }
 }

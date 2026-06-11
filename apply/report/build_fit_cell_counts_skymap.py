@@ -44,6 +44,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-metadata", type=str, default="apply/report/assets/crab-v2-baseline24-fit-cell-skymaps/crab_v2_baseline24_fit_counts_grid_meta.json")
     parser.add_argument("--title", type=str, default="v2_baseline24 fit-cell Stage D counts maps")
     parser.add_argument("--vmax-percentile", type=float, default=99.3)
+    parser.add_argument("--roi-circle-deg", type=float, default=0.0, help="Overlay a circle with this radius in degrees. Disabled when <= 0.")
     parser.add_argument("--crop-radius-deg", type=float, default=0.0, help="Crop the map to +/- this offset in both axes. Disabled when <= 0.")
     parser.add_argument("--circular-roi-mask", action="store_true", help="Mask pixels outside crop-radius-deg as NaN after cropping.")
     return parser.parse_args()
@@ -145,6 +146,7 @@ def plot_grid(
     vmax_percentile: float,
     per_cell_roi_events: Dict[int, int],
     map_key: str,
+    roi_circle_deg: float,
 ) -> None:
     nhit_bins, pred_bins, by_key = prepare_grid(cells)
     first_visible_col_by_row = {
@@ -190,6 +192,9 @@ def plot_grid(
                 cmap=cmap,
                 norm=norm,
             )
+            if roi_circle_deg > 0.0:
+                ax.add_patch(plt.Circle((0.0, 0.0), roi_circle_deg, fill=False, color="black", linewidth=1.05, alpha=0.9))
+                ax.add_patch(plt.Circle((0.0, 0.0), roi_circle_deg, fill=False, color="white", linewidth=0.52, alpha=0.95))
             ax.plot([0.0], [0.0], marker="+", markersize=7, markeredgewidth=1.2, color="black")
             roi_events = per_cell_roi_events.get(cell.cell_id)
             if roi_events is None:
@@ -313,6 +318,7 @@ def main() -> None:
         vmax_percentile=float(args.vmax_percentile),
         per_cell_roi_events=per_cell_roi_events,
         map_key=str(args.map_key),
+        roi_circle_deg=float(args.roi_circle_deg),
     )
 
     output_metadata.parent.mkdir(parents=True, exist_ok=True)
@@ -341,6 +347,7 @@ def main() -> None:
             "vmax_percentile": float(args.vmax_percentile),
             "normalization": "TwoSlopeNorm centered at 0" if args.map_key == "excess_map" else "Normalize from 0",
             "marker": "Crab nominal center at (0,0)",
+            "roi_circle_deg": float(args.roi_circle_deg) if args.roi_circle_deg > 0.0 else None,
         },
     }
     with output_metadata.open("w", encoding="utf-8") as f:

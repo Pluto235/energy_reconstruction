@@ -35,11 +35,6 @@ def parse_args() -> argparse.Namespace:
         default="",
     )
     parser.add_argument(
-        "--fit-cell-counts-roi6-skymap",
-        type=str,
-        default="",
-    )
-    parser.add_argument(
         "--fit-cell-excess-skymap",
         type=str,
         default="",
@@ -373,12 +368,6 @@ def main() -> None:
             f"{baseline_name} fit-cell Stage D counts skymap",
         )
         if args.fit_cell_counts_skymap
-        else "",
-        wide_figure(
-            REPO_ROOT / args.fit_cell_counts_roi6_skymap,
-            f"{baseline_name} fit-cell Stage D counts skymap, 6 deg fiducial ROI crop",
-        )
-        if args.fit_cell_counts_roi6_skymap
         else "",
         wide_figure(
             REPO_ROOT / args.fit_cell_excess_skymap,

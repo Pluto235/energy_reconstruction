@@ -35,6 +35,11 @@ def parse_args() -> argparse.Namespace:
         default="",
     )
     parser.add_argument(
+        "--fit-cell-counts-roi6-skymap",
+        type=str,
+        default="",
+    )
+    parser.add_argument(
         "--fit-cell-excess-skymap",
         type=str,
         default="",
@@ -370,6 +375,12 @@ def main() -> None:
         if args.fit_cell_counts_skymap
         else "",
         wide_figure(
+            REPO_ROOT / args.fit_cell_counts_roi6_skymap,
+            f"{baseline_name} fit-cell Stage D counts skymap, 6 deg fiducial ROI crop",
+        )
+        if args.fit_cell_counts_roi6_skymap
+        else "",
+        wide_figure(
             REPO_ROOT / args.fit_cell_excess_skymap,
             f"{baseline_name} fit-cell Stage D excess skymap",
         )
@@ -377,13 +388,13 @@ def main() -> None:
         else "",
         wide_figure(
             REPO_ROOT / args.fit_cell_ra_profile,
-            f"raw65 normalized RA-offset excess profiles ({baseline_name} fit cells highlighted)",
+            f"raw65 normalized RA-offset counts profiles ({baseline_name} fit cells highlighted)",
         )
         if args.fit_cell_ra_profile
         else "",
         wide_figure(
             REPO_ROOT / args.fit_cell_dec_profile,
-            f"raw65 normalized Dec-offset excess profiles ({baseline_name} fit cells highlighted)",
+            f"raw65 normalized Dec-offset counts profiles ({baseline_name} fit cells highlighted)",
         )
         if args.fit_cell_dec_profile
         else "",
@@ -495,6 +506,7 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
 </body>
 </html>
 """
+    html_text = "\n".join(line.rstrip() for line in html_text.splitlines()) + "\n"
     output_html.parent.mkdir(parents=True, exist_ok=True)
     output_html.write_text(html_text, encoding="utf-8")
     print(f"Wrote {output_html}")

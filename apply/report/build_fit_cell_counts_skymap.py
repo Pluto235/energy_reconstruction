@@ -44,6 +44,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-metadata", type=str, default="apply/report/assets/crab-v2-baseline24-fit-cell-skymaps/crab_v2_baseline24_fit_counts_grid_meta.json")
     parser.add_argument("--title", type=str, default="v2_baseline24 fit-cell Stage D counts maps")
     parser.add_argument("--vmax-percentile", type=float, default=99.3)
+    parser.add_argument("--crop-radius-deg", type=float, default=0.0, help="Crop the map to +/- this offset in both axes. Disabled when <= 0.")
+    parser.add_argument("--circular-roi-mask", action="store_true", help="Mask pixels outside crop-radius-deg as NaN after cropping.")
     return parser.parse_args()
 
 
@@ -207,6 +209,61 @@ def plot_grid(
     plt.close(fig)
 
 
+def crop_maps(
+    *,
+    maps: np.ndarray,
+    x_edges: np.ndarray,
+    y_edges: np.ndarray,
+    x_centers: np.ndarray,
+    y_centers: np.ndarray,
+    crop_radius_deg: float,
+    circular_roi_mask: bool,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, object]]:
+    if crop_radius_deg <= 0.0:
+        return (
+            maps,
+            x_edges,
+            y_edges,
+            {
+                "enabled": False,
+                "crop_radius_deg": None,
+                "circular_roi_mask": False,
+            },
+        )
+
+    x_idx = np.flatnonzero(np.abs(x_centers) <= crop_radius_deg)
+    y_idx = np.flatnonzero(np.abs(y_centers) <= crop_radius_deg)
+    if x_idx.size == 0 or y_idx.size == 0:
+        raise ValueError(f"No bins selected by --crop-radius-deg {crop_radius_deg}")
+
+    cropped = maps[:, y_idx.min() : y_idx.max() + 1, x_idx.min() : x_idx.max() + 1].astype(np.float64, copy=True)
+    cropped_x_edges = x_edges[x_idx.min() : x_idx.max() + 2]
+    cropped_y_edges = y_edges[y_idx.min() : y_idx.max() + 2]
+    cropped_x_centers = x_centers[x_idx.min() : x_idx.max() + 1]
+    cropped_y_centers = y_centers[y_idx.min() : y_idx.max() + 1]
+
+    masked_pixel_count = 0
+    if circular_roi_mask:
+        xx, yy = np.meshgrid(cropped_x_centers, cropped_y_centers)
+        outside_roi = (xx * xx + yy * yy) > crop_radius_deg * crop_radius_deg
+        masked_pixel_count = int(np.count_nonzero(outside_roi))
+        cropped[:, outside_roi] = np.nan
+
+    return (
+        cropped,
+        cropped_x_edges,
+        cropped_y_edges,
+        {
+            "enabled": True,
+            "crop_radius_deg": float(crop_radius_deg),
+            "circular_roi_mask": bool(circular_roi_mask),
+            "x_range_deg": [float(cropped_x_edges[0]), float(cropped_x_edges[-1])],
+            "y_range_deg": [float(cropped_y_edges[0]), float(cropped_y_edges[-1])],
+            "masked_pixels_per_cell": masked_pixel_count,
+        },
+    )
+
+
 def metadata_cell_events(path: Path) -> Dict[int, int]:
     if not path.exists():
         return {}
@@ -229,7 +286,7 @@ def main() -> None:
     output_metadata = resolve(args.output_metadata)
 
     data = np.load(stage_d_npz)
-    required = {"cell_id", "nhit_bin", "predE_bin", "x_edges_deg", "y_edges_deg", args.map_key}
+    required = {"cell_id", "nhit_bin", "predE_bin", "x_edges_deg", "y_edges_deg", "x_centers_deg", "y_centers_deg", args.map_key}
     missing = required - set(data.files)
     if missing:
         raise ValueError(f"{stage_d_npz} is missing arrays: {sorted(missing)}")
@@ -237,11 +294,20 @@ def main() -> None:
     included_ids = selector_included_ids(selector_csv)
     cells = load_cells(data, included_ids)
     per_cell_roi_events = metadata_cell_events(stage_d_metadata)
-    plot_grid(
+    maps, x_edges, y_edges, crop_metadata = crop_maps(
         maps=data[args.map_key],
+        x_edges=data["x_edges_deg"].astype(np.float64),
+        y_edges=data["y_edges_deg"].astype(np.float64),
+        x_centers=data["x_centers_deg"].astype(np.float64),
+        y_centers=data["y_centers_deg"].astype(np.float64),
+        crop_radius_deg=float(args.crop_radius_deg),
+        circular_roi_mask=bool(args.circular_roi_mask),
+    )
+    plot_grid(
+        maps=maps,
         cells=cells,
-        x_edges=data["x_edges_deg"],
-        y_edges=data["y_edges_deg"],
+        x_edges=x_edges,
+        y_edges=y_edges,
         output_png=output_png,
         title=str(args.title),
         vmax_percentile=float(args.vmax_percentile),
@@ -259,6 +325,7 @@ def main() -> None:
         "output_png": str(output_png),
         "included_cell_ids": [cell.cell_id for cell in cells],
         "included_cell_count": len(cells),
+        "crop": crop_metadata,
         "cells": [
             {
                 "cell_id": cell.cell_id,

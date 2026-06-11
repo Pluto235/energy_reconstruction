@@ -1,0 +1,225 @@
+{
+  "description": "Stage D counts_map maps for cells included in the fit selector.",
+  "map_key": "counts_map",
+  "selector_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v2_baseline24.csv",
+  "stage_d_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v2_raw65/runs/v2_stage_d_slurm_42014/background_v2_raw65.npz",
+  "stage_d_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v2_raw65/runs/v2_stage_d_slurm_42014/background_v2_raw65_metadata.json",
+  "output_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/crab-v2-baseline24-fit-cell-skymaps/crab_v2_baseline24_fit_counts_grid_roi6.png",
+  "included_cell_ids": [
+    7,
+    8,
+    9,
+    17,
+    18,
+    19,
+    20,
+    21,
+    28,
+    29,
+    30,
+    31,
+    32,
+    38,
+    39,
+    40,
+    41,
+    42,
+    47,
+    48,
+    49,
+    55,
+    56,
+    57
+  ],
+  "included_cell_count": 24,
+  "crop": {
+    "enabled": true,
+    "crop_radius_deg": 6.0,
+    "circular_roi_mask": true,
+    "x_range_deg": [
+      -6.0,
+      6.0
+    ],
+    "y_range_deg": [
+      -6.0,
+      6.0
+    ],
+    "masked_pixels_per_cell": 3096
+  },
+  "cells": [
+    {
+      "cell_id": 7,
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[2,3)",
+      "stage_d_source_index": 6,
+      "grid_events": 8726563
+    },
+    {
+      "cell_id": 8,
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[3,3.25)",
+      "stage_d_source_index": 7,
+      "grid_events": 936513
+    },
+    {
+      "cell_id": 9,
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[3.25,3.5)",
+      "stage_d_source_index": 8,
+      "grid_events": 415171
+    },
+    {
+      "cell_id": 17,
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[2,3)",
+      "stage_d_source_index": 16,
+      "grid_events": 1381469
+    },
+    {
+      "cell_id": 18,
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[3,3.25)",
+      "stage_d_source_index": 17,
+      "grid_events": 548846
+    },
+    {
+      "cell_id": 19,
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[3.25,3.5)",
+      "stage_d_source_index": 18,
+      "grid_events": 232475
+    },
+    {
+      "cell_id": 20,
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[3.5,3.75)",
+      "stage_d_source_index": 19,
+      "grid_events": 105993
+    },
+    {
+      "cell_id": 21,
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[3.75,4.0)",
+      "stage_d_source_index": 20,
+      "grid_events": 49690
+    },
+    {
+      "cell_id": 28,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3,3.25)",
+      "stage_d_source_index": 27,
+      "grid_events": 461238
+    },
+    {
+      "cell_id": 29,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3.25,3.5)",
+      "stage_d_source_index": 28,
+      "grid_events": 272242
+    },
+    {
+      "cell_id": 30,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3.5,3.75)",
+      "stage_d_source_index": 29,
+      "grid_events": 94566
+    },
+    {
+      "cell_id": 31,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3.75,4.0)",
+      "stage_d_source_index": 30,
+      "grid_events": 38954
+    },
+    {
+      "cell_id": 32,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[4.0,4.25)",
+      "stage_d_source_index": 31,
+      "grid_events": 15587
+    },
+    {
+      "cell_id": 38,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.25,3.5)",
+      "stage_d_source_index": 37,
+      "grid_events": 186586
+    },
+    {
+      "cell_id": 39,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.5,3.75)",
+      "stage_d_source_index": 38,
+      "grid_events": 97387
+    },
+    {
+      "cell_id": 40,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.75,4.0)",
+      "stage_d_source_index": 39,
+      "grid_events": 26650
+    },
+    {
+      "cell_id": 41,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[4.0,4.25)",
+      "stage_d_source_index": 40,
+      "grid_events": 7206
+    },
+    {
+      "cell_id": 42,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[4.25,4.5)",
+      "stage_d_source_index": 41,
+      "grid_events": 2019
+    },
+    {
+      "cell_id": 47,
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[3.5,3.75)",
+      "stage_d_source_index": 46,
+      "grid_events": 47830
+    },
+    {
+      "cell_id": 48,
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[3.75,4.0)",
+      "stage_d_source_index": 47,
+      "grid_events": 26734
+    },
+    {
+      "cell_id": 49,
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[4.0,4.25)",
+      "stage_d_source_index": 48,
+      "grid_events": 7545
+    },
+    {
+      "cell_id": 55,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[3.75,4.0)",
+      "stage_d_source_index": 54,
+      "grid_events": 20073
+    },
+    {
+      "cell_id": 56,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[4.0,4.25)",
+      "stage_d_source_index": 55,
+      "grid_events": 17290
+    },
+    {
+      "cell_id": 57,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[4.25,4.5)",
+      "stage_d_source_index": 56,
+      "grid_events": 9040
+    }
+  ],
+  "plotting": {
+    "counts_scale": "per-panel",
+    "vmax_percentile": 99.3,
+    "normalization": "Normalize from 0",
+    "marker": "Crab nominal center at (0,0)"
+  }
+}

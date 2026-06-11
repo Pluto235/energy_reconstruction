@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crab SED v2 Stage A-G Report</title>
+<style>
+:root { --bg:#f6f7f8; --fg:#1f2933; --muted:#5d6b76; --panel:#ffffff; --panel2:#eef2f5; --border:#d8e0e6; --accent:#006c67; --warn:#b7791f; --code:#edf2f7; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans CJK SC","Microsoft YaHei",sans-serif; line-height:1.62; }
+main { max-width:1240px; margin:0 auto; padding:42px 20px 72px; }
+header { border-bottom:1px solid var(--border); padding-bottom:24px; margin-bottom:30px; }
+.eyebrow { color:var(--accent); font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+h1 { margin:8px 0 12px; font-size:clamp(32px,5vw,52px); line-height:1.08; }
+h2 { margin:38px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--border); font-size:24px; }
+h3 { margin:4px 0 12px; font-size:20px; }
+p { margin:10px 0; }
+a { color:var(--accent); }
+code { background:var(--code); border-radius:4px; padding:2px 5px; font-size:13px; }
+.lead { max-width:960px; color:var(--muted); font-size:17px; }
+.metric-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:20px 0; }
+.metric { min-height:112px; padding:16px; border:1px solid var(--border); background:var(--panel); border-radius:8px; }
+.label { color:var(--muted); font-size:12px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; }
+.value { margin-top:8px; font-size:25px; font-weight:800; overflow-wrap:anywhere; }
+.note { margin-top:7px; color:var(--muted); font-size:13px; }
+.callout { margin:18px 0; padding:16px 18px; border:1px solid var(--border); border-left:4px solid var(--warn); background:var(--panel); border-radius:8px; }
+.stage-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.stage-card { position:relative; padding:18px 18px 16px 76px; border:1px solid var(--border); background:var(--panel); border-radius:8px; min-height:190px; }
+.stage-label { position:absolute; left:18px; top:18px; width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--accent); color:#fff; font-weight:900; }
+dl { display:grid; grid-template-columns:86px 1fr; gap:4px 10px; margin:0 0 10px; }
+dt { color:var(--muted); }
+dd { margin:0; overflow-wrap:anywhere; }
+ul { margin:10px 0 0 18px; padding:0; }
+.table-wrap { overflow-x:auto; border:1px solid var(--border); background:var(--panel); border-radius:8px; margin:16px 0; }
+table { width:100%; min-width:880px; border-collapse:collapse; font-size:14px; }
+th,td { padding:10px 12px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+th { background:var(--panel2); white-space:nowrap; }
+.figure-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+figure { margin:0; padding:12px; border:1px solid var(--border); background:var(--panel); border-radius:8px; }
+img { display:block; width:100%; height:auto; background:#fff; border-radius:4px; }
+figcaption { margin-top:8px; color:var(--muted); font-size:13px; }
+footer { margin-top:48px; padding-top:18px; border-top:1px solid var(--border); color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
+@media (max-width:900px) { .metric-grid,.stage-grid,.figure-grid { grid-template-columns:1fr; } .stage-card { padding-left:18px; padding-top:68px; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">LHAASO-WCDA · Crab SED v2</div>
+    <h1>Stage A-G 完整结果报告</h1>
+    <p class="lead">本页把 roadmap v2 的 raw65 ledger、v2_baseline24 selector、Stage A-E raw artifacts、Stage F forward-folding 和 Stage G diagnostic SED 串成一个可追踪结果页。</p>
+  </header>
+
+  <section>
+    <h2>Run Summary</h2>
+    <div class="metric-grid">
+      <div class="metric"><div class="label">raw ledger</div><div class="value">65</div><div class="note">v2_raw65 cells</div></div>
+      <div class="metric"><div class="label">baseline</div><div class="value">24</div><div class="note">v2_baseline24 cells</div></div>
+      <div class="metric"><div class="label">Stage E sigma</div><div class="value">n/a</div><div class="note">n/a</div></div>
+      <div class="metric"><div class="label">Stage F preferred</div><div class="value">LogPar</div><div class="note">chi2/ndof 164.2 / 21</div></div>
+    </div>
+    <div class="callout">
+      v2.0 使用 <code>n/a</code> / <code>n/a</code>。若 background form 是 direct expectation，则 Li-Ma 不适用；Stage E/F/G 的显著性、pull 和 SED residual 只作为 diagnostic 信息，不反向修改 selector。
+    </div>
+    <p><a href="roadmap_v2.html">Roadmap v2</a> · <a href="crab_v2_cell_skymaps.html">v2 skymaps</a> · <a href="stage_e_v2_raw65_report.html">Stage E report</a> · <a href="stage_f_v2_baseline24_report.html">Stage F report</a> · <a href="stage_g_v2_baseline24_report.html">Stage G report</a></p>
+  </section>
+
+  <section>
+    <h2>Ledger And Selector</h2>
+    <p>raw65 role 分布：</p>
+    <div class="table-wrap"><table><thead><tr><th>role</th><th>cells</th></tr></thead><tbody><tr><td>baseline_fit</td><td>26</td></tr><tr><td>diagnostic_legacy_low_nhit</td><td>6</td></tr><tr><td>diagnostic_low_stat_high_energy</td><td>3</td></tr><tr><td>diagnostic_response_tail</td><td>29</td></tr><tr><td>transition_probe</td><td>1</td></tr></tbody></table></div>
+    <p>v2_baseline24 included cells: <code>7,8,9,17,18,19,20,21,28,29,30,31,32,38,39,40,41,42,47,48,49,55,56,57</code></p>
+    <p>excluded / diagnostic cells: <code>1,2,3,4,5,6,10,11,12,13,14,15,16,22,23,24,25,26,27,33,34,35,36,37,43,44,45,46,50,51,52,53,54,58,59,60,61,62,63,64,65</code></p>
+  </section>
+
+  <section>
+    <h2>Stages</h2>
+    <div class="stage-grid">
+    <article class="stage-card">
+      <div class="stage-label">A</div>
+      <h3>raw65 response</h3>
+      <dl>
+        <dt>Run</dt><dd><code>/mnt/mydisk/server/projects/energy_reconstruction/runs/theta_recoxy_position_embed_midenergy_8666</code></dd>
+        <dt>Status</dt><dd><code>available</code></dd>
+        <dt>Artifacts</dt><dd><a href="../output/stage_a_v2_raw65/response_2d_v2_raw65_metadata.json">metadata</a></dd>
+      </dl>
+      <ul><li>Cells: 65</li><li>Response type: primary_thrown_response</li><li>S0: 4.000000e+06 m2</li></ul>
+    </article>
+
+    <article class="stage-card">
+      <div class="stage-label">B</div>
+      <h3>raw65 PSF</h3>
+      <dl>
+        <dt>Run</dt><dd><code>slurm_42013</code></dd>
+        <dt>Status</dt><dd><code>promoted</code></dd>
+        <dt>Artifacts</dt><dd><a href="../output/stage_b_v2_raw65/runs/slurm_42013/psf_v2_raw65_metadata.json">metadata</a> · <a href="../output/stage_b_v2_raw65/runs/slurm_42013/psf_v2_raw65_summary.md">summary_md</a> · <a href="../output/stage_b_v2_raw65/runs/slurm_42013/psf_v2_raw65_summary.csv">summary_csv</a> · <a href="../output/stage_b_v2_raw65/runs/slurm_42013/psf_v2_raw65.npz">npz</a></dd>
+      </dl>
+      <ul><li>Cells: 65</li><li>Crab declination PSF, r_opt and containment.</li><li>Warning rows: 37</li></ul>
+    </article>
+
+    <article class="stage-card">
+      <div class="stage-label">C</div>
+      <h3>raw65 observation reduction</h3>
+      <dl>
+        <dt>Run</dt><dd><code>v2_stage_c_slurm_42014</code></dd>
+        <dt>Status</dt><dd><code>promoted</code></dd>
+        <dt>Artifacts</dt><dd><a href="../output/stage_c_v2_raw65/runs/v2_stage_c_slurm_42014/obs_events_metadata.json">metadata</a> · <a href="../output/stage_c_v2_raw65/runs/v2_stage_c_slurm_42014/obs_events_summary.md">summary_md</a></dd>
+      </dl>
+      <ul><li>Output rows: 83,905,806</li><li>Source files: 1,258</li><li>Crab-centered ROI coverage retained for Stage D.</li></ul>
+    </article>
+
+    <article class="stage-card">
+      <div class="stage-label">D</div>
+      <h3>ROI-local direct expectation</h3>
+      <dl>
+        <dt>Run</dt><dd><code>n/a</code></dd>
+        <dt>Status</dt><dd><code>n/a</code></dd>
+        <dt>Artifacts</dt><dd>n/a</dd>
+      </dl>
+      <ul><li>Background mode: n/a</li><li>Background form: n/a</li></ul>
+    </article>
+
+    <article class="stage-card">
+      <div class="stage-label">E</div>
+      <h3>raw65 signal table</h3>
+      <dl>
+        <dt>Run</dt><dd><code>n/a</code></dd>
+        <dt>Status</dt><dd><code>n/a</code></dd>
+        <dt>Artifacts</dt><dd>n/a</dd>
+      </dl>
+      <ul><li>Quality: n/a</li><li>Formal sigma: n/a</li><li>Excess: n/a</li><li>N_on/B_on and excess are diagnostics only for v2.0.</li></ul>
+    </article>
+
+    <article class="stage-card">
+      <div class="stage-label">F</div>
+      <h3>v2_baseline24 forward folding</h3>
+      <dl>
+        <dt>Run</dt><dd><code>v2_stage_f_baseline24_slurm_42015</code></dd>
+        <dt>Status</dt><dd><code>promoted_physical</code></dd>
+        <dt>Artifacts</dt><dd><a href="../output/stage_f_v2_baseline24/runs/v2_stage_f_baseline24_slurm_42015/fit_v2_baseline24_metadata.json">metadata</a> · <a href="../output/stage_f_v2_baseline24/runs/v2_stage_f_baseline24_slurm_42015/fit_v2_baseline24_summary.md">summary_md</a> · <a href="../output/stage_f_v2_baseline24/runs/v2_stage_f_baseline24_slurm_42015/fit_v2_baseline24_summary.csv">summary_csv</a> · <a href="stage_f_v2_baseline24_report.html">report_html</a> · <a href="../output/stage_f_v2_baseline24/runs/v2_stage_f_baseline24_slurm_42015/fit_v2_baseline24.npz">npz</a></dd>
+      </dl>
+      <ul><li>Included cells: 7,8,9,17,18,19,20,21,28,29,30,31,32,38,39,40,41,42,47,48,49,55,56,57</li><li>Preferred model: LogPar / conservative</li><li>Preferred phi0: 3.056379e-12</li><li>PL gamma: 2.6301</li></ul>
+    </article>
+
+    <article class="stage-card">
+      <div class="stage-label">G</div>
+      <h3>v2_baseline24 diagnostic SED</h3>
+      <dl>
+        <dt>Run</dt><dd><code>v2_stage_g_baseline24_slurm_42015</code></dd>
+        <dt>Status</dt><dd><code>promoted_diagnostic</code></dd>
+        <dt>Artifacts</dt><dd><a href="../output/stage_g_v2_baseline24/runs/v2_stage_g_baseline24_slurm_42015/sed_points_v2_baseline24_metadata.json">metadata</a> · <a href="../output/stage_g_v2_baseline24/runs/v2_stage_g_baseline24_slurm_42015/sed_points_v2_baseline24_summary.md">summary_md</a> · <a href="../output/stage_g_v2_baseline24/runs/v2_stage_g_baseline24_slurm_42015/sed_points_v2_baseline24_summary.csv">summary_csv</a> · <a href="stage_g_v2_baseline24_report.html">report_html</a> · <a href="../output/stage_g_v2_baseline24/runs/v2_stage_g_baseline24_slurm_42015/sed_points_v2_baseline24.npz">npz</a></dd>
+      </dl>
+      <ul><li>SED points: 13</li><li>Fixed Stage F LogPar shape; per-group normalization only.</li></ul>
+    </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Stage G SED Points</h2>
+    <div class="table-wrap"><table><thead><tr><th>grouping</th><th>group</th><th>cells</th><th>E_eff TeV</th><th>E2 dN/dE</th><th>err</th><th>ratio StageF model</th></tr></thead><tbody><tr><td>nhit</td><td>[100,200)</td><td>7,8,9</td><td>0.55028</td><td>6.49499e-11</td><td>4.7327e-12</td><td>1.018</td></tr><tr><td>nhit</td><td>[200,300)</td><td>17,18,19,20,21</td><td>0.87165</td><td>6.26316e-11</td><td>2.5279e-12</td><td>1.109</td></tr><tr><td>nhit</td><td>[300,500)</td><td>28,29,30,31,32</td><td>1.6222</td><td>4.33874e-11</td><td>1.5257e-12</td><td>1.027</td></tr><tr><td>nhit</td><td>[500,800)</td><td>38,39,40,41,42</td><td>2.741</td><td>2.69065e-11</td><td>1.1117e-12</td><td>0.9104</td></tr><tr><td>nhit</td><td>[800,1100)</td><td>47,48,49</td><td>5.0196</td><td>1.50765e-11</td><td>1.1259e-12</td><td>0.8747</td></tr><tr><td>nhit</td><td>[1100,2000)</td><td>55,56,57</td><td>9.9602</td><td>8.93081e-12</td><td>7.4852e-13</td><td>1.125</td></tr><tr><td>predE</td><td>[2,3)</td><td>7,17</td><td>0.56081</td><td>5.82421e-11</td><td>2.7849e-12</td><td>0.9159</td></tr><tr><td>predE</td><td>[3,3.25)</td><td>8,18,28</td><td>1.2773</td><td>5.51692e-11</td><td>1.9574e-12</td><td>1.148</td></tr><tr><td>predE</td><td>[3.25,3.5)</td><td>9,19,29,38</td><td>2.1135</td><td>3.52352e-11</td><td>1.3433e-12</td><td>0.9861</td></tr><tr><td>predE</td><td>[3.5,3.75)</td><td>20,30,39,47</td><td>3.6318</td><td>2.05856e-11</td><td>1.0837e-12</td><td>0.88</td></tr><tr><td>predE</td><td>[3.75,4.0)</td><td>21,31,40,48,55</td><td>6.4511</td><td>1.31415e-11</td><td>1.0345e-12</td><td>0.9924</td></tr><tr><td>predE</td><td>[4.0,4.25)</td><td>32,41,49,56</td><td>10.951</td><td>1.10214e-11</td><td>1.2016e-12</td><td>1.567</td></tr><tr><td>predE</td><td>[4.25,4.5)</td><td>42,57</td><td>18.211</td><td>4.77836e-12</td><td>1.5009e-12</td><td>1.377</td></tr></tbody></table></div>
+  </section>
+
+  <section>
+    <h2>Figures</h2>
+    <div class="figure-grid"><figure><img src="../output/stage_f_v2_baseline24/runs/v2_stage_f_baseline24_slurm_42015/model_counts_vs_excess.png" alt="Stage F model counts vs excess"><figcaption>Stage F model counts vs excess</figcaption></figure><figure><img src="../output/stage_f_v2_baseline24/runs/v2_stage_f_baseline24_slurm_42015/pull_grid_logpar.png" alt="Stage F LogPar conservative pulls"><figcaption>Stage F LogPar conservative pulls</figcaption></figure><figure><img src="../output/stage_g_v2_baseline24/runs/v2_stage_g_baseline24_slurm_42015/sed_points_stage_f_fullarray_pool1.png" alt="Stage G SED points"><figcaption>Stage G SED points</figcaption></figure><figure><img src="../output/stage_g_v2_baseline24/runs/v2_stage_g_baseline24_slurm_42015/sed_points_ratio.png" alt="Stage G SED ratios"><figcaption>Stage G SED ratios</figcaption></figure><figure><img src="../output/stage_g_v2_baseline24/runs/v2_stage_g_baseline24_slurm_42015/sed_point_cell_counts.png" alt="Stage G cell counts per point"><figcaption>Stage G cell counts per point</figcaption></figure></div>
+  </section>
+
+  <footer>
+    Generated from Stage metadata under <code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output</code>.
+  </footer>
+</main>
+</body>
+</html>

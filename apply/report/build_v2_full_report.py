@@ -25,8 +25,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stage-e-dir", type=str, default="apply/output/stage_e_v2_raw65/current")
     parser.add_argument("--stage-f-dir", type=str, default="apply/output/stage_f_v2_baseline26/current")
     parser.add_argument("--stage-g-dir", type=str, default="apply/output/stage_g_v2_baseline26/current")
+    parser.add_argument("--stage-f-metadata-name", type=str, default="fit_v2_baseline26_metadata.json")
+    parser.add_argument("--stage-g-metadata-name", type=str, default="sed_points_v2_baseline26_metadata.json")
+    parser.add_argument("--stage-f-report-html", type=str, default="apply/report/stage_f_v2_baseline26_report.html")
+    parser.add_argument("--stage-g-report-html", type=str, default="apply/report/stage_g_v2_baseline26_report.html")
     parser.add_argument("--raw-ledger-csv", type=str, default="apply/config/cell_ledger_v2_raw65.csv")
     parser.add_argument("--baseline-selector-csv", type=str, default="apply/config/cell_selector_v2_baseline26.csv")
+    parser.add_argument("--baseline-name", type=str, default="v2_baseline26")
     return parser.parse_args()
 
 
@@ -86,10 +91,33 @@ def h(value: object) -> str:
     return html.escape(str(value))
 
 
+def spectrum_label(model_name: object) -> str:
+    value = str(model_name or "").lower()
+    if value == "pl":
+        return "PL"
+    if value == "logpar":
+        return "LogPar"
+    return str(model_name or "n/a")
+
+
 def stage_card(stage: str, title: str, meta: Dict[str, object], artifact: Path, notes: Sequence[str]) -> str:
-    run_id = meta.get("run_id") or meta.get("slurm_job_id") or "n/a"
+    run_id = meta.get("run_id") or meta.get("slurm_job_id") or meta.get("run_dir") or "n/a"
     promotion = meta.get("promotion") if isinstance(meta.get("promotion"), dict) else {}
-    status = promotion.get("status", "n/a") if isinstance(promotion, dict) else "n/a"
+    quality = meta.get("quality") if isinstance(meta.get("quality"), dict) else {}
+    quality_gate = meta.get("quality_gate") if isinstance(meta.get("quality_gate"), dict) else {}
+    status = (
+        promotion.get("status")
+        if isinstance(promotion, dict)
+        else None
+    ) or (
+        quality.get("status")
+        if isinstance(quality, dict)
+        else None
+    ) or (
+        quality_gate.get("status")
+        if isinstance(quality_gate, dict)
+        else None
+    ) or meta.get("absolute_effective_area_status") or "n/a"
     outputs = meta.get("outputs") if isinstance(meta.get("outputs"), dict) else {}
     links = []
     if artifact.exists():
@@ -157,6 +185,7 @@ def main() -> None:
 
     raw_rows = read_csv_rows((REPO_ROOT / args.raw_ledger_csv).resolve())
     selector_rows = read_csv_rows((REPO_ROOT / args.baseline_selector_csv).resolve())
+    baseline_name = str(args.baseline_name or "v2_baseline26")
     included_ids = selector_ids(selector_rows, True)
     excluded_ids = selector_ids(selector_rows, False)
     role_counts: Dict[str, int] = {}
@@ -169,8 +198,8 @@ def main() -> None:
     stage_c_meta_path = stage_c_dir / "obs_events_metadata.json"
     stage_d_meta_path = stage_d_dir / "background_v2_raw65_metadata.json"
     stage_e_meta_path = stage_e_dir / "signal_v2_raw65_metadata.json"
-    stage_f_meta_path = stage_f_dir / "fit_v2_baseline26_metadata.json"
-    stage_g_meta_path = stage_g_dir / "sed_points_v2_baseline26_metadata.json"
+    stage_f_meta_path = stage_f_dir / args.stage_f_metadata_name
+    stage_g_meta_path = stage_g_dir / args.stage_g_metadata_name
 
     stage_a = load_json(stage_a_meta_path)
     stage_b = load_json(stage_b_meta_path)
@@ -180,14 +209,23 @@ def main() -> None:
     stage_f = load_json(stage_f_meta_path)
     stage_g = load_json(stage_g_meta_path)
 
-    signal_stats = stage_e.get("signal_stats") if isinstance(stage_e.get("signal_stats"), dict) else {}
-    fit_pl = {}
+    totals_e = stage_e.get("totals") if isinstance(stage_e.get("totals"), dict) else {}
+    preferred = stage_f.get("preferred_fit") if isinstance(stage_f.get("preferred_fit"), dict) else {}
     fits = stage_f.get("fits") if isinstance(stage_f.get("fits"), dict) else {}
+    preferred_model = str(preferred.get("model", "pl") if isinstance(preferred, dict) else "pl").lower()
+    preferred_error = str(preferred.get("error_mode", "conservative") if isinstance(preferred, dict) else "conservative").lower()
+    preferred_key = f"{preferred_model}_{preferred_error}"
+    fit_preferred = fits.get(preferred_key, {}) if isinstance(fits, dict) else {}
+    fit_params = fit_preferred.get("parameters") if isinstance(fit_preferred.get("parameters"), dict) else {}
+    fit_pl = {}
     if isinstance(fits, dict):
         fit_pl = fits.get("pl_conservative", {}) if isinstance(fits.get("pl_conservative"), dict) else {}
-    fit_params = fit_pl.get("parameters") if isinstance(fit_pl.get("parameters"), dict) else {}
+    fit_pl_params = fit_pl.get("parameters") if isinstance(fit_pl.get("parameters"), dict) else {}
     quality_e = stage_e.get("quality_gate") if isinstance(stage_e.get("quality_gate"), dict) else {}
     contract_e = stage_e.get("stage_d_contract") if isinstance(stage_e.get("stage_d_contract"), dict) else {}
+    frozen_g = stage_g.get("frozen_spectrum") if isinstance(stage_g.get("frozen_spectrum"), dict) else {}
+    frozen_g_label = spectrum_label(frozen_g.get("model") if isinstance(frozen_g, dict) else preferred_model)
+    stage_b_warnings = stage_b.get("warning_rows", stage_b.get("warnings", []))
 
     sed_points = stage_g.get("points", []) if isinstance(stage_g.get("points"), list) else []
     sed_table_rows = []
@@ -202,7 +240,7 @@ def main() -> None:
                 "E_eff TeV": fmt(point.get("effective_energy_tev"), 5),
                 "E2 dN/dE": fmt(point.get("E2_dnde"), 5),
                 "err": fmt(point.get("E2_dnde_err"), 4),
-                "ratio StageF": fmt(point.get("ratio_to_stage_f_pl"), 4),
+                "ratio StageF model": fmt(point.get("ratio_to_stage_f_model", point.get("ratio_to_stage_f_pl")), 4),
             }
         )
 
@@ -227,6 +265,7 @@ def main() -> None:
             [
                 f"Cells: {fmt_int(len(stage_b.get('cells', [])) if isinstance(stage_b.get('cells'), list) else len(raw_rows))}",
                 "Crab declination PSF, r_opt and containment.",
+                f"Warning rows: {fmt_int(len(stage_b_warnings) if isinstance(stage_b_warnings, list) else 0)}",
             ],
         ),
         stage_card(
@@ -235,8 +274,8 @@ def main() -> None:
             stage_c,
             stage_c_meta_path,
             [
-                f"Output rows: {fmt_int(stage_c.get('output_rows'))}",
-                f"Source files: {fmt_int(stage_c.get('processed_files'))}",
+                f"Output rows: {fmt_int(stage_c.get('processing', {}).get('selected_rows') if isinstance(stage_c.get('processing'), dict) else None)}",
+                f"Source files: {fmt_int(stage_c.get('processing', {}).get('processed_file_count') if isinstance(stage_c.get('processing'), dict) else None)}",
                 "Crab-centered ROI coverage retained for Stage D.",
             ],
         ),
@@ -257,29 +296,31 @@ def main() -> None:
             stage_e_meta_path,
             [
                 f"Quality: {quality_e.get('status', 'n/a') if isinstance(quality_e, dict) else 'n/a'}",
-                f"Formal sigma: {fmt(signal_stats.get('total_formal_sigma'), 5) if isinstance(signal_stats, dict) else 'n/a'}",
+                f"Formal sigma: {fmt(totals_e.get('formal_sigma'), 5) if isinstance(totals_e, dict) else 'n/a'}",
+                f"Excess: {fmt(totals_e.get('excess'), 5) if isinstance(totals_e, dict) else 'n/a'}",
                 "N_on/B_on and excess are diagnostics only for v2.0.",
             ],
         ),
         stage_card(
             "F",
-            "baseline26 forward folding",
+            f"{baseline_name} forward folding",
             stage_f,
             stage_f_meta_path,
             [
                 f"Included cells: {','.join(str(v) for v in included_ids)}",
-                f"PL phi0: {fmt(fit_params.get('phi0'), 6) if isinstance(fit_params, dict) else 'n/a'}",
-                f"PL gamma: {fmt(fit_params.get('gamma'), 5) if isinstance(fit_params, dict) else 'n/a'}",
+                f"Preferred model: {spectrum_label(preferred_model)} / {preferred_error}",
+                f"Preferred phi0: {fmt(fit_params.get('phi0'), 6) if isinstance(fit_params, dict) else 'n/a'}",
+                f"PL gamma: {fmt(fit_pl_params.get('gamma'), 5) if isinstance(fit_pl_params, dict) else 'n/a'}",
             ],
         ),
         stage_card(
             "G",
-            "baseline26 diagnostic SED",
+            f"{baseline_name} diagnostic SED",
             stage_g,
             stage_g_meta_path,
             [
                 f"SED points: {fmt_int(len(sed_points))}",
-                "Fixed Stage F PL shape; per-group normalization only.",
+                f"Fixed Stage F {frozen_g_label} shape; per-group normalization only.",
             ],
         ),
     ]
@@ -288,8 +329,8 @@ def main() -> None:
         ("Roadmap v2", REPO_ROOT / args.roadmap_html),
         ("v2 skymaps", REPO_ROOT / args.skymap_html),
         ("Stage E report", REPO_ROOT / "apply/report/stage_e_v2_raw65_report.html"),
-        ("Stage F report", REPO_ROOT / "apply/report/stage_f_v2_baseline26_report.html"),
-        ("Stage G report", REPO_ROOT / "apply/report/stage_g_v2_baseline26_report.html"),
+        ("Stage F report", REPO_ROOT / args.stage_f_report_html),
+        ("Stage G report", REPO_ROOT / args.stage_g_report_html),
     ]
     link_html = " · ".join(
         f'<a href="{h(rel(path, REPORT_DIR))}">{h(label)}</a>' for label, path in report_links if Path(path).exists()
@@ -297,7 +338,10 @@ def main() -> None:
 
     figures = [
         figure(stage_f_dir / "model_counts_vs_excess.png", "Stage F model counts vs excess"),
-        figure(stage_f_dir / "pull_grid_pl.png", "Stage F PL conservative pulls"),
+        figure(
+            stage_f_dir / ("pull_grid_logpar.png" if preferred_model == "logpar" else "pull_grid_pl.png"),
+            f"Stage F {spectrum_label(preferred_model)} conservative pulls",
+        ),
         figure(stage_g_dir / "sed_points_stage_f_fullarray_pool1.png", "Stage G SED points"),
         figure(stage_g_dir / "sed_points_ratio.png", "Stage G SED ratios"),
         figure(stage_g_dir / "sed_point_cell_counts.png", "Stage G cell counts per point"),
@@ -353,16 +397,16 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
   <header>
     <div class="eyebrow">LHAASO-WCDA · Crab SED v2</div>
     <h1>Stage A-G 完整结果报告</h1>
-    <p class="lead">本页把 roadmap v2 的 raw65 ledger、baseline26 selector、Stage A-E raw artifacts、Stage F forward-folding 和 Stage G diagnostic SED 串成一个可追踪结果页。</p>
+    <p class="lead">本页把 roadmap v2 的 raw65 ledger、{h(baseline_name)} selector、Stage A-E raw artifacts、Stage F forward-folding 和 Stage G diagnostic SED 串成一个可追踪结果页。</p>
   </header>
 
   <section>
     <h2>Run Summary</h2>
     <div class="metric-grid">
       <div class="metric"><div class="label">raw ledger</div><div class="value">{fmt_int(len(raw_rows))}</div><div class="note">v2_raw65 cells</div></div>
-      <div class="metric"><div class="label">baseline</div><div class="value">{fmt_int(len(included_ids))}</div><div class="note">v2_baseline26 cells</div></div>
-      <div class="metric"><div class="label">Stage E sigma</div><div class="value">{fmt(signal_stats.get('total_formal_sigma'), 4) if isinstance(signal_stats, dict) else 'n/a'}</div><div class="note">{h(contract_e.get('background_form', 'n/a') if isinstance(contract_e, dict) else 'n/a')}</div></div>
-      <div class="metric"><div class="label">Stage F PL</div><div class="value">{fmt(fit_params.get('gamma'), 4) if isinstance(fit_params, dict) else 'n/a'}</div><div class="note">gamma, conservative errors</div></div>
+      <div class="metric"><div class="label">baseline</div><div class="value">{fmt_int(len(included_ids))}</div><div class="note">{h(baseline_name)} cells</div></div>
+      <div class="metric"><div class="label">Stage E sigma</div><div class="value">{fmt(totals_e.get('formal_sigma'), 4) if isinstance(totals_e, dict) else 'n/a'}</div><div class="note">{h(contract_e.get('background_form', 'n/a') if isinstance(contract_e, dict) else 'n/a')}</div></div>
+      <div class="metric"><div class="label">Stage F preferred</div><div class="value">{h(spectrum_label(preferred_model))}</div><div class="note">chi2/ndof {fmt(fit_preferred.get('chi2'), 4) if isinstance(fit_preferred, dict) else 'n/a'} / {h(fit_preferred.get('ndof', 'n/a') if isinstance(fit_preferred, dict) else 'n/a')}</div></div>
     </div>
     <div class="callout">
       v2.0 使用 <code>{h(contract_e.get('background_mode', 'n/a') if isinstance(contract_e, dict) else 'n/a')}</code> / <code>{h(contract_e.get('background_form', 'n/a') if isinstance(contract_e, dict) else 'n/a')}</code>。若 background form 是 direct expectation，则 Li-Ma 不适用；Stage E/F/G 的显著性、pull 和 SED residual 只作为 diagnostic 信息，不反向修改 selector。
@@ -374,7 +418,7 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
     <h2>Ledger And Selector</h2>
     <p>raw65 role 分布：</p>
     <div class="table-wrap">{table_from_rows(role_table, ['role', 'cells'])}</div>
-    <p>baseline26 included cells: <code>{h(','.join(str(v) for v in included_ids))}</code></p>
+    <p>{h(baseline_name)} included cells: <code>{h(','.join(str(v) for v in included_ids))}</code></p>
     <p>excluded / diagnostic cells: <code>{h(','.join(str(v) for v in excluded_ids))}</code></p>
   </section>
 
@@ -385,7 +429,7 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
 
   <section>
     <h2>Stage G SED Points</h2>
-    <div class="table-wrap">{table_from_rows(sed_table_rows, ['grouping', 'group', 'cells', 'E_eff TeV', 'E2 dN/dE', 'err', 'ratio StageF'])}</div>
+    <div class="table-wrap">{table_from_rows(sed_table_rows, ['grouping', 'group', 'cells', 'E_eff TeV', 'E2 dN/dE', 'err', 'ratio StageF model'])}</div>
   </section>
 
   <section>

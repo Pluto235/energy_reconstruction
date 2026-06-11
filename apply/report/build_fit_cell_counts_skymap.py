@@ -1,0 +1,262 @@
+#!/usr/bin/env python
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import math
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Optional, Sequence, Tuple
+
+import numpy as np
+
+os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
+os.environ.setdefault("XDG_CACHE_HOME", "/tmp/.cache")
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+@dataclass(frozen=True)
+class Cell:
+    index: int
+    cell_id: int
+    nhit_bin: str
+    predE_bin: str
+    source_index: int
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Plot Stage D counts maps for cells included in a fit selector.")
+    parser.add_argument("--stage-d-npz", type=str, default="apply/output/stage_d_v2_raw65/runs/v2_stage_d_slurm_42014/background_v2_raw65.npz")
+    parser.add_argument("--stage-d-metadata", type=str, default="apply/output/stage_d_v2_raw65/runs/v2_stage_d_slurm_42014/background_v2_raw65_metadata.json")
+    parser.add_argument("--selector-csv", type=str, default="apply/config/cell_selector_v2_baseline24.csv")
+    parser.add_argument("--output-png", type=str, default="apply/report/assets/crab-v2-baseline24-fit-cell-skymaps/crab_v2_baseline24_fit_counts_grid.png")
+    parser.add_argument("--output-metadata", type=str, default="apply/report/assets/crab-v2-baseline24-fit-cell-skymaps/crab_v2_baseline24_fit_counts_grid_meta.json")
+    parser.add_argument("--title", type=str, default="v2_baseline24 fit-cell Stage D counts maps")
+    parser.add_argument("--counts-vmax-percentile", type=float, default=99.3)
+    return parser.parse_args()
+
+
+def resolve(path: str) -> Path:
+    p = Path(path)
+    return p if p.is_absolute() else REPO_ROOT / p
+
+
+def parse_interval(label: str) -> Tuple[Optional[float], Optional[float]]:
+    label = label.strip()
+    if label.startswith("[") and label.endswith(")"):
+        low, high = label[1:-1].split(",", 1)
+        return float(low), float(high)
+    if label.startswith("<"):
+        return None, float(label[1:])
+    if label.startswith(">="):
+        return float(label[2:]), None
+    raise ValueError(f"Unsupported interval label: {label}")
+
+
+def interval_key(label: str) -> float:
+    low, high = parse_interval(label)
+    if low is None:
+        return -1.0e30
+    if high is None:
+        return 1.0e30
+    return low
+
+
+def selector_included_ids(path: Path) -> List[int]:
+    with path.open("r", encoding="utf-8", newline="") as f:
+        rows = list(csv.DictReader(f))
+    ids: List[int] = []
+    for row in rows:
+        include = str(row.get("include", "")).strip().lower() in {"1", "true", "yes", "y", "include"}
+        if include:
+            ids.append(int(row["cell_id"]))
+    if not ids:
+        raise ValueError(f"No included cells found in selector: {path}")
+    return ids
+
+
+def load_cells(data: np.lib.npyio.NpzFile, included_ids: Sequence[int]) -> List[Cell]:
+    source_by_id = {int(cell_id): idx for idx, cell_id in enumerate(data["cell_id"])}
+    cells: List[Cell] = []
+    for out_index, cell_id in enumerate(included_ids):
+        if int(cell_id) not in source_by_id:
+            raise ValueError(f"Cell {cell_id} is included by selector but missing from Stage D NPZ")
+        source_index = source_by_id[int(cell_id)]
+        cells.append(
+            Cell(
+                index=out_index,
+                cell_id=int(cell_id),
+                nhit_bin=str(data["nhit_bin"][source_index]),
+                predE_bin=str(data["predE_bin"][source_index]),
+                source_index=source_index,
+            )
+        )
+    return sorted(cells, key=lambda c: (interval_key(c.nhit_bin), interval_key(c.predE_bin), c.cell_id))
+
+
+def robust_vmax(values: np.ndarray, percentile: float) -> float:
+    finite_positive = values[np.isfinite(values) & (values > 0)]
+    if finite_positive.size == 0:
+        return 1.0
+    vmax = float(np.percentile(finite_positive, percentile))
+    if not np.isfinite(vmax) or vmax <= 0:
+        vmax = float(finite_positive.max())
+    return max(vmax, 1.0e-6)
+
+
+def prepare_grid(cells: Sequence[Cell]) -> Tuple[List[str], List[str], Dict[Tuple[str, str], Cell]]:
+    nhit_bins = sorted({cell.nhit_bin for cell in cells}, key=interval_key)
+    pred_bins = sorted({cell.predE_bin for cell in cells}, key=interval_key)
+    by_key = {(cell.nhit_bin, cell.predE_bin): cell for cell in cells}
+    return nhit_bins, pred_bins, by_key
+
+
+def plot_counts_grid(
+    *,
+    maps: np.ndarray,
+    cells: Sequence[Cell],
+    x_edges: np.ndarray,
+    y_edges: np.ndarray,
+    output_png: Path,
+    title: str,
+    vmax_percentile: float,
+    per_cell_roi_events: Dict[int, int],
+) -> None:
+    nhit_bins, pred_bins, by_key = prepare_grid(cells)
+    first_visible_col_by_row = {
+        i: min(j for j, pred_bin in enumerate(pred_bins) if (nhit_bin, pred_bin) in by_key)
+        for i, nhit_bin in enumerate(nhit_bins)
+    }
+    fig, axes = plt.subplots(
+        len(nhit_bins),
+        len(pred_bins),
+        figsize=(2.05 * len(pred_bins), 1.95 * len(nhit_bins)),
+        dpi=170,
+        sharex=True,
+        sharey=True,
+        squeeze=False,
+    )
+    extent = [float(x_edges[0]), float(x_edges[-1]), float(y_edges[0]), float(y_edges[-1])]
+    cmap = plt.get_cmap("viridis").copy()
+    cmap.set_bad("#eeeeee")
+
+    for i, nhit_bin in enumerate(nhit_bins):
+        for j, pred_bin in enumerate(pred_bins):
+            ax = axes[i, j]
+            cell = by_key.get((nhit_bin, pred_bin))
+            if cell is None:
+                ax.set_axis_off()
+                continue
+
+            image = maps[cell.source_index].astype(np.float64)
+            norm = Normalize(vmin=0.0, vmax=robust_vmax(image, vmax_percentile))
+            ax.imshow(
+                image,
+                origin="lower",
+                extent=extent,
+                aspect="equal",
+                interpolation="nearest",
+                cmap=cmap,
+                norm=norm,
+            )
+            ax.plot([0.0], [0.0], marker="+", markersize=7, markeredgewidth=1.2, color="black")
+            roi_events = per_cell_roi_events.get(cell.cell_id, int(np.sum(image)))
+            ax.set_title(f"cell {cell.cell_id}: {pred_bin}\nN={roi_events:,}", fontsize=6.9)
+            ax.tick_params(labelsize=6.2, length=2)
+            ax.grid(color="white", alpha=0.22, linewidth=0.32)
+            if j == first_visible_col_by_row[i]:
+                ax.set_ylabel(f"{nhit_bin}\nDec offset (deg)", fontsize=7.0)
+            if i == len(nhit_bins) - 1:
+                ax.set_xlabel("RA offset cos(dec) (deg)", fontsize=7.0)
+
+    fig.suptitle(f"{title} (per-panel color scale)", fontsize=12, y=0.996)
+    fig.tight_layout(rect=[0.0, 0.0, 1.0, 0.982])
+    output_png.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_png)
+    plt.close(fig)
+
+
+def metadata_cell_events(path: Path) -> Dict[int, int]:
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as f:
+        meta = json.load(f)
+    events: Dict[int, int] = {}
+    for cell in meta.get("cells", []):
+        if not isinstance(cell, dict):
+            continue
+        events[int(cell["cell_id"])] = int(cell.get("grid_events", cell.get("selected_events", 0)))
+    return events
+
+
+def main() -> None:
+    args = parse_args()
+    stage_d_npz = resolve(args.stage_d_npz)
+    stage_d_metadata = resolve(args.stage_d_metadata)
+    selector_csv = resolve(args.selector_csv)
+    output_png = resolve(args.output_png)
+    output_metadata = resolve(args.output_metadata)
+
+    data = np.load(stage_d_npz)
+    required = {"cell_id", "nhit_bin", "predE_bin", "x_edges_deg", "y_edges_deg", "counts_map"}
+    missing = required - set(data.files)
+    if missing:
+        raise ValueError(f"{stage_d_npz} is missing arrays: {sorted(missing)}")
+
+    included_ids = selector_included_ids(selector_csv)
+    cells = load_cells(data, included_ids)
+    per_cell_roi_events = metadata_cell_events(stage_d_metadata)
+    plot_counts_grid(
+        maps=data["counts_map"],
+        cells=cells,
+        x_edges=data["x_edges_deg"],
+        y_edges=data["y_edges_deg"],
+        output_png=output_png,
+        title=str(args.title),
+        vmax_percentile=float(args.counts_vmax_percentile),
+        per_cell_roi_events=per_cell_roi_events,
+    )
+
+    output_metadata.parent.mkdir(parents=True, exist_ok=True)
+    metadata = {
+        "description": "Stage D counts maps for cells included in the fit selector.",
+        "selector_csv": str(selector_csv),
+        "stage_d_npz": str(stage_d_npz),
+        "stage_d_metadata": str(stage_d_metadata),
+        "output_png": str(output_png),
+        "included_cell_ids": [cell.cell_id for cell in cells],
+        "included_cell_count": len(cells),
+        "cells": [
+            {
+                "cell_id": cell.cell_id,
+                "nhit_bin": cell.nhit_bin,
+                "predE_bin": cell.predE_bin,
+                "stage_d_source_index": cell.source_index,
+                "grid_events": per_cell_roi_events.get(cell.cell_id),
+            }
+            for cell in cells
+        ],
+        "plotting": {
+            "counts_scale": "per-panel",
+            "counts_vmax_percentile": float(args.counts_vmax_percentile),
+            "marker": "Crab nominal center at (0,0)",
+        },
+    }
+    with output_metadata.open("w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2)
+    print(f"Wrote {output_png}")
+    print(f"Wrote {output_metadata}")
+
+
+if __name__ == "__main__":
+    main()

@@ -37,6 +37,7 @@ th,td { padding:10px 12px; border-bottom:1px solid var(--border); text-align:lef
 th { background:var(--panel2); white-space:nowrap; }
 .figure-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
 figure { margin:0; padding:12px; border:1px solid var(--border); background:var(--panel); border-radius:8px; }
+.wide { grid-column:1 / -1; }
 img { display:block; width:100%; height:auto; background:#fff; border-radius:4px; }
 figcaption { margin-top:8px; color:var(--muted); font-size:13px; }
 footer { margin-top:48px; padding-top:18px; border-top:1px solid var(--border); color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
@@ -56,11 +57,11 @@ footer { margin-top:48px; padding-top:18px; border-top:1px solid var(--border); 
     <div class="metric-grid">
       <div class="metric"><div class="label">raw ledger</div><div class="value">65</div><div class="note">v2_raw65 cells</div></div>
       <div class="metric"><div class="label">baseline</div><div class="value">24</div><div class="note">v2_baseline24 cells</div></div>
-      <div class="metric"><div class="label">Stage E sigma</div><div class="value">n/a</div><div class="note">n/a</div></div>
+      <div class="metric"><div class="label">Stage E sigma</div><div class="value">90.25</div><div class="note">direct_expectation</div></div>
       <div class="metric"><div class="label">Stage F preferred</div><div class="value">LogPar</div><div class="note">chi2/ndof 164.2 / 21</div></div>
     </div>
     <div class="callout">
-      v2.0 使用 <code>n/a</code> / <code>n/a</code>。若 background form 是 direct expectation，则 Li-Ma 不适用；Stage E/F/G 的显著性、pull 和 SED residual 只作为 diagnostic 信息，不反向修改 selector。
+      v2.0 使用 <code>crab_roi_local</code> / <code>direct_expectation</code>。若 background form 是 direct expectation，则 Li-Ma 不适用；Stage E/F/G 的显著性、pull 和 SED residual 只作为 diagnostic 信息，不反向修改 selector。
     </div>
     <p><a href="roadmap_v2.html">Roadmap v2</a> · <a href="crab_v2_cell_skymaps.html">v2 skymaps</a> · <a href="stage_e_v2_raw65_report.html">Stage E report</a> · <a href="stage_f_v2_baseline24_report.html">Stage F report</a> · <a href="stage_g_v2_baseline24_report.html">Stage G report</a></p>
   </section>
@@ -113,22 +114,22 @@ footer { margin-top:48px; padding-top:18px; border-top:1px solid var(--border); 
       <div class="stage-label">D</div>
       <h3>ROI-local direct expectation</h3>
       <dl>
-        <dt>Run</dt><dd><code>n/a</code></dd>
-        <dt>Status</dt><dd><code>n/a</code></dd>
-        <dt>Artifacts</dt><dd>n/a</dd>
+        <dt>Run</dt><dd><code>v2_stage_d_slurm_42014</code></dd>
+        <dt>Status</dt><dd><code>skipped</code></dd>
+        <dt>Artifacts</dt><dd><a href="../output/stage_d_v2_raw65/runs/v2_stage_d_slurm_42014/background_v2_raw65_metadata.json">metadata</a> · <a href="../output/stage_d_v2_raw65/runs/v2_stage_d_slurm_42014/background_v2_raw65_summary.md">summary_md</a> · <a href="../output/stage_d_v2_raw65/runs/v2_stage_d_slurm_42014/background_v2_raw65_summary.csv">summary_csv</a> · <a href="../output/stage_d_v2_raw65/runs/v2_stage_d_slurm_42014/background_v2_raw65.npz">npz</a></dd>
       </dl>
-      <ul><li>Background mode: n/a</li><li>Background form: n/a</li></ul>
+      <ul><li>Background mode: crab_roi_local</li><li>Background form: direct_expectation</li></ul>
     </article>
 
     <article class="stage-card">
       <div class="stage-label">E</div>
       <h3>raw65 signal table</h3>
       <dl>
-        <dt>Run</dt><dd><code>n/a</code></dd>
-        <dt>Status</dt><dd><code>n/a</code></dd>
-        <dt>Artifacts</dt><dd>n/a</dd>
+        <dt>Run</dt><dd><code>v2_stage_e_slurm_42014</code></dd>
+        <dt>Status</dt><dd><code>skipped_no_promote_current</code></dd>
+        <dt>Artifacts</dt><dd><a href="../output/stage_e_v2_raw65/runs/v2_stage_e_slurm_42014/signal_v2_raw65_metadata.json">metadata</a> · <a href="../output/stage_e_v2_raw65/runs/v2_stage_e_slurm_42014/signal_v2_raw65_summary.md">summary_md</a> · <a href="../output/stage_e_v2_raw65/runs/v2_stage_e_slurm_42014/signal_v2_raw65_summary.csv">summary_csv</a> · <a href="stage_e_v2_raw65_report.html">report_html</a> · <a href="../output/stage_e_v2_raw65/runs/v2_stage_e_slurm_42014/signal_v2_raw65.npz">npz</a></dd>
       </dl>
-      <ul><li>Quality: n/a</li><li>Formal sigma: n/a</li><li>Excess: n/a</li><li>N_on/B_on and excess are diagnostics only for v2.0.</li></ul>
+      <ul><li>Quality: passed</li><li>Formal sigma: 90.248</li><li>Excess: 65214</li><li>N_on/B_on and excess are diagnostics only for v2.0.</li></ul>
     </article>
 
     <article class="stage-card">
@@ -162,7 +163,7 @@ footer { margin-top:48px; padding-top:18px; border-top:1px solid var(--border); 
 
   <section>
     <h2>Figures</h2>
-    <div class="figure-grid"><figure><img src="../output/stage_f_v2_baseline24/runs/v2_stage_f_baseline24_slurm_42015/model_counts_vs_excess.png" alt="Stage F model counts vs excess"><figcaption>Stage F model counts vs excess</figcaption></figure><figure><img src="../output/stage_f_v2_baseline24/runs/v2_stage_f_baseline24_slurm_42015/pull_grid_logpar.png" alt="Stage F LogPar conservative pulls"><figcaption>Stage F LogPar conservative pulls</figcaption></figure><figure><img src="../output/stage_g_v2_baseline24/runs/v2_stage_g_baseline24_slurm_42015/sed_points_stage_f_fullarray_pool1.png" alt="Stage G SED points"><figcaption>Stage G SED points</figcaption></figure><figure><img src="../output/stage_g_v2_baseline24/runs/v2_stage_g_baseline24_slurm_42015/sed_points_ratio.png" alt="Stage G SED ratios"><figcaption>Stage G SED ratios</figcaption></figure><figure><img src="../output/stage_g_v2_baseline24/runs/v2_stage_g_baseline24_slurm_42015/sed_point_cell_counts.png" alt="Stage G cell counts per point"><figcaption>Stage G cell counts per point</figcaption></figure></div>
+    <div class="figure-grid"><figure class="wide"><img src="assets/crab-v2-baseline24-fit-cell-skymaps/crab_v2_baseline24_fit_counts_grid.png" alt="v2_baseline24 fit-cell Stage D counts skymap"><figcaption>v2_baseline24 fit-cell Stage D counts skymap</figcaption></figure><figure><img src="../output/stage_f_v2_baseline24/runs/v2_stage_f_baseline24_slurm_42015/model_counts_vs_excess.png" alt="Stage F model counts vs excess"><figcaption>Stage F model counts vs excess</figcaption></figure><figure><img src="../output/stage_f_v2_baseline24/runs/v2_stage_f_baseline24_slurm_42015/pull_grid_logpar.png" alt="Stage F LogPar conservative pulls"><figcaption>Stage F LogPar conservative pulls</figcaption></figure><figure><img src="../output/stage_g_v2_baseline24/runs/v2_stage_g_baseline24_slurm_42015/sed_points_stage_f_fullarray_pool1.png" alt="Stage G SED points"><figcaption>Stage G SED points</figcaption></figure><figure><img src="../output/stage_g_v2_baseline24/runs/v2_stage_g_baseline24_slurm_42015/sed_points_ratio.png" alt="Stage G SED ratios"><figcaption>Stage G SED ratios</figcaption></figure><figure><img src="../output/stage_g_v2_baseline24/runs/v2_stage_g_baseline24_slurm_42015/sed_point_cell_counts.png" alt="Stage G cell counts per point"><figcaption>Stage G cell counts per point</figcaption></figure></div>
   </section>
 
   <footer>

@@ -29,6 +29,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stage-g-metadata-name", type=str, default="sed_points_v2_baseline26_metadata.json")
     parser.add_argument("--stage-f-report-html", type=str, default="apply/report/stage_f_v2_baseline26_report.html")
     parser.add_argument("--stage-g-report-html", type=str, default="apply/report/stage_g_v2_baseline26_report.html")
+    parser.add_argument(
+        "--fit-cell-counts-skymap",
+        type=str,
+        default="",
+    )
     parser.add_argument("--raw-ledger-csv", type=str, default="apply/config/cell_ledger_v2_raw65.csv")
     parser.add_argument("--baseline-selector-csv", type=str, default="apply/config/cell_selector_v2_baseline26.csv")
     parser.add_argument("--baseline-name", type=str, default="v2_baseline26")
@@ -146,6 +151,12 @@ def figure(path: Path, caption: str) -> str:
     if not path.exists():
         return ""
     return f'<figure><img src="{h(rel(path, REPORT_DIR))}" alt="{h(caption)}"><figcaption>{h(caption)}</figcaption></figure>'
+
+
+def wide_figure(path: Path, caption: str) -> str:
+    if not path.exists():
+        return ""
+    return f'<figure class="wide"><img src="{h(rel(path, REPORT_DIR))}" alt="{h(caption)}"><figcaption>{h(caption)}</figcaption></figure>'
 
 
 def table_from_rows(rows: Sequence[Dict[str, object]], columns: Sequence[str]) -> str:
@@ -337,6 +348,12 @@ def main() -> None:
     )
 
     figures = [
+        wide_figure(
+            REPO_ROOT / args.fit_cell_counts_skymap,
+            f"{baseline_name} fit-cell Stage D counts skymap",
+        )
+        if args.fit_cell_counts_skymap
+        else "",
         figure(stage_f_dir / "model_counts_vs_excess.png", "Stage F model counts vs excess"),
         figure(
             stage_f_dir / ("pull_grid_logpar.png" if preferred_model == "logpar" else "pull_grid_pl.png"),
@@ -386,6 +403,7 @@ th,td {{ padding:10px 12px; border-bottom:1px solid var(--border); text-align:le
 th {{ background:var(--panel2); white-space:nowrap; }}
 .figure-grid {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }}
 figure {{ margin:0; padding:12px; border:1px solid var(--border); background:var(--panel); border-radius:8px; }}
+.wide {{ grid-column:1 / -1; }}
 img {{ display:block; width:100%; height:auto; background:#fff; border-radius:4px; }}
 figcaption {{ margin-top:8px; color:var(--muted); font-size:13px; }}
 footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border); color:var(--muted); font-size:13px; overflow-wrap:anywhere; }}

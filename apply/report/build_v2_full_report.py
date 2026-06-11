@@ -377,13 +377,13 @@ def main() -> None:
         else "",
         wide_figure(
             REPO_ROOT / args.fit_cell_ra_profile,
-            f"{baseline_name} normalized RA-offset excess profiles",
+            f"raw65 normalized RA-offset excess profiles ({baseline_name} fit cells highlighted)",
         )
         if args.fit_cell_ra_profile
         else "",
         wide_figure(
             REPO_ROOT / args.fit_cell_dec_profile,
-            f"{baseline_name} normalized Dec-offset excess profiles",
+            f"raw65 normalized Dec-offset excess profiles ({baseline_name} fit cells highlighted)",
         )
         if args.fit_cell_dec_profile
         else "",

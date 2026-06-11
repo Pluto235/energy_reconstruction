@@ -30,6 +30,7 @@ class Cell:
     nhit_bin: str
     predE_bin: str
     source_index: int
+    in_fit: bool
 
 
 def parse_args() -> argparse.Namespace:
@@ -85,22 +86,24 @@ def selector_included_ids(path: Path) -> List[int]:
     return included
 
 
-def load_cells(data: np.lib.npyio.NpzFile, included_ids: Sequence[int]) -> List[Cell]:
-    source_by_id = {int(cell_id): idx for idx, cell_id in enumerate(data["cell_id"])}
+def load_cells(data: np.lib.npyio.NpzFile, fit_ids: Sequence[int]) -> List[Cell]:
+    fit_id_set = {int(value) for value in fit_ids}
     cells: List[Cell] = []
-    for out_index, cell_id in enumerate(included_ids):
-        if int(cell_id) not in source_by_id:
-            raise ValueError(f"Cell {cell_id} is included by selector but missing from Stage D NPZ")
-        source_index = source_by_id[int(cell_id)]
+    for source_index, cell_id_raw in enumerate(data["cell_id"]):
+        cell_id = int(cell_id_raw)
         cells.append(
             Cell(
-                index=out_index,
-                cell_id=int(cell_id),
+                index=len(cells),
+                cell_id=cell_id,
                 nhit_bin=str(data["nhit_bin"][source_index]),
                 predE_bin=str(data["predE_bin"][source_index]),
                 source_index=source_index,
+                in_fit=cell_id in fit_id_set,
             )
         )
+    missing_fit_ids = sorted(fit_id_set - {cell.cell_id for cell in cells})
+    if missing_fit_ids:
+        raise ValueError(f"Selector includes cells missing from Stage D NPZ: {missing_fit_ids}")
     return sorted(cells, key=lambda c: (interval_key(c.nhit_bin), interval_key(c.predE_bin), c.cell_id))
 
 
@@ -204,6 +207,14 @@ def plot_profile_grid(
                 ax.set_axis_off()
                 continue
 
+            if cell.in_fit:
+                ax.set_facecolor("#ecf7ee")
+                for spine in ax.spines.values():
+                    spine.set_color("#2f7d32")
+                    spine.set_linewidth(1.15)
+            else:
+                ax.set_facecolor("#ffffff")
+
             values = normalized_profile[cell.source_index]
             ax.axhline(0.0, color="#777777", linewidth=0.7, alpha=0.85)
             ax.axhline(0.5, color="#999999", linestyle="--", linewidth=0.65, alpha=0.75)
@@ -212,14 +223,15 @@ def plot_profile_grid(
             ax.grid(alpha=0.22, linewidth=0.35)
             ax.set_ylim(float(y_min), float(y_max))
             roi_events = per_cell_roi_events.get(cell.cell_id, 0)
-            ax.set_title(f"cell {cell.cell_id}: {pred_bin}\nN={roi_events:,}", fontsize=6.9)
+            marker = "fit" if cell.in_fit else "diag"
+            ax.set_title(f"cell {cell.cell_id}: {pred_bin} [{marker}]\nN={roi_events:,}", fontsize=6.6)
             ax.tick_params(labelsize=6.2, length=2)
             if j == first_visible_col_by_row[i]:
                 ax.set_ylabel(f"{nhit_bin}\nexcess / peak", fontsize=7.0)
             if i == len(nhit_bins) - 1:
                 ax.set_xlabel(x_label, fontsize=7.0)
 
-    fig.suptitle(title, fontsize=12, y=0.996)
+    fig.suptitle(f"{title} (green panels enter the fit)", fontsize=12, y=0.996)
     fig.tight_layout(rect=[0.0, 0.0, 1.0, 0.982])
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path)
@@ -242,8 +254,8 @@ def main() -> None:
     if missing:
         raise ValueError(f"{stage_d_npz} is missing arrays: {sorted(missing)}")
 
-    included_ids = selector_included_ids(selector_csv)
-    cells = load_cells(data, included_ids)
+    fit_ids = selector_included_ids(selector_csv)
+    cells = load_cells(data, fit_ids)
     per_cell_roi_events = metadata_cell_events(stage_d_metadata)
     profiles = compute_profiles(
         data["excess_map"],
@@ -280,14 +292,17 @@ def main() -> None:
 
     output_dir.mkdir(parents=True, exist_ok=True)
     metadata = {
-        "description": "Normalized Stage D excess profiles for cells included in the fit selector.",
+        "description": "Normalized Stage D excess profiles for all raw65 cells; fit-selector cells are highlighted.",
         "selector_csv": str(selector_csv),
         "stage_d_npz": str(stage_d_npz),
         "stage_d_metadata": str(stage_d_metadata),
-        "included_cell_ids": [cell.cell_id for cell in cells],
-        "included_cell_count": len(cells),
+        "cell_ids": [cell.cell_id for cell in cells],
+        "cell_count": len(cells),
+        "highlighted_fit_cell_ids": [cell.cell_id for cell in cells if cell.in_fit],
+        "highlighted_fit_cell_count": int(sum(1 for cell in cells if cell.in_fit)),
         "profile_half_width_deg": float(args.profile_half_width_deg),
         "normalization": "Each 1D excess profile is divided by its own positive peak.",
+        "highlight_style": "Fit cells use a light green panel background and green border.",
         "outputs": {
             "ra_normalized_excess_profiles_png": str(ra_png),
             "dec_normalized_excess_profiles_png": str(dec_png),
@@ -298,6 +313,7 @@ def main() -> None:
                 "nhit_bin": cell.nhit_bin,
                 "predE_bin": cell.predE_bin,
                 "stage_d_source_index": cell.source_index,
+                "in_fit_selector": cell.in_fit,
                 "grid_events": per_cell_roi_events.get(cell.cell_id),
                 "ra_profile_peak": float(profiles["ra_peak"][cell.source_index]),
                 "dec_profile_peak": float(profiles["dec_peak"][cell.source_index]),

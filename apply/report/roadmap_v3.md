@@ -26,7 +26,7 @@ v3 最终交付物必须和 v2 一样形成完整 Stage A-G HTML 报告；报告
    `1, x, y, x^2, x*y, y^2`。第一版先做加权二乘/Poisson 近似，保留 Poisson log-link 作为系统学交叉检查。
 5. **环带覆盖视为完整。** v3 仍记录 coverage diagnostics，但不把环带不完整作为当前主要风险。
 6. **selector 仍然冻结。** 禁止用 Crab 实测 `N_on/B_on`、excess、significance、Stage F pull 或 Stage G residual 回头定义 baseline selector。
-7. **predE candidate bins 使用 0.25 dex 主网格。** v2 的 `[2,3)` 和 `>=5` 不再作为 v3 最终 fit bin；`[3,5)` 的 0.25 dex binning 保留，低端和高端先拆成候选细 bin，再由 HAWC-style central-99% 和质量门决定是否进入 baseline。
+7. **predE 使用混合网格。** v2 的 `[2,3)` 作为最终 fit bin 太粗，v3 需要拆细；`[3,5)`，包括 `[4,5)`，已经是 0.25 dex，保留现状；`>=5` 数据量本来很少，不应强制拆成 0.25 dex final fit / SED bins，baseline 默认保留为合并高能 bin 或 upper-limit bin，只在 MC/data 统计足够时输出诊断性的 high-energy probe split。
 
 ---
 
@@ -72,7 +72,7 @@ apply/config/cell_ledger_v3_candidate.csv
 [125,200), [200,300), [300,500), [500,800), [800,1100), [1100,2000), [2000,3000)
 ```
 
-predicted-energy 轴使用 HAWC-style quarter-decade 主网格。v2 中 `[3,5)` 已经是 0.25 dex，保留为候选网格；v2 中 `[2,3)` 太宽，v3 拆为 `[2.0,2.25)`, `[2.25,2.5)`, `[2.5,2.75)`, `[2.75,3.0)` 候选 bins；v2 中 `>=5` open bin 太宽，v3 拆为 `[5.0,5.25)`, `[5.25,5.5)`, `[5.5,5.75)`, `[5.75,6.0)`，必要时再保留 `>=6.0` 作为 high-energy probe / upper-limit 候选。每行至少包含：
+predicted-energy 轴使用混合网格，而不是全范围强制 0.25 dex。v2 中 `[3,5)` 已经是 0.25 dex，尤其 `[4,5)` 已经对应 `[4.0,4.25)`, `[4.25,4.5)`, `[4.5,4.75)`, `[4.75,5.0)`，不需要额外细分；v2 中 `[2,3)` 太宽，v3 拆为 `[2.0,2.25)`, `[2.25,2.5)`, `[2.5,2.75)`, `[2.75,3.0)` 候选 bins；v2 中 `>=5` 因统计量低，baseline 不强制拆成 0.25 dex，默认作为合并高能 bin / upper-limit bin。若 MC 与数据统计都足够，可额外生成 `[5.0,5.25)`, `[5.25,5.5)`, `[5.5,5.75)`, `[5.75,6.0)` 等 high-energy probe diagnostics，但这些 probe split 不默认进入 baseline，不默认作为独立 SED 点。每行至少包含：
 
 ```text
 cell_id
@@ -455,6 +455,6 @@ apply/report/v3_cell_selection_diagnostics.html
 以下是 2026-06-12 已确认或仍需实现前验证的点：
 
 1. **Stage C 原始 Nhit 字段：已接受推荐。** 从 ROOT/recovered event source 重新生成 Stage C v3，并在 parquet 或 metadata 中保留 Nhit audit 字段。
-2. **predE binning：已更新推荐。** `[3,5)` 的 0.25 dex binning 合理；`[2,3)` 一整 dex 太宽，`>=5` open bin 也太宽。v3 candidate grid 使用 0.25 dex 主网格，低端 `[2,3)` 和高端 `>=5` 先拆成候选细 bin；最终 baseline 由 MC central-99%、response/PSF/background quality 和 expected sensitivity 决定。
+2. **predE binning：已更新推荐。** `[2,3)` 一整 dex太宽，v3 应拆成 0.25 dex 候选 bins；`[3,5)` 的 0.25 dex binning 合理，`[4,5)` 已经细分，不需要额外拆；`>=5` 统计量低，不能默认再切成 0.25 dex final bins。v3 baseline 对 `>=5` 默认使用合并高能 bin / upper-limit bin；只有当 MC 与数据统计量都足够时，才把更细的 high-energy probe split 作为诊断输出，而不是默认 fit cell。
 3. **annulus 外移上限：已接受推荐。** 默认允许到 `4.5 deg`，必要时到 `5.0 deg`，但必须保持在 `rho < 6 deg` fiducial coverage 内，并写入 systematics。
 4. **nominal surface fit 统计形式：已接受推荐。** v3.0 用二阶加权 least squares 快速闭环，同时输出 Poisson log-link cross-check 作为 v3.1 或 systematics。

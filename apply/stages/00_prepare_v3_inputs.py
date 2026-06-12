@@ -29,6 +29,8 @@ DEFAULT_SYSTEMATICS_SELECTOR = "apply/config/cell_selector_v3_systematics.csv"
 DEFAULT_HIGH_ENERGY_SELECTOR = "apply/config/cell_selector_v3_high_energy_probes.csv"
 DEFAULT_DIAGNOSTICS_HTML = "apply/report/v3_cell_selection_diagnostics.html"
 DEFAULT_PSF_SUMMARY_CSV = ""
+DEFAULT_BASELINE_PSF_FOLLOWUP_CELL_IDS = "39,52,65"
+PSF_QUALITY_MODES = ("off", "annotate", "strict")
 
 NHIT_BINS = ["[125,200)", "[200,300)", "[300,500)", "[500,800)", "[800,1100)", "[1100,2000)", "[2000,3000)"]
 PRED_BINS = [
@@ -71,6 +73,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--diagnostics-html", type=str, default=DEFAULT_DIAGNOSTICS_HTML)
     parser.add_argument("--psf-summary-csv", type=str, default=DEFAULT_PSF_SUMMARY_CSV)
     parser.add_argument("--require-psf-quality", action="store_true", default=False)
+    parser.add_argument(
+        "--psf-quality-mode",
+        choices=PSF_QUALITY_MODES,
+        default="off",
+        help=(
+            "How baseline selection uses PSF summary quality. 'strict' excludes bad-PSF ridge cells; "
+            "'annotate' writes psf_quality_flag but keeps ridge-core cells; 'off' ignores PSF quality."
+        ),
+    )
+    parser.add_argument(
+        "--baseline-psf-followup-cell-ids",
+        type=str,
+        default=DEFAULT_BASELINE_PSF_FOLLOWUP_CELL_IDS,
+        help=(
+            "Comma-separated ridge cell ids accepted into the baseline despite PSF-quality warnings. "
+            "Used only with --psf-quality-mode=annotate."
+        ),
+    )
     parser.add_argument("--tree-name", type=str, default="t_eventout")
     parser.add_argument("--write-configs", action="store_true", default=False)
     parser.add_argument("--prepare-cache", action="store_true", default=False)
@@ -139,6 +159,16 @@ def write_csv(path: Path, rows: Sequence[Dict[str, object]], fieldnames: Sequenc
 
 def truthy(value: object) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "y"}
+
+
+def parse_int_set(value: str) -> set[int]:
+    out: set[int] = set()
+    for item in str(value or "").split(","):
+        item = item.strip()
+        if not item:
+            continue
+        out.add(int(item))
+    return out
 
 
 def sanitize_label(label: str) -> str:
@@ -401,7 +431,8 @@ def selector_rows(
     central_flags: Dict[int, bool],
     ridge_flags: Dict[int, Tuple[bool, float]],
     psf_quality_flags: Dict[int, bool],
-    require_psf_quality: bool,
+    psf_quality_mode: str,
+    psf_followup_cell_ids: set[int],
 ) -> List[Dict[str, object]]:
     out: List[Dict[str, object]] = []
     for row in rows:
@@ -411,12 +442,22 @@ def selector_rows(
         count = int(row.get("mc_count") or 0)
         central = bool(central_flags.get(cell_id, False))
         on_ridge, ridge_peak_fraction = ridge_flags.get(cell_id, (False, 0.0))
-        psf_quality = bool(psf_quality_flags.get(cell_id, True)) if require_psf_quality else True
+        psf_quality = bool(psf_quality_flags.get(cell_id, True)) if psf_quality_mode in {"annotate", "strict"} else True
         count_ok = count >= int(min_baseline_mc_count)
         high_probe = pred in {"[5,6)", ">=6"} or nhit == TARGET_HIGH_NHIT
         if mode == "baseline":
-            include = central and on_ridge and count_ok and psf_quality and pred != ">=6"
-            reason = "central99 MC-occupancy-ridge PSF-quality prefit cell" if include else "excluded by central99/MC-ridge/PSF/statistics/high-energy prefit rule"
+            include = central and on_ridge and count_ok and pred != ">=6"
+            if psf_quality_mode == "strict":
+                include = include and psf_quality
+            elif psf_quality_mode == "annotate" and not psf_quality:
+                include = include and cell_id in psf_followup_cell_ids
+            reason = (
+                "central99 MC-occupancy-ridge prefit cell"
+                if include and psf_quality
+                else "central99 MC-occupancy-ridge prefit cell; PSF requires follow-up"
+                if include
+                else "excluded by central99/MC-ridge/statistics/high-energy prefit rule"
+            )
         elif mode == "systematics":
             include = central and count_ok and pred != ">=6"
             reason = "central99 count-qualified expanded systematics cell" if include else "excluded from expanded systematics selector"
@@ -668,6 +709,8 @@ def main() -> None:
     start = time.perf_counter()
     if args.workers <= 0:
         raise ValueError("--workers must be positive")
+    psf_quality_mode = "strict" if bool(args.require_psf_quality) else str(args.psf_quality_mode)
+    psf_followup_cell_ids = parse_int_set(str(args.baseline_psf_followup_cell_ids))
 
     source_root = Path(args.source_binned_root).resolve()
     target_root = Path(args.target_binned_root).resolve()
@@ -702,7 +745,7 @@ def main() -> None:
     central_flags = compute_central_flags(rows, central_fraction=0.99)
     psf_quality_flags = compute_psf_quality_flags(
         Path(args.psf_summary_csv).resolve(),
-        require_quality=bool(args.require_psf_quality),
+        require_quality=psf_quality_mode in {"annotate", "strict"},
     )
     ridge_flags = compute_mc_ridge_flags(
         rows,
@@ -718,7 +761,8 @@ def main() -> None:
         central_flags=central_flags,
         ridge_flags=ridge_flags,
         psf_quality_flags=psf_quality_flags,
-        require_psf_quality=bool(args.require_psf_quality),
+        psf_quality_mode=psf_quality_mode,
+        psf_followup_cell_ids=psf_followup_cell_ids,
     )
     systematics = selector_rows(
         rows,
@@ -728,7 +772,8 @@ def main() -> None:
         central_flags=central_flags,
         ridge_flags=ridge_flags,
         psf_quality_flags=psf_quality_flags,
-        require_psf_quality=bool(args.require_psf_quality),
+        psf_quality_mode=psf_quality_mode,
+        psf_followup_cell_ids=psf_followup_cell_ids,
     )
     high_energy = selector_rows(
         rows,
@@ -738,7 +783,8 @@ def main() -> None:
         central_flags=central_flags,
         ridge_flags=ridge_flags,
         psf_quality_flags=psf_quality_flags,
-        require_psf_quality=bool(args.require_psf_quality),
+        psf_quality_mode=psf_quality_mode,
+        psf_followup_cell_ids=psf_followup_cell_ids,
     )
 
     for row in rows:
@@ -812,6 +858,8 @@ def main() -> None:
         "baseline_cells": sum(1 for row in baseline if int(row["include"]) == 1),
         "systematics_cells": sum(1 for row in systematics if int(row["include"]) == 1),
         "high_energy_probe_cells": sum(1 for row in high_energy if int(row["include"]) == 1),
+        "psf_quality_mode": psf_quality_mode,
+        "baseline_psf_followup_cell_ids": sorted(psf_followup_cell_ids),
         "source_binned_root": str(source_root),
         "target_binned_root": str(target_root),
         "cache_prepared": bool(args.prepare_cache),

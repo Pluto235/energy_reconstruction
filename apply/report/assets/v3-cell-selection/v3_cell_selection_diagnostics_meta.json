@@ -6,7 +6,7 @@
   "html": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/v3_cell_selection_diagnostics.html",
   "metadata_json": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v3-cell-selection/v3_cell_selection_diagnostics_meta.json",
   "candidate_cells": 84,
-  "baseline_cells": 27,
+  "baseline_cells": 30,
   "systematics_cells": 62,
   "high_energy_probe_cells": 16
 }

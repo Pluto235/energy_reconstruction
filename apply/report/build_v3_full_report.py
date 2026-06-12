@@ -143,6 +143,28 @@ def selector_ids(rows: Sequence[Dict[str, str]], include: bool) -> List[int]:
     return ids
 
 
+def stage_f_cell_ids(meta: Dict[str, object]) -> List[int]:
+    validation = meta.get("validation") if isinstance(meta.get("validation"), dict) else {}
+    subset = validation.get("cell_subset") if isinstance(validation.get("cell_subset"), dict) else {}
+    ids = subset.get("included_cell_ids")
+    if isinstance(ids, list):
+        return [int(value) for value in ids]
+    cells = meta.get("cells") if isinstance(meta.get("cells"), list) else []
+    out: List[int] = []
+    for cell in cells:
+        if isinstance(cell, dict) and "cell_id" in cell:
+            out.append(int(cell["cell_id"]))
+    return out
+
+
+def stage_g_required_cell_ids(meta: Dict[str, object]) -> List[int]:
+    validation = meta.get("validation") if isinstance(meta.get("validation"), dict) else {}
+    ids = validation.get("required_cell_ids")
+    if isinstance(ids, list):
+        return [int(value) for value in ids]
+    return []
+
+
 def table_from_rows(rows: Sequence[Dict[str, object]], columns: Sequence[str]) -> str:
     if not rows:
         return "<p>n/a</p>"
@@ -260,6 +282,23 @@ def main() -> None:
     preferred_key = f"{preferred_model}_{preferred_error}"
     fit_preferred = fits.get(preferred_key, {}) if isinstance(fits, dict) else {}
     fit_params = fit_preferred.get("parameters") if isinstance(fit_preferred.get("parameters"), dict) else {}
+    stage_f_ids = stage_f_cell_ids(stage_f)
+    stage_g_ids = stage_g_required_cell_ids(stage_g)
+    selector_matches_stage_f = bool(included_ids and stage_f_ids and included_ids == stage_f_ids)
+    selector_matches_stage_g = bool(included_ids and stage_g_ids and included_ids == stage_g_ids)
+    selector_result_status = (
+        "selector/result matched"
+        if selector_matches_stage_f and selector_matches_stage_g
+        else "selector frozen; fit/SED pending rerun"
+    )
+    selector_pending_ids = sorted(set(included_ids) - set(stage_f_ids))
+    stale_result_ids = sorted(set(stage_f_ids) - set(included_ids))
+    psf_followup_ids = [
+        int(row["cell_id"])
+        for row in selector_rows
+        if str(row.get("include", "")).strip().lower() in {"1", "true", "yes", "y", "include"}
+        and str(row.get("psf_quality_flag", "1")).strip().lower() not in {"1", "true", "yes", "y"}
+    ]
     sed_points = stage_g.get("points", []) if isinstance(stage_g.get("points"), list) else []
     high_energy_ref = (
         background_systematics.get("high_energy_stage_g_reference")
@@ -448,7 +487,10 @@ def main() -> None:
             [
                 f"Cells: {fmt_int(len(stage_b.get('cells', [])) if isinstance(stage_b.get('cells'), list) else len(raw_rows))}",
                 f"Warning rows: {fmt_int(len(stage_b_warnings) if isinstance(stage_b_warnings, list) else 0)}",
-                "Fallback PSF rows are diagnostic-only and excluded by frozen selector.",
+                (
+                    f"PSF follow-up baseline cells: {','.join(str(v) for v in psf_followup_ids) or 'none'}; "
+                    "fit rerun is deferred until PSF is repaired."
+                ),
             ],
         ),
         stage_card(
@@ -492,6 +534,7 @@ def main() -> None:
             stage_f_meta_path,
             [
                 f"Included cells: {','.join(str(v) for v in included_ids) or 'n/a'}",
+                f"Result status: {selector_result_status}",
                 f"Preferred model: {spectrum_label(preferred_model)} / {preferred_error}",
                 f"Preferred phi0: {fmt(fit_params.get('phi0'), 6) if isinstance(fit_params, dict) else 'n/a'}",
             ],
@@ -503,6 +546,7 @@ def main() -> None:
             stage_g_meta_path,
             [
                 f"SED points: {fmt_int(len(sed_points))}",
+                f"Result status: {selector_result_status}",
                 "PredE grouping follows reconstructed-energy bins across contributing Nhit cells.",
             ],
         ),
@@ -749,6 +793,9 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
     </div>
     <div class="callout">
       Selector freeze audit: baseline/systematics selectors are read from CSV files and are not defined from Crab <code>N_on/B_on</code>, excess, significance, Stage F pulls, or Stage G residuals. Stage D uses <code>direct_expectation</code>; Li-Ma remains not applicable unless a future off-counts background is produced. Stage D candidate-grid quality may fail when excluded diagnostic/probe cells have fragile annulus fits; the frozen baseline warning count is reported separately. Background systematics compare default versus PSF-shifted annuli and first- versus second-order surfaces using the same Stage D counts maps.
+    </div>
+    <div class="callout">
+      Current selector status: <strong>{h(selector_result_status)}</strong>. The frozen baseline selector now contains <code>{h(','.join(str(v) for v in included_ids) or 'n/a')}</code>. Existing Stage F/G artifacts contain <code>{h(','.join(str(v) for v in stage_f_ids) or 'n/a')}</code>; pending selector cells are <code>{h(','.join(str(v) for v in selector_pending_ids) or 'none')}</code>, stale result-only cells are <code>{h(','.join(str(v) for v in stale_result_ids) or 'none')}</code>. Treat Stage F/G plots and tables as the previous reference until the 30-cell fit is explicitly rerun.
     </div>
     <p>{link_html}</p>
   </section>

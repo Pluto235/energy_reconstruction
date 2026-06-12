@@ -68,7 +68,7 @@ footer { margin-top:48px; padding-top:18px; border-top:1px solid var(--border); 
   <section>
     <h2>Stage A-G</h2>
     <div class="grid">
-      <article class="card"><h3>Stage A</h3><p>对 v3 candidate grid 全量生成 response，并输出 MC central-99% selection inputs。</p></article>
+      <article class="card"><h3>Stage A</h3><p>对 v3 candidate grid 全量生成 response，并输出 MC central-99% selection inputs 与 predE bin normalized true-energy overlay。</p></article>
       <article class="card"><h3>Stage B</h3><p>对所有 candidate cells 建 PSF，输出 <code>r_opt</code>、containment、PSF tail risk 和 annulus placement 建议。</p></article>
       <article class="card"><h3>Stage C</h3><p>重新规约观测事件，执行 <code>Nhit &gt;= 125</code>，输出可审计 v3 cell assignment 和 annulus coverage。</p></article>
       <article class="card"><h3>Stage D</h3><p>在 annulus 上拟合二阶 2D surface，外推核心区，输出兼容 Stage E 的 <code>B_on/background_map/excess_map</code>。</p></article>
@@ -90,7 +90,7 @@ footer { margin-top:48px; padding-top:18px; border-top:1px solid var(--border); 
         <thead><tr><th>类别</th><th>必须包含</th></tr></thead>
         <tbody>
           <tr><td>v2 继承</td><td>Run Summary、Stage cards、Stage G SED table、counts skymap、excess skymap、RA/Dec normalized profiles、Stage F model counts vs excess、pull grid、SED points、SED ratios、cell counts per point。</td></tr>
-          <tr><td>v3 新增</td><td>cell selection matrix、MC central-99% mask、annulus training mask、2D background surface、annulus residual、core extrapolated background、before/after Dec profile、background-method sensitivity summary。</td></tr>
+          <tr><td>v3 新增</td><td>cell selection matrix、MC central-99% mask、MC normalized energy-distribution overlay、annulus training mask、2D background surface、annulus residual、core extrapolated background、before/after Dec profile、background-method sensitivity summary。</td></tr>
         </tbody>
       </table>
     </div>

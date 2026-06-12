@@ -132,6 +132,11 @@ baseline selector 只允许使用以下 prefit 信息：
   - expected counts under reference spectra
   - true-energy containment / migration summary
   - central-99% selector flag by Nhit row
+- 输出 v3 predE binning 的 MC 能量分布 overlay：
+  - 横轴：`log10(E_true / GeV)` 或等价 TeV 能量轴；
+  - 纵轴：每个 predE bin 内归一化后的 MC counts / livetime-equivalent counts density；
+  - 每条曲线对应一个 v3 predE bin，使用不同颜色叠画在同一张图上；
+  - 图中标注 `[2,2.5)`, `[2.5,3)`, `[3,5)` 0.25 dex bins, `[5,6)`, `>=6` 的 bin 边界和 median / 68% containment。
 - 不在 Stage A 删除 cell，只写 metadata 和 selection inputs。
 
 ### Stage B — PSF on v3 candidate grid
@@ -340,6 +345,7 @@ v3 新增必备图：
 |---|---|
 | v3 cell selection matrix | 显示 candidate / baseline / probe / excluded cells |
 | MC central-99% selection mask | 对应 HAWC-style prefit selection |
+| MC normalized energy-distribution overlay | 用 MC 模拟数据按 v3 predE bin 画归一化 true-energy 分布；横轴为能量，纵轴为归一化 counts / livetime-equivalent counts density，每个 predE bin 一条不同颜色曲线 |
 | annulus training mask grid | 每个 fit cell 的训练环带和 source mask |
 | fitted 2D background surface grid | 展示 `background_map` |
 | annulus residual grid | 检查 fit residual 是否有 RA/Dec 结构 |
@@ -413,6 +419,7 @@ apply/report/v3_cell_selection_diagnostics.html
 
 - `[125,200)` 起步；
 - MC central-99% selection mask 可视化；
+- MC normalized energy-distribution overlay 可视化，并复用/升级已有 `plot_true_energy_distributions.py` 或 `plot_acceptable_true_energy_grid.py` 风格；
 - selector 不依赖 Crab on-source results。
 
 ### Phase 2 — Stage C v3 observation reduction
@@ -446,6 +453,7 @@ apply/report/v3_cell_selection_diagnostics.html
 
 - `crab_sed_v3_stage_a_to_g_report.html` 包含 v2 全部关键图；
 - 新增 annulus 2D surface diagnostics；
+- 新增 MC normalized energy-distribution overlay，说明 v3 predE 分箱对应的 true-energy 覆盖和重叠；
 - 报告中明确列出 selector freeze audit 和 background systematics。
 
 ---

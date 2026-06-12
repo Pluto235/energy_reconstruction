@@ -6,6 +6,7 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-06-12 13:12 · [997fb6f] Clarify roadmap v3 high-energy predE binning strategy.
 - **energy** · 2026-06-12 12:56 · [ff46d37] Refine roadmap v3 predE binning and accepted implementation decisions.
 - **energy** · 2026-06-12 11:53 · [804c425] Add roadmap v3 for HAWC-style cell selection and annulus 2D surface background.
 - **energy** · 2026-06-11 14:37 · [94e38db] Archive the LHAASO gamma source analysis guide Markdown under report references.

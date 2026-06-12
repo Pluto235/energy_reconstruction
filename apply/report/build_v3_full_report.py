@@ -9,6 +9,8 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 
+import numpy as np
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REPORT_DIR = Path(".")
@@ -30,6 +32,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stage-g-metadata-name", type=str, default="sed_points_v3_baseline_metadata.json")
     parser.add_argument("--stage-f-report-html", type=str, default="apply/report/stage_f_v3_baseline_report.html")
     parser.add_argument("--stage-g-report-html", type=str, default="apply/report/stage_g_v3_baseline_report.html")
+    parser.add_argument("--psfborrow-stage-b-dir", type=str, default="apply/output/stage_b_v3_candidate_psfborrow/current")
+    parser.add_argument("--psfborrow-stage-d-dir", type=str, default="apply/output/stage_d_v3_candidate_psfborrow/current")
+    parser.add_argument("--psfborrow-stage-e-dir", type=str, default="apply/output/stage_e_v3_candidate_psfborrow/current")
+    parser.add_argument("--psfborrow-stage-f-dir", type=str, default="apply/output/stage_f_v3_baseline_psfborrow/current")
+    parser.add_argument("--psfborrow-stage-g-dir", type=str, default="apply/output/stage_g_v3_baseline_psfborrow/current")
+    parser.add_argument("--psfborrow-selector-csv", type=str, default="apply/config/cell_selector_v3_baseline_psfborrow.csv")
+    parser.add_argument("--psfborrow-stage-d-metadata-name", type=str, default="background_v3_candidate_psfborrow_metadata.json")
+    parser.add_argument("--psfborrow-stage-e-metadata-name", type=str, default="signal_v3_candidate_psfborrow_metadata.json")
+    parser.add_argument("--psfborrow-stage-f-metadata-name", type=str, default="fit_v3_baseline_psfborrow_metadata.json")
+    parser.add_argument("--psfborrow-stage-g-metadata-name", type=str, default="sed_points_v3_baseline_psfborrow_metadata.json")
+    parser.add_argument("--psfborrow-stage-f-report-html", type=str, default="apply/report/stage_f_v3_baseline_psfborrow_report.html")
+    parser.add_argument("--psfborrow-stage-g-report-html", type=str, default="apply/report/stage_g_v3_baseline_psfborrow_report.html")
     parser.add_argument("--raw-ledger-csv", type=str, default="apply/config/cell_ledger_v3_candidate.csv")
     parser.add_argument("--baseline-selector-csv", type=str, default="apply/config/cell_selector_v3_baseline.csv")
     parser.add_argument("--systematics-selector-csv", type=str, default="apply/config/cell_selector_v3_systematics.csv")
@@ -45,6 +59,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fit-cell-dec-profile", type=str, default="apply/report/assets/crab-v3-baseline-fit-cell-profiles/crab_v3_baseline_fit_dec_normalized_counts_profiles.png")
     parser.add_argument("--fit-cell-excess-ra-profile", type=str, default="apply/report/assets/crab-v3-baseline-fit-cell-profiles/crab_v3_baseline_fit_ra_normalized_excess_profiles.png")
     parser.add_argument("--fit-cell-excess-dec-profile", type=str, default="apply/report/assets/crab-v3-baseline-fit-cell-profiles/crab_v3_baseline_fit_dec_normalized_excess_profiles.png")
+    parser.add_argument("--psfborrow-fit-cell-counts-skymap", type=str, default="apply/report/assets/crab-v3-psfborrow-fit-cell-skymaps/crab_v3_psfborrow_fit_counts_grid.png")
+    parser.add_argument("--psfborrow-fit-cell-excess-skymap", type=str, default="apply/report/assets/crab-v3-psfborrow-fit-cell-skymaps/crab_v3_psfborrow_fit_excess_grid.png")
     parser.add_argument("--selection-matrix-png", type=str, default="apply/report/assets/v3-cell-selection/v3_cell_selection_matrix.png")
     parser.add_argument("--mc-overlay-png", type=str, default="apply/report/assets/v3-cell-selection/v3_mc_true_energy_overlay.png")
     parser.add_argument("--central-mask-png", type=str, default="apply/report/assets/v3-cell-selection/v3_central99_mask.png")
@@ -165,6 +181,184 @@ def stage_g_required_cell_ids(meta: Dict[str, object]) -> List[int]:
     return []
 
 
+def preferred_fit_entry(meta: Dict[str, object]) -> Dict[str, object]:
+    preferred = meta.get("preferred_fit") if isinstance(meta.get("preferred_fit"), dict) else {}
+    fits = meta.get("fits") if isinstance(meta.get("fits"), dict) else {}
+    model = str(preferred.get("model", "pl")).lower() if isinstance(preferred, dict) else "pl"
+    error = str(preferred.get("error_mode", "conservative")).lower() if isinstance(preferred, dict) else "conservative"
+    fit = fits.get(f"{model}_{error}", {}) if isinstance(fits, dict) else {}
+    return fit if isinstance(fit, dict) else {}
+
+
+def fit_parameters(meta: Dict[str, object]) -> Dict[str, object]:
+    fit = preferred_fit_entry(meta)
+    params = fit.get("parameters") if isinstance(fit.get("parameters"), dict) else {}
+    return params if isinstance(params, dict) else {}
+
+
+def fit_model(meta: Dict[str, object]) -> str:
+    preferred = meta.get("preferred_fit") if isinstance(meta.get("preferred_fit"), dict) else {}
+    return str(preferred.get("model", "n/a")) if isinstance(preferred, dict) else "n/a"
+
+
+def fit_error_mode(meta: Dict[str, object]) -> str:
+    preferred = meta.get("preferred_fit") if isinstance(meta.get("preferred_fit"), dict) else {}
+    return str(preferred.get("error_mode", "n/a")) if isinstance(preferred, dict) else "n/a"
+
+
+def metadata_run_label(meta: Dict[str, object]) -> str:
+    return str(meta.get("run_id") or meta.get("slurm_job_id") or "n/a")
+
+
+def compare_value(new_value: object, old_value: object, digits: int = 5) -> str:
+    new_number = finite_float(new_value)
+    old_number = finite_float(old_value)
+    if new_number is None:
+        return "n/a"
+    if old_number is None:
+        return fmt(new_number, digits)
+    delta = new_number - old_number
+    if old_number != 0:
+        rel_delta = delta / old_number
+        return f"{fmt(new_number, digits)} ({fmt(delta, digits)}, {fmt(rel_delta, 4)})"
+    return f"{fmt(new_number, digits)} ({fmt(delta, digits)})"
+
+
+def psf_borrow_records(meta: Dict[str, object]) -> List[Dict[str, object]]:
+    borrowing = meta.get("psf_borrowing") if isinstance(meta.get("psf_borrowing"), dict) else {}
+    records = borrowing.get("records", []) if isinstance(borrowing, dict) else []
+    return [record for record in records if isinstance(record, dict)]
+
+
+def make_psfborrow_fit_rows(
+    nominal_f: Dict[str, object],
+    nominal_g: Dict[str, object],
+    psf_f: Dict[str, object],
+    psf_g: Dict[str, object],
+    nominal_ids: Sequence[int],
+    psf_ids: Sequence[int],
+) -> List[Dict[str, object]]:
+    rows: List[Dict[str, object]] = []
+    for label, fit_meta, sed_meta, ids, reference_fit in [
+        ("nominal reference", nominal_f, nominal_g, nominal_ids, {}),
+        ("PSF systematic", psf_f, psf_g, psf_ids, nominal_f),
+    ]:
+        fit = preferred_fit_entry(fit_meta)
+        params = fit_parameters(fit_meta)
+        ref_params = fit_parameters(reference_fit) if reference_fit else {}
+        ref_fit = preferred_fit_entry(reference_fit) if reference_fit else {}
+        rows.append(
+            {
+                "version": label,
+                "run": metadata_run_label(fit_meta),
+                "cells": len(ids),
+                "added": ",".join(str(v) for v in sorted(set(ids) - set(nominal_ids))) if label != "nominal reference" else "",
+                "removed": ",".join(str(v) for v in sorted(set(nominal_ids) - set(ids))) if label != "nominal reference" else "",
+                "model": spectrum_label(fit_model(fit_meta)),
+                "error": fit_error_mode(fit_meta),
+                "phi0 (delta)": compare_value(params.get("phi0"), ref_params.get("phi0"), 6),
+                "gamma/alpha (delta)": compare_value(
+                    params.get("gamma", params.get("alpha")),
+                    ref_params.get("gamma", ref_params.get("alpha")),
+                    5,
+                ),
+                "beta (delta)": compare_value(params.get("beta"), ref_params.get("beta"), 5),
+                "chi2/ndof": f"{fmt(fit.get('chi2'), 5)} / {h(fit.get('ndof', ''))}",
+                "delta chi2": compare_value(fit.get("chi2"), ref_fit.get("chi2"), 5),
+                "SED pts": len(sed_meta.get("points", [])) if isinstance(sed_meta.get("points"), list) else "",
+            }
+        )
+    return rows
+
+
+def make_sed_compare_rows(nominal_g: Dict[str, object], psf_g: Dict[str, object]) -> List[Dict[str, object]]:
+    nominal_points = nominal_g.get("points", []) if isinstance(nominal_g.get("points"), list) else []
+    psf_points = psf_g.get("points", []) if isinstance(psf_g.get("points"), list) else []
+    nominal_by_key = {
+        (str(point.get("grouping")), str(point.get("group_label"))): point
+        for point in nominal_points
+        if isinstance(point, dict)
+    }
+    rows: List[Dict[str, object]] = []
+    for point in psf_points:
+        if not isinstance(point, dict):
+            continue
+        key = (str(point.get("grouping")), str(point.get("group_label")))
+        nominal = nominal_by_key.get(key, {})
+        rows.append(
+            {
+                "grouping": key[0],
+                "group": key[1],
+                "cells": ",".join(str(v) for v in point.get("cell_ids", [])) if isinstance(point.get("cell_ids"), list) else "",
+                "E_eff TeV": compare_value(point.get("effective_energy_tev"), nominal.get("effective_energy_tev"), 5),
+                "E2 dN/dE": compare_value(point.get("E2_dnde"), nominal.get("E2_dnde"), 5),
+                "err": fmt(point.get("E2_dnde_err"), 4),
+                "ratio StageF": compare_value(
+                    point.get("ratio_to_stage_f_model", point.get("ratio_to_stage_f_pl")),
+                    nominal.get("ratio_to_stage_f_model", nominal.get("ratio_to_stage_f_pl")),
+                    4,
+                ),
+            }
+        )
+    return rows
+
+
+def plot_sed_overlay(
+    output_path: Path,
+    nominal_g: Dict[str, object],
+    psf_g: Dict[str, object],
+) -> Optional[Path]:
+    nominal_points = [p for p in nominal_g.get("points", []) if isinstance(p, dict)] if isinstance(nominal_g.get("points"), list) else []
+    psf_points = [p for p in psf_g.get("points", []) if isinstance(p, dict)] if isinstance(psf_g.get("points"), list) else []
+    if not nominal_points or not psf_points:
+        return None
+    try:
+        os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
+        os.environ.setdefault("XDG_CACHE_HOME", "/tmp/.cache")
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception:
+        return None
+
+    def arrays(points: Sequence[Dict[str, object]], grouping: str):
+        selected = [p for p in points if str(p.get("grouping")) == grouping]
+        selected.sort(key=lambda p: finite_float(p.get("effective_energy_tev")) or 0.0)
+        energy = [finite_float(p.get("effective_energy_tev")) for p in selected]
+        flux = [finite_float(p.get("E2_dnde")) for p in selected]
+        err = [finite_float(p.get("E2_dnde_err")) for p in selected]
+        labels = [str(p.get("group_label")) for p in selected]
+        valid = [i for i, (e, f) in enumerate(zip(energy, flux)) if e is not None and f is not None]
+        return (
+            np.asarray([energy[i] for i in valid], dtype=np.float64),
+            np.asarray([flux[i] for i in valid], dtype=np.float64),
+            np.asarray([err[i] if err[i] is not None else 0.0 for i in valid], dtype=np.float64),
+            [labels[i] for i in valid],
+        )
+
+    fig, ax = plt.subplots(figsize=(8.2, 5.2), dpi=150)
+    for grouping, marker in [("nhit", "o"), ("predE", "s")]:
+        x, y, yerr, _ = arrays(nominal_points, grouping)
+        if x.size:
+            ax.errorbar(x, y, yerr=yerr, fmt=marker, markersize=4.5, capsize=2, label=f"nominal {grouping}", alpha=0.78)
+        x, y, yerr, _ = arrays(psf_points, grouping)
+        if x.size:
+            ax.errorbar(x, y, yerr=yerr, fmt=marker, markersize=4.5, capsize=2, label=f"psfborrow {grouping}", alpha=0.78)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("Effective energy (TeV)")
+    ax.set_ylabel("E^2 dN/dE (TeV cm^-2 s^-1)")
+    ax.set_title("Stage G SED points: nominal reference vs PSF borrowing systematic")
+    ax.grid(alpha=0.25, which="both", linewidth=0.45)
+    ax.legend(fontsize=8)
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path)
+    plt.close(fig)
+    return output_path
+
+
 def table_from_rows(rows: Sequence[Dict[str, object]], columns: Sequence[str]) -> str:
     if not rows:
         return "<p>n/a</p>"
@@ -233,13 +427,21 @@ def main() -> None:
     stage_e_dir = abs_path(args.stage_e_dir)
     stage_f_dir = abs_path(args.stage_f_dir)
     stage_g_dir = abs_path(args.stage_g_dir)
+    psfborrow_stage_b_dir = abs_path(args.psfborrow_stage_b_dir)
+    psfborrow_stage_d_dir = abs_path(args.psfborrow_stage_d_dir)
+    psfborrow_stage_e_dir = abs_path(args.psfborrow_stage_e_dir)
+    psfborrow_stage_f_dir = abs_path(args.psfborrow_stage_f_dir)
+    psfborrow_stage_g_dir = abs_path(args.psfborrow_stage_g_dir)
 
     raw_rows = read_csv_rows(abs_path(args.raw_ledger_csv))
     selector_rows = read_csv_rows(abs_path(args.baseline_selector_csv))
+    psfborrow_selector_rows = read_csv_rows(abs_path(args.psfborrow_selector_csv))
     systematics_rows = read_csv_rows(abs_path(args.systematics_selector_csv))
     high_energy_rows = read_csv_rows(abs_path(args.high_energy_selector_csv))
     included_ids = selector_ids(selector_rows, True)
     excluded_ids = selector_ids(selector_rows, False)
+    psfborrow_included_ids = selector_ids(psfborrow_selector_rows, True)
+    psfborrow_excluded_ids = selector_ids(psfborrow_selector_rows, False)
     systematics_ids = selector_ids(systematics_rows, True)
     high_energy_ids = selector_ids(high_energy_rows, True)
     role_counts: Dict[str, int] = {}
@@ -254,6 +456,11 @@ def main() -> None:
     stage_e_meta_path = stage_e_dir / "signal_v3_candidate_metadata.json"
     stage_f_meta_path = stage_f_dir / args.stage_f_metadata_name
     stage_g_meta_path = stage_g_dir / args.stage_g_metadata_name
+    psfborrow_stage_b_meta_path = psfborrow_stage_b_dir / "psf_v3_candidate_metadata.json"
+    psfborrow_stage_d_meta_path = psfborrow_stage_d_dir / args.psfborrow_stage_d_metadata_name
+    psfborrow_stage_e_meta_path = psfborrow_stage_e_dir / args.psfborrow_stage_e_metadata_name
+    psfborrow_stage_f_meta_path = psfborrow_stage_f_dir / args.psfborrow_stage_f_metadata_name
+    psfborrow_stage_g_meta_path = psfborrow_stage_g_dir / args.psfborrow_stage_g_metadata_name
 
     stage_a = load_json(stage_a_meta_path)
     stage_b = load_json(stage_b_meta_path)
@@ -262,6 +469,11 @@ def main() -> None:
     stage_e = load_json(stage_e_meta_path)
     stage_f = load_json(stage_f_meta_path)
     stage_g = load_json(stage_g_meta_path)
+    psfborrow_stage_b = load_json(psfborrow_stage_b_meta_path)
+    psfborrow_stage_d = load_json(psfborrow_stage_d_meta_path)
+    psfborrow_stage_e = load_json(psfborrow_stage_e_meta_path)
+    psfborrow_stage_f = load_json(psfborrow_stage_f_meta_path)
+    psfborrow_stage_g = load_json(psfborrow_stage_g_meta_path)
     background_systematics = load_json(abs_path(args.background_systematics_json))
     background_systematics_rows = read_csv_rows(abs_path(args.background_systematics_csv))
     validation_summary = load_json(abs_path(args.validation_json))
@@ -284,6 +496,19 @@ def main() -> None:
     fit_params = fit_preferred.get("parameters") if isinstance(fit_preferred.get("parameters"), dict) else {}
     stage_f_ids = stage_f_cell_ids(stage_f)
     stage_g_ids = stage_g_required_cell_ids(stage_g)
+    psfborrow_stage_f_ids = stage_f_cell_ids(psfborrow_stage_f)
+    psfborrow_stage_g_ids = stage_g_required_cell_ids(psfborrow_stage_g)
+    psfborrow_selector_matches_stage_f = bool(
+        psfborrow_included_ids and psfborrow_stage_f_ids and psfborrow_included_ids == psfborrow_stage_f_ids
+    )
+    psfborrow_selector_matches_stage_g = bool(
+        psfborrow_included_ids and psfborrow_stage_g_ids and psfborrow_included_ids == psfborrow_stage_g_ids
+    )
+    psfborrow_result_status = (
+        "selector/result matched"
+        if psfborrow_selector_matches_stage_f and psfborrow_selector_matches_stage_g
+        else "PSF systematic pending rerun"
+    )
     selector_matches_stage_f = bool(included_ids and stage_f_ids and included_ids == stage_f_ids)
     selector_matches_stage_g = bool(included_ids and stage_g_ids and included_ids == stage_g_ids)
     selector_result_status = (
@@ -293,6 +518,10 @@ def main() -> None:
     )
     selector_pending_ids = sorted(set(included_ids) - set(stage_f_ids))
     stale_result_ids = sorted(set(stage_f_ids) - set(included_ids))
+    psfborrow_added_vs_nominal_result = sorted(set(psfborrow_included_ids) - set(stage_f_ids))
+    psfborrow_removed_vs_nominal_result = sorted(set(stage_f_ids) - set(psfborrow_included_ids))
+    psfborrow_added_vs_selector = sorted(set(psfborrow_included_ids) - set(included_ids))
+    psfborrow_removed_vs_selector = sorted(set(included_ids) - set(psfborrow_included_ids))
     psf_followup_ids = [
         int(row["cell_id"])
         for row in selector_rows
@@ -300,6 +529,97 @@ def main() -> None:
         and str(row.get("psf_quality_flag", "1")).strip().lower() not in {"1", "true", "yes", "y"}
     ]
     sed_points = stage_g.get("points", []) if isinstance(stage_g.get("points"), list) else []
+    psfborrow_sed_points = (
+        psfborrow_stage_g.get("points", []) if isinstance(psfborrow_stage_g.get("points"), list) else []
+    )
+    psfborrow_records = psf_borrow_records(psfborrow_stage_b)
+    psfborrow_record_rows = []
+    for record in psfborrow_records:
+        original = record.get("original") if isinstance(record.get("original"), dict) else {}
+        borrowed = record.get("borrowed") if isinstance(record.get("borrowed"), dict) else {}
+        sources = record.get("sources") if isinstance(record.get("sources"), list) else []
+        source_text = []
+        for source in sources:
+            if not isinstance(source, dict):
+                continue
+            source_text.append(
+                f"{source.get('cell_id')} sigma={fmt(source.get('sigma_deg'), 5)} "
+                f"r={fmt(source.get('r_opt_deg'), 5)} c={fmt(source.get('containment_r_opt'), 5)} "
+                f"Neff={fmt(source.get('effective_events'), 5)}"
+            )
+        weights = record.get("weights") if isinstance(record.get("weights"), dict) else {}
+        psfborrow_record_rows.append(
+            {
+                "cell": record.get("target_cell_id", ""),
+                "method": record.get("method", ""),
+                "borrowed_from": ",".join(str(v) for v in record.get("borrowed_from", []))
+                if isinstance(record.get("borrowed_from"), list)
+                else record.get("borrowed_from", ""),
+                "weights": ",".join(f"{k}:{fmt(v, 4)}" for k, v in weights.items()),
+                "orig missing": fmt(original.get("theta_missing_crab_probability_mass"), 5),
+                "orig Neff": fmt(original.get("effective_events"), 5),
+                "orig sigma": fmt(original.get("sigma_deg"), 5),
+                "borrow sigma": fmt(borrowed.get("sigma_deg"), 5),
+                "borrow r_opt": fmt(borrowed.get("r_opt_deg"), 5),
+                "borrow containment": fmt(borrowed.get("containment_r_opt"), 5),
+                "source PSF": "; ".join(source_text),
+            }
+        )
+    psfborrow_fit_rows = make_psfborrow_fit_rows(
+        stage_f,
+        stage_g,
+        psfborrow_stage_f,
+        psfborrow_stage_g,
+        stage_f_ids,
+        psfborrow_stage_f_ids,
+    )
+    psfborrow_sed_compare_rows = make_sed_compare_rows(stage_g, psfborrow_stage_g)
+    psfborrow_sed_overlay_path = plot_sed_overlay(
+        REPORT_DIR / "assets/v3-psfborrow/v3_psfborrow_sed_overlay.png",
+        stage_g,
+        psfborrow_stage_g,
+    )
+    psfborrow_run_rows = [
+        {
+            "stage": label,
+            "run": metadata_run_label(meta),
+            "status": (
+                meta.get("promotion", {}).get("status")
+                if isinstance(meta.get("promotion"), dict)
+                else meta.get("psf_systematic_variant", "missing" if not path.exists() else "available")
+            ),
+            "artifact": rel(path, REPORT_DIR) if path.exists() else "missing",
+        }
+        for label, meta, path in [
+            ("B", psfborrow_stage_b, psfborrow_stage_b_meta_path),
+            ("D", psfborrow_stage_d, psfborrow_stage_d_meta_path),
+            ("E", psfborrow_stage_e, psfborrow_stage_e_meta_path),
+            ("F", psfborrow_stage_f, psfborrow_stage_f_meta_path),
+            ("G", psfborrow_stage_g, psfborrow_stage_g_meta_path),
+        ]
+    ]
+    psfborrow_selector_table_rows = [
+        {
+            "selector": "nominal selector file",
+            "cells": len(included_ids),
+            "included": ",".join(str(v) for v in included_ids),
+            "added vs nominal result": "",
+            "removed vs nominal result": "",
+            "added vs nominal selector": "",
+            "removed vs nominal selector": "",
+            "status": selector_result_status,
+        },
+        {
+            "selector": "v3_baseline_psfborrow",
+            "cells": len(psfborrow_included_ids),
+            "included": ",".join(str(v) for v in psfborrow_included_ids),
+            "added vs nominal result": ",".join(str(v) for v in psfborrow_added_vs_nominal_result) or "none",
+            "removed vs nominal result": ",".join(str(v) for v in psfborrow_removed_vs_nominal_result) or "none",
+            "added vs nominal selector": ",".join(str(v) for v in psfborrow_added_vs_selector) or "none",
+            "removed vs nominal selector": ",".join(str(v) for v in psfborrow_removed_vs_selector) or "none",
+            "status": psfborrow_result_status,
+        },
+    ]
     high_energy_ref = (
         background_systematics.get("high_energy_stage_g_reference")
         if isinstance(background_systematics.get("high_energy_stage_g_reference"), dict)
@@ -558,6 +878,8 @@ def main() -> None:
         ("Stage E report", abs_path("apply/report/stage_e_v3_candidate_report.html")),
         ("Stage F report", abs_path(args.stage_f_report_html)),
         ("Stage G report", abs_path(args.stage_g_report_html)),
+        ("PSF-borrow Stage F report", abs_path(args.psfborrow_stage_f_report_html)),
+        ("PSF-borrow Stage G report", abs_path(args.psfborrow_stage_g_report_html)),
     ]
     link_html = " · ".join(f'<a href="{h(rel(path, REPORT_DIR))}">{h(label)}</a>' for label, path in links if path.exists())
 
@@ -707,6 +1029,34 @@ def main() -> None:
             "Stage G cell counts per point",
             explanation="Shows how many cells contribute to each Stage G SED point. High-energy points with few cells should be interpreted more conservatively.",
         ),
+        figure(
+            abs_path(args.psfborrow_fit_cell_counts_skymap),
+            "PSF-borrow fit-cell Stage D counts skymap",
+            wide=True,
+            explanation="Observed counts maps for the PSF borrowing systematic selector. Cells 39/52/65 are included after neighboring-PSF repair, while high-Nhit edge cells 79/80 remain excluded.",
+        ),
+        figure(
+            abs_path(args.psfborrow_fit_cell_excess_skymap),
+            "PSF-borrow fit-cell Stage D excess skymap",
+            wide=True,
+            explanation="Counts minus fitted background for the PSF borrowing systematic selector. Compare against the nominal fit-cell excess map to isolate aperture/containment-driven changes.",
+        ),
+        figure(
+            psfborrow_sed_overlay_path or (REPORT_DIR / "assets/v3-psfborrow/v3_psfborrow_sed_overlay.png"),
+            "PSF-borrow versus nominal Stage G SED overlay",
+            wide=True,
+            explanation="Nominal reference Stage G points and PSF borrowing systematic points overlaid. This is a systematic comparison, not a new nominal promotion.",
+        ),
+        figure(
+            psfborrow_stage_g_dir / "sed_points_stage_f_fullarray_pool1.png",
+            "PSF-borrow Stage G SED points",
+            explanation="Diagnostic SED points built from the PSF borrowing Stage F spectrum and Stage E signal table.",
+        ),
+        figure(
+            psfborrow_stage_g_dir / "sed_points_ratio.png",
+            "PSF-borrow Stage G SED ratios",
+            explanation="Ratio of the PSF borrowing diagnostic SED points to the corresponding Stage F reference model.",
+        ),
     ]
 
     html_text = f"""<!doctype html>
@@ -808,9 +1158,26 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
       <p>These cells are the left shoulder of the ridge: high Nhit but lower predicted energy than the row peak. That combination can be more sensitive to zenith angle, shower geometry, and NN response residuals, so its theta support can be less continuous than the neighboring right-shoulder cells. In contrast, adjacent cells <code>40</code>, <code>53</code>, and <code>66</code> pass with missing masses near <code>0.000</code>, <code>0.083</code>, and <code>0.062</code>.</p>
       <p>A follow-up audit of cell <code>39</code> shows that the fallback summary row can be misleading: fallback rows reset diagnostic counters such as <code>logE_range_events</code> to zero. The underlying ROOT files for cell <code>39</code> contain <code>27,733</code> positive-weight events in <code>log10(mc_energy)=[2,6)</code> out of <code>27,769</code> total events. The problem is therefore not the true-energy window; it is sparse high-theta support after Crab-declination reweighting.</p>
       <p>For cell <code>39</code>, the missing 1-degree theta bins are all in the high-theta tail: <code>40-41</code>, <code>41-42</code>, <code>43-44</code>, <code>45-46</code>, <code>46-47</code>, and <code>48-49 deg</code>, totaling <code>0.12449</code> Crab theta probability mass. With 2-degree theta bins the missing mass drops to <code>0.04146</code> and only <code>40-42 deg</code> is unsupported, but the reweighted effective event count falls to <code>108.29</code>, below the Stage B threshold of <code>200</code>. Wider theta bins remove the missing-bin flag, but the effective event count remains lower because a very small number of high-theta MC events receives large weights.</p>
-      <p>The selector decision is therefore: keep <code>39/52/65</code> in the frozen baseline cell list because they are physical-ridge cells, but do not trust the fallback PSF as a final fit input. Before the next Stage F/G rerun, repair or replace their PSF using a documented method and carry the choice as a PSF systematic.</p>
-      <p>Practical repair options, in recommended order: first, use neighboring-cell PSF borrowing/interpolation along the ridge, e.g. derive <code>39</code> from <code>40</code>, <code>52</code> from <code>53/54</code>, and <code>65</code> from <code>66/67</code>, with the borrowed PSF tagged in metadata and rerun as a named systematic. Second, make an adaptive-theta PSF only for these follow-up cells: merge high-theta bins until every Crab-positive bin has MC support, but require a separate minimum effective-event threshold and compare the resulting PSF against the neighbor-borrowed result. Third, enlarge the conditional PSF pool for these cells by combining adjacent predE bins on the left shoulder while keeping the Stage D/E signal cell itself unchanged; this trades cell-specific PSF purity for stable zenith coverage. The least robust option is to lower the Stage B missing-mass or Neff thresholds without changing the PSF estimate; that should be treated only as a stress test, not as the baseline fit input.</p>
+      <p>The selector decision is therefore: keep <code>39/52/65</code> in the frozen physical-ridge cell list, but do not use their fallback PSF as nominal. The dedicated <code>v3_psfborrow</code> systematic replaces their active PSF with neighboring ridge PSFs while preserving the original missing-support diagnostics in metadata and summary tables.</p>
+      <p>The active PSF systematic uses <code>39 -> 40</code>, <code>52 -> 2/3*53 + 1/3*54</code>, and <code>65 -> 2/3*66 + 1/3*67</code>. It keeps 39/52/65 in the fit selector and continues to exclude high-Nhit edge cells such as <code>79/80</code>. This branch is explicitly a PSF systematic, not a nominal v3 promotion.</p>
     </div>
+  </section>
+
+  <section>
+    <h2>PSF Borrowing Systematic</h2>
+    <div class="callout">
+      This branch is labeled <code>v3_psfborrow</code>. It starts from nominal Stage B <code>psf_v3_candidate.npz</code>, writes a separate Stage B artifact under <code>stage_b_v3_candidate_psfborrow</code>, and reruns Stage D/E/F/G into <code>*_psfborrow</code> output roots. It does not overwrite nominal v3 or promote this result as nominal.
+    </div>
+    <h3>Borrowed PSF audit</h3>
+    {table_from_rows(psfborrow_record_rows, ['cell', 'method', 'borrowed_from', 'weights', 'orig missing', 'orig Neff', 'orig sigma', 'borrow sigma', 'borrow r_opt', 'borrow containment', 'source PSF'])}
+    <h3>Selector change</h3>
+    {table_from_rows(psfborrow_selector_table_rows, ['selector', 'cells', 'included', 'added vs nominal result', 'removed vs nominal result', 'added vs nominal selector', 'removed vs nominal selector', 'status'])}
+    <h3>PSF systematic run artifacts</h3>
+    {table_from_rows(psfborrow_run_rows, ['stage', 'run', 'status', 'artifact'])}
+    <h3>Stage F/G comparison</h3>
+    {table_from_rows(psfborrow_fit_rows, ['version', 'run', 'cells', 'added', 'removed', 'model', 'error', 'phi0 (delta)', 'gamma/alpha (delta)', 'beta (delta)', 'chi2/ndof', 'delta chi2', 'SED pts'])}
+    <h3>Stage G SED point comparison</h3>
+    {table_from_rows(psfborrow_sed_compare_rows, ['grouping', 'group', 'cells', 'E_eff TeV', 'E2 dN/dE', 'err', 'ratio StageF'])}
   </section>
 
   <section>

@@ -801,6 +801,16 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
   </section>
 
   <section>
+    <h2>PSF Theta-Support Notes</h2>
+    <div class="callout">
+      <p><code>theta_missing_crab_probability_mass</code> measures the fraction of the Crab declination theta exposure for which a given cell has no MC support after applying that cell's Nhit/predE selection, true-energy range, finite-angle, and positive-weight requirements. It is not a measure of the total MC sample size; it is a coverage test on the conditional MC sample inside one cell.</p>
+      <p>The important lesson for v3 is that many MC events globally do not guarantee full theta coverage inside every fine <code>Nhit x predE</code> cell. The ridge-left cells <code>39</code>, <code>52</code>, and <code>65</code> have visible Crab excess and satisfy the MC occupancy ridge rule, but their Stage B PSF falls back because their conditional MC theta support misses more than 10% of the Crab theta exposure. Current values are approximately <code>0.124</code>, <code>0.228</code>, and <code>0.208</code>, respectively.</p>
+      <p>These cells are the left shoulder of the ridge: high Nhit but lower predicted energy than the row peak. That combination can be more sensitive to zenith angle, shower geometry, and NN response residuals, so its theta support can be less continuous than the neighboring right-shoulder cells. In contrast, adjacent cells <code>40</code>, <code>53</code>, and <code>66</code> pass with missing masses near <code>0.000</code>, <code>0.083</code>, and <code>0.062</code>.</p>
+      <p>The selector decision is therefore: keep <code>39/52/65</code> in the frozen baseline cell list because they are physical-ridge cells, but do not trust the fallback PSF as a final fit input. Before the next Stage F/G rerun, repair or replace their PSF using a documented method such as neighboring-cell interpolation/borrowing and carry the choice as a PSF systematic.</p>
+    </div>
+  </section>
+
+  <section>
     <h2>Ledger And Selector</h2>
     {table_from_rows(role_table, ['role', 'cells'])}
     <p>{h(args.baseline_name)} included cells: <code>{h(','.join(str(v) for v in included_ids) or 'n/a')}</code></p>

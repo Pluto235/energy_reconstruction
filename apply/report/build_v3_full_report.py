@@ -48,6 +48,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--selection-matrix-png", type=str, default="apply/report/assets/v3-cell-selection/v3_cell_selection_matrix.png")
     parser.add_argument("--mc-overlay-png", type=str, default="apply/report/assets/v3-cell-selection/v3_mc_true_energy_overlay.png")
     parser.add_argument("--central-mask-png", type=str, default="apply/report/assets/v3-cell-selection/v3_central99_mask.png")
+    parser.add_argument("--ridge-fraction-png", type=str, default="apply/report/assets/v3-cell-selection/v3_mc_occupancy_ridge_fraction.png")
     parser.add_argument("--background-systematics-csv", type=str, default="apply/report/assets/v3-background-systematics/v3_background_systematics_summary.csv")
     parser.add_argument("--background-systematics-json", type=str, default="apply/report/assets/v3-background-systematics/v3_background_systematics_summary.json")
     parser.add_argument("--background-sensitivity-png", type=str, default="apply/report/assets/v3-background-systematics/v3_background_method_sensitivity_summary.png")
@@ -533,7 +534,13 @@ def main() -> None:
             abs_path(args.central_mask_png),
             "MC central-99% selection mask",
             wide=True,
-            explanation="This shows which Nhit x predE cells fall inside the MC reconstructed-energy central-99% population. Baseline cells should mostly lie on the central physical ridge; off-ridge cells are diagnostics or excluded.",
+            explanation="This shows which Nhit x predE cells fall inside the MC reconstructed-energy central-99% population. It is the first prefit selector cut and does not use Crab excess or fit residuals.",
+        ),
+        figure(
+            abs_path(args.ridge_fraction_png),
+            "MC occupancy ridge fraction",
+            wide=True,
+            explanation="Each cell is normalized by the maximum MC count in its Nhit row. The v3 baseline ridge is generated from this prefit occupancy fraction together with central99, MC-count, and high-energy-bin rules; highlighted baseline cells are not chosen from Crab on-source significance.",
         ),
         figure(
             abs_path(args.fit_cell_counts_skymap),

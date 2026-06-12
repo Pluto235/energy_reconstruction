@@ -190,6 +190,44 @@ def plot_selection_matrix(
     plt.close(fig)
 
 
+def plot_ridge_fraction(rows: Sequence[Dict[str, str]], baseline_ids: set[int], path: Path) -> None:
+    plt = setup_matplotlib()
+    values: Dict[int, float] = {}
+    labels: Dict[int, str] = {}
+    for row in rows:
+        cell_id = int(row["cell_id"])
+        try:
+            fraction = float(row.get("ridge_peak_fraction", "nan"))
+        except ValueError:
+            fraction = float("nan")
+        values[cell_id] = fraction
+        labels[cell_id] = f"{cell_id}\n{fraction:.2f}" if math.isfinite(fraction) else f"{cell_id}\n-"
+    matrix, nhit_bins, pred_bins = build_matrix(rows, values)
+    fig, ax = plt.subplots(figsize=(1.28 * len(pred_bins) + 2.8, 0.62 * len(nhit_bins) + 2.2), dpi=150)
+    im = ax.imshow(matrix, aspect="auto", interpolation="nearest", cmap="magma", vmin=0, vmax=1)
+    ax.set_xticks(np.arange(len(pred_bins)))
+    ax.set_xticklabels(pred_bins, rotation=45, ha="right", fontsize=7)
+    ax.set_yticks(np.arange(len(nhit_bins)))
+    ax.set_yticklabels(nhit_bins, fontsize=7)
+    ax.set_xlabel("log10(E_pred / GeV) bin")
+    ax.set_ylabel("Nhit bin")
+    ax.set_title("v3 MC occupancy ridge fraction")
+    for i, nhit in enumerate(nhit_bins):
+        for j, pred in enumerate(pred_bins):
+            match = [row for row in rows if row["nhit_bin"] == nhit and row["predE_bin"] == pred]
+            if not match:
+                continue
+            cell_id = int(match[0]["cell_id"])
+            color = "cyan" if cell_id in baseline_ids else "white"
+            weight = "bold" if cell_id in baseline_ids else "normal"
+            ax.text(j, i, labels[cell_id], ha="center", va="center", fontsize=6.2, color=color, fontweight=weight)
+    cbar = fig.colorbar(im, ax=ax, shrink=0.82)
+    cbar.ax.set_ylabel("MC count / Nhit-row peak")
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+
+
 def plot_true_energy_overlay(response: Dict[str, np.ndarray], rows: Sequence[Dict[str, str]], path: Path) -> None:
     plt = setup_matplotlib()
     cell_ids = np.asarray(response["cell_id"], dtype=np.int32)
@@ -234,6 +272,7 @@ def write_html_report(path: Path, payload: Dict[str, object]) -> None:
     figures = [
         ("v3 cell selection matrix", payload["selection_matrix_png"]),
         ("MC central-99% selection mask", payload["central99_mask_png"]),
+        ("MC occupancy ridge fraction", payload["ridge_fraction_png"]),
         ("MC normalized true-energy distribution overlay", payload["mc_true_energy_overlay_png"]),
     ]
     figure_html = []
@@ -313,8 +352,10 @@ def main() -> None:
     matrix_png = output_dir / "v3_cell_selection_matrix.png"
     central_png = output_dir / "v3_central99_mask.png"
     overlay_png = output_dir / "v3_mc_true_energy_overlay.png"
+    ridge_png = output_dir / "v3_mc_occupancy_ridge_fraction.png"
     plot_selection_matrix(rows, baseline_ids, systematics_ids, high_energy_ids, matrix_png)
     plot_central_mask(rows, baseline_ids, central_png)
+    plot_ridge_fraction(baseline, baseline_ids, ridge_png)
     with np.load(abs_path(args.response_npz), allow_pickle=False) as data:
         response = {key: data[key] for key in data.files}
     plot_true_energy_overlay(response, rows, overlay_png)
@@ -322,6 +363,7 @@ def main() -> None:
     payload = {
         "selection_matrix_png": str(matrix_png),
         "central99_mask_png": str(central_png),
+        "ridge_fraction_png": str(ridge_png),
         "mc_true_energy_overlay_png": str(overlay_png),
         "html": str(abs_path(args.html)),
         "metadata_json": str(output_dir / "v3_cell_selection_diagnostics_meta.json"),

@@ -1,0 +1,12 @@
+{
+  "selection_matrix_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v3-cell-selection/v3_cell_selection_matrix.png",
+  "central99_mask_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v3-cell-selection/v3_central99_mask.png",
+  "ridge_fraction_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v3-cell-selection/v3_mc_occupancy_ridge_fraction.png",
+  "mc_true_energy_overlay_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v3-cell-selection/v3_mc_true_energy_overlay.png",
+  "html": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/v3_cell_selection_diagnostics.html",
+  "metadata_json": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v3-cell-selection/v3_cell_selection_diagnostics_meta.json",
+  "candidate_cells": 84,
+  "baseline_cells": 27,
+  "systematics_cells": 62,
+  "high_energy_probe_cells": 16
+}

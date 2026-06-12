@@ -13,14 +13,11 @@ import time
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import numpy as np
-import uproot
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
-
-from apply.simulation_all_bin import sanitize_label
 
 
 DEFAULT_SOURCE_BINNED_ROOT = "/mnt/mydisk/WCDA_simulation_binned_response_v1"
@@ -31,6 +28,7 @@ DEFAULT_BASELINE_SELECTOR = "apply/config/cell_selector_v3_baseline.csv"
 DEFAULT_SYSTEMATICS_SELECTOR = "apply/config/cell_selector_v3_systematics.csv"
 DEFAULT_HIGH_ENERGY_SELECTOR = "apply/config/cell_selector_v3_high_energy_probes.csv"
 DEFAULT_DIAGNOSTICS_HTML = "apply/report/v3_cell_selection_diagnostics.html"
+DEFAULT_PSF_SUMMARY_CSV = ""
 
 NHIT_BINS = ["[125,200)", "[200,300)", "[300,500)", "[500,800)", "[800,1100)", "[1100,2000)", "[2000,3000)"]
 PRED_BINS = [
@@ -56,16 +54,7 @@ V3_CANDIDATE_VERSION = "v3_candidate"
 V3_BASELINE_VERSION = "v3_baseline"
 V3_SYSTEMATICS_VERSION = "v3_systematics"
 V3_HIGH_ENERGY_VERSION = "v3_high_energy_probes"
-
-BASELINE_RIDGE: Dict[str, set[str]] = {
-    "[125,200)": {"[2.5,3)", "[3,3.25)", "[3.25,3.5)"},
-    "[200,300)": {"[2.5,3)", "[3,3.25)", "[3.25,3.5)", "[3.5,3.75)"},
-    "[300,500)": {"[3,3.25)", "[3.25,3.5)", "[3.5,3.75)", "[3.75,4.0)", "[4.0,4.25)"},
-    "[500,800)": {"[3.25,3.5)", "[3.5,3.75)", "[3.75,4.0)", "[4.0,4.25)", "[4.25,4.5)"},
-    "[800,1100)": {"[3.5,3.75)", "[3.75,4.0)", "[4.0,4.25)", "[4.25,4.5)", "[4.5,4.75)"},
-    "[1100,2000)": {"[3.75,4.0)", "[4.0,4.25)", "[4.25,4.5)", "[4.5,4.75)", "[4.75,5.0)"},
-    "[2000,3000)": {"[4.25,4.5)", "[4.5,4.75)", "[4.75,5.0)", "[5,6)"},
-}
+DEFAULT_BASELINE_RIDGE_MIN_PEAK_FRACTION = 0.10
 
 
 def parse_args() -> argparse.Namespace:
@@ -80,14 +69,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--systematics-selector-csv", type=str, default=DEFAULT_SYSTEMATICS_SELECTOR)
     parser.add_argument("--high-energy-selector-csv", type=str, default=DEFAULT_HIGH_ENERGY_SELECTOR)
     parser.add_argument("--diagnostics-html", type=str, default=DEFAULT_DIAGNOSTICS_HTML)
+    parser.add_argument("--psf-summary-csv", type=str, default=DEFAULT_PSF_SUMMARY_CSV)
+    parser.add_argument("--require-psf-quality", action="store_true", default=False)
     parser.add_argument("--tree-name", type=str, default="t_eventout")
     parser.add_argument("--write-configs", action="store_true", default=False)
     parser.add_argument("--prepare-cache", action="store_true", default=False)
+    parser.add_argument(
+        "--reuse-candidate-ledger",
+        action="store_true",
+        default=False,
+        help="Reuse --candidate-ledger-csv rows and regenerate only selector flags/configs.",
+    )
     parser.add_argument("--overwrite-filtered-cache", action="store_true", default=False)
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--progress-every", type=int, default=500)
     parser.add_argument("--max-files-per-source-bin", type=int, default=None)
     parser.add_argument("--min-baseline-mc-count", type=int, default=1000)
+    parser.add_argument("--baseline-ridge-min-peak-fraction", type=float, default=DEFAULT_BASELINE_RIDGE_MIN_PEAK_FRACTION)
     parser.add_argument("--write-diagnostics", action="store_true", default=False)
     return parser.parse_args()
 
@@ -139,6 +137,37 @@ def write_csv(path: Path, rows: Sequence[Dict[str, object]], fieldnames: Sequenc
             writer.writerow({name: row.get(name, "") for name in fieldnames})
 
 
+def truthy(value: object) -> bool:
+    return str(value).strip().lower() in {"1", "true", "yes", "y"}
+
+
+def sanitize_label(label: str) -> str:
+    return (
+        label.replace(">=", "ge_")
+        .replace("<", "lt_")
+        .replace("[", "")
+        .replace(")", "")
+        .replace(",", "_")
+        .replace(".", "p")
+        .replace("-", "m")
+    )
+
+
+def compute_psf_quality_flags(path: Path, *, require_quality: bool) -> Dict[int, bool]:
+    if not require_quality:
+        return {}
+    if not path.exists():
+        raise FileNotFoundError(f"--require-psf-quality was set but PSF summary is missing: {path}")
+    flags: Dict[int, bool] = {}
+    for row in read_csv(path):
+        cell_id = int(row["cell_id"])
+        valid_events = int(float(row.get("valid_events") or 0))
+        positive_weight_events = int(float(row.get("positive_baseline_weight_events") or 0))
+        angle_warning = truthy(row.get("angle_check_warning", ""))
+        flags[cell_id] = bool(valid_events > 0 and positive_weight_events > 0 and not angle_warning)
+    return flags
+
+
 def source_nhit_bin(target_nhit: str) -> str:
     if target_nhit == TARGET_LOW_NHIT:
         return SOURCE_LOW_NHIT
@@ -171,6 +200,8 @@ def target_dir(target_root: Path, target_nhit: str, target_pred: str) -> Path:
 
 
 def open_tree(path: Path, tree_name: str):
+    import uproot
+
     root_file = uproot.open(path)
     try:
         if tree_name in root_file:
@@ -242,6 +273,8 @@ def split_file(task: Dict[str, object]) -> Dict[str, object]:
     payload = {name: np.asarray(value)[mask] for name, value in arrays.items()}
     payload["nhit_bin"] = np.asarray([target_nhit] * kept, dtype=object)
     payload["predE_bin"] = np.asarray([target_pred] * kept, dtype=object)
+    import uproot
+
     with uproot.recreate(target) as output:
         output[tree_name] = payload
     return {
@@ -328,6 +361,37 @@ def compute_central_flags(rows: Sequence[Dict[str, object]], central_fraction: f
     return flags
 
 
+def compute_mc_ridge_flags(
+    rows: Sequence[Dict[str, object]],
+    *,
+    central_flags: Dict[int, bool],
+    min_baseline_mc_count: int,
+    min_peak_fraction: float,
+) -> Dict[int, Tuple[bool, float]]:
+    flags: Dict[int, Tuple[bool, float]] = {}
+    by_nhit: Dict[str, List[Dict[str, object]]] = {}
+    for row in rows:
+        by_nhit.setdefault(str(row["nhit_bin"]), []).append(row)
+
+    for nhit, items in by_nhit.items():
+        counts = np.asarray([int(row.get("mc_count") or 0) for row in items], dtype=np.float64)
+        peak = float(np.max(counts)) if counts.size else 0.0
+        for row, count_value in zip(items, counts):
+            cell_id = int(row["cell_id"])
+            pred = str(row["predE_bin"])
+            count = int(count_value)
+            peak_fraction = float(count_value / peak) if peak > 0.0 else 0.0
+            count_ok = count >= int(min_baseline_mc_count)
+            central = bool(central_flags.get(cell_id, False))
+            # The [5,6) bin is deliberately wide and is kept as a baseline
+            # high-energy bin only in the highest Nhit row; elsewhere it stays
+            # in the high-energy probe selector.
+            high_energy_allowed = pred != "[5,6)" or nhit == TARGET_HIGH_NHIT
+            on_ridge = central and count_ok and high_energy_allowed and pred != ">=6" and peak_fraction >= float(min_peak_fraction)
+            flags[cell_id] = (bool(on_ridge), peak_fraction)
+    return flags
+
+
 def selector_rows(
     rows: Sequence[Dict[str, object]],
     *,
@@ -335,6 +399,9 @@ def selector_rows(
     mode: str,
     min_baseline_mc_count: int,
     central_flags: Dict[int, bool],
+    ridge_flags: Dict[int, Tuple[bool, float]],
+    psf_quality_flags: Dict[int, bool],
+    require_psf_quality: bool,
 ) -> List[Dict[str, object]]:
     out: List[Dict[str, object]] = []
     for row in rows:
@@ -343,12 +410,13 @@ def selector_rows(
         pred = str(row["predE_bin"])
         count = int(row.get("mc_count") or 0)
         central = bool(central_flags.get(cell_id, False))
-        on_ridge = pred in BASELINE_RIDGE.get(nhit, set())
+        on_ridge, ridge_peak_fraction = ridge_flags.get(cell_id, (False, 0.0))
+        psf_quality = bool(psf_quality_flags.get(cell_id, True)) if require_psf_quality else True
         count_ok = count >= int(min_baseline_mc_count)
         high_probe = pred in {"[5,6)", ">=6"} or nhit == TARGET_HIGH_NHIT
         if mode == "baseline":
-            include = central and on_ridge and count_ok and pred != ">=6"
-            reason = "central99 physical-ridge MC/response prefit cell" if include else "excluded by central99/ridge/statistics/high-energy prefit rule"
+            include = central and on_ridge and count_ok and psf_quality and pred != ">=6"
+            reason = "central99 MC-occupancy-ridge PSF-quality prefit cell" if include else "excluded by central99/MC-ridge/PSF/statistics/high-energy prefit rule"
         elif mode == "systematics":
             include = central and count_ok and pred != ">=6"
             reason = "central99 count-qualified expanded systematics cell" if include else "excluded from expanded systematics selector"
@@ -368,6 +436,8 @@ def selector_rows(
                 "mc_count": count,
                 "central99_flag": int(central),
                 "physical_ridge_flag": int(on_ridge),
+                "ridge_peak_fraction": ridge_peak_fraction,
+                "psf_quality_flag": int(psf_quality),
                 "cell_role": "baseline_fit" if include and mode == "baseline" else ("probe" if include else "excluded"),
                 "exclusion_source": "" if include else "MC_prefit_selector",
             }
@@ -602,7 +672,10 @@ def main() -> None:
     source_root = Path(args.source_binned_root).resolve()
     target_root = Path(args.target_binned_root).resolve()
     source_counts_csv = Path(args.source_bin_counts_csv).resolve()
-    rows = build_candidate_rows(source_counts_csv=source_counts_csv)
+    if args.reuse_candidate_ledger:
+        rows = read_csv(Path(args.candidate_ledger_csv).resolve())
+    else:
+        rows = build_candidate_rows(source_counts_csv=source_counts_csv)
 
     cache_manifest: Optional[Dict[str, object]] = None
     exact_counts: Optional[Dict[Tuple[str, str], int]] = None
@@ -627,12 +700,25 @@ def main() -> None:
         rows = build_candidate_rows(source_counts_csv=source_counts_csv, exact_counts=exact_counts)
 
     central_flags = compute_central_flags(rows, central_fraction=0.99)
+    psf_quality_flags = compute_psf_quality_flags(
+        Path(args.psf_summary_csv).resolve(),
+        require_quality=bool(args.require_psf_quality),
+    )
+    ridge_flags = compute_mc_ridge_flags(
+        rows,
+        central_flags=central_flags,
+        min_baseline_mc_count=int(args.min_baseline_mc_count),
+        min_peak_fraction=float(args.baseline_ridge_min_peak_fraction),
+    )
     baseline = selector_rows(
         rows,
         version=V3_BASELINE_VERSION,
         mode="baseline",
         min_baseline_mc_count=int(args.min_baseline_mc_count),
         central_flags=central_flags,
+        ridge_flags=ridge_flags,
+        psf_quality_flags=psf_quality_flags,
+        require_psf_quality=bool(args.require_psf_quality),
     )
     systematics = selector_rows(
         rows,
@@ -640,6 +726,9 @@ def main() -> None:
         mode="systematics",
         min_baseline_mc_count=int(args.min_baseline_mc_count),
         central_flags=central_flags,
+        ridge_flags=ridge_flags,
+        psf_quality_flags=psf_quality_flags,
+        require_psf_quality=bool(args.require_psf_quality),
     )
     high_energy = selector_rows(
         rows,
@@ -647,6 +736,9 @@ def main() -> None:
         mode="high_energy",
         min_baseline_mc_count=int(args.min_baseline_mc_count),
         central_flags=central_flags,
+        ridge_flags=ridge_flags,
+        psf_quality_flags=psf_quality_flags,
+        require_psf_quality=bool(args.require_psf_quality),
     )
 
     for row in rows:
@@ -667,7 +759,7 @@ def main() -> None:
             row["role_reason"] = "below prefit MC-count threshold"
         else:
             row["cell_role"] = "systematics_probe"
-            row["role_reason"] = "central-99 count-qualified probe outside default physical ridge"
+            row["role_reason"] = "central-99 count-qualified probe outside MC occupancy ridge"
         row["selection_reason"] = row["role_reason"]
 
     if args.write_configs:
@@ -697,6 +789,8 @@ def main() -> None:
             "mc_count",
             "central99_flag",
             "physical_ridge_flag",
+            "ridge_peak_fraction",
+            "psf_quality_flag",
             "cell_role",
             "exclusion_source",
         ]

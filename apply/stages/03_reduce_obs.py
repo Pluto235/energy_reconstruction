@@ -475,6 +475,15 @@ def init_cutflow() -> Dict[str, int]:
     return {key: 0 for key in CUTFLOW_KEYS}
 
 
+def finite_cell_lower_bounds(cells: Sequence[CellSpec]) -> Dict[str, Optional[float]]:
+    nhit_lows = [cell.nhit_low for cell in cells if cell.nhit_low is not None]
+    pred_lows = [cell.pred_low for cell in cells if cell.pred_low is not None]
+    return {
+        "nhit_min_inclusive": min(nhit_lows) if nhit_lows else None,
+        "predE_min_inclusive": min(pred_lows) if pred_lows else None,
+    }
+
+
 def process_input_file(task: Tuple[InputFileSpec, Dict[str, object]]) -> Dict[str, object]:
     spec, config = task
     obs_path = Path(spec.obs_path)
@@ -482,6 +491,9 @@ def process_input_file(task: Tuple[InputFileSpec, Dict[str, object]]) -> Dict[st
     run_dir = Path(str(config["run_dir"]))
     cells: Sequence[CellSpec] = config["cells"]  # type: ignore[assignment]
     compression = None if str(config["compression"]) == "none" else str(config["compression"])
+    lower_bounds = finite_cell_lower_bounds(cells)
+    nhit_min = lower_bounds["nhit_min_inclusive"]
+    pred_min = lower_bounds["predE_min_inclusive"]
 
     result: Dict[str, object] = {
         "source_file_id": int(spec.source_file_id),
@@ -499,6 +511,9 @@ def process_input_file(task: Tuple[InputFileSpec, Dict[str, object]]) -> Dict[st
         "parquet_relative_path": None,
         "cutflow": init_cutflow(),
         "cell_counts": [0 for _ in cells],
+        "nhit_below_candidate_min": 0,
+        "predE_below_candidate_min": 0,
+        "out_of_ledger_after_finite": 0,
         "matched_mjd_min": None,
         "matched_mjd_max": None,
         "matched_mjd_start_utc_yyyymm": None,
@@ -595,6 +610,17 @@ def process_input_file(task: Tuple[InputFileSpec, Dict[str, object]]) -> Dict[st
                 selected_mask = finite_mask & (cell_ids > 0)
                 selected_count = int(selected_mask.sum())
                 cutflow["after_cell_selection"] += selected_count  # type: ignore[index]
+                result["out_of_ledger_after_finite"] = int(result["out_of_ledger_after_finite"]) + int(
+                    np.count_nonzero(finite_mask & (cell_ids <= 0))
+                )
+                if nhit_min is not None:
+                    result["nhit_below_candidate_min"] = int(result["nhit_below_candidate_min"]) + int(
+                        np.count_nonzero(finite_mask & (nv < float(nhit_min)))
+                    )
+                if pred_min is not None:
+                    result["predE_below_candidate_min"] = int(result["predE_below_candidate_min"]) + int(
+                        np.count_nonzero(finite_mask & (loge_pred < float(pred_min)))
+                    )
                 if selected_count == 0:
                     continue
 
@@ -1392,6 +1418,10 @@ def build_metadata(
     grouped = group_by_month(results)
     global_cutflow = merge_cutflow(results)
     global_cell_counts = merge_cell_counts(results, len(cells))
+    lower_bounds = finite_cell_lower_bounds(cells)
+    out_of_ledger_after_finite = sum(int(result.get("out_of_ledger_after_finite") or 0) for result in results)
+    nhit_below_candidate_min = sum(int(result.get("nhit_below_candidate_min") or 0) for result in results)
+    pred_below_candidate_min = sum(int(result.get("predE_below_candidate_min") or 0) for result in results)
     matched_mjd_min = finite_min([result.get("matched_mjd_min") for result in results])
     matched_mjd_max = finite_max([result.get("matched_mjd_max") for result in results])
     selected_mjd_min = finite_min([result.get("selected_mjd_min") for result in results])
@@ -1432,6 +1462,8 @@ def build_metadata(
             "theta_rad_lt": math.radians(float(args.cut_theta_max_deg)),
             "theta_deg_lt": float(args.cut_theta_max_deg),
             "dcedge_gt_m": float(args.cut_dcedge_min),
+            "candidate_nhit_min_inclusive": lower_bounds["nhit_min_inclusive"],
+            "candidate_predE_min_inclusive": lower_bounds["predE_min_inclusive"],
         },
         "columns": {
             "theta": "radians",
@@ -1453,6 +1485,15 @@ def build_metadata(
             "elapsed_seconds": float(elapsed_seconds),
         },
         "cutflow": global_cutflow,
+        "assignment_audit": {
+            "candidate_nhit_min_inclusive": lower_bounds["nhit_min_inclusive"],
+            "candidate_predE_min_inclusive": lower_bounds["predE_min_inclusive"],
+            "nhit_below_candidate_min_after_quality_cuts": int(nhit_below_candidate_min),
+            "predE_below_candidate_min_after_quality_cuts": int(pred_below_candidate_min),
+            "out_of_ledger_after_finite": int(out_of_ledger_after_finite),
+            "selected_rows": int(global_cutflow["after_cell_selection"]),
+            "note": "Counts are after match/status/quality/finite cuts and before final cell selection unless noted.",
+        },
         "months": {
             yyyymm: {
                 "input_files": len(month_results),

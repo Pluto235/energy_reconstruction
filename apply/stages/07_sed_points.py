@@ -519,6 +519,87 @@ def close_enough(actual: float, expected: float, *, rtol: float) -> bool:
     return math.isclose(float(actual), float(expected), rel_tol=float(rtol), abs_tol=abs(float(expected)) * float(rtol))
 
 
+def stage_f_preferred_fit(stage_f_metadata: Dict[str, object]) -> Dict[str, object]:
+    preferred = stage_f_metadata.get("preferred_fit") if isinstance(stage_f_metadata, dict) else None
+    if not isinstance(preferred, dict):
+        raise ValueError("Stage F metadata is missing preferred_fit")
+    model_name = str(preferred.get("model") or "").strip().lower()
+    error_mode = str(preferred.get("error_mode") or "").strip().lower()
+    if model_name not in {"pl", "logpar"}:
+        raise ValueError(f"Stage G supports Stage F preferred PL or LogPar fits; got {preferred!r}")
+    if error_mode != "conservative":
+        raise ValueError(f"Stage G uses conservative Stage E errors; preferred Stage F error mode is {error_mode!r}")
+
+    fit_key = f"{model_name}_{error_mode}"
+    fits = stage_f_metadata.get("fits") if isinstance(stage_f_metadata, dict) else None
+    fit = fits.get(fit_key) if isinstance(fits, dict) else None
+    if not isinstance(fit, dict):
+        raise ValueError(f"Stage F metadata is missing fits.{fit_key}")
+    params_in = fit.get("parameters") if isinstance(fit.get("parameters"), dict) else {}
+    phi0 = finite_float(params_in.get("phi0"))
+    if phi0 is None or phi0 <= 0.0:
+        raise ValueError(f"Stage F {fit_key} phi0 is missing or non-positive")
+
+    params: Dict[str, float] = {"phi0": float(phi0)}
+    if model_name == "pl":
+        gamma = finite_float(params_in.get("gamma"))
+        if gamma is None:
+            raise ValueError(f"Stage F {fit_key} gamma is missing")
+        params["gamma"] = float(gamma)
+    else:
+        alpha = finite_float(params_in.get("alpha"))
+        beta = finite_float(params_in.get("beta"))
+        if alpha is None:
+            raise ValueError(f"Stage F {fit_key} alpha is missing")
+        if beta is None:
+            raise ValueError(f"Stage F {fit_key} beta is missing")
+        params["alpha"] = float(alpha)
+        params["beta"] = float(beta)
+
+    chi2 = finite_float(fit.get("chi2"))
+    ndof = int(fit.get("ndof")) if fit.get("ndof") is not None else None
+    if chi2 is None:
+        raise ValueError(f"Stage F {fit_key} chi2 is missing")
+    if ndof is None:
+        raise ValueError(f"Stage F {fit_key} ndof is missing")
+    return {
+        "model": model_name,
+        "error_mode": error_mode,
+        "fit_key": fit_key,
+        "parameters": params,
+        "chi2": chi2,
+        "ndof": ndof,
+        "preferred_fit": preferred,
+    }
+
+
+def unit_normalization_params(frozen_model: Dict[str, object]) -> Dict[str, float]:
+    params = dict(frozen_model["parameters"])  # type: ignore[arg-type]
+    params["phi0"] = 1.0
+    return {str(k): float(v) for k, v in params.items()}
+
+
+def spectrum_label(model_name: object) -> str:
+    name = str(model_name).lower()
+    if name == "pl":
+        return "PL"
+    if name == "logpar":
+        return "LogPar"
+    return str(model_name)
+
+
+def format_spectrum_params(spectrum: Dict[str, object]) -> str:
+    model_name = str(spectrum.get("model", ""))
+    parts = [f"model={spectrum_label(model_name)}", f"phi0={format_float(spectrum.get('phi0'), 6)}"]
+    if model_name == "pl":
+        parts.append(f"gamma={format_float(spectrum.get('gamma'), 6)}")
+    elif model_name == "logpar":
+        parts.append(f"alpha={format_float(spectrum.get('alpha'), 6)}")
+        parts.append(f"beta={format_float(spectrum.get('beta'), 6)}")
+    parts.append(f"pivot={format_float(spectrum.get('pivot_tev'), 4)} TeV")
+    return ", ".join(parts)
+
+
 def validate_inputs(
     *,
     args: argparse.Namespace,
@@ -528,6 +609,7 @@ def validate_inputs(
     response_metadata: Dict[str, object],
     signal_metadata: Dict[str, object],
     stage_f_metadata: Dict[str, object],
+    frozen_model: Dict[str, object],
     stage_f_model_counts_recomputed: np.ndarray,
 ) -> Dict[str, object]:
     required_cell_ids = parse_cell_ids(str(args.required_cell_ids))
@@ -564,7 +646,7 @@ def validate_inputs(
             "excess_err_conservative",
             "containment_r_opt",
             "theta_exposure_sec",
-            "pl_conservative_model_counts",
+            f"{frozen_model['fit_key']}_model_counts",
         ],
         "Stage F fit",
     )
@@ -607,27 +689,20 @@ def validate_inputs(
         if missing_excluded:
             raise ValueError(f"Stage F metadata does not explicitly exclude expected cells: {missing_excluded}")
 
-    preferred = stage_f_metadata.get("preferred_fit") if isinstance(stage_f_metadata, dict) else None
-    if not isinstance(preferred, dict) or preferred.get("model") != "pl" or preferred.get("error_mode") != "conservative":
-        raise ValueError(f"Stage G requires Stage F preferred conservative PL fit; got {preferred!r}")
-    fits = stage_f_metadata.get("fits") if isinstance(stage_f_metadata, dict) else None
-    pl = fits.get("pl_conservative") if isinstance(fits, dict) else None
-    if not isinstance(pl, dict):
-        raise ValueError("Stage F metadata is missing fits.pl_conservative")
-    params = pl.get("parameters") if isinstance(pl.get("parameters"), dict) else {}
-    phi0 = finite_float(params.get("phi0"))
-    gamma = finite_float(params.get("gamma"))
-    chi2 = finite_float(pl.get("chi2"))
-    ndof = int(pl.get("ndof")) if pl.get("ndof") is not None else None
-    if phi0 is None:
-        raise ValueError("Stage F PL phi0 is missing")
-    if gamma is None:
-        raise ValueError("Stage F PL gamma is missing")
-    if chi2 is None:
-        raise ValueError("Stage F PL chi2 is missing")
-    if ndof is None:
-        raise ValueError("Stage F PL ndof is missing")
+    preferred = frozen_model["preferred_fit"]
+    model_name = str(frozen_model["model"])
+    fit_key = str(frozen_model["fit_key"])
+    frozen_params = dict(frozen_model["parameters"])  # type: ignore[arg-type]
+    phi0 = float(frozen_params["phi0"])
+    chi2 = float(frozen_model["chi2"])
+    ndof = int(frozen_model["ndof"])
     if enforce_expected:
+        if model_name != "pl":
+            raise ValueError(
+                "Stage G expected Stage F validation constants are PL-specific; "
+                "pass --skip-expected-stage-f-validation for non-PL preferred fits"
+            )
+        gamma = float(frozen_params["gamma"])
         if not close_enough(phi0, float(args.expected_stage_f_phi0), rtol=float(args.validation_rtol)):
             raise ValueError(f"Stage F PL phi0 {phi0!r} does not match expected {args.expected_stage_f_phi0:.6e}")
         if not close_enough(gamma, float(args.expected_stage_f_gamma), rtol=float(args.validation_rtol)):
@@ -643,11 +718,11 @@ def validate_inputs(
         if not np.allclose(lhs, rhs, rtol=1.0e-10, atol=1.0e-8, equal_nan=True):
             raise ValueError(f"Stage E aligned {name} does not match Stage F {name}")
 
-    stage_f_counts = np.asarray(stage_f["pl_conservative_model_counts"], dtype=np.float64)
+    stage_f_counts = np.asarray(stage_f[f"{fit_key}_model_counts"], dtype=np.float64)
     if not np.allclose(stage_f_model_counts_recomputed, stage_f_counts, rtol=float(args.model_counts_rtol), atol=1.0e-8):
         max_abs = float(np.nanmax(np.abs(stage_f_model_counts_recomputed - stage_f_counts)))
         max_rel = float(np.nanmax(np.abs((stage_f_model_counts_recomputed - stage_f_counts) / stage_f_counts)))
-        raise ValueError(f"Recomputed Stage F PL model counts do not match NPZ: max_abs={max_abs}, max_rel={max_rel}")
+        raise ValueError(f"Recomputed Stage F {fit_key} model counts do not match NPZ: max_abs={max_abs}, max_rel={max_rel}")
 
     signal_quality = signal_metadata.get("quality_gate") if isinstance(signal_metadata, dict) else None
     contract = signal_metadata.get("stage_d_contract") if isinstance(signal_metadata, dict) else None
@@ -664,9 +739,18 @@ def validate_inputs(
             "rtol": float(args.validation_rtol),
         },
         "stage_f_preferred_fit": preferred,
+        "stage_f_frozen_model": {
+            "model": model_name,
+            "error_mode": str(frozen_model["error_mode"]),
+            "fit_key": fit_key,
+            "parameters": frozen_params,
+            "chi2": chi2,
+            "ndof": ndof,
+            "source": f"Stage F {fit_key} preferred fit",
+        },
         "stage_f_pl_parameters_validated": {
             "phi0": phi0,
-            "gamma": gamma,
+            "gamma": float(frozen_params["gamma"]) if model_name == "pl" else None,
             "chi2": chi2,
             "ndof": ndof,
             "expected_phi0": float(args.expected_stage_f_phi0) if enforce_expected else None,
@@ -682,6 +766,7 @@ def validate_inputs(
         "stage_e_quality_promotable": signal_quality.get("promotable") if isinstance(signal_quality, dict) else None,
         "background_mode": contract.get("background_mode") if isinstance(contract, dict) else None,
         "background_form": contract.get("background_form") if isinstance(contract, dict) else None,
+        "stage_f_model_counts_key": f"{fit_key}_model_counts",
         "stage_f_model_counts_recomputed_max_abs_diff": float(
             np.nanmax(np.abs(stage_f_model_counts_recomputed - stage_f_counts))
         ),
@@ -693,11 +778,44 @@ def pl_flux_tev(E_tev: np.ndarray | float, *, phi0: float, gamma: float, pivot_t
     return float(phi0) * np.power(ratio, -float(gamma))
 
 
-def integrate_pl_flux_bins(
-    loge_edges: np.ndarray,
+def logpar_flux_tev(
+    E_tev: np.ndarray | float,
     *,
     phi0: float,
-    gamma: float,
+    alpha: float,
+    beta: float,
+    pivot_tev: float,
+) -> np.ndarray:
+    ratio = np.asarray(E_tev, dtype=np.float64) / float(pivot_tev)
+    log_ratio = np.log(ratio)
+    return float(phi0) * np.exp((-float(alpha) - float(beta) * log_ratio) * log_ratio)
+
+
+def flux_tev(
+    E_tev: np.ndarray | float,
+    *,
+    model_name: str,
+    params: Dict[str, float],
+    pivot_tev: float,
+) -> np.ndarray:
+    if model_name == "pl":
+        return pl_flux_tev(E_tev, phi0=params["phi0"], gamma=params["gamma"], pivot_tev=pivot_tev)
+    if model_name == "logpar":
+        return logpar_flux_tev(
+            E_tev,
+            phi0=params["phi0"],
+            alpha=params["alpha"],
+            beta=params["beta"],
+            pivot_tev=pivot_tev,
+        )
+    raise ValueError(f"Unsupported spectrum model: {model_name}")
+
+
+def integrate_flux_bins(
+    loge_edges: np.ndarray,
+    *,
+    model_name: str,
+    params: Dict[str, float],
     pivot_tev: float,
     quadrature_points: int,
 ) -> np.ndarray:
@@ -708,10 +826,27 @@ def integrate_pl_flux_bins(
     for idx, (lo, hi) in enumerate(zip(loge_edges[:-1], loge_edges[1:])):
         xs = 0.5 * (hi - lo) * nodes + 0.5 * (hi + lo)
         E_tev = np.power(10.0, xs) / 1000.0
-        flux = pl_flux_tev(E_tev, phi0=phi0, gamma=gamma, pivot_tev=pivot_tev)
+        flux = flux_tev(E_tev, model_name=model_name, params=params, pivot_tev=pivot_tev)
         integrand = flux * math.log(10.0) * E_tev
         out[idx] = 0.5 * (hi - lo) * float(np.sum(weights * integrand))
     return out
+
+
+def integrate_pl_flux_bins(
+    loge_edges: np.ndarray,
+    *,
+    phi0: float,
+    gamma: float,
+    pivot_tev: float,
+    quadrature_points: int,
+) -> np.ndarray:
+    return integrate_flux_bins(
+        loge_edges,
+        model_name="pl",
+        params={"phi0": float(phi0), "gamma": float(gamma)},
+        pivot_tev=pivot_tev,
+        quadrature_points=quadrature_points,
+    )
 
 
 def model_counts_from_flux_integral(
@@ -793,6 +928,9 @@ def point_to_dict(point: SedPoint) -> Dict[str, object]:
         "ratio_to_stage_f_pl": point.ratio_to_stage_f_pl,
         "ratio_to_stage_f_pl_err": point.ratio_to_stage_f_pl_err,
         "pull_vs_stage_f_pl": point.pull_vs_stage_f_pl,
+        "ratio_to_stage_f_model": point.ratio_to_stage_f_pl,
+        "ratio_to_stage_f_model_err": point.ratio_to_stage_f_pl_err,
+        "pull_vs_stage_f_model": point.pull_vs_stage_f_pl,
         "ratio_to_full_array_pl_ref": point.ratio_to_wcda1_ref,
         "ratio_to_full_array_pl_ref_err": point.ratio_to_wcda1_ref_err,
         "pull_vs_full_array_pl_ref": point.pull_vs_wcda1_ref,
@@ -858,17 +996,20 @@ def fit_sed_points(
     containment: np.ndarray,
     theta_exposure_sec: np.ndarray,
     loge_edges: np.ndarray,
-    frozen_phi0: float,
-    frozen_gamma: float,
+    frozen_model: Dict[str, object],
     pivot_tev: float,
     reference_phi0: float,
     reference_gamma: float,
     quadrature_points: int,
 ) -> Tuple[List[SedPoint], np.ndarray, np.ndarray, np.ndarray]:
-    unit_flux_integral = integrate_pl_flux_bins(
+    model_name = str(frozen_model["model"])
+    frozen_params = {str(k): float(v) for k, v in dict(frozen_model["parameters"]).items()}  # type: ignore[arg-type]
+    unit_params = unit_normalization_params(frozen_model)
+    frozen_phi0 = float(frozen_params["phi0"])
+    unit_flux_integral = integrate_flux_bins(
         loge_edges,
-        phi0=1.0,
-        gamma=frozen_gamma,
+        model_name=model_name,
+        params=unit_params,
         pivot_tev=pivot_tev,
         quadrature_points=quadrature_points,
     )
@@ -913,9 +1054,13 @@ def fit_sed_points(
         e16, e50, e84 = weighted_quantiles_from_loge_bins(loge_edges, energy_weights, [0.16, 0.50, 0.84])
         effective_energy = e50
 
-        stage_f_flux = float(pl_flux_tev(effective_energy, phi0=frozen_phi0, gamma=frozen_gamma, pivot_tev=pivot_tev))
-        point_flux = float(pl_flux_tev(effective_energy, phi0=n0, gamma=frozen_gamma, pivot_tev=pivot_tev))
-        point_flux_err = float(pl_flux_tev(effective_energy, phi0=n0_err, gamma=frozen_gamma, pivot_tev=pivot_tev))
+        stage_f_flux = float(flux_tev(effective_energy, model_name=model_name, params=frozen_params, pivot_tev=pivot_tev))
+        point_params = dict(unit_params)
+        point_params["phi0"] = float(n0)
+        point_err_params = dict(unit_params)
+        point_err_params["phi0"] = float(n0_err)
+        point_flux = float(flux_tev(effective_energy, model_name=model_name, params=point_params, pivot_tev=pivot_tev))
+        point_flux_err = float(flux_tev(effective_energy, model_name=model_name, params=point_err_params, pivot_tev=pivot_tev))
         reference_flux = float(pl_flux_tev(effective_energy, phi0=reference_phi0, gamma=reference_gamma, pivot_tev=pivot_tev))
         e2 = effective_energy * effective_energy
         e2_dnde = e2 * point_flux
@@ -1012,6 +1157,8 @@ def write_summary_csv(path: Path, points: Sequence[SedPoint]) -> None:
         "chi2_over_ndof",
         "ratio_to_stage_f_pl",
         "ratio_to_stage_f_pl_err",
+        "ratio_to_stage_f_model",
+        "ratio_to_stage_f_model_err",
         "ratio_to_full_array_pl_ref",
         "ratio_to_full_array_pl_ref_err",
         "observed_excess_total",
@@ -1089,10 +1236,7 @@ def write_summary_md(path: Path, metadata: Dict[str, object], points: Sequence[S
         f.write(f"- Scope: diagnostic `{baseline_name}` SED points; not a publication baseline.\n")
         f.write(f"- Stage F run: `{validation['stage_f_run_id']}`\n")
         f.write(f"- Included cells: `{format_cell_list(required_ids)}`\n")
-        f.write(
-            f"- Frozen PL: phi0={format_float(frozen['phi0'], 6)}, "
-            f"gamma={format_float(frozen['gamma'], 6)}, pivot={format_float(frozen['pivot_tev'], 4)} TeV\n"
-        )
+        f.write(f"- Frozen Stage F model: {format_spectrum_params(frozen)}\n")
         f.write(
             f"- Full-array PL reference: {reference['name']}, "
             f"phi0={format_float(reference['phi0'], 6)}, gamma={format_float(reference['gamma'], 4)}\n"
@@ -1107,7 +1251,7 @@ def write_summary_md(path: Path, metadata: Dict[str, object], points: Sequence[S
             f.write(f"## {grouping} points\n\n")
             f.write(
                 "| group | cells | E_eff [TeV] | E2 dN/dE | err | N0 | N0 err | chi2/ndof | "
-                "ratio StageF | ratio full-array PL | single cell |\n"
+                "ratio StageF model | ratio full-array PL | single cell |\n"
             )
             f.write("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |\n")
             for point in points:
@@ -1145,7 +1289,14 @@ def write_summary_md(path: Path, metadata: Dict[str, object], points: Sequence[S
         f.write("\n")
 
 
-def write_npz(path: Path, points: Sequence[SedPoint], stage_f: Dict[str, np.ndarray], frozen_counts: np.ndarray) -> None:
+def write_npz(
+    path: Path,
+    points: Sequence[SedPoint],
+    stage_f: Dict[str, np.ndarray],
+    frozen_counts: np.ndarray,
+    *,
+    frozen_model: Dict[str, object],
+) -> None:
     rows = [point_to_dict(point) for point in points]
     payload: Dict[str, np.ndarray] = {
         "grouping": np.asarray([row["grouping"] for row in rows], dtype="U16"),
@@ -1169,6 +1320,8 @@ def write_npz(path: Path, points: Sequence[SedPoint], stage_f: Dict[str, np.ndar
         ),
         "ratio_to_stage_f_pl": np.asarray([row["ratio_to_stage_f_pl"] for row in rows], dtype=np.float64),
         "ratio_to_stage_f_pl_err": np.asarray([row["ratio_to_stage_f_pl_err"] for row in rows], dtype=np.float64),
+        "ratio_to_stage_f_model": np.asarray([row["ratio_to_stage_f_model"] for row in rows], dtype=np.float64),
+        "ratio_to_stage_f_model_err": np.asarray([row["ratio_to_stage_f_model_err"] for row in rows], dtype=np.float64),
         "ratio_to_full_array_pl_ref": np.asarray(
             [row["ratio_to_full_array_pl_ref"] for row in rows],
             dtype=np.float64,
@@ -1216,8 +1369,12 @@ def write_npz(path: Path, points: Sequence[SedPoint], stage_f: Dict[str, np.ndar
             dtype=bool,
         ),
         "stage_f_cell_id": np.asarray(stage_f["cell_id"], dtype=np.int32),
-        "stage_f_pl_model_counts": np.asarray(frozen_counts, dtype=np.float64),
+        "stage_f_frozen_model_counts": np.asarray(frozen_counts, dtype=np.float64),
+        "stage_f_frozen_model": np.asarray([str(frozen_model["model"])], dtype="U16"),
+        "stage_f_frozen_fit_key": np.asarray([str(frozen_model["fit_key"])], dtype="U32"),
     }
+    if str(frozen_model["model"]) == "pl":
+        payload["stage_f_pl_model_counts"] = np.asarray(frozen_counts, dtype=np.float64)
     np.savez_compressed(path, **payload)
 
 
@@ -1231,8 +1388,14 @@ def setup_matplotlib():
     return plt
 
 
-def sed_curve(E_tev: np.ndarray, *, phi0: float, gamma: float, pivot_tev: float) -> np.ndarray:
-    return E_tev * E_tev * pl_flux_tev(E_tev, phi0=phi0, gamma=gamma, pivot_tev=pivot_tev)
+def sed_curve(
+    E_tev: np.ndarray,
+    *,
+    model_name: str,
+    params: Dict[str, float],
+    pivot_tev: float,
+) -> np.ndarray:
+    return E_tev * E_tev * flux_tev(E_tev, model_name=model_name, params=params, pivot_tev=pivot_tev)
 
 
 def interpolate_pool1_e2_sed(E_tev: np.ndarray | float) -> np.ndarray:
@@ -1257,8 +1420,7 @@ def plot_sed_points(
     path: Path,
     *,
     baseline_name: str,
-    frozen_phi0: float,
-    frozen_gamma: float,
+    frozen_model: Dict[str, object],
     reference_phi0: float,
     reference_gamma: float,
     pivot_tev: float,
@@ -1272,10 +1434,23 @@ def plot_sed_points(
         emin, emax = 0.3, 80.0
     x = np.geomspace(emin, emax, 240)
     fig, ax = plt.subplots(figsize=(8.4, 5.4), constrained_layout=True)
-    ax.plot(x, sed_curve(x, phi0=frozen_phi0, gamma=frozen_gamma, pivot_tev=pivot_tev), color="#1f77b4", lw=2.0, label="Stage F frozen PL")
+    frozen_params = {str(k): float(v) for k, v in dict(frozen_model["parameters"]).items()}  # type: ignore[arg-type]
+    frozen_label = f"Stage F frozen {spectrum_label(frozen_model['model'])}"
     ax.plot(
         x,
-        sed_curve(x, phi0=reference_phi0, gamma=reference_gamma, pivot_tev=pivot_tev),
+        sed_curve(x, model_name=str(frozen_model["model"]), params=frozen_params, pivot_tev=pivot_tev),
+        color="#1f77b4",
+        lw=2.0,
+        label=frozen_label,
+    )
+    ax.plot(
+        x,
+        sed_curve(
+            x,
+            model_name="pl",
+            params={"phi0": float(reference_phi0), "gamma": float(reference_gamma)},
+            pivot_tev=pivot_tev,
+        ),
         color="#555555",
         lw=1.8,
         ls="--",
@@ -1345,7 +1520,7 @@ def plot_sed_points(
     plt.close(fig)
 
 
-def plot_ratio_points(points: Sequence[SedPoint], path: Path) -> None:
+def plot_ratio_points(points: Sequence[SedPoint], path: Path, *, frozen_model_label: str) -> None:
     plt = setup_matplotlib()
     fig, axes = plt.subplots(3, 1, figsize=(8.4, 8.4), sharex=True, constrained_layout=True)
     styles = {
@@ -1395,7 +1570,7 @@ def plot_ratio_points(points: Sequence[SedPoint], path: Path) -> None:
         )
     for ax, ylabel in zip(
         axes,
-        ["Point / Stage F PL", "Point / 1LHAASO full-array PL", "Point / WCDA-1 Pool-1 points"],
+        [f"Point / Stage F {frozen_model_label}", "Point / 1LHAASO full-array PL", "Point / WCDA-1 Pool-1 points"],
     ):
         ax.axhline(1.0, color="#333333", lw=1.0, ls="--")
         ax.set_xscale("log")
@@ -1446,6 +1621,7 @@ def write_report_html(path: Path, metadata: Dict[str, object], points: Sequence[
     excluded_cells = validation.get("excluded_cell_ids", []) if isinstance(validation, dict) else []
     background_mode = validation.get("background_mode") if isinstance(validation, dict) else None
     background_form = validation.get("background_form") if isinstance(validation, dict) else None
+    frozen_model_label = spectrum_label(frozen.get("model")) if isinstance(frozen, dict) else "model"
 
     def img(key: str, label: str) -> str:
         target = outputs.get(key) if isinstance(outputs, dict) else None
@@ -1546,11 +1722,11 @@ footer {{ margin-top:54px; padding-top:18px; border-top:1px solid var(--border);
   <header>
     <div class="eyebrow">LHAASO-WCDA · Crab SED diagnostic</div>
     <h1>Stage G Diagnostic SED 报告</h1>
-    <p class="lead">本页是 <code>{html.escape(baseline_name)}</code> 的 diagnostic SED points。它用于检查 Stage F 固定谱形下不同能段的归一化是否自洽，不作为正式发表版。</p>
+	    <p class="lead">本页是 <code>{html.escape(baseline_name)}</code> 的 diagnostic SED points。它用于检查 Stage F 固定谱形下不同能段的归一化是否自洽，不作为正式发表版。</p>
   </header>
   <section>
     <h2>结论摘要</h2>
-    <p>Stage G 固定 Stage F conservative PL 谱形，只在每个分组里重新拟合归一化 <code>N0_bin</code>，再转换为 <code>E^2 dN/dE</code>。能量位置使用冻结 PL 和响应权重下的 true-energy 加权中位数。</p>
+	    <p>Stage G 固定 Stage F conservative {html.escape(frozen_model_label)} 谱形，只在每个分组里重新拟合归一化 <code>N0_bin</code>，再转换为 <code>E^2 dN/dE</code>。能量位置使用冻结 Stage F 模型和响应权重下的 true-energy 加权中位数。</p>
     <div class="grid">
       <div class="metric"><div class="label">Run</div><div class="value">{html.escape(str(metadata['run_id']))}</div><div class="note">Stage G diagnostic</div></div>
       <div class="metric"><div class="label">Cells</div><div class="value">{len(included_cells)}</div><div class="note"><code>{html.escape(format_cell_list(included_cells))}</code></div></div>
@@ -1564,7 +1740,7 @@ footer {{ margin-top:54px; padding-top:18px; border-top:1px solid var(--border);
   <section>
     <h2>Stage G 做了什么</h2>
     <p>输入来自 Stage A response、Stage E signal 和 Stage F current fit。脚本验证 Stage F run 为 <code>{html.escape(str(validation['stage_f_run_id']))}</code>，并确认 included cells 为 <code>{html.escape(format_cell_list(included_cells))}</code>。</p>
-    <p>冻结谱形为 <code>phi0={format_float(frozen['phi0'], 6)}</code>、<code>gamma={format_float(frozen['gamma'], 6)}</code>、pivot <code>{format_float(frozen['pivot_tev'], 4)} TeV</code>。PL 曲线参考为 <code>{html.escape(str(reference['name']))}</code>：<code>phi0={format_float(reference['phi0'], 6)}</code>、<code>gamma={format_float(reference['gamma'], 4)}</code>。</p>
+	    <p>冻结谱形为 <code>{html.escape(format_spectrum_params(frozen))}</code>。PL 曲线参考为 <code>{html.escape(str(reference['name']))}</code>：<code>phi0={format_float(reference['phi0'], 6)}</code>、<code>gamma={format_float(reference['gamma'], 4)}</code>。</p>
     <p>本版新增 <code>{html.escape(str(pool1_reference.get('name', 'WCDA-1 Pool-1 Table 1 SED points')) if isinstance(pool1_reference, dict) else 'WCDA-1 Pool-1 Table 1 SED points')}</code> 作为逐点参考。它来自 2021 年 WCDA-1 Crab 标准烛光论文 Table 1，代表一号水池/Pool-1 结果；它不是胡 2023 图 6-32 的全阵列紫色逐点数据。</p>
     <p>同时叠加 MAGIC、H.E.S.S. 和 HAWC 的 Crab SED 参考点，只作为跨实验视觉对照。MAGIC 点来自 <code>open-gamma-ray-astro/joint-crab</code> 的多波段 FITS 表，对应 Albert et al. 2008 的公开表格点；MAGIC 2015 虽然报告接近 30 TeV 的谱测量，但未找到可直接引用的公开逐点数表，因此没有混入本图。H.E.S.S. 点来自 2024 官方辅助 ECSV 的 stereo CT1-4 flux points；HAWC 点来自 2019 ApJ Table 4 的 neural-network estimator。</p>
   </section>
@@ -1572,7 +1748,7 @@ footer {{ margin-top:54px; padding-top:18px; border-top:1px solid var(--border);
     <h2>SED 点结果</h2>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>grouping</th><th>group</th><th>cells</th><th class="num">E_eff [TeV]</th><th class="num">E2 dN/dE</th><th class="num">err</th><th class="num">N0</th><th class="num">chi2/ndof</th><th class="num">ratio StageF</th><th class="num">ratio full-array PL</th><th>single</th></tr></thead>
+	        <thead><tr><th>grouping</th><th>group</th><th>cells</th><th class="num">E_eff [TeV]</th><th class="num">E2 dN/dE</th><th class="num">err</th><th class="num">N0</th><th class="num">chi2/ndof</th><th class="num">ratio StageF model</th><th class="num">ratio full-array PL</th><th>single</th></tr></thead>
         <tbody>{''.join(table_rows)}</tbody>
       </table>
     </div>
@@ -1602,8 +1778,8 @@ footer {{ margin-top:54px; padding-top:18px; border-top:1px solid var(--border);
   <section>
     <h2>对比图</h2>
     <div class="figure-grid">
-      {img('sed_png', 'E^2 dN/dE SED points + Stage F PL + LHAASO/WCDA-1/MAGIC/H.E.S.S./HAWC references')}
-      {img('ratio_png', '每点相对 Stage F PL、1LHAASO full-array PL 和 WCDA-1 Pool-1 points 的 ratio')}
+	      {img('sed_png', 'E^2 dN/dE SED points + Stage F model + LHAASO/WCDA-1/MAGIC/H.E.S.S./HAWC references')}
+	      {img('ratio_png', '每点相对 Stage F model、1LHAASO full-array PL 和 WCDA-1 Pool-1 points 的 ratio')}
       {img('cell_counts_png', '每个 SED 点使用的 cell 数量')}
     </div>
   </section>
@@ -1652,8 +1828,7 @@ def make_metadata(
     signal_metadata: Dict[str, object],
     stage_f_metadata: Dict[str, object],
     validation: Dict[str, object],
-    frozen_phi0: float,
-    frozen_gamma: float,
+    frozen_model: Dict[str, object],
     points: Sequence[SedPoint],
     outputs: Dict[str, object],
     elapsed_seconds: float,
@@ -1661,6 +1836,17 @@ def make_metadata(
     baseline_name = str(validation.get("baseline", args.baseline_name))
     required_ids = validation.get("required_cell_ids", [])
     excluded_ids = validation.get("excluded_cell_ids", [])
+    frozen_params = {str(k): float(v) for k, v in dict(frozen_model["parameters"]).items()}  # type: ignore[arg-type]
+    frozen_spectrum: Dict[str, object] = {
+        "model": str(frozen_model["model"]),
+        **frozen_params,
+        "pivot_tev": float(args.pivot_tev),
+        "source": f"Stage F {frozen_model['fit_key']} preferred fit",
+        "fit_key": str(frozen_model["fit_key"]),
+        "error_mode": str(frozen_model["error_mode"]),
+        "stage_f_chi2": float(frozen_model["chi2"]),
+        "stage_f_ndof": int(frozen_model["ndof"]),
+    }
     return {
         "description": f"Stage G diagnostic SED points for the {baseline_name} Crab baseline.",
         "run_id": run_id,
@@ -1683,23 +1869,15 @@ def make_metadata(
         "latest": str(output_root / "latest"),
         "validation": validation,
         "method": {
-            "summary": "Fixed Stage F global PL shape; refit only N0_bin for each diagnostic energy grouping.",
+            "summary": "Fixed Stage F preferred global spectrum shape; refit only N0_bin for each diagnostic energy grouping.",
             "error_mode": "conservative sqrt(N_on + B_on)",
             "normalization_fit": "N0 = sum(excess_b * M_unit_b / sigma_b^2) / sum(M_unit_b^2 / sigma_b^2)",
             "normalization_error": "N0_err = 1 / sqrt(sum(M_unit_b^2 / sigma_b^2))",
-            "energy_position": "true-energy weighted median under frozen Stage F PL and response weights",
-            "e2_flux": "E_eff^2 * N0_bin * (E_eff / pivot)^(-gamma)",
+            "energy_position": "true-energy weighted median under frozen Stage F preferred model and response weights",
+            "e2_flux": "E_eff^2 times the Stage F preferred model with only phi0 replaced by N0_bin",
             "energy_quadrature_points": int(args.energy_quadrature_points),
         },
-        "frozen_spectrum": {
-            "model": "pl",
-            "phi0": float(frozen_phi0),
-            "gamma": float(frozen_gamma),
-            "pivot_tev": float(args.pivot_tev),
-            "source": "Stage F pl_conservative fit",
-            "stage_f_chi2": validation["stage_f_pl_parameters_validated"]["chi2"],
-            "stage_f_ndof": validation["stage_f_pl_parameters_validated"]["ndof"],
-        },
+        "frozen_spectrum": frozen_spectrum,
         "reference_spectrum": {
             "name": "Hu 2023 / 1LHAASO WCDA full-array Crab PL reference",
             "model": "pl",
@@ -1780,22 +1958,17 @@ def main() -> None:
     stage_f = load_npz(stage_f_npz, "Stage F fit")
     response, signal = align_to_stage_f_cells(response_full, signal_full, stage_f)
 
-    fits = stage_f_metadata.get("fits") if isinstance(stage_f_metadata, dict) else None
-    pl = fits.get("pl_conservative") if isinstance(fits, dict) else None
-    if not isinstance(pl, dict):
-        raise ValueError("Stage F metadata is missing fits.pl_conservative")
-    params = pl.get("parameters") if isinstance(pl.get("parameters"), dict) else {}
-    frozen_phi0 = float(params["phi0"])
-    frozen_gamma = float(params["gamma"])
+    frozen_model = stage_f_preferred_fit(stage_f_metadata)
+    frozen_params = {str(k): float(v) for k, v in dict(frozen_model["parameters"]).items()}  # type: ignore[arg-type]
 
     a_eff = np.asarray(response["a_eff"], dtype=np.float64)
     containment = np.asarray(signal["containment_r_opt"], dtype=np.float64)
     theta_exposure = np.asarray(stage_f["theta_exposure_sec"], dtype=np.float64)
     loge_edges = np.asarray(response["logE_true_edges"], dtype=np.float64)
-    stage_f_flux_integral = integrate_pl_flux_bins(
+    stage_f_flux_integral = integrate_flux_bins(
         loge_edges,
-        phi0=frozen_phi0,
-        gamma=frozen_gamma,
+        model_name=str(frozen_model["model"]),
+        params=frozen_params,
         pivot_tev=float(args.pivot_tev),
         quadrature_points=int(args.energy_quadrature_points),
     )
@@ -1813,6 +1986,7 @@ def main() -> None:
         response_metadata=response_metadata,
         signal_metadata=signal_metadata,
         stage_f_metadata=stage_f_metadata,
+        frozen_model=frozen_model,
         stage_f_model_counts_recomputed=stage_f_model_counts_recomputed,
     )
     baseline_name = str(validation.get("baseline", args.baseline_name))
@@ -1824,8 +1998,7 @@ def main() -> None:
         containment=containment,
         theta_exposure_sec=theta_exposure,
         loge_edges=loge_edges,
-        frozen_phi0=frozen_phi0,
-        frozen_gamma=frozen_gamma,
+        frozen_model=frozen_model,
         pivot_tev=float(args.pivot_tev),
         reference_phi0=float(args.reference_phi0),
         reference_gamma=float(args.reference_gamma),
@@ -1850,13 +2023,12 @@ def main() -> None:
             points,
             Path(plot_outputs["sed_png"]),
             baseline_name=baseline_name,
-            frozen_phi0=frozen_phi0,
-            frozen_gamma=frozen_gamma,
+            frozen_model=frozen_model,
             reference_phi0=float(args.reference_phi0),
             reference_gamma=float(args.reference_gamma),
             pivot_tev=float(args.pivot_tev),
         )
-        plot_ratio_points(points, Path(plot_outputs["ratio_png"]))
+        plot_ratio_points(points, Path(plot_outputs["ratio_png"]), frozen_model_label=spectrum_label(frozen_model["model"]))
         plot_point_cell_counts(points, Path(plot_outputs["cell_counts_png"]), baseline_name=baseline_name)
 
     outputs: Dict[str, object] = {
@@ -1885,15 +2057,14 @@ def main() -> None:
         signal_metadata=signal_metadata,
         stage_f_metadata=stage_f_metadata,
         validation=validation,
-        frozen_phi0=frozen_phi0,
-        frozen_gamma=frozen_gamma,
+        frozen_model=frozen_model,
         points=points,
         outputs=outputs,
         elapsed_seconds=time.perf_counter() - start,
     )
     summary_json = make_summary_json(metadata, points)
 
-    write_npz(npz_path, points, stage_f, frozen_counts)
+    write_npz(npz_path, points, stage_f, frozen_counts, frozen_model=frozen_model)
     write_summary_csv(summary_csv_path, points)
     write_pool1_reference_csv(pool1_reference_csv_path)
     write_external_reference_csv(external_reference_csv_path)
@@ -1918,7 +2089,8 @@ def main() -> None:
     print(f"Loaded Stage E signal: {signal_npz}", flush=True)
     print(f"Loaded Stage F fit: {stage_f_npz}", flush=True)
     print(
-        f"Validated {baseline_name}; frozen PL phi0={frozen_phi0:.6e} gamma={frozen_gamma:.6g}",
+        f"Validated {baseline_name}; frozen {spectrum_label(frozen_model['model'])} "
+        f"{', '.join(f'{key}={value:.6g}' for key, value in frozen_params.items())}",
         flush=True,
     )
     print(

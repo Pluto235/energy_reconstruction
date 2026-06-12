@@ -301,7 +301,7 @@ def main() -> None:
 
     output_dir.mkdir(parents=True, exist_ok=True)
     metadata = {
-        "description": f"Normalized Stage D {label} profiles for all raw65 cells; fit-selector cells are highlighted.",
+        "description": f"Normalized Stage D {label} profiles for all cells in the Stage D NPZ; fit-selector cells are highlighted.",
         "map_key": str(args.map_key),
         "selector_csv": str(selector_csv),
         "stage_d_npz": str(stage_d_npz),

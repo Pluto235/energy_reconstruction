@@ -1054,8 +1054,20 @@ def write_report_html(path: Path, metadata: Dict[str, object], rows: Sequence[Di
     roi = metadata["roi"]  # type: ignore[index]
     statistic = metadata["statistic"]  # type: ignore[index]
     source = metadata.get("source", {})
+    inputs = metadata.get("inputs", {})
     quality_status = str(quality["status"])
     quality_class = "good" if quality_status == "passed" else ("warn" if quality_status == "skipped" else "bad")
+    cell_count = len(rows)
+    background_npz_name = Path(str(inputs.get("background_npz", "Stage D background NPZ"))).name if isinstance(inputs, dict) else "Stage D background NPZ"
+    npz_output = str(outputs.get("npz", "signal.npz")) if isinstance(outputs, dict) else "signal.npz"
+    summary_csv_output = str(outputs.get("summary_csv", "signal_summary.csv")) if isinstance(outputs, dict) else "signal_summary.csv"
+    metadata_output = str(outputs.get("metadata_json", "signal_metadata.json")) if isinstance(outputs, dict) else "signal_metadata.json"
+    background_summary = contract.get("metadata_summary") if isinstance(contract, dict) else {}
+    background_method = (
+        background_summary.get("method")
+        if isinstance(background_summary, dict)
+        else None
+    ) or contract.get("background_form", "direct_expectation")
 
     figure_items = [
         (
@@ -1086,7 +1098,6 @@ def write_report_html(path: Path, metadata: Dict[str, object], rows: Sequence[Di
                 f'<strong>{html.escape(title)}。</strong>{html.escape(caption)}</figcaption></figure>'
             )
 
-    inputs = metadata.get("inputs", {})
     stage_d_outputs: Dict[str, object] = {}
     background_metadata_json = inputs.get("background_metadata_json") if isinstance(inputs, dict) else None
     if background_metadata_json:
@@ -1104,7 +1115,7 @@ def write_report_html(path: Path, metadata: Dict[str, object], rows: Sequence[Di
         (
             "roi_excess_grid_png",
             "Stage D 正式去背景天图",
-            "逐像素 excess_map = counts_map - background_map；background_map 来自 Stage D ROI-local Dec-sideband direct expectation。",
+            f"逐像素 excess_map = counts_map - background_map；background_map 来自 Stage D {background_method} direct expectation。",
         ),
         (
             "roi_known_b_sigma_grid_png",
@@ -1112,7 +1123,7 @@ def write_report_html(path: Path, metadata: Dict[str, object], rows: Sequence[Di
             "逐像素 known-background Poisson residual，使用同一个 Stage D background_map；它不是此前平滑 skymap 的 sideband 近似显著性。",
         ),
         ("roi_counts_grid_png", "Stage D counts 天图", "Stage D 正式 ROI 网格里的原始 counts_map，没有 Gaussian smoothing。"),
-        ("roi_background_grid_png", "Stage D background 天图", "Stage D 正式 ROI-local Dec-sideband background_map，与去背景天图使用同一背景口径。"),
+        ("roi_background_grid_png", "Stage D background 天图", f"Stage D 正式 ROI-local {background_method} background_map，与去背景天图使用同一背景口径。"),
     ]
     stage_d_map_html: List[str] = []
     for key, title, caption in stage_d_map_items:
@@ -1228,14 +1239,14 @@ footer {{ margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--borde
 <body>
 <main>
   <header>
-    <div class="eyebrow">LHAASO-WCDA · Crab SED v1</div>
+    <div class="eyebrow">LHAASO-WCDA · Crab SED</div>
     <h1>Stage E 信号提取报告</h1>
     <p class="lead">本页把 Stage E 的输出翻译成可读的分析说明：它不是在拟合能谱，而是在每个 <code>(Nhit, log10 E_pred)</code> cell 里统计 Crab 源区计数，并扣除 Stage D 给出的背景期望，得到后续 Stage F forward folding 拟合要使用的信号表。</p>
   </header>
 
   <section>
     <h2>一句话结论</h2>
-    <p>Stage E 已经在 18 个 v1 physical-band cell 上完成 Crab on-region 计数。总源区计数 <code>N_on = {format_int(totals['N_on'])}</code>，Stage D 背景期望 <code>B_on = {format_float(totals['B_on'], 6)}</code>，因此总 excess 为 <code>{format_float(totals['excess'], 6)}</code>，known-background 形式的总诊断显著性为 <code>{format_float(totals['formal_sigma'], 6)} sigma</code>。质量门状态为 <code>{html.escape(quality_status)}</code>。</p>
+    <p>Stage E 已经在 <code>{format_int(cell_count)}</code> 个传入 cell 上完成 Crab on-region 计数。总源区计数 <code>N_on = {format_int(totals['N_on'])}</code>，Stage D 背景期望 <code>B_on = {format_float(totals['B_on'], 6)}</code>，因此总 excess 为 <code>{format_float(totals['excess'], 6)}</code>，known-background 形式的总诊断显著性为 <code>{format_float(totals['formal_sigma'], 6)} sigma</code>。质量门状态为 <code>{html.escape(quality_status)}</code>。</p>
     <div class="grid">
       <div class="metric"><div class="label">Run</div><div class="value">{html.escape(str(metadata['run_id']))}</div><div class="note">Stage E signal extraction</div></div>
       <div class="metric"><div class="label">扫描事件</div><div class="value">{format_int(processing['input_rows_scanned'])}</div><div class="note">Stage C obs_events</div></div>
@@ -1298,7 +1309,7 @@ footer {{ margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--borde
 
   <section>
     <h2>结果怎么读</h2>
-    <p>下表每一行是一个 v1 拟合 cell。<code>Nhit bin</code> 表示 shower size 分箱，<code>log10 E_pred bin</code> 是 ML 预测能量分箱。低 Nhit、低预测能量 cell 统计量最大；高 Nhit、高预测能量 cell 背景很低，但如果仍有明显 positive excess，就对高能端谱形很有价值。</p>
+    <p>下表每一行是一个输入 cell。<code>Nhit bin</code> 表示 shower size 分箱，<code>log10 E_pred bin</code> 是 ML 预测能量分箱。低 Nhit、低预测能量 cell 统计量最大；高 Nhit、高预测能量 cell 背景很低，但如果仍有明显 positive excess，就对高能端谱形很有价值。</p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>cell</th><th>Nhit bin</th><th>log10 E_pred bin</th><th class="num">r_opt deg</th><th class="num">N_on</th><th class="num">B_on</th><th class="num">excess</th><th class="num">stat err</th><th class="num">known-B sigma</th><th class="num">Li-Ma</th></tr></thead>
@@ -1317,7 +1328,7 @@ footer {{ margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--borde
 
 	  <section>
 	    <h2>和 Stage D 正式去背景天图的关系</h2>
-	    <p>下面几张图来自 Stage D 正式 ROI-local 背景输出，不再使用此前平滑 skymap 的 sideband 近似。它们直接读取 <code>background_v1.npz</code> 中的 <code>counts_map</code> 和 <code>background_map</code>：去背景天图是逐像素 <code>counts_map - background_map</code>，residual 天图是同一背景期望下的 Poisson 诊断量。</p>
+	    <p>下面几张图来自 Stage D 正式 ROI-local 背景输出，不再使用此前平滑 skymap 的 sideband 近似。它们直接读取 <code>{html.escape(background_npz_name)}</code> 中的 <code>counts_map</code> 和 <code>background_map</code>：去背景天图是逐像素 <code>counts_map - background_map</code>，residual 天图是同一背景期望下的 Poisson 诊断量。</p>
 	    <div class="callout good">
 	      <strong>这组图和 Stage E 的背景口径一致。</strong>
 	      Stage E 表格中的 <code>B_on</code> 是把同一个 Stage D <code>background_map</code> 积分到每个 cell 的 Crab on-region 后得到的；这里的天图只是把同一个过程摊回 ROI 像素上，方便人眼检查源形态。
@@ -1330,10 +1341,10 @@ footer {{ margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--borde
 	  <section>
     <h2>输出文件和下一步</h2>
     <ul>
-      <li><code>apply/output/stage_e/current/signal_v1.npz</code>：Stage F 直接读取的数组，包含 <code>N_on</code>、<code>B_on</code>、<code>excess</code>、误差和显著性。</li>
-      <li><code>apply/output/stage_e/current/signal_v1_summary.csv</code>：逐 cell 表格，适合人工检查和快速画图。</li>
-      <li><code>apply/output/stage_e/current/signal_v1_metadata.json</code>：输入路径、Stage D 合约、ROI 口径、统计公式和质量门信息。</li>
-      <li><code>apply/output/stage_e/current/*.png</code>：二维 cell 诊断图。</li>
+      <li><code>{html.escape(npz_output)}</code>：Stage F 直接读取的数组，包含 <code>N_on</code>、<code>B_on</code>、<code>excess</code>、误差和显著性。</li>
+      <li><code>{html.escape(summary_csv_output)}</code>：逐 cell 表格，适合人工检查和快速画图。</li>
+      <li><code>{html.escape(metadata_output)}</code>：输入路径、Stage D 合约、ROI 口径、统计公式和质量门信息。</li>
+      <li><code>{html.escape(str(Path(npz_output).parent))}/*.png</code>：二维 cell 诊断图。</li>
     </ul>
     <div class="callout good">
       <strong>下一步是 Stage F。</strong>
@@ -1378,7 +1389,7 @@ def make_metadata(
     elapsed_seconds: float,
 ) -> Dict[str, object]:
     return {
-        "description": "Stage E Crab signal extraction for v1 (Nhit, predicted logE) SED cells.",
+        "description": "Stage E Crab signal extraction for configured (Nhit, predicted logE) SED cells.",
         "run_id": run_id,
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
         "inputs": {
@@ -1583,7 +1594,7 @@ def main() -> None:
             stats.excess,
             cells,
             Path(plot_outputs["excess_grid_png"]),
-            title="Stage E excess by v1 cell",
+            title="Stage E excess by configured cell",
             colorbar_label="excess",
             cmap_name="magma",
         )

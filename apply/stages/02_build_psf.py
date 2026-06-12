@@ -116,6 +116,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-events-per-cell", type=int, default=1000)
     parser.add_argument("--min-effective-events", type=float, default=200.0)
     parser.add_argument(
+        "--allow-low-stat-psf-fallback",
+        action="store_true",
+        default=False,
+        help=(
+            "Write finite fallback PSF rows for cells that cannot support a PSF fit. "
+            "Intended for full candidate ledgers where low-stat cells are excluded by a downstream selector."
+        ),
+    )
+    parser.add_argument(
         "--core-fit-max-deg",
         type=float,
         default=3.0,
@@ -640,6 +649,79 @@ def finite_percentiles(values: np.ndarray, percentiles: Sequence[float]) -> List
     return [float(v) for v in np.percentile(finite, percentiles)]
 
 
+def fallback_psf_row(
+    cell: CellSpec,
+    *,
+    cell_dir: Path,
+    input_files: int,
+    events: int,
+    reason: str,
+    profile_edges_deg: np.ndarray,
+) -> Tuple[Dict[str, object], np.ndarray]:
+    sigma_deg = 1.0
+    r_opt_deg = RAYLEIGH_OPT_RADIUS_FACTOR * sigma_deg
+    row: Dict[str, object] = {
+        "cell_index": int(cell.index),
+        "cell_id": int(cell.cell_id),
+        "nhit_bin": cell.nhit_bin,
+        "predE_bin": cell.predE_bin,
+        "input_dir": str(cell_dir),
+        "input_files": int(input_files),
+        "events": int(events),
+        "logE_range_events": 0,
+        "valid_events": 0,
+        "positive_baseline_weight_events": 0,
+        "sumw_baseline": 0.0,
+        "sumw_mc_weight": 0.0,
+        "effective_events": 0.0,
+        "core_fit_max_deg": None,
+        "core_fit_events": 0,
+        "core_fit_sumw": 0.0,
+        "core_fit_effective_events": 0.0,
+        "core_fit_weight_fraction": 0.0,
+        "tail_weight_fraction_above_core_fit": 1.0,
+        "sigma_rad": math.radians(sigma_deg),
+        "sigma_deg": sigma_deg,
+        "sigma_mc_weight_deg": sigma_deg,
+        "sigma_unweighted_deg": sigma_deg,
+        "sigma_full_rayleigh_rad": math.radians(sigma_deg),
+        "sigma_full_rayleigh_deg": sigma_deg,
+        "sigma_full_mc_weight_deg": sigma_deg,
+        "sigma_full_unweighted_deg": sigma_deg,
+        "r_opt_rad": math.radians(r_opt_deg),
+        "r_opt_deg": r_opt_deg,
+        "r_opt_factor": float(RAYLEIGH_OPT_RADIUS_FACTOR),
+        "containment_r_opt": float(RAYLEIGH_OPT_CONTAINMENT),
+        "containment_r_opt_core_fit_full_distribution": float(RAYLEIGH_OPT_CONTAINMENT),
+        "rayleigh_expected_containment_r_opt": float(RAYLEIGH_OPT_CONTAINMENT),
+        "containment_minus_expected": 0.0,
+        "containment_warning": True,
+        "r68_deg": sigma_deg * math.sqrt(-2.0 * math.log(1.0 - 0.68)),
+        "r90_deg": sigma_deg * math.sqrt(-2.0 * math.log(1.0 - 0.90)),
+        "r95_deg": sigma_deg * math.sqrt(-2.0 * math.log(1.0 - 0.95)),
+        "core_r68_deg": sigma_deg * math.sqrt(-2.0 * math.log(1.0 - 0.68)),
+        "core_r90_deg": sigma_deg * math.sqrt(-2.0 * math.log(1.0 - 0.90)),
+        "core_r95_deg": sigma_deg * math.sqrt(-2.0 * math.log(1.0 - 0.95)),
+        "mc_logE_true_p05": None,
+        "mc_logE_true_p50": None,
+        "mc_logE_true_p95": None,
+        "theta_missing_crab_probability_mass": 1.0,
+        "theta_reweight": {
+            "status": "fallback",
+            "reason": reason,
+            "missing_crab_probability_mass": 1.0,
+        },
+        "angle_check_absdiff_rad_p50": None,
+        "angle_check_absdiff_rad_p90": None,
+        "angle_check_absdiff_rad_p99": None,
+        "angle_check_absdiff_rad_max": None,
+        "angle_check_warning": True,
+        "psf_quality_flag": "fallback_low_stat",
+        "warnings": [reason],
+    }
+    return row, np.zeros(profile_edges_deg.size - 1, dtype=np.float32)
+
+
 def process_cell(
     cell: CellSpec,
     *,
@@ -656,6 +738,7 @@ def process_cell(
     allow_incomplete_theta_support: bool,
     min_events_per_cell: int,
     min_effective_events: float,
+    allow_low_stat_psf_fallback: bool,
     core_fit_max_deg: float,
     theta_missing_mass_fail_threshold: float,
     containment_warning_tolerance: float,
@@ -678,6 +761,15 @@ def process_cell(
 
     n_events = int(events.dangle_rad.size)
     if n_events < int(min_events_per_cell):
+        if allow_low_stat_psf_fallback:
+            return fallback_psf_row(
+                cell,
+                cell_dir=cell_dir,
+                input_files=events.input_files,
+                events=n_events,
+                reason=f"events_below_min_events_per_cell:{n_events}<{min_events_per_cell}",
+                profile_edges_deg=profile_edges_deg,
+            )
         raise ValueError(
             f"Cell {cell.cell_id} has {n_events} events, below --min-events-per-cell={min_events_per_cell}"
         )
@@ -704,6 +796,18 @@ def process_cell(
     )
     missing_crab_mass = float(theta_meta.get("missing_crab_probability_mass") or 0.0)
     if missing_crab_mass > float(theta_missing_mass_fail_threshold):
+        if allow_low_stat_psf_fallback:
+            return fallback_psf_row(
+                cell,
+                cell_dir=cell_dir,
+                input_files=events.input_files,
+                events=n_events,
+                reason=(
+                    f"theta_missing_crab_probability_mass:{missing_crab_mass:.6g}>"
+                    f"{theta_missing_mass_fail_threshold}"
+                ),
+                profile_edges_deg=profile_edges_deg,
+            )
         raise ValueError(
             f"Cell {cell.cell_id} is missing Crab theta support mass {missing_crab_mass:.4g}, "
             f"above --theta-missing-mass-fail-threshold={theta_missing_mass_fail_threshold}"
@@ -721,10 +825,28 @@ def process_cell(
     positive_full = full_weight > 0
     sumw_full = float(np.sum(full_weight[positive_full]))
     if sumw_full <= 0:
+        if allow_low_stat_psf_fallback:
+            return fallback_psf_row(
+                cell,
+                cell_dir=cell_dir,
+                input_files=events.input_files,
+                events=n_events,
+                reason="no_positive_baseline_weight_after_theta_reweighting",
+                profile_edges_deg=profile_edges_deg,
+            )
         raise ValueError(f"Cell {cell.cell_id} has no positive baseline weight after Crab theta reweighting.")
 
     neff = effective_event_count(full_weight)
     if neff < float(min_effective_events):
+        if allow_low_stat_psf_fallback:
+            return fallback_psf_row(
+                cell,
+                cell_dir=cell_dir,
+                input_files=events.input_files,
+                events=n_events,
+                reason=f"effective_events_below_min:{neff:.6g}<{min_effective_events}",
+                profile_edges_deg=profile_edges_deg,
+            )
         raise ValueError(
             f"Cell {cell.cell_id} has effective events {neff:.3g}, below --min-effective-events={min_effective_events}"
         )
@@ -737,8 +859,26 @@ def process_cell(
     core_sumw = float(np.sum(core_weight[core_weight > 0]))
     core_neff = effective_event_count(core_weight)
     if core_sumw <= 0:
+        if allow_low_stat_psf_fallback:
+            return fallback_psf_row(
+                cell,
+                cell_dir=cell_dir,
+                input_files=events.input_files,
+                events=n_events,
+                reason="no_positive_baseline_weight_inside_core_fit_range",
+                profile_edges_deg=profile_edges_deg,
+            )
         raise ValueError(f"Cell {cell.cell_id} has no positive baseline weight inside core fit range.")
     if core_neff < float(min_effective_events):
+        if allow_low_stat_psf_fallback:
+            return fallback_psf_row(
+                cell,
+                cell_dir=cell_dir,
+                input_files=events.input_files,
+                events=n_events,
+                reason=f"core_effective_events_below_min:{core_neff:.6g}<{min_effective_events}",
+                profile_edges_deg=profile_edges_deg,
+            )
         raise ValueError(
             f"Cell {cell.cell_id} has core effective events {core_neff:.3g}, "
             f"below --min-effective-events={min_effective_events}"
@@ -751,6 +891,15 @@ def process_cell(
     sigma_full_mc_weight_rad = rayleigh_sigma_mle(events.dangle_rad, mc_weight_only)
     sigma_full_unweighted_rad = rayleigh_sigma_mle(events.dangle_rad, unweighted)
     if not np.isfinite(sigma_rad) or sigma_rad <= 0:
+        if allow_low_stat_psf_fallback:
+            return fallback_psf_row(
+                cell,
+                cell_dir=cell_dir,
+                input_files=events.input_files,
+                events=n_events,
+                reason=f"invalid_baseline_sigma:{sigma_rad}",
+                profile_edges_deg=profile_edges_deg,
+            )
         raise ValueError(f"Cell {cell.cell_id} has invalid baseline sigma: {sigma_rad}")
 
     r_opt_rad = RAYLEIGH_OPT_RADIUS_FACTOR * sigma_rad
@@ -827,6 +976,8 @@ def process_cell(
         "angle_check_absdiff_rad_p99": angle_check_percentiles[2],
         "angle_check_absdiff_rad_max": angle_check_percentiles[3],
         "angle_check_warning": bool(angle_check_warning),
+        "psf_quality_flag": "warning" if (containment_warning or angle_check_warning) else "ok",
+        "warnings": [],
     }
     return row, profile_density
 
@@ -1162,6 +1313,7 @@ def main() -> None:
         "allow_incomplete_theta_support": bool(args.allow_incomplete_theta_support),
         "min_events_per_cell": int(args.min_events_per_cell),
         "min_effective_events": float(args.min_effective_events),
+        "allow_low_stat_psf_fallback": bool(args.allow_low_stat_psf_fallback),
         "core_fit_max_deg": float(args.core_fit_max_deg),
         "theta_missing_mass_fail_threshold": float(args.theta_missing_mass_fail_threshold),
         "containment_warning_tolerance": float(args.containment_warning_tolerance),

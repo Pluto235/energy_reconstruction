@@ -117,7 +117,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--roi-background-method",
-        choices=["dec-sideband"],
+        choices=["dec-sideband", "annulus-quadratic"],
         default="dec-sideband",
         help="Background estimator for --background-mode crab_roi_local.",
     )
@@ -129,6 +129,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--roi-source-mask-r-opt-factor", type=float, default=2.0)
     parser.add_argument("--roi-coverage-max-deg", type=float, default=12.0)
     parser.add_argument("--roi-coverage-bin-deg", type=float, default=0.1)
+    parser.add_argument("--annulus-default-inner-deg", type=float, default=1.5)
+    parser.add_argument("--annulus-width-deg", type=float, default=2.0)
+    parser.add_argument("--annulus-source-mask-min-deg", type=float, default=1.5)
+    parser.add_argument("--annulus-source-mask-r-opt-factor", type=float, default=2.0)
+    parser.add_argument("--annulus-source-mask-margin-deg", type=float, default=0.2)
+    parser.add_argument("--annulus-max-inner-deg", type=float, default=3.0)
+    parser.add_argument("--roi-surface-order", type=int, choices=[1, 2], default=2)
+    parser.add_argument("--surface-condition-max", type=float, default=1.0e8)
+    parser.add_argument("--surface-min-training-pixels", type=int, default=80)
 
     parser.add_argument("--batch-size", type=int, default=500000)
     parser.add_argument("--workers", type=int, default=1, help="Reserved for Slurm resource accounting; scanning is vectorized.")
@@ -937,6 +946,212 @@ def estimate_roi_dec_sideband_background(
     return b_on, background_map, training_mask, off_counts, off_pixels, on_pixels
 
 
+def surface_design_matrix(x: np.ndarray, y: np.ndarray, order: int) -> np.ndarray:
+    if int(order) == 1:
+        return np.column_stack([np.ones_like(x), x, y]).astype(np.float64)
+    if int(order) == 2:
+        return np.column_stack([np.ones_like(x), x, y, x * x, x * y, y * y]).astype(np.float64)
+    raise ValueError(f"Unsupported surface order: {order}")
+
+
+def padded_coefficients(coeff: np.ndarray, order: int) -> np.ndarray:
+    out = np.full(6, np.nan, dtype=np.float64)
+    coeff = np.asarray(coeff, dtype=np.float64)
+    out[: coeff.size] = coeff
+    return out
+
+
+def padded_covariance(cov: np.ndarray, order: int) -> np.ndarray:
+    out = np.full((6, 6), np.nan, dtype=np.float64)
+    cov = np.asarray(cov, dtype=np.float64)
+    out[: cov.shape[0], : cov.shape[1]] = cov
+    return out
+
+
+def annulus_placement(
+    r_opt_deg: np.ndarray,
+    *,
+    default_inner_deg: float,
+    width_deg: float,
+    source_mask_min_deg: float,
+    source_mask_r_opt_factor: float,
+    source_mask_margin_deg: float,
+    max_inner_deg: float,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    r_opt = np.asarray(r_opt_deg, dtype=np.float64)
+    source_mask = np.maximum(float(source_mask_min_deg), float(source_mask_r_opt_factor) * r_opt)
+    shifted_inner = source_mask + float(source_mask_margin_deg)
+    inner = np.full(r_opt.shape, float(default_inner_deg), dtype=np.float64)
+    needs_shift = shifted_inner > float(default_inner_deg)
+    if np.any(needs_shift):
+        inner[needs_shift] = np.minimum(np.ceil(shifted_inner[needs_shift] * 2.0) / 2.0, float(max_inner_deg))
+    outer = inner + float(width_deg)
+    return source_mask, inner, outer, needs_shift
+
+
+def estimate_roi_annulus_surface_background(
+    counts_map: np.ndarray,
+    xy_centers: np.ndarray,
+    r_opt_deg: np.ndarray,
+    *,
+    roi_fiducial_deg: float,
+    annulus_default_inner_deg: float,
+    annulus_width_deg: float,
+    annulus_source_mask_min_deg: float,
+    annulus_source_mask_r_opt_factor: float,
+    annulus_source_mask_margin_deg: float,
+    annulus_max_inner_deg: float,
+    surface_order: int,
+    condition_max: float,
+    min_training_pixels: int,
+) -> Tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    Dict[str, np.ndarray],
+]:
+    n_cells, n_y, n_x = counts_map.shape
+    x_grid, y_grid = np.meshgrid(xy_centers.astype(np.float64), xy_centers.astype(np.float64))
+    rho_grid = np.hypot(x_grid, y_grid)
+    fiducial_mask = rho_grid < float(roi_fiducial_deg)
+    on_masks = np.zeros((n_cells, n_y, n_x), dtype=bool)
+    source_masks = np.zeros_like(on_masks)
+    training_mask = np.zeros_like(on_masks)
+    background_map = np.full((n_cells, n_y, n_x), np.nan, dtype=np.float32)
+    residual_map = np.full((n_cells, n_y, n_x), np.nan, dtype=np.float32)
+    core_background_map = np.full((n_cells, n_y, n_x), np.nan, dtype=np.float32)
+    b_on = np.zeros(n_cells, dtype=np.float64)
+    on_pixels = np.zeros(n_cells, dtype=np.int64)
+    source_mask_radius, annulus_inner, annulus_outer, shifted = annulus_placement(
+        r_opt_deg,
+        default_inner_deg=float(annulus_default_inner_deg),
+        width_deg=float(annulus_width_deg),
+        source_mask_min_deg=float(annulus_source_mask_min_deg),
+        source_mask_r_opt_factor=float(annulus_source_mask_r_opt_factor),
+        source_mask_margin_deg=float(annulus_source_mask_margin_deg),
+        max_inner_deg=float(annulus_max_inner_deg),
+    )
+    coeffs = np.full((n_cells, 6), np.nan, dtype=np.float64)
+    covariances = np.full((n_cells, 6, 6), np.nan, dtype=np.float64)
+    chi2 = np.full(n_cells, np.nan, dtype=np.float64)
+    ndof = np.zeros(n_cells, dtype=np.int64)
+    condition = np.full(n_cells, np.inf, dtype=np.float64)
+    annulus_counts = np.zeros(n_cells, dtype=np.float64)
+    annulus_pixels = np.zeros(n_cells, dtype=np.int64)
+    residual_mean = np.full(n_cells, np.nan, dtype=np.float64)
+    residual_rms = np.full(n_cells, np.nan, dtype=np.float64)
+    rank = np.zeros(n_cells, dtype=np.int64)
+    negative_pixels = np.zeros(n_cells, dtype=np.int64)
+    core_warning = np.zeros(n_cells, dtype=bool)
+    fit_success = np.zeros(n_cells, dtype=bool)
+    off_counts = np.zeros(n_cells, dtype=np.float64)
+    off_pixels = np.zeros(n_cells, dtype=np.int64)
+
+    full_design = surface_design_matrix(x_grid.ravel(), y_grid.ravel(), int(surface_order))
+    for cell_idx in range(n_cells):
+        on_mask = (rho_grid <= float(r_opt_deg[cell_idx])) & fiducial_mask
+        source_mask = (rho_grid <= float(source_mask_radius[cell_idx])) & fiducial_mask
+        annulus_mask = (
+            (rho_grid >= float(annulus_inner[cell_idx]))
+            & (rho_grid < float(annulus_outer[cell_idx]))
+            & fiducial_mask
+        )
+        on_masks[cell_idx] = on_mask
+        source_masks[cell_idx] = source_mask
+        training_mask[cell_idx] = annulus_mask
+        on_pixels[cell_idx] = int(np.count_nonzero(on_mask))
+        annulus_pixels[cell_idx] = int(np.count_nonzero(annulus_mask))
+        off_pixels[cell_idx] = int(annulus_pixels[cell_idx])
+        annulus_counts[cell_idx] = float(counts_map[cell_idx][annulus_mask].sum())
+        off_counts[cell_idx] = float(annulus_counts[cell_idx])
+
+        warnings = []
+        if annulus_pixels[cell_idx] < int(min_training_pixels):
+            core_warning[cell_idx] = True
+            continue
+
+        x_train = x_grid[annulus_mask].ravel()
+        y_train = y_grid[annulus_mask].ravel()
+        z = counts_map[cell_idx][annulus_mask].astype(np.float64).ravel()
+        design = surface_design_matrix(x_train, y_train, int(surface_order))
+        weights = 1.0 / np.sqrt(np.maximum(z, 1.0))
+        weighted_design = design * weights[:, None]
+        weighted_z = z * weights
+        rank[cell_idx] = int(np.linalg.matrix_rank(weighted_design))
+        if rank[cell_idx] < design.shape[1]:
+            core_warning[cell_idx] = True
+            continue
+        condition[cell_idx] = float(np.linalg.cond(weighted_design))
+        if not np.isfinite(condition[cell_idx]) or condition[cell_idx] > float(condition_max):
+            core_warning[cell_idx] = True
+            continue
+
+        coeff, _, _, _ = np.linalg.lstsq(weighted_design, weighted_z, rcond=None)
+        pred_train = design @ coeff
+        variance = np.maximum(z, 1.0)
+        resid = z - pred_train
+        chi2[cell_idx] = float(np.sum((resid * resid) / variance))
+        ndof[cell_idx] = max(0, int(z.size - coeff.size))
+        xtwx = weighted_design.T @ weighted_design
+        try:
+            cov = np.linalg.inv(xtwx) * (chi2[cell_idx] / max(ndof[cell_idx], 1))
+        except np.linalg.LinAlgError:
+            cov = np.full((coeff.size, coeff.size), np.nan, dtype=np.float64)
+            core_warning[cell_idx] = True
+
+        pred_full = (full_design @ coeff).reshape(n_y, n_x)
+        neg = fiducial_mask & (pred_full < 0.0)
+        negative_pixels[cell_idx] = int(np.count_nonzero(neg))
+        if negative_pixels[cell_idx] > 0:
+            core_warning[cell_idx] = True
+        pred_clipped = np.maximum(pred_full, 0.0)
+        pred_clipped[~fiducial_mask] = np.nan
+        background_map[cell_idx] = pred_clipped.astype(np.float32)
+        core_background_map[cell_idx][on_mask] = pred_clipped[on_mask].astype(np.float32)
+        residual = np.full((n_y, n_x), np.nan, dtype=np.float64)
+        valid_bg = annulus_mask & np.isfinite(pred_clipped)
+        residual[valid_bg] = (counts_map[cell_idx][valid_bg] - pred_clipped[valid_bg]) / np.sqrt(
+            np.maximum(pred_clipped[valid_bg], 1.0)
+        )
+        residual_map[cell_idx] = residual.astype(np.float32)
+        ann_resid = residual[valid_bg]
+        residual_mean[cell_idx] = float(np.nanmean(ann_resid)) if ann_resid.size else np.nan
+        residual_rms[cell_idx] = float(np.sqrt(np.nanmean(ann_resid * ann_resid))) if ann_resid.size else np.nan
+        coeffs[cell_idx] = padded_coefficients(coeff, int(surface_order))
+        covariances[cell_idx] = padded_covariance(cov, int(surface_order))
+        b_on[cell_idx] = float(np.nansum(pred_clipped[on_mask]))
+        if b_on[cell_idx] <= 0.0 or on_pixels[cell_idx] <= 0:
+            core_warning[cell_idx] = True
+        fit_success[cell_idx] = not bool(core_warning[cell_idx])
+
+    diagnostics = {
+        "annulus_inner_deg": annulus_inner.astype(np.float32),
+        "annulus_outer_deg": annulus_outer.astype(np.float32),
+        "source_mask_radius_deg": source_mask_radius.astype(np.float32),
+        "annulus_shifted_flag": shifted.astype(bool),
+        "surface_coefficients": coeffs.astype(np.float64),
+        "surface_covariance": covariances.astype(np.float64),
+        "fit_chi2": chi2.astype(np.float64),
+        "fit_ndof": ndof.astype(np.int64),
+        "fit_rank": rank.astype(np.int64),
+        "fit_condition_number": condition.astype(np.float64),
+        "annulus_counts": annulus_counts.astype(np.float64),
+        "annulus_pixels": annulus_pixels.astype(np.int64),
+        "annulus_residual_mean": residual_mean.astype(np.float64),
+        "annulus_residual_rms": residual_rms.astype(np.float64),
+        "core_extrapolation_warning": core_warning.astype(bool),
+        "negative_background_pixels": negative_pixels.astype(np.int64),
+        "surface_fit_success": fit_success.astype(bool),
+        "annulus_residual_map": residual_map.astype(np.float32),
+        "core_background_map": core_background_map.astype(np.float32),
+        "annulus_off_counts": off_counts.astype(np.float64),
+        "annulus_off_pixels": off_pixels.astype(np.int64),
+    }
+    return b_on, background_map, training_mask, on_masks, source_masks, diagnostics
+
+
 def build_weighted_mask_exposure(
     cell_time_counts: np.ndarray,
     time_centers_mjd: np.ndarray,
@@ -1478,6 +1693,50 @@ def plot_roi_mask_summary(
     plt.close(fig)
 
 
+def plot_roi_annulus_mask_grid(
+    training_mask: np.ndarray,
+    source_masks: np.ndarray,
+    on_masks: np.ndarray,
+    xy_edges: np.ndarray,
+    cells: Sequence[CellSpec],
+    output_path: Path,
+) -> None:
+    plt = setup_matplotlib()
+    nhit_bins, pred_bins, by_key = prepare_grid(cells)
+    fig, axes = plt.subplots(
+        len(nhit_bins),
+        len(pred_bins),
+        figsize=(2.05 * len(pred_bins), 1.75 * len(nhit_bins)),
+        dpi=150,
+        sharex=True,
+        sharey=True,
+        squeeze=False,
+    )
+    extent = [float(xy_edges[0]), float(xy_edges[-1]), float(xy_edges[0]), float(xy_edges[-1])]
+    for i, nhit_bin in enumerate(nhit_bins):
+        for j, pred_bin in enumerate(pred_bins):
+            ax = axes[i, j]
+            cell = by_key.get((nhit_bin, pred_bin))
+            if cell is None:
+                ax.set_axis_off()
+                continue
+            view = np.zeros(training_mask.shape[1:], dtype=np.float32)
+            view[source_masks[cell.index]] = 1.0
+            view[training_mask[cell.index]] = 2.0
+            view[on_masks[cell.index]] = 3.0
+            ax.imshow(view, origin="lower", extent=extent, aspect="equal", interpolation="nearest", cmap="viridis", vmin=0, vmax=3)
+            ax.set_title(f"cell {cell.cell_id}: {pred_bin}", fontsize=6.7)
+            ax.tick_params(labelsize=6, length=2)
+            if j == 0:
+                ax.set_ylabel(f"{nhit_bin}\ny (deg)", fontsize=6.7)
+            if i == len(nhit_bins) - 1:
+                ax.set_xlabel("x (deg)", fontsize=6.7)
+    fig.suptitle("Stage D annulus training masks", fontsize=11, y=0.995)
+    fig.tight_layout(rect=[0.0, 0.0, 1.0, 0.982])
+    fig.savefig(output_path)
+    plt.close(fig)
+
+
 def plot_roi_coverage_profile(
     rho_hist_total: np.ndarray,
     rho_edges: np.ndarray,
@@ -1535,6 +1794,12 @@ def write_summary_csv(path: Path, rows: Sequence[Dict[str, object]]) -> None:
         "r_opt_large_warning",
         "r_opt_extreme_warning",
         "background_form",
+        "annulus_inner_deg",
+        "annulus_outer_deg",
+        "surface_fit_chi2",
+        "surface_fit_ndof",
+        "surface_condition_number",
+        "annulus_residual_rms",
     ]
     with path.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -1708,13 +1973,35 @@ def run_crab_roi_local_background(
         roi_source_mask_deg=float(args.roi_source_mask_deg),
         source_mask_r_opt_factor=float(args.roi_source_mask_r_opt_factor),
     )
-    b_on, background_map, training_mask, off_counts, off_pixels, on_pixels = estimate_roi_dec_sideband_background(
-        counts_map,
-        fiducial_mask,
-        edge_safe_mask,
-        on_masks,
-        source_masks,
-    )
+    annulus_diagnostics: Dict[str, np.ndarray] = {}
+    background_method = str(args.roi_background_method).replace("-", "_")
+    if str(args.roi_background_method) == "annulus-quadratic":
+        b_on, background_map, training_mask, on_masks, source_masks, annulus_diagnostics = estimate_roi_annulus_surface_background(
+            counts_map,
+            xy_centers,
+            r_opt_deg.astype(np.float64),
+            roi_fiducial_deg=float(args.roi_fiducial_deg),
+            annulus_default_inner_deg=float(args.annulus_default_inner_deg),
+            annulus_width_deg=float(args.annulus_width_deg),
+            annulus_source_mask_min_deg=float(args.annulus_source_mask_min_deg),
+            annulus_source_mask_r_opt_factor=float(args.annulus_source_mask_r_opt_factor),
+            annulus_source_mask_margin_deg=float(args.annulus_source_mask_margin_deg),
+            annulus_max_inner_deg=float(args.annulus_max_inner_deg),
+            surface_order=int(args.roi_surface_order),
+            condition_max=float(args.surface_condition_max),
+            min_training_pixels=int(args.surface_min_training_pixels),
+        )
+        off_counts = np.asarray(annulus_diagnostics["annulus_off_counts"], dtype=np.float64)
+        off_pixels = np.asarray(annulus_diagnostics["annulus_off_pixels"], dtype=np.int64)
+        on_pixels = np.asarray([int(np.count_nonzero(mask)) for mask in on_masks], dtype=np.int64)
+    else:
+        b_on, background_map, training_mask, off_counts, off_pixels, on_pixels = estimate_roi_dec_sideband_background(
+            counts_map,
+            fiducial_mask,
+            edge_safe_mask,
+            on_masks,
+            source_masks,
+        )
     if not np.all(np.isfinite(b_on)) or np.any(b_on < 0.0):
         raise RuntimeError("ROI-local background produced non-finite or negative B_on values")
     excess_map = counts_map.astype(np.float32) - background_map.astype(np.float32)
@@ -1740,6 +2027,11 @@ def run_crab_roi_local_background(
             warnings.append("non_positive_B_on")
         if scan.cell_fiducial_events[idx] <= 0:
             warnings.append("no_fiducial_events")
+        if annulus_diagnostics:
+            if bool(annulus_diagnostics["core_extrapolation_warning"][idx]):
+                warnings.append("core_extrapolation_warning")
+            if not bool(annulus_diagnostics["surface_fit_success"][idx]):
+                warnings.append("surface_fit_not_successful")
         rows.append(
             {
                 "cell_index": int(idx),
@@ -1770,7 +2062,21 @@ def run_crab_roi_local_background(
                 "r_opt_extreme_warning": bool(r_opt_deg[idx] > 20.0),
                 "background_form": "direct_expectation",
                 "background_mode": "crab_roi_local",
-                "background_method": "dec_sideband",
+                "background_method": background_method,
+                "annulus_inner_deg": (
+                    float(annulus_diagnostics["annulus_inner_deg"][idx]) if annulus_diagnostics else ""
+                ),
+                "annulus_outer_deg": (
+                    float(annulus_diagnostics["annulus_outer_deg"][idx]) if annulus_diagnostics else ""
+                ),
+                "surface_fit_chi2": float(annulus_diagnostics["fit_chi2"][idx]) if annulus_diagnostics else "",
+                "surface_fit_ndof": int(annulus_diagnostics["fit_ndof"][idx]) if annulus_diagnostics else "",
+                "surface_condition_number": (
+                    float(annulus_diagnostics["fit_condition_number"][idx]) if annulus_diagnostics else ""
+                ),
+                "annulus_residual_rms": (
+                    float(annulus_diagnostics["annulus_residual_rms"][idx]) if annulus_diagnostics else ""
+                ),
                 "warnings": warnings,
             }
         )
@@ -1819,10 +2125,21 @@ def run_crab_roi_local_background(
         sigma_deg=sigma_deg.astype(np.float32),
         containment_r_opt=containment_r_opt.astype(np.float32),
         B_on=b_on.astype(np.float64),
+        **annulus_diagnostics,
     )
 
     plot_outputs: Dict[str, str] = {}
     if not args.no_plots:
+        background_title = (
+            "Stage D ROI-local annulus quadratic surface background"
+            if annulus_diagnostics
+            else "Stage D ROI-local Dec-sideband background"
+        )
+        excess_title = (
+            "Stage D ROI-local counts minus annulus quadratic surface background"
+            if annulus_diagnostics
+            else "Stage D ROI-local counts minus Dec-sideband background"
+        )
         plot_outputs = {
             "roi_coverage_profile_png": str(run_dir / "roi_coverage_profile.png"),
             "roi_counts_grid_png": str(run_dir / "roi_counts_grid.png"),
@@ -1830,6 +2147,9 @@ def run_crab_roi_local_background(
             "roi_excess_grid_png": str(run_dir / "roi_excess_grid.png"),
             "roi_known_b_sigma_grid_png": str(run_dir / "roi_known_b_sigma_grid.png"),
             "roi_mask_summary_png": str(run_dir / "roi_mask_summary.png"),
+            "annulus_training_mask_grid_png": str(run_dir / "annulus_training_mask_grid.png"),
+            "annulus_residual_grid_png": str(run_dir / "annulus_residual_grid.png"),
+            "core_background_grid_png": str(run_dir / "core_background_grid.png"),
             "background_prediction_png": str(run_dir / "background_prediction_grid.png"),
         }
         plot_roi_coverage_profile(
@@ -1852,7 +2172,7 @@ def run_crab_roi_local_background(
             cells,
             xy_edges,
             Path(plot_outputs["roi_background_grid_png"]),
-            title="Stage D ROI-local Dec-sideband background",
+            title=background_title,
             roi_fiducial_deg=float(args.roi_fiducial_deg),
         )
         plot_roi_signed_grid(
@@ -1860,7 +2180,7 @@ def run_crab_roi_local_background(
             cells,
             xy_edges,
             Path(plot_outputs["roi_excess_grid_png"]),
-            title="Stage D ROI-local counts minus Dec-sideband background",
+            title=excess_title,
             colorbar_label="counts - background",
             roi_fiducial_deg=float(args.roi_fiducial_deg),
             r_opt_deg=r_opt_deg,
@@ -1883,6 +2203,33 @@ def run_crab_roi_local_background(
             Path(plot_outputs["roi_mask_summary_png"]),
             cell_index=0,
         )
+        plot_roi_annulus_mask_grid(
+            training_mask,
+            source_masks,
+            on_masks,
+            xy_edges,
+            cells,
+            Path(plot_outputs["annulus_training_mask_grid_png"]),
+        )
+        if annulus_diagnostics:
+            plot_roi_signed_grid(
+                annulus_diagnostics["annulus_residual_map"],
+                cells,
+                xy_edges,
+                Path(plot_outputs["annulus_residual_grid_png"]),
+                title="Stage D annulus fit residuals",
+                colorbar_label="annulus residual sigma",
+                roi_fiducial_deg=float(args.roi_fiducial_deg),
+                r_opt_deg=r_opt_deg,
+            )
+            plot_roi_counts_grid(
+                annulus_diagnostics["core_background_map"],
+                cells,
+                xy_edges,
+                Path(plot_outputs["core_background_grid_png"]),
+                title="Stage D core extrapolated background",
+                roi_fiducial_deg=float(args.roi_fiducial_deg),
+            )
         plot_background_grid(rows, cells, Path(plot_outputs["background_prediction_png"]))
 
     severe_warnings = [
@@ -1959,13 +2306,22 @@ def run_crab_roi_local_background(
         },
         "background_model": {
             "background_mode": "crab_roi_local",
-            "method": "roi_dec_sideband",
+            "method": background_method,
             "background_form": "direct_expectation",
-            "B_on_formula": "sum_y mean(counts in same y strip training pixels) * on_pixels_y",
+            "B_on_formula": (
+                "integral of weighted least-squares annulus quadratic surface over on aperture"
+                if annulus_diagnostics
+                else "sum_y mean(counts in same y strip training pixels) * on_pixels_y"
+            ),
             "alpha_b": None,
             "N_off_b": None,
-            "alpha_N_off_note": "ROI Dec-sideband v1 outputs direct background expectation B_on,b; traditional alpha/N_off is not defined.",
-            "on_region_radius_source": "Stage B psf_v1.npz r_opt_deg",
+            "alpha_N_off_note": "ROI-local direct expectation outputs B_on,b; traditional alpha/N_off is not defined.",
+            "on_region_radius_source": f"Stage B PSF NPZ r_opt_deg: {Path(args.psf_npz).resolve()}",
+            "surface_order": int(args.roi_surface_order) if annulus_diagnostics else None,
+            "surface_basis": ["1", "x", "y", "x^2", "x*y", "y^2"] if int(args.roi_surface_order) == 2 else ["1", "x", "y"],
+            "annulus_default_inner_deg": float(args.annulus_default_inner_deg) if annulus_diagnostics else None,
+            "annulus_width_deg": float(args.annulus_width_deg) if annulus_diagnostics else None,
+            "li_ma_applicable": False,
         },
         "processing": {
             "input_rows_scanned": int(scan.input_rows),
@@ -2327,8 +2683,8 @@ def main() -> None:
             "B_on_formula": "sum_time N_cell,time * sum_grid acceptance_cell,grid * I(grid within Crab aperture at time)",
             "alpha_b": None,
             "N_off_b": None,
-            "alpha_N_off_note": "Stage D v1 outputs direct background expectation B_on,b; traditional alpha/N_off is not defined.",
-            "on_region_radius_source": "Stage B psf_v1.npz r_opt_deg",
+            "alpha_N_off_note": "Stage D outputs direct background expectation B_on,b; traditional alpha/N_off is not defined.",
+            "on_region_radius_source": f"Stage B PSF NPZ r_opt_deg: {psf_npz}",
             "mask_exposure_correction": "counts_masked / sum_time(N_cell,time * source_mask_available_time,grid), normalized over visible grid",
         },
         "theta_coordinate_check": scan.theta_check,

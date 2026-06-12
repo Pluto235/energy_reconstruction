@@ -55,6 +55,7 @@ footer { margin-top:48px; padding-top:18px; border-top:1px solid var(--border); 
       <li>背景训练环带默认 <code>1.5-3.5 deg</code>，低 Nhit 宽 PSF cell 可按 prefit PSF 规则外移。</li>
       <li>nominal 背景曲面为二阶模型：<code>1, x, y, x^2, xy, y^2</code>。</li>
       <li>selector 冻结；不允许用 Crab on-source excess、pull 或 SED residual 回头删 cell。</li>
+      <li>predE candidate bins 使用 0.25 dex 主网格；<code>[2,3)</code> 和 <code>&gt;=5</code> 不再作为 v3 最终 fit bin。</li>
     </ol>
   </section>
 
@@ -108,12 +109,12 @@ footer { margin-top:48px; padding-top:18px; border-top:1px solid var(--border); 
   </section>
 
   <section>
-    <h2>待确认</h2>
+    <h2>已确认与待验证</h2>
     <ol>
-      <li>Stage C 原始 Nhit 字段：推荐从 ROOT/recovered source 重跑并保留 Nhit audit。</li>
-      <li>predE bin：推荐先保持 v2 0.25 dex。</li>
-      <li>annulus 外移上限：推荐默认到 4.5 deg，必要时 5.0 deg。</li>
-      <li>surface fit：推荐 v3.0 用二阶加权 least squares，Poisson log-link 做 cross-check。</li>
+      <li>Stage C 原始 Nhit 字段：已接受推荐，从 ROOT/recovered source 重跑并保留 Nhit audit。</li>
+      <li>predE binning：<code>[3,5)</code> 的 0.25 dex 合理；<code>[2,3)</code> 和 <code>&gt;=5</code> 太宽，v3 先拆成 0.25 dex 候选细 bin，再由 MC central-99% 和质量门筛入 baseline。</li>
+      <li>annulus 外移上限：已接受推荐，默认到 4.5 deg，必要时 5.0 deg。</li>
+      <li>surface fit：已接受推荐，v3.0 用二阶加权 least squares，Poisson log-link 做 cross-check。</li>
     </ol>
   </section>
 

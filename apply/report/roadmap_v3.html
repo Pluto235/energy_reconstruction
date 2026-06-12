@@ -55,7 +55,7 @@ footer { margin-top:48px; padding-top:18px; border-top:1px solid var(--border); 
       <li>背景训练环带默认 <code>1.5-3.5 deg</code>，低 Nhit 宽 PSF cell 可按 prefit PSF 规则外移。</li>
       <li>nominal 背景曲面为二阶模型：<code>1, x, y, x^2, xy, y^2</code>。</li>
       <li>selector 冻结；不允许用 Crab on-source excess、pull 或 SED residual 回头删 cell。</li>
-      <li>predE 使用混合网格：<code>[2,3)</code> 拆细；<code>[3,5)</code> 保持 0.25 dex；<code>&gt;=5</code> 因统计量低，baseline 默认合并或作为 upper-limit bin，不强制拆成 0.25 dex final bins。</li>
+      <li>predE 使用混合网格：<code>[2,3)</code> 拆成两个 0.5 dex bins；<code>[3,5)</code> 保持 0.25 dex；<code>&gt;=5</code> 拆成 <code>[5,6)</code> 和 <code>&gt;=6</code> 两个高能宽 bins。</li>
     </ol>
   </section>
 
@@ -112,7 +112,7 @@ footer { margin-top:48px; padding-top:18px; border-top:1px solid var(--border); 
     <h2>已确认与待验证</h2>
     <ol>
       <li>Stage C 原始 Nhit 字段：已接受推荐，从 ROOT/recovered source 重跑并保留 Nhit audit。</li>
-      <li>predE binning：<code>[2,3)</code> 一整 dex 太宽，应拆成 0.25 dex 候选 bins；<code>[3,5)</code> 的 0.25 dex 合理，<code>[4,5)</code> 已经细分；<code>&gt;=5</code> 统计量低，baseline 默认合并或给 upper limit，只有统计足够时才额外输出 high-energy probe split 诊断。</li>
+      <li>predE binning：<code>[2,3)</code> 一整 dex 太宽，但 0.25 dex 对低能端可能过细，推荐拆成 <code>[2,2.5)</code> 和 <code>[2.5,3)</code>；<code>[3,5)</code> 的 0.25 dex 合理，<code>[4,5)</code> 已经细分；<code>&gt;=5</code> 统计量低，推荐拆成 <code>[5,6)</code> 和 <code>&gt;=6</code>，其中 <code>&gt;=6</code> 主要作为 upper-limit / diagnostic 候选。</li>
       <li>annulus 外移上限：已接受推荐，默认到 4.5 deg，必要时 5.0 deg。</li>
       <li>surface fit：已接受推荐，v3.0 用二阶加权 least squares，Poisson log-link 做 cross-check。</li>
     </ol>

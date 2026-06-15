@@ -283,6 +283,7 @@ python apply/report/build_v3_full_report.py \
   --raw-ledger-csv "${CELL_LEDGER}" \
   --baseline-selector-csv "${BASELINE_SELECTOR}" \
   --systematics-selector-csv "${SYSTEMATICS_SELECTOR}" \
+  --high-energy-selector-csv "${HIGH_ENERGY_SELECTOR}" \
   --output-html apply/report/crab_sed_v3_stage_a_to_g_report.html
 
 echo "v3 Stage C-G chain finished"

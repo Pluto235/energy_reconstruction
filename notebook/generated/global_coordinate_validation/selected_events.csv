@@ -1,0 +1,5 @@
+dataset_idx,event_idx,file,n_hits,max_abs_diff_function_vs_dataset
+114,114,/mnt/mydisk/WCDA_simulation/Egr000000000_01_n0010_eventout.root,47,0.0
+25,25,/mnt/mydisk/WCDA_simulation/Egr000000000_01_n0010_eventout.root,141,0.0
+281,70,/mnt/mydisk/WCDA_simulation/Egr000000001_01_n0010_eventout.root,138,0.0
+250,39,/mnt/mydisk/WCDA_simulation/Egr000000001_01_n0010_eventout.root,565,0.0

@@ -1,0 +1,56 @@
+{
+  "summary_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/summary_selectedcuts/bin_counts.csv",
+  "pred_bins": [
+    "[2,3)",
+    "[3,3.25)",
+    "[3.25,3.5)",
+    "[3.5,3.75)",
+    "[3.75,4.0)",
+    "[4.0,4.25)",
+    "[4.25,4.5)",
+    "[4.5,4.75)",
+    "[4.75,5.0)",
+    ">=5"
+  ],
+  "nhit_bins_in_letter_order": [
+    {
+      "letter": "a",
+      "nhit_bin": "[30,60)"
+    },
+    {
+      "letter": "b",
+      "nhit_bin": "[60,100)"
+    },
+    {
+      "letter": "c",
+      "nhit_bin": "[100,200)"
+    },
+    {
+      "letter": "d",
+      "nhit_bin": "[200,300)"
+    },
+    {
+      "letter": "e",
+      "nhit_bin": "[300,500)"
+    },
+    {
+      "letter": "f",
+      "nhit_bin": "[500,800)"
+    },
+    {
+      "letter": "g",
+      "nhit_bin": "[800,1100)"
+    },
+    {
+      "letter": "h",
+      "nhit_bin": "[1100,2000)"
+    },
+    {
+      "letter": "i",
+      "nhit_bin": ">=2000"
+    }
+  ],
+  "num_acceptable_rows": 65,
+  "total_acceptable_events": 3412749,
+  "note": "Heights are normalized within each predE_bin column."
+}

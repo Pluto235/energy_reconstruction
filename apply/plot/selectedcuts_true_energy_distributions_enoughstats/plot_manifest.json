@@ -1,0 +1,277 @@
+{
+  "binned_root": "/mnt/mydisk/WCDA_simulation_binned_selectedcuts",
+  "summary_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/summary_selectedcuts/bin_counts.csv",
+  "branch": "mc_energy",
+  "tree_name": "t_eventout",
+  "min_statistics_level": "acceptable",
+  "min_count": 20000,
+  "x_range_log10_GeV": [
+    2.0,
+    6.0
+  ],
+  "num_bins": 60,
+  "target_events_per_bin": 10000,
+  "generated_plots": [
+    {
+      "nhit_bin": "[30,60)",
+      "predE_bin": "[2,3)",
+      "count_from_summary": 86609,
+      "events_read_for_branch": 10000,
+      "files_used": 1158,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__30_60__2_3.png"
+    },
+    {
+      "nhit_bin": "[60,100)",
+      "predE_bin": "[2,3)",
+      "count_from_summary": 423777,
+      "events_read_for_branch": 10000,
+      "files_used": 235,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__60_100__2_3.png"
+    },
+    {
+      "nhit_bin": "[60,100)",
+      "predE_bin": "[3,3.25)",
+      "count_from_summary": 22631,
+      "events_read_for_branch": 10000,
+      "files_used": 3978,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__60_100__3_3p25.png"
+    },
+    {
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[2,3)",
+      "count_from_summary": 935671,
+      "events_read_for_branch": 10050,
+      "files_used": 110,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__100_200__2_3.png"
+    },
+    {
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[3,3.25)",
+      "count_from_summary": 149327,
+      "events_read_for_branch": 10000,
+      "files_used": 668,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__100_200__3_3p25.png"
+    },
+    {
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[3.25,3.5)",
+      "count_from_summary": 76652,
+      "events_read_for_branch": 10002,
+      "files_used": 1311,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__100_200__3p25_3p5.png"
+    },
+    {
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[3.5,3.75)",
+      "count_from_summary": 39630,
+      "events_read_for_branch": 10003,
+      "files_used": 2485,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__100_200__3p5_3p75.png"
+    },
+    {
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[2,3)",
+      "count_from_summary": 258212,
+      "events_read_for_branch": 10019,
+      "files_used": 390,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__200_300__2_3.png"
+    },
+    {
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[3,3.25)",
+      "count_from_summary": 162827,
+      "events_read_for_branch": 10021,
+      "files_used": 618,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__200_300__3_3p25.png"
+    },
+    {
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[3.25,3.5)",
+      "count_from_summary": 80983,
+      "events_read_for_branch": 10006,
+      "files_used": 1240,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__200_300__3p25_3p5.png"
+    },
+    {
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[3.5,3.75)",
+      "count_from_summary": 43842,
+      "events_read_for_branch": 10003,
+      "files_used": 2268,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__200_300__3p5_3p75.png"
+    },
+    {
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[3.75,4.0)",
+      "count_from_summary": 24555,
+      "events_read_for_branch": 10005,
+      "files_used": 3699,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__200_300__3p75_4p0.png"
+    },
+    {
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[2,3)",
+      "count_from_summary": 54913,
+      "events_read_for_branch": 10003,
+      "files_used": 1841,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__300_500__2_3.png"
+    },
+    {
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3,3.25)",
+      "count_from_summary": 157484,
+      "events_read_for_branch": 10005,
+      "files_used": 639,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__300_500__3_3p25.png"
+    },
+    {
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3.25,3.5)",
+      "count_from_summary": 152731,
+      "events_read_for_branch": 10008,
+      "files_used": 660,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__300_500__3p25_3p5.png"
+    },
+    {
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3.5,3.75)",
+      "count_from_summary": 66096,
+      "events_read_for_branch": 10003,
+      "files_used": 1501,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__300_500__3p5_3p75.png"
+    },
+    {
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3.75,4.0)",
+      "count_from_summary": 35732,
+      "events_read_for_branch": 10002,
+      "files_used": 2755,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__300_500__3p75_4p0.png"
+    },
+    {
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[4.0,4.25)",
+      "count_from_summary": 23752,
+      "events_read_for_branch": 10002,
+      "files_used": 3774,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__300_500__4p0_4p25.png"
+    },
+    {
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.25,3.5)",
+      "count_from_summary": 89790,
+      "events_read_for_branch": 10005,
+      "files_used": 1109,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__500_800__3p25_3p5.png"
+    },
+    {
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.5,3.75)",
+      "count_from_summary": 85249,
+      "events_read_for_branch": 10006,
+      "files_used": 1167,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__500_800__3p5_3p75.png"
+    },
+    {
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.75,4.0)",
+      "count_from_summary": 34158,
+      "events_read_for_branch": 10002,
+      "files_used": 2827,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__500_800__3p75_4p0.png"
+    },
+    {
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[4.0,4.25)",
+      "count_from_summary": 22437,
+      "events_read_for_branch": 10000,
+      "files_used": 3953,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__500_800__4p0_4p25.png"
+    },
+    {
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[3.5,3.75)",
+      "count_from_summary": 34552,
+      "events_read_for_branch": 10000,
+      "files_used": 2778,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__800_1100__3p5_3p75.png"
+    },
+    {
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[3.75,4.0)",
+      "count_from_summary": 28276,
+      "events_read_for_branch": 10001,
+      "files_used": 3308,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__800_1100__3p75_4p0.png"
+    },
+    {
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[3.75,4.0)",
+      "count_from_summary": 24408,
+      "events_read_for_branch": 10001,
+      "files_used": 3707,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__1100_2000__3p75_4p0.png"
+    },
+    {
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[4.0,4.25)",
+      "count_from_summary": 27355,
+      "events_read_for_branch": 10003,
+      "files_used": 3417,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_enoughstats/true_energy_density__1100_2000__4p0_4p25.png"
+    }
+  ],
+  "skipped_bins": []
+}

@@ -1,0 +1,710 @@
+{
+  "description": "Stage F forward-folding chi2 fit for v1 Crab SED cells.",
+  "run_id": "codex_stage_f_cell6_plus_8to18_probe",
+  "slurm_job_id": null,
+  "inputs": {
+    "response_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a/response_2d.npz",
+    "response_metadata_json": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a/response_2d_metadata.json",
+    "signal_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e/runs/codex_stage_e_contract_full/signal_v1.npz",
+    "signal_metadata_json": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e/runs/codex_stage_e_contract_full/signal_v1_metadata.json",
+    "source_files_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_c/runs/slurm_41959/source_files.csv",
+    "cell_subset_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_subset_cell6_plus_8to18_stageg_probe.csv",
+    "stage_a_run_dir": "/mnt/mydisk/server/projects/energy_reconstruction/runs/theta_recoxy_position_embed_midenergy_8666",
+    "stage_e_run_id": "codex_stage_e_contract_full"
+  },
+  "output_root": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f",
+  "output_dir": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f/runs/codex_stage_f_cell6_plus_8to18_probe",
+  "current_dir": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f/current",
+  "latest": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f/latest",
+  "validation": {
+    "n_cells": 12,
+    "cells_match": true,
+    "signal_quality_promotable": true,
+    "signal_quality_status": "passed",
+    "background_mode": "crab_roi_local",
+    "background_form": "direct_expectation",
+    "cell_selection_versions": [
+      "v1_physical_18"
+    ],
+    "cell_selection_version": "v1_physical_18",
+    "cell_subset": {
+      "enabled": true,
+      "path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_subset_cell6_plus_8to18_stageg_probe.csv",
+      "included_cell_ids": [
+        6,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "excluded_cell_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        7
+      ],
+      "subset_version": "cell6_plus_8to18_stageg_probe",
+      "reasons": {
+        "1": "low-Nhit/low-predE sideband diagnostic outlier",
+        "2": "low-Nhit/low-predE sideband diagnostic outlier",
+        "3": "low-Nhit/low-predE sideband diagnostic outlier",
+        "4": "low-Nhit/low-predE response/background-shape outlier",
+        "5": "low-Nhit/low-predE response/background-shape outlier",
+        "6": "probe whether cell 6 can be retained with cells 8-18",
+        "7": "low-predE transition cell excluded from conservative diagnostic subset",
+        "8": "retained diagnostic high-confidence subset",
+        "9": "retained diagnostic high-confidence subset",
+        "10": "retained diagnostic high-confidence subset",
+        "11": "retained diagnostic high-confidence subset",
+        "12": "retained diagnostic high-confidence subset",
+        "13": "retained diagnostic high-confidence subset",
+        "14": "retained diagnostic high-confidence subset",
+        "15": "retained diagnostic high-confidence subset",
+        "16": "retained diagnostic high-confidence subset",
+        "17": "retained diagnostic high-confidence subset",
+        "18": "retained diagnostic high-confidence subset"
+      },
+      "n_input_cells": 18,
+      "n_included_cells": 12,
+      "n_excluded_cells": 6
+    }
+  },
+  "source": {
+    "name": "Crab",
+    "ra_deg": 83.63,
+    "dec_deg": 22.01
+  },
+  "site": {
+    "latitude_deg": 29.45,
+    "longitude_east_deg": 100.14,
+    "sidereal_time_formula": "IAU-style GMST polynomial from MJD plus east longitude; no astropy/IERS download."
+  },
+  "exposure": {
+    "source_files_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_c/runs/slurm_41959/source_files.csv",
+    "processed_files": 1257,
+    "skipped_files": 1,
+    "sample_step_seconds": 60.0,
+    "total_samples": 71716,
+    "total_live_seconds": 3756360.319456396,
+    "total_live_days": 43.47639258630088,
+    "source_visible_live_seconds": 1348852.0220848278,
+    "source_visible_live_days": 15.611713218574396,
+    "source_visible_fraction_of_live": 0.35908483408748915,
+    "mjd_min": 59579.6669078,
+    "mjd_max": 59638.6661835,
+    "theta_edges_deg": [
+      0.0,
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      5.0,
+      6.0,
+      7.0,
+      8.0,
+      9.0,
+      10.0,
+      11.0,
+      12.0,
+      13.0,
+      14.0,
+      15.0,
+      16.0,
+      17.0,
+      18.0,
+      19.0,
+      20.0,
+      21.0,
+      22.0,
+      23.0,
+      24.0,
+      25.0,
+      26.0,
+      27.0,
+      28.0,
+      29.0,
+      30.0,
+      31.0,
+      32.0,
+      33.0,
+      34.0,
+      35.0,
+      36.0,
+      37.0,
+      38.0,
+      39.0,
+      40.0,
+      41.0,
+      42.0,
+      43.0,
+      44.0,
+      45.0,
+      46.0,
+      47.0,
+      48.0,
+      49.0,
+      50.0
+    ],
+    "theta_exposure_sec": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      80329.56491741567,
+      56316.96767536212,
+      43729.17097620276,
+      37654.484053367996,
+      35270.28678912202,
+      33855.163123803286,
+      31337.970724819184,
+      31154.145556935124,
+      30821.817766080127,
+      30532.08679666113,
+      30234.11770772245,
+      29318.105374728155,
+      28948.201877346895,
+      29230.64619166121,
+      29803.453358900842,
+      29596.35817139545,
+      28282.82697859126,
+      27539.596126005592,
+      29367.143152616147,
+      29418.515050239013,
+      27571.35341216465,
+      28037.453458279873,
+      29434.482454696834,
+      27944.40452674494,
+      27936.67530068456,
+      29228.47375610186,
+      27864.033542744473,
+      27540.025434895088,
+      28920.61577885016,
+      28250.728708002265,
+      27435.47093883342,
+      28998.494182812392,
+      27691.160633822758,
+      27838.94608132716,
+      28917.106052976163,
+      27520.234406018135,
+      27625.337143082525,
+      28648.99798237429,
+      27663.625363238792,
+      27438.818532633173,
+      28646.561123433406,
+      27095.586585201756,
+      27862.81431693286
+    ],
+    "method": "per-file midpoint integration of Stage C rough live time into source theta bins"
+  },
+  "forward_folding": {
+    "counts_formula": "S_b = containment_b * 1e4 * sum_E,theta(A_eff_b,E,theta * theta_exposure_theta * integral_flux_E)",
+    "a_eff_units": "m^2",
+    "flux_units": "TeV^-1 cm^-2 s^-1",
+    "energy_grid": "Stage A log10(E_true/GeV) edges",
+    "theta_grid": "Stage A theta_true_edges_deg",
+    "pivot_tev": 3.0,
+    "logpar_log_base": "natural_log",
+    "energy_quadrature_points": 64
+  },
+  "statistic": {
+    "baseline": "chi2 on Stage E excess",
+    "main_error_mode": "conservative sqrt(N_on + B_on)",
+    "comparison_error_mode": "sqrt(N_on)",
+    "li_ma_status": "not_applicable_for_direct_expectation_background"
+  },
+  "reference_count_preflight": {
+    "reference_model": "PL",
+    "reference_phi0_tev_cm2_s": 2.114e-12,
+    "reference_gamma": 2.69,
+    "pivot_tev": 3.0,
+    "reference_source": "Hu 2023 Crab catalog value corrected to 2.114e-12 TeV^-1 cm^-2 s^-1 at 3 TeV",
+    "expected_counts_by_cell": [
+      2521.180855365448,
+      1079.1390678359255,
+      597.7708278619523,
+      557.9596815907246,
+      324.38566098992857,
+      82.1725788985792,
+      188.90523183001199,
+      95.88977959290932,
+      22.09387996451676,
+      106.96472581401733,
+      70.70489161829714,
+      30.16664096165472
+    ],
+    "expected_counts_total": 5677.333822323966,
+    "observed_excess_total": 6667.275248933144,
+    "observed_over_expected": 1.1743673100067866,
+    "allowed_ratio_range": [
+      0.3,
+      3.0
+    ],
+    "status": "passed",
+    "note": "Stage F still writes a diagnostic fit when this fails; Stage G physical SED should wait until Stage A absolute response normalization is understood."
+  },
+  "fits": {
+    "pl_conservative": {
+      "model_name": "pl",
+      "error_mode": "conservative",
+      "valid": true,
+      "parameters": {
+        "phi0": 2.5299779374860245e-12,
+        "gamma": 2.692495899431354
+      },
+      "errors": {
+        "phi0": 6.338261994583243e-14,
+        "gamma": 0.02381446220106831
+      },
+      "fit_parameters": {
+        "log10_phi0": -11.596883266045468,
+        "gamma": 2.692495899431354
+      },
+      "fit_parameter_errors": {
+        "log10_phi0": 0.010880222188181854,
+        "gamma": 0.02381446220106831
+      },
+      "fit_parameter_names": [
+        "log10_phi0",
+        "gamma"
+      ],
+      "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+      "covariance": [
+        [
+          0.00011837925675176065,
+          -0.00010946592117268861
+        ],
+        [
+          -0.00010946592117268861,
+          0.0005671433949078465
+        ]
+      ],
+      "chi2": 50.72761545901895,
+      "ndof": 10,
+      "chi2_over_ndof": 5.072761545901895,
+      "p_value": 1.9605976049777027e-07,
+      "minuit_status": {
+        "valid": true,
+        "accurate": true,
+        "fmin_is_valid": true,
+        "has_covariance": true,
+        "has_accurate_covar": true,
+        "edm": 5.347986668638141e-06
+      }
+    },
+    "logpar_conservative": {
+      "model_name": "logpar",
+      "error_mode": "conservative",
+      "valid": true,
+      "parameters": {
+        "phi0": 2.8182165837445266e-12,
+        "alpha": 2.7803983192341453,
+        "beta": 0.13004142124496085
+      },
+      "errors": {
+        "phi0": 9.086744843074157e-14,
+        "alpha": 0.03799179533608399,
+        "beta": 0.03112763757307075
+      },
+      "fit_parameters": {
+        "log10_phi0": -11.550025633827563,
+        "alpha": 2.7803983192341453,
+        "beta": 0.13004142124496085
+      },
+      "fit_parameter_errors": {
+        "log10_phi0": 0.014002909380962159,
+        "alpha": 0.03799179533608399,
+        "beta": 0.03112763757307075
+      },
+      "fit_parameter_names": [
+        "log10_phi0",
+        "alpha",
+        "beta"
+      ],
+      "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+      "covariance": [
+        [
+          0.0001960815312728116,
+          2.9561157106746605e-05,
+          0.0002591174239769553
+        ],
+        [
+          2.9561157106746605e-05,
+          0.0014434711084062525,
+          0.0007297682579664823
+        ],
+        [
+          0.0002591174239769553,
+          0.0007297682579664823,
+          0.0009690083986513893
+        ]
+      ],
+      "chi2": 28.23420849231317,
+      "ndof": 9,
+      "chi2_over_ndof": 3.1371342769236854,
+      "p_value": 0.0008715852938148412,
+      "minuit_status": {
+        "valid": true,
+        "accurate": true,
+        "fmin_is_valid": true,
+        "has_covariance": true,
+        "has_accurate_covar": true,
+        "edm": 1.1719505253074505e-06
+      }
+    },
+    "pl_sqrt_n": {
+      "model_name": "pl",
+      "error_mode": "sqrt_n",
+      "valid": true,
+      "parameters": {
+        "phi0": 2.5365989317669005e-12,
+        "gamma": 2.678667725251863
+      },
+      "errors": {
+        "phi0": 5.44210850516258e-14,
+        "gamma": 0.019681319997677527
+      },
+      "fit_parameters": {
+        "log10_phi0": -11.595748194776668,
+        "gamma": 2.678667725251863
+      },
+      "fit_parameter_errors": {
+        "log10_phi0": 0.009317506461553826,
+        "gamma": 0.019681319997677527
+      },
+      "fit_parameter_names": [
+        "log10_phi0",
+        "gamma"
+      ],
+      "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+      "covariance": [
+        [
+          8.681593843338421e-05,
+          -8.872994890419201e-05
+        ],
+        [
+          -8.872994890419201e-05,
+          0.00038736126886658006
+        ]
+      ],
+      "chi2": 74.64077177469287,
+      "ndof": 10,
+      "chi2_over_ndof": 7.464077177469287,
+      "p_value": 5.588622511967955e-12,
+      "minuit_status": {
+        "valid": true,
+        "accurate": true,
+        "fmin_is_valid": true,
+        "has_covariance": true,
+        "has_accurate_covar": true,
+        "edm": 1.3876100084758309e-05
+      }
+    },
+    "logpar_sqrt_n": {
+      "model_name": "logpar",
+      "error_mode": "sqrt_n",
+      "valid": true,
+      "parameters": {
+        "phi0": 2.8359691035971496e-12,
+        "alpha": 2.7847661220976723,
+        "beta": 0.13926700976990158
+      },
+      "errors": {
+        "phi0": 7.684719669339154e-14,
+        "alpha": 0.0341090382278062,
+        "beta": 0.026801924139739447
+      },
+      "fit_parameters": {
+        "log10_phi0": -11.547298504874853,
+        "alpha": 2.7847661220976723,
+        "beta": 0.13926700976990158
+      },
+      "fit_parameter_errors": {
+        "log10_phi0": 0.0117682218157249,
+        "alpha": 0.0341090382278062,
+        "beta": 0.026801924139739447
+      },
+      "fit_parameter_names": [
+        "log10_phi0",
+        "alpha",
+        "beta"
+      ],
+      "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+      "covariance": [
+        [
+          0.0001384910747082915,
+          1.4891525193732413e-05,
+          0.00017534071747601408
+        ],
+        [
+          1.4891525193732413e-05,
+          0.0011634879129548401,
+          0.0006221093580090775
+        ],
+        [
+          0.00017534071747601408,
+          0.0006221093580090775,
+          0.0007183863526792025
+        ]
+      ],
+      "chi2": 38.76465705078898,
+      "ndof": 9,
+      "chi2_over_ndof": 4.307184116754332,
+      "p_value": 1.2702328611036057e-05,
+      "minuit_status": {
+        "valid": true,
+        "accurate": true,
+        "fmin_is_valid": true,
+        "has_covariance": true,
+        "has_accurate_covar": true,
+        "edm": 5.969830982899499e-07
+      }
+    }
+  },
+  "preferred_fit": {
+    "error_mode": "conservative",
+    "model": "logpar",
+    "reason": "logpar improves chi2 by 22.4934 >= 4",
+    "delta_chi2_pl_minus_logpar": 22.49340696670578
+  },
+  "quality": {
+    "fit_status": "passed",
+    "stage_f_current_promotable": true,
+    "stage_g_physical_promotable": true,
+    "physical_flux_status": "ok",
+    "reason": "fits are finite; physical normalization preflight controls Stage G promotion"
+  },
+  "cells": [
+    {
+      "cell_id": 6,
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[2,3)",
+      "N_on": 11259,
+      "B_on": 8710.000711237552,
+      "excess": 2548.9992887624485,
+      "error_conservative": 141.31171469923345,
+      "error_sqrt_n": 106.10843510296436,
+      "pl_model": 3029.5472545996,
+      "pl_pull": -3.400623698183447,
+      "logpar_model": 2706.89951531611,
+      "logpar_pull": -1.1173895022768272,
+      "preferred_model": "logpar",
+      "preferred_counts": 2706.89951531611,
+      "preferred_pull": -1.1173895022768272
+    },
+    {
+      "cell_id": 8,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3,3.25)",
+      "N_on": 3067,
+      "B_on": 1556.2972972972973,
+      "excess": 1510.7027027027027,
+      "error_conservative": 67.99483287204475,
+      "error_sqrt_n": 55.380501984001555,
+      "pl_model": 1294.3086927778934,
+      "pl_pull": 3.182506681530165,
+      "logpar_model": 1383.0829146248382,
+      "logpar_pull": 1.8769042100305515,
+      "preferred_model": "logpar",
+      "preferred_counts": 1383.0829146248382,
+      "preferred_pull": 1.8769042100305515
+    },
+    {
+      "cell_id": 9,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3.25,3.5)",
+      "N_on": 1706,
+      "B_on": 906.8648648648648,
+      "excess": 799.1351351351352,
+      "error_conservative": 51.11618985081796,
+      "error_sqrt_n": 41.30375285612676,
+      "pl_model": 716.2809533231513,
+      "pl_pull": 1.6208990156307224,
+      "logpar_model": 781.1918163292853,
+      "logpar_pull": 0.3510300524788192,
+      "preferred_model": "logpar",
+      "preferred_counts": 781.1918163292853,
+      "preferred_pull": 0.3510300524788192
+    },
+    {
+      "cell_id": 10,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.25,3.5)",
+      "N_on": 1155,
+      "B_on": 383.6216216216216,
+      "excess": 771.3783783783783,
+      "error_conservative": 39.22526764244728,
+      "error_sqrt_n": 33.98529093593286,
+      "pl_model": 668.2282094915356,
+      "pl_pull": 2.6296868086941916,
+      "logpar_model": 742.0016895334829,
+      "logpar_pull": 0.7489225851222917,
+      "preferred_model": "logpar",
+      "preferred_counts": 742.0016895334829,
+      "preferred_pull": 0.7489225851222917
+    },
+    {
+      "cell_id": 11,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.5,3.75)",
+      "N_on": 559,
+      "B_on": 192.67567567567568,
+      "excess": 366.3243243243243,
+      "error_conservative": 27.41670431827421,
+      "error_sqrt_n": 23.643180835073778,
+      "pl_model": 388.1164417511814,
+      "pl_pull": -0.7948481762752158,
+      "logpar_model": 415.5219471882512,
+      "logpar_pull": -1.7944397070050069,
+      "preferred_model": "logpar",
+      "preferred_counts": 415.5219471882512,
+      "preferred_pull": -1.7944397070050069
+    },
+    {
+      "cell_id": 12,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.75,4.0)",
+      "N_on": 238,
+      "B_on": 148.86913229018495,
+      "excess": 89.13086770981505,
+      "error_conservative": 19.6689891018879,
+      "error_sqrt_n": 15.427248620541512,
+      "pl_model": 98.25405046942771,
+      "pl_pull": -0.4638358744495408,
+      "logpar_model": 94.16311797924199,
+      "logpar_pull": -0.2558469193998346,
+      "preferred_model": "logpar",
+      "preferred_counts": 94.16311797924199,
+      "preferred_pull": -0.2558469193998346
+    },
+    {
+      "cell_id": 13,
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[3.5,3.75)",
+      "N_on": 280,
+      "B_on": 73.21621621621621,
+      "excess": 206.7837837837838,
+      "error_conservative": 18.79404736123159,
+      "error_sqrt_n": 16.73320053068151,
+      "pl_model": 225.84685196456027,
+      "pl_pull": -1.0143141503463386,
+      "logpar_model": 234.60297784613033,
+      "logpar_pull": -1.4802130444627926,
+      "preferred_model": "logpar",
+      "preferred_counts": 234.60297784613033,
+      "preferred_pull": -1.4802130444627926
+    },
+    {
+      "cell_id": 14,
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[3.75,4.0)",
+      "N_on": 152,
+      "B_on": 56.270270270270274,
+      "excess": 95.72972972972973,
+      "error_conservative": 14.43157199581079,
+      "error_sqrt_n": 12.328828005937952,
+      "pl_model": 114.55366624511983,
+      "pl_pull": -1.3043580090134554,
+      "logpar_model": 107.74675043059122,
+      "logpar_pull": -0.8326896546231973,
+      "preferred_model": "logpar",
+      "preferred_counts": 107.74675043059122,
+      "preferred_pull": -0.8326896546231973
+    },
+    {
+      "cell_id": 15,
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[4.0,4.25)",
+      "N_on": 105,
+      "B_on": 38.04409672830726,
+      "excess": 66.95590327169273,
+      "error_conservative": 11.96010437781825,
+      "error_sqrt_n": 10.246950765959598,
+      "pl_model": 26.370939901887944,
+      "pl_pull": 3.393361971411846,
+      "logpar_model": 21.323339591181362,
+      "logpar_pull": 3.8153984479553187,
+      "preferred_model": "logpar",
+      "preferred_counts": 21.323339591181362,
+      "preferred_pull": 3.8153984479553187
+    },
+    {
+      "cell_id": 16,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[3.75,4.0)",
+      "N_on": 131,
+      "B_on": 19.56756756756757,
+      "excess": 111.43243243243244,
+      "error_conservative": 12.270597685832895,
+      "error_sqrt_n": 11.445523142259598,
+      "pl_model": 127.67128233190594,
+      "pl_pull": -1.3233951854050423,
+      "logpar_model": 110.34607119943615,
+      "logpar_pull": 0.08853368522142552,
+      "preferred_model": "logpar",
+      "preferred_counts": 110.34607119943615,
+      "preferred_pull": 0.08853368522142552
+    },
+    {
+      "cell_id": 17,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[4.0,4.25)",
+      "N_on": 93,
+      "B_on": 16.864864864864867,
+      "excess": 76.13513513513513,
+      "error_conservative": 10.481644187095117,
+      "error_sqrt_n": 9.643650760992955,
+      "pl_model": 84.31600859569802,
+      "pl_pull": -0.7804952462167235,
+      "logpar_model": 61.765246495315964,
+      "logpar_pull": 1.370957493244353,
+      "preferred_model": "logpar",
+      "preferred_counts": 61.765246495315964,
+      "preferred_pull": 1.370957493244353
+    },
+    {
+      "cell_id": 18,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[4.25,4.5)",
+      "N_on": 44,
+      "B_on": 19.43243243243243,
+      "excess": 24.56756756756757,
+      "error_conservative": 7.964448030619098,
+      "error_sqrt_n": 6.6332495807108,
+      "pl_model": 35.94278289187306,
+      "pl_pull": -1.4282490488447903,
+      "logpar_model": 21.33955370971988,
+      "logpar_pull": 0.4053028967528797,
+      "preferred_model": "logpar",
+      "preferred_counts": 21.33955370971988,
+      "preferred_pull": 0.4053028967528797
+    }
+  ],
+  "promotion": {
+    "promote_current": false,
+    "status": "skipped_no_promote_current"
+  },
+  "outputs": {
+    "npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f/runs/codex_stage_f_cell6_plus_8to18_probe/fit_v1.npz",
+    "metadata_json": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f/runs/codex_stage_f_cell6_plus_8to18_probe/fit_v1_metadata.json",
+    "summary_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f/runs/codex_stage_f_cell6_plus_8to18_probe/fit_v1_summary.csv",
+    "summary_md": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f/runs/codex_stage_f_cell6_plus_8to18_probe/fit_v1_summary.md",
+    "report_html": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/stage_f_cell6_plus_8to18_probe_report.html",
+    "theta_exposure_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f/runs/codex_stage_f_cell6_plus_8to18_probe/theta_exposure.png",
+    "model_counts_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f/runs/codex_stage_f_cell6_plus_8to18_probe/model_counts_vs_excess.png",
+    "pull_grid_pl_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f/runs/codex_stage_f_cell6_plus_8to18_probe/pull_grid_pl.png",
+    "pull_grid_logpar_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f/runs/codex_stage_f_cell6_plus_8to18_probe/pull_grid_logpar.png"
+  },
+  "elapsed_seconds": 3.581110229017213
+}

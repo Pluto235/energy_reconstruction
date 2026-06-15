@@ -1,0 +1,347 @@
+{
+  "description": "Crab-centered v2-cell sky maps. Approx significance is a quicklook only, not the Stage-D background result.",
+  "analysis_version": "v2",
+  "output_prefix": "crab_v2",
+  "obs_root": "/mnt/mydisk/WCDA_observation_eval",
+  "time_root": "/mnt/mydisk/WCDA_observation_eval/recovered_time",
+  "cell_selection_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selection_v2.csv",
+  "output_dir": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/crab_cell_skymaps_v2",
+  "source": {
+    "name": "Crab",
+    "ra_deg": 83.63,
+    "dec_deg": 22.01
+  },
+  "projection": "x=(ra-source_ra wrapped)*cos(source_dec), y=dec-source_dec",
+  "radec_projection": {
+    "ra_axis": "increasing_right",
+    "ra_range_deg": [
+      72.84389181704613,
+      94.41610818295386
+    ],
+    "dec_range_deg": [
+      12.010000000000002,
+      32.010000000000005
+    ],
+    "source_marker": [
+      83.63,
+      22.01
+    ],
+    "range_definition": "RA: source_ra +/- half_width_deg / cos(source_dec); Dec: source_dec +/- half_width_deg"
+  },
+  "roi": {
+    "half_width_deg": 10.0,
+    "pixel_size_deg": 0.1
+  },
+  "cuts": {
+    "match_status_equals": 0,
+    "pincness_lt": 1.1,
+    "fitstat_equals": 0,
+    "theta_deg_lt": 50.0
+  },
+  "quicklook": {
+    "smooth_sigma_deg": 0.3,
+    "source_exclusion_radius_deg": 2.0,
+    "sideband_stat": "mean",
+    "bg_max_abs_x_deg": 5.0,
+    "sideband_region": "same Dec strip, r >= source_exclusion_radius_deg, abs(RA offset * cos(source Dec)) < bg_max_abs_x_deg",
+    "excluded_region_note": "The quicklook background does not use ROI edge bins with abs(x) >= bg_max_abs_x_deg.",
+    "approx_sigma_formula": "(smoothed_counts - smoothed_sideband_background) / sqrt(smoothed_sideband_background)",
+    "not_for_physics": true
+  },
+  "plotting": {
+    "counts_scale": "per-panel",
+    "counts_vmax_percentile": 99.5,
+    "significance_max": 5.0
+  },
+  "cells": [
+    {
+      "index": 0,
+      "cell_id": 1,
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[2,3)",
+      "cut_events": 4025524,
+      "roi_events": 1607188
+    },
+    {
+      "index": 1,
+      "cell_id": 2,
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[3,3.25)",
+      "cut_events": 2376396,
+      "roi_events": 877841
+    },
+    {
+      "index": 2,
+      "cell_id": 3,
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[3.25,3.5)",
+      "cut_events": 1587585,
+      "roi_events": 553094
+    },
+    {
+      "index": 3,
+      "cell_id": 4,
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[3.5,3.75)",
+      "cut_events": 953366,
+      "roi_events": 319727
+    },
+    {
+      "index": 4,
+      "cell_id": 5,
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[3.75,4.0)",
+      "cut_events": 468450,
+      "roi_events": 151395
+    },
+    {
+      "index": 5,
+      "cell_id": 6,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3,3.25)",
+      "cut_events": 1400831,
+      "roi_events": 551891
+    },
+    {
+      "index": 6,
+      "cell_id": 7,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3.25,3.5)",
+      "cut_events": 1230287,
+      "roi_events": 450530
+    },
+    {
+      "index": 7,
+      "cell_id": 8,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3.5,3.75)",
+      "cut_events": 741698,
+      "roi_events": 251808
+    },
+    {
+      "index": 8,
+      "cell_id": 9,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3.75,4.0)",
+      "cut_events": 400758,
+      "roi_events": 130865
+    },
+    {
+      "index": 9,
+      "cell_id": 10,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[4.0,4.25)",
+      "cut_events": 172853,
+      "roi_events": 55180
+    },
+    {
+      "index": 10,
+      "cell_id": 11,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.25,3.5)",
+      "cut_events": 532506,
+      "roi_events": 211419
+    },
+    {
+      "index": 11,
+      "cell_id": 12,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.5,3.75)",
+      "cut_events": 424891,
+      "roi_events": 154719
+    },
+    {
+      "index": 12,
+      "cell_id": 13,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.75,4.0)",
+      "cut_events": 200583,
+      "roi_events": 66419
+    },
+    {
+      "index": 13,
+      "cell_id": 14,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[4.0,4.25)",
+      "cut_events": 80068,
+      "roi_events": 25017
+    },
+    {
+      "index": 14,
+      "cell_id": 15,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[4.25,4.5)",
+      "cut_events": 26331,
+      "roi_events": 8382
+    },
+    {
+      "index": 15,
+      "cell_id": 16,
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[3.5,3.75)",
+      "cut_events": 139393,
+      "roi_events": 55142
+    },
+    {
+      "index": 16,
+      "cell_id": 17,
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[3.75,4.0)",
+      "cut_events": 102608,
+      "roi_events": 37724
+    },
+    {
+      "index": 17,
+      "cell_id": 18,
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[4.0,4.25)",
+      "cut_events": 38081,
+      "roi_events": 12463
+    },
+    {
+      "index": 18,
+      "cell_id": 19,
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[4.25,4.5)",
+      "cut_events": 10264,
+      "roi_events": 3006
+    },
+    {
+      "index": 19,
+      "cell_id": 20,
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[4.5,4.75)",
+      "cut_events": 2001,
+      "roi_events": 545
+    },
+    {
+      "index": 20,
+      "cell_id": 21,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[3.75,4.0)",
+      "cut_events": 55576,
+      "roi_events": 22040
+    },
+    {
+      "index": 21,
+      "cell_id": 22,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[4.0,4.25)",
+      "cut_events": 52471,
+      "roi_events": 19684
+    },
+    {
+      "index": 22,
+      "cell_id": 23,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[4.25,4.5)",
+      "cut_events": 28669,
+      "roi_events": 10212
+    },
+    {
+      "index": 23,
+      "cell_id": 24,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[4.5,4.75)",
+      "cut_events": 11716,
+      "roi_events": 3904
+    },
+    {
+      "index": 24,
+      "cell_id": 25,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[4.75,5.0)",
+      "cut_events": 4580,
+      "roi_events": 1510
+    },
+    {
+      "index": 25,
+      "cell_id": 26,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": ">=5",
+      "cut_events": 1934,
+      "roi_events": 546
+    },
+    {
+      "index": 26,
+      "cell_id": 27,
+      "nhit_bin": "[2000,3000)",
+      "predE_bin": "[4.0,4.25)",
+      "cut_events": 391,
+      "roi_events": 167
+    },
+    {
+      "index": 27,
+      "cell_id": 28,
+      "nhit_bin": "[2000,3000)",
+      "predE_bin": "[4.25,4.5)",
+      "cut_events": 2201,
+      "roi_events": 799
+    },
+    {
+      "index": 28,
+      "cell_id": 29,
+      "nhit_bin": "[2000,3000)",
+      "predE_bin": "[4.5,4.75)",
+      "cut_events": 7251,
+      "roi_events": 2945
+    },
+    {
+      "index": 29,
+      "cell_id": 30,
+      "nhit_bin": "[2000,3000)",
+      "predE_bin": "[4.75,5.0)",
+      "cut_events": 13339,
+      "roi_events": 5164
+    },
+    {
+      "index": 30,
+      "cell_id": 31,
+      "nhit_bin": "[2000,3000)",
+      "predE_bin": ">=5",
+      "cut_events": 22973,
+      "roi_events": 7907
+    }
+  ],
+  "processing": {
+    "input_file_count": 1258,
+    "processed_file_count": 1258,
+    "total_entries_seen": 127692389,
+    "cut_match_events": 127691852,
+    "roi_events": 45502526,
+    "missing_time_file_count": 0,
+    "missing_time_files": [],
+    "entry_mismatch_file_count": 0,
+    "entry_mismatch_files": [],
+    "processed_files_sample": [
+      "/mnt/mydisk/WCDA_observation_eval/0101/Esg20220101_00.root",
+      "/mnt/mydisk/WCDA_observation_eval/0101/Esg20220101_01.root",
+      "/mnt/mydisk/WCDA_observation_eval/0101/Esg20220101_02.root",
+      "/mnt/mydisk/WCDA_observation_eval/0101/Esg20220101_03.root",
+      "/mnt/mydisk/WCDA_observation_eval/0101/Esg20220101_04.root"
+    ]
+  },
+  "outputs": {
+    "counts_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/crab_cell_skymaps_v2/crab_v2_counts_grid.png",
+    "counts_radec_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/crab_cell_skymaps_v2/crab_v2_counts_radec_grid.png",
+    "smoothed_counts_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/crab_cell_skymaps_v2/crab_v2_smoothed_counts_grid.png",
+    "approx_significance_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/crab_cell_skymaps_v2/crab_v2_approx_significance_grid.png",
+    "maps_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/crab_cell_skymaps_v2/crab_v2_maps.npz",
+    "metadata_json": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/crab_cell_skymaps_v2/crab_v2_maps_meta.json",
+    "ra_offset_profiles_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/crab_cell_skymaps_v2/crab_v2_ra_offset_profiles_grid.png",
+    "dec_offset_profiles_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/crab_cell_skymaps_v2/crab_v2_dec_offset_profiles_grid.png",
+    "ra_offset_profiles_normalized_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/crab_cell_skymaps_v2/crab_v2_ra_offset_profiles_normalized_grid.png",
+    "dec_offset_profiles_normalized_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/crab_cell_skymaps_v2/crab_v2_dec_offset_profiles_normalized_grid.png"
+  },
+  "profiles": {
+    "profile_half_width_deg": 1.0,
+    "sideband_min_abs_offset_deg": 5.0,
+    "baseline_stat": "median",
+    "ra_offset_profile": "counts[:, abs(y_center)<profile_half_width, :].sum(axis=1)",
+    "dec_offset_profile": "counts[:, :, abs(x_center)<profile_half_width].sum(axis=2)",
+    "ra_profile_center_band_y_bins": 20,
+    "dec_profile_center_band_x_bins": 20,
+    "normalization": "(profile - baseline) / max(profile - baseline) per cell",
+    "not_for_physics": true
+  }
+}

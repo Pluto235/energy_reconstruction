@@ -1,0 +1,6 @@
+name,ra_deg,dec_deg,radius_deg,enabled
+Crab,83.63,22.01,2,True
+Mrk421,166.1138,38.2088,3,True
+Mrk501,253.4676,39.7602,3,True
+Geminga,98.4756,17.7703,3,True
+Cygnus_Cocoon,307.7,41,8,True

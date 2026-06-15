@@ -57,7 +57,7 @@ class CellEvents:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build Stage B Crab-declination PSF table for v1 (Nhit, predicted-energy) cells."
+        description="Build Stage B Crab-declination PSF table for configured (Nhit, predicted-energy) cells."
     )
     parser.add_argument("--binned-root", type=str, default=DEFAULT_BINNED_ROOT)
     parser.add_argument("--cell-selection-csv", type=str, default=DEFAULT_CELL_SELECTION)
@@ -1190,7 +1190,7 @@ def write_plots(
         cells,
         paths["sigma_grid_png"],
         key="sigma_deg",
-        title="Stage B PSF sigma by v1 cell",
+        title="Stage B PSF sigma by configured cell",
         colorbar_label="sigma (deg)",
         fmt=".3g",
     )
@@ -1199,7 +1199,7 @@ def write_plots(
         cells,
         paths["r_opt_grid_png"],
         key="r_opt_deg",
-        title="Stage B optimal integration radius by v1 cell",
+        title="Stage B optimal integration radius by configured cell",
         colorbar_label="1.58 sigma (deg)",
         fmt=".3g",
     )
@@ -1217,7 +1217,7 @@ def write_plots(
         cells,
         paths["effective_events_grid_png"],
         key="effective_events",
-        title="Stage B effective event count by v1 cell",
+        title="Stage B effective event count by configured cell",
         colorbar_label="Neff",
         fmt=".2g",
     )
@@ -1423,7 +1423,7 @@ def main() -> None:
         )
     ]
     metadata: Dict[str, object] = {
-        "description": "Stage B Crab-declination PSF table for v1 (Nhit, predicted logE) cells.",
+        "description": "Stage B Crab-declination PSF table for configured (Nhit, predicted logE) cells.",
         "run_id": run_id,
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
         "binned_root": str(binned_root),

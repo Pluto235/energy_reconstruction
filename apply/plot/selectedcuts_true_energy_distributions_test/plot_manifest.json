@@ -1,0 +1,26 @@
+{
+  "binned_root": "/mnt/mydisk/WCDA_simulation_binned_selectedcuts",
+  "summary_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/summary_selectedcuts/bin_counts.csv",
+  "branch": "mc_energy",
+  "tree_name": "t_eventout",
+  "min_statistics_level": "acceptable",
+  "x_range_log10_GeV": [
+    2.0,
+    6.0
+  ],
+  "num_bins": 40,
+  "target_events_per_bin": 5000,
+  "generated_plots": [
+    {
+      "nhit_bin": "[30,60)",
+      "predE_bin": "[2,3)",
+      "count_from_summary": 86609,
+      "events_read_for_branch": 5011,
+      "files_used": 566,
+      "formal_nhit_bin": true,
+      "statistics_level": "acceptable",
+      "plot_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/plot/selectedcuts_true_energy_distributions_test/true_energy_density__30_60__2_3.png"
+    }
+  ],
+  "skipped_bins": []
+}

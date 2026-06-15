@@ -86,7 +86,7 @@ class InputFileSpec:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Stage C observation reduction: eval ROOT + recovered time friend tree to v1-cell parquet."
+        description="Stage C observation reduction: eval ROOT + recovered time friend tree to configured-cell parquet."
     )
     parser.add_argument("--obs-root", type=str, default=DEFAULT_OBS_ROOT)
     parser.add_argument("--time-root", type=str, default=DEFAULT_TIME_ROOT)
@@ -1429,7 +1429,7 @@ def build_metadata(
     rough_live_time_seconds = sum(float(result.get("rough_live_time_seconds") or 0.0) for result in results)
 
     return {
-        "description": "Stage C observation reduction for v1 (Nhit, predicted logE) cells.",
+        "description": "Stage C observation reduction for configured (Nhit, predicted logE) cells.",
         "run_id": run_dir.name,
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
         "obs_root": str(Path(args.obs_root).resolve()),
@@ -1569,7 +1569,7 @@ def write_summary(path: Path, metadata: Dict[str, object]) -> None:
         f.write(f"- Missing time files: {processing['missing_time_file_count']}\n")
         f.write(f"- Entry mismatch files: {processing['entry_mismatch_file_count']}\n")
         f.write(f"- Input entries: {cutflow['input_entries']:,}\n")
-        f.write(f"- Selected v1-cell rows: {cutflow['after_cell_selection']:,}\n")
+        f.write(f"- Selected configured-cell rows: {cutflow['after_cell_selection']:,}\n")
         f.write(f"- Rough live-time basis: {live_time['rough_live_time_days_sum_files']:.6g} days\n")
         f.write("- Live-time note: Stage D owns final rate/live-time weighting.\n\n")
         f.write("| yyyymm | files | selected rows | rough live-time days |\n")

@@ -92,7 +92,7 @@ class SignalStats:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Stage E Crab signal extraction for v1 SED cells.")
+    parser = argparse.ArgumentParser(description="Stage E Crab signal extraction for configured SED cells.")
     parser.add_argument("--stage-c-dir", type=str, default=DEFAULT_STAGE_C_DIR)
     parser.add_argument("--background-npz", type=str, default=DEFAULT_BACKGROUND_NPZ)
     parser.add_argument("--background-metadata", type=str, default=DEFAULT_BACKGROUND_METADATA)
@@ -109,6 +109,8 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--source-ra-deg", type=float, default=DEFAULT_SOURCE_RA_DEG)
     parser.add_argument("--source-dec-deg", type=float, default=DEFAULT_SOURCE_DEC_DEG)
+    parser.add_argument("--mjd-min", type=float, default=None, help="Optional inclusive MJD lower bound for validation splits.")
+    parser.add_argument("--mjd-max", type=float, default=None, help="Optional exclusive MJD upper bound for validation splits.")
     parser.add_argument("--batch-size", type=int, default=500000)
     parser.add_argument("--max-batches", type=int, default=None, help="Read only the first N parquet batches for smoke tests.")
     parser.add_argument("--print-every", type=int, default=10)
@@ -324,6 +326,15 @@ def column_to_numpy(batch, name: str) -> np.ndarray:
     return batch.column(batch.schema.get_field_index(name)).to_numpy(zero_copy_only=False)
 
 
+def apply_mjd_window(mjd: np.ndarray, *, mjd_min: Optional[float], mjd_max: Optional[float]) -> np.ndarray:
+    mask = np.isfinite(mjd)
+    if mjd_min is not None:
+        mask &= mjd >= float(mjd_min)
+    if mjd_max is not None:
+        mask &= mjd < float(mjd_max)
+    return mask
+
+
 def ordered_background_arrays(
     data: np.lib.npyio.NpzFile,
     background_npz: Path,
@@ -495,9 +506,11 @@ def scan_on_region(
     batch_size: int,
     max_batches: Optional[int],
     print_every: int,
+    mjd_min: Optional[float] = None,
+    mjd_max: Optional[float] = None,
 ) -> ScanResult:
     dataset = ds.dataset(obs_events_dir, format="parquet", partitioning="hive")
-    columns = ["ra_mean_deg", "dec_mean_deg", "cell_id"]
+    columns = ["mjd", "ra_mean_deg", "dec_mean_deg", "cell_id"]
     scanner = dataset.scanner(columns=columns, batch_size=int(batch_size), use_threads=True)
     n_cells = len(cells)
     max_cell_id = max(cell.cell_id for cell in cells)
@@ -521,6 +534,7 @@ def scan_on_region(
         processed_batches += 1
         input_rows += int(batch.num_rows)
 
+        mjd = np.asarray(column_to_numpy(batch, "mjd"), dtype=np.float64)
         ra = np.asarray(column_to_numpy(batch, "ra_mean_deg"), dtype=np.float64)
         dec = np.asarray(column_to_numpy(batch, "dec_mean_deg"), dtype=np.float64)
         cell_id = np.asarray(column_to_numpy(batch, "cell_id"), dtype=np.int32)
@@ -528,7 +542,7 @@ def scan_on_region(
         valid_id = (cell_id >= 0) & (cell_id < cell_index_by_id.size)
         cell_idx = np.full(cell_id.shape, -1, dtype=np.int16)
         cell_idx[valid_id] = cell_index_by_id[cell_id[valid_id]]
-        valid = (cell_idx >= 0) & np.isfinite(ra) & np.isfinite(dec)
+        valid = (cell_idx >= 0) & apply_mjd_window(mjd, mjd_min=mjd_min, mjd_max=mjd_max) & np.isfinite(ra) & np.isfinite(dec)
         if not np.any(valid):
             continue
 
@@ -1458,6 +1472,8 @@ def make_metadata(
             "processed_batches": int(scan.processed_batches),
             "batch_size": int(args.batch_size),
             "max_batches": args.max_batches,
+            "mjd_min": args.mjd_min,
+            "mjd_max": args.mjd_max,
             "elapsed_seconds": float(elapsed_seconds),
         },
         "cells": rows,
@@ -1514,6 +1530,8 @@ def main() -> None:
         batch_size=int(args.batch_size),
         max_batches=args.max_batches,
         print_every=int(args.print_every),
+        mjd_min=args.mjd_min,
+        mjd_max=args.mjd_max,
     )
     stats = compute_signal_stats(
         scan.n_on,

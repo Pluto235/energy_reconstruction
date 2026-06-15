@@ -1,0 +1,10 @@
+{
+  "theta_only": "/home/server/projects/energy_reconstruction/runs/dcedge20_2724",
+  "theta_plus_pos": "/home/server/projects/energy_reconstruction/runs/theta_position_embed_2735",
+  "judgement": "dcedge20_2724 is theta-only baseline; theta_position_embed_2735 is theta + position embedding",
+  "outputs": {
+    "resolution": "/home/server/projects/energy_reconstruction/notebook/generated/theta_only_vs_position_embed_2724_2735/resolution_theta_only_vs_position_embed_2724_2735.png",
+    "bias": "/home/server/projects/energy_reconstruction/notebook/generated/theta_only_vs_position_embed_2724_2735/bias_theta_only_vs_position_embed_2724_2735.png",
+    "rms": "/home/server/projects/energy_reconstruction/notebook/generated/theta_only_vs_position_embed_2724_2735/logRMS_theta_only_vs_position_embed_2724_2735.png"
+  }
+}

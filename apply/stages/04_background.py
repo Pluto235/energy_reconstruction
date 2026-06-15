@@ -83,7 +83,7 @@ class RoiScanResult:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Stage D background for Crab SED v1 cells.")
+    parser = argparse.ArgumentParser(description="Stage D background for Crab SED analysis cells.")
     parser.add_argument("--stage-c-dir", type=str, default=DEFAULT_STAGE_C_DIR)
     parser.add_argument("--psf-npz", type=str, default=DEFAULT_PSF_NPZ)
     parser.add_argument("--cell-selection-csv", type=str, default=DEFAULT_CELL_SELECTION)
@@ -108,6 +108,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lhaaso-lon-deg", type=float, default=DEFAULT_LHAASO_LON_DEG)
     parser.add_argument("--source-ra-deg", type=float, default=DEFAULT_SOURCE_RA_DEG)
     parser.add_argument("--source-dec-deg", type=float, default=DEFAULT_SOURCE_DEC_DEG)
+    parser.add_argument("--mjd-min", type=float, default=None, help="Optional inclusive MJD lower bound for validation splits.")
+    parser.add_argument("--mjd-max", type=float, default=None, help="Optional exclusive MJD upper bound for validation splits.")
 
     parser.add_argument(
         "--background-mode",
@@ -603,6 +605,15 @@ def column_to_numpy(batch, name: str) -> np.ndarray:
     return batch.column(batch.schema.get_field_index(name)).to_numpy(zero_copy_only=False)
 
 
+def apply_mjd_window(mjd: np.ndarray, *, mjd_min: Optional[float], mjd_max: Optional[float]) -> np.ndarray:
+    mask = np.isfinite(mjd)
+    if mjd_min is not None:
+        mask &= mjd >= float(mjd_min)
+    if mjd_max is not None:
+        mask &= mjd < float(mjd_max)
+    return mask
+
+
 def update_bincount(target: np.ndarray, linear_index: np.ndarray, minlength: int) -> None:
     if linear_index.size == 0:
         return
@@ -623,6 +634,8 @@ def scan_stage_c_events(
     max_batches: Optional[int],
     print_every: int,
     theta_check_max_events: int,
+    mjd_min: Optional[float] = None,
+    mjd_max: Optional[float] = None,
 ) -> ScanResult:
     dataset = ds.dataset(obs_events_dir, format="parquet", partitioning="hive")
     columns = ["mjd", "ra_mean_deg", "dec_mean_deg", "theta", "cell_id"]
@@ -680,7 +693,7 @@ def scan_stage_c_events(
         cell_idx[valid_id] = cell_index_by_id[cell_id[valid_id]]
         valid_cell = cell_idx >= 0
 
-        finite = valid_cell & np.isfinite(mjd) & np.isfinite(ra) & np.isfinite(dec)
+        finite = valid_cell & apply_mjd_window(mjd, mjd_min=mjd_min, mjd_max=mjd_max) & np.isfinite(ra) & np.isfinite(dec)
         if not np.any(finite):
             continue
 
@@ -788,9 +801,11 @@ def scan_stage_c_roi_events(
     batch_size: int,
     max_batches: Optional[int],
     print_every: int,
+    mjd_min: Optional[float] = None,
+    mjd_max: Optional[float] = None,
 ) -> RoiScanResult:
     dataset = ds.dataset(obs_events_dir, format="parquet", partitioning="hive")
-    columns = ["ra_mean_deg", "dec_mean_deg", "cell_id"]
+    columns = ["mjd", "ra_mean_deg", "dec_mean_deg", "cell_id"]
     scanner = dataset.scanner(columns=columns, batch_size=int(batch_size), use_threads=True)
     n_cells = len(cells)
     n_xy = xy_edges_deg.size - 1
@@ -818,6 +833,7 @@ def scan_stage_c_roi_events(
         processed_batches += 1
         input_rows += int(batch.num_rows)
 
+        mjd = np.asarray(column_to_numpy(batch, "mjd"), dtype=np.float64)
         ra = np.asarray(column_to_numpy(batch, "ra_mean_deg"), dtype=np.float64)
         dec = np.asarray(column_to_numpy(batch, "dec_mean_deg"), dtype=np.float64)
         cell_id = np.asarray(column_to_numpy(batch, "cell_id"), dtype=np.int32)
@@ -825,7 +841,7 @@ def scan_stage_c_roi_events(
         valid_id = (cell_id >= 0) & (cell_id < cell_index_by_id.size)
         cell_idx = np.full(cell_id.shape, -1, dtype=np.int16)
         cell_idx[valid_id] = cell_index_by_id[cell_id[valid_id]]
-        finite = (cell_idx >= 0) & np.isfinite(ra) & np.isfinite(dec)
+        finite = (cell_idx >= 0) & apply_mjd_window(mjd, mjd_min=mjd_min, mjd_max=mjd_max) & np.isfinite(ra) & np.isfinite(dec)
         if not np.any(finite):
             continue
 
@@ -1959,6 +1975,8 @@ def run_crab_roi_local_background(
         batch_size=int(args.batch_size),
         max_batches=args.max_batches,
         print_every=int(args.print_every),
+        mjd_min=args.mjd_min,
+        mjd_max=args.mjd_max,
     )
     print(f"Scanned rows: {scan.input_rows:,}", flush=True)
 
@@ -2085,7 +2103,7 @@ def run_crab_roi_local_background(
     summary_csv_path = run_dir / args.summary_csv_name
     summary_md_path = run_dir / args.summary_md_name
     metadata_path = run_dir / args.metadata_name
-    source_masks_csv_path = run_dir / "source_masks_v1.csv"
+    source_masks_csv_path = run_dir / "source_masks.csv"
 
     np.savez_compressed(
         npz_path,
@@ -2250,7 +2268,7 @@ def run_crab_roi_local_background(
         promotable = True
         quality_reason = "ROI-local background passed basic positivity and training-pixel checks"
     metadata: Dict[str, object] = {
-        "description": "Stage D ROI-local background for v1 (Nhit, predicted logE) Crab SED cells.",
+        "description": "Stage D ROI-local background for configured (Nhit, predicted logE) Crab SED cells.",
         "run_id": run_id,
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
         "inputs": {
@@ -2321,6 +2339,16 @@ def run_crab_roi_local_background(
             "surface_basis": ["1", "x", "y", "x^2", "x*y", "y^2"] if int(args.roi_surface_order) == 2 else ["1", "x", "y"],
             "annulus_default_inner_deg": float(args.annulus_default_inner_deg) if annulus_diagnostics else None,
             "annulus_width_deg": float(args.annulus_width_deg) if annulus_diagnostics else None,
+            "annulus_max_inner_deg": float(args.annulus_max_inner_deg) if annulus_diagnostics else None,
+            "annulus_source_mask_min_deg": float(args.annulus_source_mask_min_deg) if annulus_diagnostics else None,
+            "annulus_source_mask_r_opt_factor": (
+                float(args.annulus_source_mask_r_opt_factor) if annulus_diagnostics else None
+            ),
+            "annulus_source_mask_margin_deg": (
+                float(args.annulus_source_mask_margin_deg) if annulus_diagnostics else None
+            ),
+            "surface_condition_max": float(args.surface_condition_max) if annulus_diagnostics else None,
+            "surface_min_training_pixels": int(args.surface_min_training_pixels) if annulus_diagnostics else None,
             "li_ma_applicable": False,
         },
         "processing": {
@@ -2329,6 +2357,8 @@ def run_crab_roi_local_background(
             "batch_size": int(args.batch_size),
             "max_batches": args.max_batches,
             "workers_requested": int(args.workers),
+            "mjd_min": args.mjd_min,
+            "mjd_max": args.mjd_max,
             "elapsed_seconds": float(time.perf_counter() - start_time),
         },
         "quality": {
@@ -2469,6 +2499,8 @@ def main() -> None:
         max_batches=args.max_batches,
         print_every=int(args.print_every),
         theta_check_max_events=int(args.theta_check_max_events),
+        mjd_min=args.mjd_min,
+        mjd_max=args.mjd_max,
     )
     theta_p95 = finite_float(scan.theta_check.get("p95_absdiff_deg"))
     if theta_p95 is not None:
@@ -2558,7 +2590,7 @@ def main() -> None:
     summary_csv_path = run_dir / args.summary_csv_name
     summary_md_path = run_dir / args.summary_md_name
     metadata_path = run_dir / args.metadata_name
-    source_masks_csv_path = run_dir / "source_masks_v1.csv"
+    source_masks_csv_path = run_dir / "source_masks.csv"
 
     np.savez_compressed(
         npz_path,
@@ -2626,7 +2658,7 @@ def main() -> None:
         plot_mask_exposure(available_time_bins, active_time_bins, ha_edges, dec_edges, Path(plot_outputs["mask_exposure_png"]))
 
     metadata: Dict[str, object] = {
-        "description": "Stage D full-field direct-integration background for v1 (Nhit, predicted logE) Crab SED cells.",
+        "description": "Stage D full-field direct-integration background for configured (Nhit, predicted logE) Crab SED cells.",
         "run_id": run_id,
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
         "inputs": {
@@ -2694,6 +2726,8 @@ def main() -> None:
             "batch_size": int(args.batch_size),
             "max_batches": args.max_batches,
             "workers_requested": int(args.workers),
+            "mjd_min": args.mjd_min,
+            "mjd_max": args.mjd_max,
             "elapsed_seconds": float(time.perf_counter() - start),
         },
         "cells": rows,

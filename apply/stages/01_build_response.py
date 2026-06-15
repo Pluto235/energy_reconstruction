@@ -50,7 +50,7 @@ class CellSpec:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build Stage A 2D primary-thrown response on v1 (Nhit, predicted-energy) cells."
+        description="Build Stage A 2D primary-thrown response on configured (Nhit, predicted-energy) cells."
     )
     parser.add_argument("--input-root", type=str, default=DEFAULT_INPUT_ROOT)
     parser.add_argument("--binned-root", type=str, default=DEFAULT_BINNED_ROOT)
@@ -923,6 +923,7 @@ def main() -> None:
         ],
         "empty_denominator_bins": empty_denominator_bins,
         "low_denominator_count_bins_lt10": low_denominator_bins,
+        "max_sum_eta_over_configured_cells": float(np.nanmax(max_cell_eta_sum)) if max_cell_eta_sum.size else None,
         "max_sum_eta_over_v1_cells": float(np.nanmax(max_cell_eta_sum)) if max_cell_eta_sum.size else None,
         "a_eff_max_m2": float(np.nanmax(a_eff)) if a_eff.size else None,
         "elapsed_seconds": float(time.perf_counter() - start),

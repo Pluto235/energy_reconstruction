@@ -93,6 +93,11 @@ def parse_args() -> argparse.Namespace:
         default="apply/report/assets/official-pass5/wcda_pass5_vs_v3_stage_g_sed_overlay.png",
     )
     parser.add_argument(
+        "--stage-g-official-overlay-png",
+        type=str,
+        default="apply/report/assets/official-pass5/stage_g_sed_points_with_official_refs.png",
+    )
+    parser.add_argument(
         "--official-v099-sed-csv",
         type=str,
         default="apply/report/assets/official-v099/wcda_crab_sed_v099_20250731_20260616_123624.csv",
@@ -199,6 +204,26 @@ def spectrum_label(model_name: object) -> str:
     if value == "logpar":
         return "LogPar"
     return str(model_name or "n/a")
+
+
+def sed_curve(
+    energy_tev: np.ndarray,
+    *,
+    model_name: str,
+    params: Dict[str, float],
+    pivot_tev: float,
+) -> np.ndarray:
+    ratio = np.asarray(energy_tev, dtype=np.float64) / float(pivot_tev)
+    if model_name == "pl":
+        flux = float(params["phi0"]) * np.power(ratio, -float(params["gamma"]))
+    elif model_name == "logpar":
+        log_ratio = np.log(ratio)
+        flux = float(params["phi0"]) * np.exp(
+            (-float(params["alpha"]) - float(params["beta"]) * log_ratio) * log_ratio
+        )
+    else:
+        raise ValueError(f"Unsupported spectrum model: {model_name}")
+    return energy_tev * energy_tev * flux
 
 
 def selector_ids(rows: Sequence[Dict[str, str]], include: bool) -> List[int]:
@@ -582,6 +607,218 @@ def plot_official_sed_overlay(
     return output_path
 
 
+def plot_stage_g_with_official_refs(
+    output_path: Path,
+    stage_g: Dict[str, object],
+    pass5_rows: Sequence[Dict[str, str]],
+    v099_rows: Sequence[Dict[str, str]],
+) -> Optional[Path]:
+    points = [p for p in stage_g.get("points", []) if isinstance(p, dict)] if isinstance(stage_g.get("points"), list) else []
+    if not points:
+        return None
+    try:
+        os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
+        os.environ.setdefault("XDG_CACHE_HOME", "/tmp/.cache")
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception:
+        return None
+
+    energies = [
+        finite_float(point.get("effective_energy_tev"))
+        for point in points
+        if finite_float(point.get("effective_energy_tev")) is not None and finite_float(point.get("E2_dnde")) is not None
+    ]
+    if energies:
+        emin = max(0.2, min(energies) / 1.8)
+        emax = min(200.0, max(energies) * 1.8)
+    else:
+        emin, emax = 0.3, 80.0
+    x = np.geomspace(emin, emax, 240)
+
+    fig, ax = plt.subplots(figsize=(8.4, 5.4), dpi=180, constrained_layout=True)
+
+    frozen = stage_g.get("frozen_spectrum") if isinstance(stage_g.get("frozen_spectrum"), dict) else {}
+    frozen_model = str(frozen.get("model", "")).lower()
+    frozen_pivot = finite_float(frozen.get("pivot_tev")) or 3.0
+    if frozen_model:
+        frozen_params = {
+            key: value
+            for key, value in {
+                "phi0": finite_float(frozen.get("phi0")),
+                "gamma": finite_float(frozen.get("gamma")),
+                "alpha": finite_float(frozen.get("alpha")),
+                "beta": finite_float(frozen.get("beta")),
+            }.items()
+            if value is not None
+        }
+        try:
+            ax.plot(
+                x,
+                sed_curve(x, model_name=frozen_model, params=frozen_params, pivot_tev=frozen_pivot),
+                color="#1f77b4",
+                lw=2.0,
+                label=f"Stage F frozen {spectrum_label(frozen_model)}",
+            )
+        except Exception:
+            pass
+
+    reference = stage_g.get("reference_spectrum") if isinstance(stage_g.get("reference_spectrum"), dict) else {}
+    ref_phi0 = finite_float(reference.get("phi0"))
+    ref_gamma = finite_float(reference.get("gamma"))
+    ref_pivot = finite_float(reference.get("pivot_tev")) or 3.0
+    if ref_phi0 is not None and ref_gamma is not None:
+        ax.plot(
+            x,
+            sed_curve(x, model_name="pl", params={"phi0": ref_phi0, "gamma": ref_gamma}, pivot_tev=ref_pivot),
+            color="#555555",
+            lw=1.8,
+            ls="--",
+            label="1LHAASO WCDA full-array PL",
+        )
+
+    pool1 = stage_g.get("wcda1_pool1_reference") if isinstance(stage_g.get("wcda1_pool1_reference"), dict) else {}
+    pool1_points = [p for p in pool1.get("points", []) if isinstance(p, dict)] if isinstance(pool1.get("points"), list) else []
+    pool1_x = [finite_float(p.get("emed_tev")) for p in pool1_points]
+    pool1_y = [finite_float(p.get("E2_dnde")) for p in pool1_points]
+    pool1_err = [finite_float(p.get("E2_dnde_err")) for p in pool1_points]
+    valid = [i for i, (px, py) in enumerate(zip(pool1_x, pool1_y)) if px is not None and py is not None]
+    if valid:
+        ax.errorbar(
+            [pool1_x[i] for i in valid],
+            [pool1_y[i] for i in valid],
+            yerr=[pool1_err[i] if pool1_err[i] is not None else 0.0 for i in valid],
+            fmt="^",
+            color="#7f3fbf",
+            ecolor="#7f3fbf",
+            capsize=3,
+            ms=5,
+            lw=0.9,
+            label="WCDA-1 Pool-1 Table 1",
+        )
+
+    external = stage_g.get("external_crab_sed_references") if isinstance(stage_g.get("external_crab_sed_references"), dict) else {}
+    external_points = [p for p in external.get("points", []) if isinstance(p, dict)] if isinstance(external.get("points"), list) else []
+    external_styles = {
+        "magic_joint_crab": {"fmt": "v", "color": "#9467bd", "label": "MAGIC"},
+        "hess_2024_stereo": {"fmt": "D", "color": "#8c564b", "label": "H.E.S.S."},
+        "hawc_2019_nn": {"fmt": "P", "color": "#17becf", "label": "HAWC NN"},
+    }
+    for dataset, style in external_styles.items():
+        selected = [
+            p
+            for p in external_points
+            if str(p.get("dataset")) == dataset
+            and not str(p.get("is_upper_limit", "")).lower() == "true"
+            and finite_float(p.get("energy_tev")) is not None
+            and finite_float(p.get("e2_dnde")) is not None
+        ]
+        if not selected:
+            continue
+        ax.errorbar(
+            [finite_float(p.get("energy_tev")) for p in selected],
+            [finite_float(p.get("e2_dnde")) for p in selected],
+            yerr=[finite_float(p.get("e2_dnde_err")) or 0.0 for p in selected],
+            capsize=2,
+            ms=4,
+            lw=0.7,
+            alpha=0.72,
+            **style,
+        )
+
+    pass5_points = []
+    for row in pass5_rows:
+        energy = finite_float(row.get("energy_tev"))
+        flux = finite_float(row.get("flux_per_tev_cm2_s"))
+        if energy is not None and flux is not None:
+            pass5_points.append((energy, energy * energy * flux))
+    if pass5_points:
+        ax.plot(
+            [p[0] for p in pass5_points],
+            [p[1] for p in pass5_points],
+            "D-",
+            color="#111827",
+            markersize=4.6,
+            linewidth=1.15,
+            alpha=0.86,
+            label="official pass5 Nhit SED",
+        )
+
+    v099_points = []
+    for row in v099_rows:
+        energy = finite_float(row.get("energy_tev"))
+        flux_scaled = finite_float(row.get("e2_flux_scaled_1e14_tev_cm2_s"))
+        err_low_scaled = finite_float(row.get("e2_flux_err_low_scaled_1e14"))
+        err_high_scaled = finite_float(row.get("e2_flux_err_high_scaled_1e14"))
+        if energy is None or flux_scaled is None:
+            continue
+        v099_points.append(
+            (
+                energy,
+                flux_scaled * 1.0e-14,
+                (err_low_scaled or 0.0) * 1.0e-14,
+                (err_high_scaled or 0.0) * 1.0e-14,
+            )
+        )
+    if v099_points:
+        ax.errorbar(
+            [p[0] for p in v099_points],
+            [p[1] for p in v099_points],
+            yerr=np.vstack(
+                [
+                    np.asarray([p[2] for p in v099_points], dtype=np.float64),
+                    np.asarray([p[3] for p in v099_points], dtype=np.float64),
+                ]
+            ),
+            fmt="^-",
+            color="#b45309",
+            markersize=4.6,
+            linewidth=1.05,
+            capsize=2.5,
+            alpha=0.86,
+            label="tutorial v0.99 WCDA-only SED",
+        )
+
+    styles = {
+        "nhit": {"fmt": "o", "color": "#d62728", "label": "Nhit grouped"},
+        "predE": {"fmt": "s", "color": "#2ca02c", "label": "predE grouped"},
+    }
+    for grouping, style in styles.items():
+        selected = [
+            p
+            for p in points
+            if str(p.get("grouping")) == grouping
+            and finite_float(p.get("effective_energy_tev")) is not None
+            and finite_float(p.get("E2_dnde")) is not None
+        ]
+        selected.sort(key=lambda p: finite_float(p.get("effective_energy_tev")) or 0.0)
+        if not selected:
+            continue
+        ax.errorbar(
+            [finite_float(p.get("effective_energy_tev")) for p in selected],
+            [finite_float(p.get("E2_dnde")) for p in selected],
+            yerr=[finite_float(p.get("E2_dnde_err")) or 0.0 for p in selected],
+            capsize=3,
+            ms=5,
+            lw=0.9,
+            **style,
+        )
+
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("Effective true energy [TeV]")
+    ax.set_ylabel(r"$E^2 dN/dE$ [TeV cm$^{-2}$ s$^{-1}$]")
+    ax.set_title(f"Stage G diagnostic SED points, {stage_g.get('validation', {}).get('baseline', 'v3_baseline') if isinstance(stage_g.get('validation'), dict) else 'v3_baseline'}")
+    ax.grid(True, which="both", alpha=0.25)
+    ax.legend(fontsize=7.0, ncol=2)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path)
+    plt.close(fig)
+    return output_path
+
+
 def table_from_rows(rows: Sequence[Dict[str, object]], columns: Sequence[str]) -> str:
     if not rows:
         return "<p>n/a</p>"
@@ -900,6 +1137,12 @@ def main() -> None:
         abs_path(args.official_pass5_overlay_png),
         stage_g,
         psfborrow_stage_g,
+        official_pass5_raw_rows,
+        official_v099_raw_rows,
+    )
+    stage_g_official_overlay_path = plot_stage_g_with_official_refs(
+        abs_path(args.stage_g_official_overlay_png),
+        stage_g,
         official_pass5_raw_rows,
         official_v099_raw_rows,
     )
@@ -1355,15 +1598,10 @@ def main() -> None:
             explanation="Per-cell fit pull for the preferred spectral model. Random small pulls are expected; coherent regions in Nhit/predE space suggest response, background, or selector systematics.",
         ),
         figure(
-            stage_g_dir / "sed_points_stage_f_fullarray_pool1.png",
+            stage_g_official_overlay_path or (stage_g_dir / "sed_points_stage_f_fullarray_pool1.png"),
             "Stage G SED points",
-            explanation="Diagnostic SED points built by refitting normalization in reconstructed-energy groups with the Stage F spectral shape fixed. Compare high-energy points with external Crab references and upper limits.",
-        ),
-        figure(
-            official_pass5_overlay_path or abs_path(args.official_pass5_overlay_png),
-            "Official/tutorial WCDA SEDs versus v3 Stage G diagnostics",
             wide=True,
-            explanation="Official pass5 Nhit SED and tutorial v0.99 WCDA-only SED points overlaid with this report's Stage G diagnostics when local Stage G metadata are available. Pass5 points are shown without error bars because the transferred summary did not include uncertainties; v0.99 points use ferrL/ferrU.",
+            explanation="Diagnostic SED points built by refitting normalization in reconstructed-energy groups with the Stage F spectral shape fixed. This report version overlays the official pass5 Nhit SED and tutorial v0.99 WCDA-only SED directly on the Stage G SED plot; pass5 points are shown without error bars because the transferred summary did not include uncertainties.",
         ),
         figure(
             stage_g_dir / "sed_points_ratio.png",

@@ -19,18 +19,39 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build v3 selector and response validation summary artifacts.")
     parser.add_argument("--ledger-csv", type=str, default="apply/config/cell_ledger_v3_candidate.csv")
     parser.add_argument("--baseline-selector-csv", type=str, default="apply/config/cell_selector_v3_baseline.csv")
+    parser.add_argument(
+        "--active-selector-csv",
+        type=str,
+        default="apply/config/cell_selector_v3_baseline_psfborrow.csv",
+    )
     parser.add_argument("--systematics-selector-csv", type=str, default="apply/config/cell_selector_v3_systematics.csv")
     parser.add_argument("--high-energy-selector-csv", type=str, default="apply/config/cell_selector_v3_high_energy_probes.csv")
     parser.add_argument("--response-npz", type=str, default="apply/output/stage_a_v3_candidate/response_2d_v3_candidate.npz")
     parser.add_argument(
         "--stage-f-baseline-metadata",
         type=str,
-        default="apply/output/stage_f_v3_baseline/runs/v3_stage_f_slurm_42024/fit_v3_baseline_metadata.json",
+        default="apply/output/stage_f_v3_baseline/runs/v3_stage_f_mc_ridge_psf/fit_v3_baseline_metadata.json",
     )
     parser.add_argument(
         "--stage-g-baseline-metadata",
         type=str,
-        default="apply/output/stage_g_v3_baseline/runs/v3_stage_g_slurm_42024/sed_points_v3_baseline_metadata.json",
+        default="apply/output/stage_g_v3_baseline/runs/v3_stage_g_mc_ridge_psf/sed_points_v3_baseline_metadata.json",
+    )
+    parser.add_argument(
+        "--stage-f-active-metadata",
+        type=str,
+        default=(
+            "apply/output/stage_f_v3_baseline_psfborrow/runs/"
+            "v3_stage_f_psfborrow_slurm_42029/fit_v3_baseline_psfborrow_metadata.json"
+        ),
+    )
+    parser.add_argument(
+        "--stage-g-active-metadata",
+        type=str,
+        default=(
+            "apply/output/stage_g_v3_baseline_psfborrow/runs/"
+            "v3_stage_g_psfborrow_slurm_42029/sed_points_v3_baseline_psfborrow_metadata.json"
+        ),
     )
     parser.add_argument(
         "--stage-f-systematics-metadata",
@@ -160,6 +181,17 @@ def include_ids(rows: Sequence[Dict[str, str]]) -> List[int]:
     return ids
 
 
+def direct_psf_quality_ids(rows: Sequence[Dict[str, str]]) -> List[int]:
+    ids: List[int] = []
+    for row in rows:
+        include = str(row.get("include", "")).strip().lower() in {"1", "true", "yes", "y", "include"}
+        psf_quality = str(row.get("psf_quality_flag", "1")).strip().lower() in {"1", "true", "yes", "y"}
+        borrowed_from = str(row.get("psf_borrowed_from", "")).strip()
+        if include and psf_quality and not borrowed_from:
+            ids.append(int(row["cell_id"]))
+    return ids
+
+
 def compute_central_flags(rows: Sequence[Dict[str, str]], central_fraction: float) -> Dict[int, bool]:
     flags: Dict[int, bool] = {}
     tail = 0.5 * (1.0 - float(central_fraction))
@@ -218,14 +250,17 @@ def selector_summary_rows(
     *,
     ledger_rows: Sequence[Dict[str, str]],
     baseline_rows: Sequence[Dict[str, str]],
+    active_rows: Sequence[Dict[str, str]],
     systematics_rows: Sequence[Dict[str, str]],
     high_energy_rows: Sequence[Dict[str, str]],
     min_mc_count: int,
 ) -> List[Dict[str, object]]:
-    baseline_ids = include_ids(baseline_rows)
+    active_ids = include_ids(active_rows)
+    direct_ids = direct_psf_quality_ids(active_rows)
     high_energy_ids = set(include_ids(high_energy_rows))
     selector_map = {
-        "baseline_selector_central99": baseline_ids,
+        "active_psfborrow_30cell": active_ids,
+        "nominal_reference_27cell": direct_ids,
         "expanded_selector_central99": include_ids(systematics_rows),
         "high_energy_probe_selector": include_ids(high_energy_rows),
         "computed_baseline_central98": computed_baseline_ids(
@@ -239,23 +274,23 @@ def selector_summary_rows(
         ),
     }
     ledger_by_id = {int(row["cell_id"]): row for row in ledger_rows}
-    baseline_set = set(baseline_ids)
+    active_set = set(active_ids)
     rows: List[Dict[str, object]] = []
     for name, ids in selector_map.items():
         id_set = set(ids)
         low_nhit = [
             cid for cid in ids if cid in ledger_by_id and str(ledger_by_id[cid].get("nhit_bin")) == "[125,200)"
         ]
-        added = sorted(id_set - baseline_set)
-        removed = sorted(baseline_set - id_set)
+        added = sorted(id_set - active_set)
+        removed = sorted(active_set - id_set)
         rows.append(
             {
                 "selector": name,
                 "included_cells": len(ids),
                 "low_nhit_125_200_cells": len(low_nhit),
                 "high_energy_probe_overlap": len(id_set & high_energy_ids),
-                "added_vs_baseline": len(added),
-                "removed_vs_baseline": len(removed),
+                "added_vs_active30": len(added),
+                "removed_vs_active30": len(removed),
                 "added_ids": ",".join(str(v) for v in added),
                 "removed_ids": ",".join(str(v) for v in removed),
                 "included_ids": ",".join(str(v) for v in ids),
@@ -469,18 +504,18 @@ def plot_selector_summary(rows: Sequence[Dict[str, object]], path: Path) -> None
     plt = setup_matplotlib()
     labels = [str(row["selector"]).replace("_", "\n") for row in rows]
     counts = [float(row["included_cells"]) for row in rows]
-    added = [float(row["added_vs_baseline"]) for row in rows]
-    removed = [float(row["removed_vs_baseline"]) for row in rows]
+    added = [float(row["added_vs_active30"]) for row in rows]
+    removed = [float(row["removed_vs_active30"]) for row in rows]
     x = np.arange(len(rows))
     width = 0.28
     fig, ax = plt.subplots(figsize=(11.5, 4.8), constrained_layout=True)
     ax.bar(x - width, counts, width=width, label="included cells", color="#2f6f8f")
-    ax.bar(x, added, width=width, label="added vs baseline", color="#61a76f")
-    ax.bar(x + width, removed, width=width, label="removed vs baseline", color="#c9704b")
+    ax.bar(x, added, width=width, label="added vs active 30-cell", color="#61a76f")
+    ax.bar(x + width, removed, width=width, label="removed vs active 30-cell", color="#c9704b")
     ax.set_xticks(x)
     ax.set_xticklabels(labels, fontsize=8)
     ax.set_ylabel("cells")
-    ax.set_title("v3 selector sensitivity audit")
+    ax.set_title("v3 selector sensitivity audit (active 30-cell reference)")
     ax.legend(loc="upper left", ncols=3, fontsize=8)
     ax.grid(axis="y", alpha=0.25)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -519,19 +554,26 @@ def main() -> None:
 
     ledger_rows = read_csv_rows(resolve(args.ledger_csv))
     baseline_rows = read_csv_rows(resolve(args.baseline_selector_csv))
+    active_rows = read_csv_rows(resolve(args.active_selector_csv))
     systematics_rows = read_csv_rows(resolve(args.systematics_selector_csv))
     high_energy_rows = read_csv_rows(resolve(args.high_energy_selector_csv))
 
     selector_rows = selector_summary_rows(
         ledger_rows=ledger_rows,
         baseline_rows=baseline_rows,
+        active_rows=active_rows,
         systematics_rows=systematics_rows,
         high_energy_rows=high_energy_rows,
         min_mc_count=int(args.min_baseline_mc_count),
     )
     fit_rows = [
         extract_fit_row(
-            "baseline_selector_central99",
+            "active_psfborrow_30cell",
+            resolve(args.stage_f_active_metadata),
+            resolve(args.stage_g_active_metadata),
+        ),
+        extract_fit_row(
+            "nominal_reference_27cell",
             resolve(args.stage_f_baseline_metadata),
             resolve(args.stage_g_baseline_metadata),
         ),
@@ -542,13 +584,13 @@ def main() -> None:
         ),
     ]
     closure_rows = response_closure_rows(resolve(args.response_npz), selector_rows)
-    baseline_ids = include_ids(baseline_rows)
+    active_ids = include_ids(active_rows)
     offsource_rows = [
-        signal_subset_row(f"offsource_{idx}", resolve(path), baseline_ids)
+        signal_subset_row(f"offsource_{idx}", resolve(path), active_ids)
         for idx, path in enumerate(args.offsource_stage_e_metadata, start=1)
     ]
     time_split_rows = [
-        signal_subset_row(f"time_split_{idx}", resolve(path), baseline_ids)
+        signal_subset_row(f"time_split_{idx}", resolve(path), active_ids)
         for idx, path in enumerate(args.time_split_stage_e_metadata, start=1)
     ]
 
@@ -570,8 +612,8 @@ def main() -> None:
             "included_cells",
             "low_nhit_125_200_cells",
             "high_energy_probe_overlap",
-            "added_vs_baseline",
-            "removed_vs_baseline",
+            "added_vs_active30",
+            "removed_vs_active30",
             "added_ids",
             "removed_ids",
             "included_ids",
@@ -681,8 +723,13 @@ def main() -> None:
             "evidence": str(resolve(args.stage_g_baseline_metadata)),
         },
         {
+            "item": "active_30cell_psfborrow_stage_a_to_g",
+            "status": "complete" if fit_rows[0].get("status") != "missing" else "missing",
+            "evidence": str(resolve(args.stage_g_active_metadata)),
+        },
+        {
             "item": "baseline_vs_expanded_selector_stage_f_g",
-            "status": "complete" if fit_rows[1].get("status") != "missing" else "missing",
+            "status": "complete" if fit_rows[2].get("status") != "missing" else "missing",
             "evidence": str(resolve(args.stage_f_systematics_metadata)),
         },
         {
@@ -718,6 +765,7 @@ def main() -> None:
             "inputs": {
                 "ledger_csv": str(resolve(args.ledger_csv)),
                 "baseline_selector_csv": str(resolve(args.baseline_selector_csv)),
+                "active_selector_csv": str(resolve(args.active_selector_csv)),
                 "systematics_selector_csv": str(resolve(args.systematics_selector_csv)),
                 "high_energy_selector_csv": str(resolve(args.high_energy_selector_csv)),
                 "response_npz": str(resolve(args.response_npz)),

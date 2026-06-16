@@ -2,6 +2,7 @@
   "inputs": {
     "ledger_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_ledger_v3_candidate.csv",
     "baseline_selector_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v3_baseline.csv",
+    "active_selector_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v3_baseline_psfborrow.csv",
     "systematics_selector_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v3_systematics.csv",
     "high_energy_selector_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v3_high_energy_probes.csv",
     "response_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v3_candidate/response_2d_v3_candidate.npz"
@@ -21,6 +22,11 @@
       "item": "baseline_stage_a_to_g",
       "status": "complete",
       "evidence": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v3_baseline/runs/v3_stage_g_mc_ridge_psf/sed_points_v3_baseline_metadata.json"
+    },
+    {
+      "item": "active_30cell_psfborrow_stage_a_to_g",
+      "status": "complete",
+      "evidence": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v3_baseline_psfborrow/runs/v3_stage_g_psfborrow_slurm_42029/sed_points_v3_baseline_psfborrow_metadata.json"
     },
     {
       "item": "baseline_vs_expanded_selector_stage_f_g",
@@ -55,14 +61,25 @@
   ],
   "selector_summary": [
     {
-      "selector": "baseline_selector_central99",
+      "selector": "active_psfborrow_30cell",
+      "included_cells": 30,
+      "low_nhit_125_200_cells": 4,
+      "high_energy_probe_overlap": 3,
+      "added_vs_active30": 0,
+      "removed_vs_active30": 0,
+      "added_ids": "",
+      "removed_ids": "",
+      "included_ids": "1,2,3,4,14,15,16,17,26,27,28,29,30,39,40,41,42,43,52,53,54,55,65,66,67,68,69,81,82,83"
+    },
+    {
+      "selector": "nominal_reference_27cell",
       "included_cells": 27,
       "low_nhit_125_200_cells": 4,
       "high_energy_probe_overlap": 3,
-      "added_vs_baseline": 0,
-      "removed_vs_baseline": 0,
+      "added_vs_active30": 0,
+      "removed_vs_active30": 3,
       "added_ids": "",
-      "removed_ids": "",
+      "removed_ids": "39,52,65",
       "included_ids": "1,2,3,4,14,15,16,17,26,27,28,29,30,40,41,42,43,53,54,55,66,67,68,69,81,82,83"
     },
     {
@@ -70,9 +87,9 @@
       "included_cells": 62,
       "low_nhit_125_200_cells": 11,
       "high_energy_probe_overlap": 10,
-      "added_vs_baseline": 35,
-      "removed_vs_baseline": 0,
-      "added_ids": "5,6,7,8,9,10,11,13,18,19,20,21,22,23,31,32,33,34,35,39,44,45,46,47,51,52,56,57,58,59,64,65,70,79,80",
+      "added_vs_active30": 32,
+      "removed_vs_active30": 0,
+      "added_ids": "5,6,7,8,9,10,11,13,18,19,20,21,22,23,31,32,33,34,35,44,45,46,47,51,56,57,58,59,64,70,79,80",
       "removed_ids": "",
       "included_ids": "1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23,26,27,28,29,30,31,32,33,34,35,39,40,41,42,43,44,45,46,47,51,52,53,54,55,56,57,58,59,64,65,66,67,68,69,70,79,80,81,82,83"
     },
@@ -81,10 +98,10 @@
       "included_cells": 16,
       "low_nhit_125_200_cells": 2,
       "high_energy_probe_overlap": 16,
-      "added_vs_baseline": 13,
-      "removed_vs_baseline": 24,
+      "added_vs_active30": 13,
+      "removed_vs_active30": 27,
       "added_ids": "11,12,23,24,35,36,47,48,59,60,72,79,80",
-      "removed_ids": "1,2,3,4,14,15,16,17,26,27,28,29,30,40,41,42,43,53,54,55,66,67,68,69",
+      "removed_ids": "1,2,3,4,14,15,16,17,26,27,28,29,30,39,40,41,42,43,52,53,54,55,65,66,67,68,69",
       "included_ids": "11,12,23,24,35,36,47,48,59,60,72,79,80,81,82,83"
     },
     {
@@ -92,10 +109,10 @@
       "included_cells": 27,
       "low_nhit_125_200_cells": 4,
       "high_energy_probe_overlap": 3,
-      "added_vs_baseline": 0,
-      "removed_vs_baseline": 0,
+      "added_vs_active30": 0,
+      "removed_vs_active30": 3,
       "added_ids": "",
-      "removed_ids": "",
+      "removed_ids": "39,52,65",
       "included_ids": "1,2,3,4,14,15,16,17,26,27,28,29,30,40,41,42,43,53,54,55,66,67,68,69,81,82,83"
     },
     {
@@ -103,10 +120,10 @@
       "included_cells": 27,
       "low_nhit_125_200_cells": 4,
       "high_energy_probe_overlap": 3,
-      "added_vs_baseline": 0,
-      "removed_vs_baseline": 0,
+      "added_vs_active30": 0,
+      "removed_vs_active30": 3,
       "added_ids": "",
-      "removed_ids": "",
+      "removed_ids": "39,52,65",
       "included_ids": "1,2,3,4,14,15,16,17,26,27,28,29,30,40,41,42,43,53,54,55,66,67,68,69,81,82,83"
     },
     {
@@ -114,16 +131,37 @@
       "included_cells": 27,
       "low_nhit_125_200_cells": 4,
       "high_energy_probe_overlap": 3,
-      "added_vs_baseline": 0,
-      "removed_vs_baseline": 0,
+      "added_vs_active30": 0,
+      "removed_vs_active30": 3,
       "added_ids": "",
-      "removed_ids": "",
+      "removed_ids": "39,52,65",
       "included_ids": "1,2,3,4,14,15,16,17,26,27,28,29,30,40,41,42,43,53,54,55,66,67,68,69,81,82,83"
     }
   ],
   "fit_comparison": [
     {
-      "fit_label": "baseline_selector_central99",
+      "fit_label": "active_psfborrow_30cell",
+      "status": "passed",
+      "stage_f_run": "v3_stage_f_psfborrow_slurm_42029",
+      "stage_g_run": "v3_stage_g_psfborrow_slurm_42029",
+      "n_cells": 30,
+      "preferred_model": "logpar",
+      "error_mode": "conservative",
+      "phi0": 3.013386785068258e-12,
+      "gamma": "",
+      "alpha": 2.8015747382288296,
+      "beta": 0.13279850950123362,
+      "chi2": 264.2942827621865,
+      "ndof": 27,
+      "chi2_over_ndof": 9.788677139340242,
+      "stage_g_points": 18,
+      "stage_g_high_energy_predE_points": 1,
+      "stage_g_max_effective_energy_tev": 63.1929209258819,
+      "stage_f_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v3_baseline_psfborrow/runs/v3_stage_f_psfborrow_slurm_42029/fit_v3_baseline_psfborrow_metadata.json",
+      "stage_g_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v3_baseline_psfborrow/runs/v3_stage_g_psfborrow_slurm_42029/sed_points_v3_baseline_psfborrow_metadata.json"
+    },
+    {
+      "fit_label": "nominal_reference_27cell",
       "status": "passed",
       "stage_f_run": "v3_stage_f_mc_ridge_psf",
       "stage_g_run": "v3_stage_g_mc_ridge_psf",
@@ -181,7 +219,21 @@
       "max_sum_eta_count_over_true_bins": 0.20000001043081284
     },
     {
-      "selector": "baseline_selector_central99",
+      "selector": "active_psfborrow_30cell",
+      "included_cells": 30,
+      "truth_numerator_count": 1938245.0,
+      "reconstructed_from_eta_count": 1938244.9996191997,
+      "rel_delta_count": -1.964665656106401e-10,
+      "max_abs_rel_delta_count_per_cell": 4.126085973942795e-09,
+      "truth_numerator_sumw": 737420743.4513292,
+      "reconstructed_from_eta_sumw": 737420743.4822233,
+      "rel_delta_sumw": 4.1894727448008676e-11,
+      "max_abs_rel_delta_sumw_per_cell": 4.8588197318461586e-09,
+      "max_sum_eta_over_true_bins": 0.028571429196745157,
+      "max_sum_eta_count_over_true_bins": 0.028571429196745157
+    },
+    {
+      "selector": "nominal_reference_27cell",
       "included_cells": 27,
       "truth_numerator_count": 1883771.0,
       "reconstructed_from_eta_count": 1883770.9997948103,
@@ -284,7 +336,24 @@
       "prediction_definition": "Stage A denominator histograms folded through eta/eta_count response"
     },
     {
-      "selector": "baseline_selector_central99",
+      "selector": "active_psfborrow_30cell",
+      "included_cells": 30,
+      "truth_numerator_count": 1938245.0,
+      "reconstructed_from_eta_count": 1938244.9996191997,
+      "rel_delta_count": -1.964665656106401e-10,
+      "max_abs_rel_delta_count_per_cell": 4.126085973942795e-09,
+      "truth_numerator_sumw": 737420743.4513292,
+      "reconstructed_from_eta_sumw": 737420743.4822233,
+      "rel_delta_sumw": 4.1894727448008676e-11,
+      "max_abs_rel_delta_sumw_per_cell": 4.8588197318461586e-09,
+      "max_sum_eta_over_true_bins": 0.028571429196745157,
+      "max_sum_eta_count_over_true_bins": 0.028571429196745157,
+      "closure_kind": "stage_a_binned_mc_reference_forward_fold",
+      "truth_definition": "Stage A numerator histograms from v3 selected MC events",
+      "prediction_definition": "Stage A denominator histograms folded through eta/eta_count response"
+    },
+    {
+      "selector": "nominal_reference_27cell",
       "included_cells": 27,
       "truth_numerator_count": 1883771.0,
       "reconstructed_from_eta_count": 1883770.9997948103,
@@ -399,11 +468,11 @@
       "all_B_on": 8597.218230229575,
       "all_excess": -2608.218230229575,
       "all_formal_sigma": -29.769429639162144,
-      "baseline_N_on": 3054,
-      "baseline_B_on": 5259.069925680362,
-      "baseline_excess": -2205.0699256803614,
-      "baseline_combined_sigma": -34.591021813234555,
-      "baseline_cells": 27,
+      "baseline_N_on": 3084,
+      "baseline_B_on": 5858.391245564205,
+      "baseline_excess": -2774.391245564203,
+      "baseline_combined_sigma": -46.44060930056865,
+      "baseline_cells": 30,
       "metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v3_offsource_control/runs/v3_stage_e_offsource_ra93p63/signal_v3_offsource_metadata.json"
     },
     {
@@ -418,11 +487,11 @@
       "all_B_on": 9463.263699609442,
       "all_excess": -2811.2636996094425,
       "all_formal_sigma": -30.54292983659164,
-      "baseline_N_on": 3764,
-      "baseline_B_on": 6148.809768051378,
-      "baseline_excess": -2384.8097680513774,
-      "baseline_combined_sigma": -35.023108424704134,
-      "baseline_cells": 27,
+      "baseline_N_on": 3793,
+      "baseline_B_on": 6662.129900573285,
+      "baseline_excess": -2869.129900573286,
+      "baseline_combined_sigma": -45.14070309087106,
+      "baseline_cells": 30,
       "metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v3_offsource_control/runs/v3_stage_e_offsource_ra73p63/signal_v3_offsource_metadata.json"
     }
   ],
@@ -439,11 +508,11 @@
       "all_B_on": 54210.133260902345,
       "all_excess": 12940.866739097655,
       "all_formal_sigma": 53.563948292056104,
-      "baseline_N_on": 55214,
-      "baseline_B_on": 45574.94161374404,
-      "baseline_excess": 9639.058386255952,
-      "baseline_combined_sigma": 70.2799759952029,
-      "baseline_cells": 27,
+      "baseline_N_on": 58167,
+      "baseline_B_on": 47369.37513613494,
+      "baseline_excess": 10797.624863865061,
+      "baseline_combined_sigma": 74.82968390539637,
+      "baseline_cells": 30,
       "metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v3_time_split/runs/v3_stage_e_time_first/signal_v3_time_first_metadata.json"
     },
     {
@@ -458,11 +527,11 @@
       "all_B_on": 53904.59295542043,
       "all_excess": 13278.407044579573,
       "all_formal_sigma": 55.05625136743933,
-      "baseline_N_on": 55330,
-      "baseline_B_on": 45535.2339857229,
-      "baseline_excess": 9794.766014277095,
-      "baseline_combined_sigma": 70.22305992202465,
-      "baseline_cells": 27,
+      "baseline_N_on": 58384,
+      "baseline_B_on": 47270.296699557985,
+      "baseline_excess": 11113.703300442008,
+      "baseline_combined_sigma": 75.99266491657042,
+      "baseline_cells": 30,
       "metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v3_time_split/runs/v3_stage_e_time_second/signal_v3_time_second_metadata.json"
     }
   ]

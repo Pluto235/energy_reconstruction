@@ -1376,8 +1376,8 @@ def main() -> None:
                 "cells": row.get("included_cells", ""),
                 "low Nhit": row.get("low_nhit_125_200_cells", ""),
                 "HE overlap": row.get("high_energy_probe_overlap", ""),
-                "added": row.get("added_vs_baseline", ""),
-                "removed": row.get("removed_vs_baseline", ""),
+                "added vs active30": row.get("added_vs_active30", row.get("added_vs_baseline", "")),
+                "removed vs active30": row.get("removed_vs_active30", row.get("removed_vs_baseline", "")),
                 "added ids": row.get("added_ids", ""),
                 "removed ids": row.get("removed_ids", ""),
             }
@@ -1695,7 +1695,7 @@ def main() -> None:
             abs_path(args.selector_sensitivity_png),
             "Cell-selection sensitivity summary",
             wide=True,
-            explanation="Shows how the fit changes under baseline versus expanded/systematic selectors. Stable spectral parameters mean the prefit selector is not driving the result artificially.",
+            explanation="Selector audit using the current active 30-cell PSF-borrow selector as the reference. The 27-cell nominal reference is the pre-borrow selector that drops 39/52/65; the 62-cell expanded selector tests whether adding central99 cells improves or destabilizes the fit.",
         ),
         figure(
             abs_path(args.response_closure_png),
@@ -1966,7 +1966,8 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
     <h2>Validation Status</h2>
     {table_from_rows(validation_status_rows, ['item', 'status', 'evidence'])}
     <h3>Cell-selection systematics</h3>
-    {table_from_rows(selector_table_rows, ['selector', 'cells', 'low Nhit', 'HE overlap', 'added', 'removed', 'added ids', 'removed ids'])}
+    <p>This selector audit is now keyed to the active <code>v3_baseline_psfborrow</code> 30-cell branch. The nominal 27-cell reference is kept only to show the pre-borrow state, while the 62-cell expanded selector remains a stress test for adding many central99 cells.</p>
+    {table_from_rows(selector_table_rows, ['selector', 'cells', 'low Nhit', 'HE overlap', 'added vs active30', 'removed vs active30', 'added ids', 'removed ids'])}
     <h3>Selector fit comparison</h3>
     {table_from_rows(selector_fit_table_rows, ['fit', 'status', 'cells', 'model', 'phi0', 'gamma', 'alpha', 'beta', 'chi2/ndof', 'SED pts', 'HE pts', 'max Eeff TeV'])}
     <h3>MC response closure</h3>

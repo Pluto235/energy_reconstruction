@@ -1492,18 +1492,6 @@ def main() -> None:
             explanation="Each cell is normalized by the maximum MC count in its Nhit row. The v3 baseline ridge is generated from this prefit occupancy fraction together with central99, MC-count, and high-energy-bin rules; highlighted baseline cells are not chosen from Crab on-source significance.",
         ),
         figure(
-            abs_path(args.fit_cell_counts_skymap),
-            f"{args.baseline_name} fit-cell Stage D counts skymap",
-            wide=True,
-            explanation="Observed Stage D counts maps for baseline fit cells. The white rho=6 deg circle marks the fiducial ROI and the center marker is Crab; this is the raw spatial distribution before background subtraction.",
-        ),
-        figure(
-            abs_path(args.fit_cell_excess_skymap),
-            f"{args.baseline_name} fit-cell Stage D excess skymap",
-            wide=True,
-            explanation="Counts minus the fitted local background for baseline fit cells. A compact positive structure near the center is Crab-like; broad gradients or edge structures point to background-model issues.",
-        ),
-        figure(
             abs_path(args.fit_cell_ra_profile),
             f"candidate-grid normalized RA-offset counts profiles ({args.baseline_name} fit cells highlighted)",
             wide=True,
@@ -1558,6 +1546,12 @@ def main() -> None:
             explanation="Background expectation restricted to the source/on aperture used for B_on. This view shows exactly what is integrated as background under the Crab region for each cell.",
         ),
         figure(
+            stage_d_dir / "roi_excess_grid.png",
+            "Stage D counts minus fitted 2D background skymap",
+            wide=True,
+            explanation="Candidate-grid residual skymaps computed as observed Stage D counts minus the fitted 2D background surface. This is the background-subtracted counterpart to the counts map grid with the rho=6 deg circle.",
+        ),
+        figure(
             abs_path(args.before_after_dec_profile_png),
             "Before/after Dec profile comparison for v3 baseline fit cells",
             wide=True,
@@ -1580,12 +1574,6 @@ def main() -> None:
             "Stage A response histogram self-closure summary",
             wide=True,
             explanation="Checks whether Stage A response histograms fold back to their MC numerator truth. Large closure errors point to response binning, normalization, or bookkeeping problems.",
-        ),
-        figure(
-            stage_d_dir / "roi_excess_grid.png",
-            "Stage D excess map grid",
-            wide=True,
-            explanation="Candidate-grid counts minus fitted background. Use this after the counts, background, and residual grids: a credible Crab signal should be central and should not be accompanied by annulus residual structure.",
         ),
         figure(
             stage_f_dir / "model_counts_vs_excess.png",

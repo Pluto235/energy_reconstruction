@@ -1,0 +1,8 @@
+energy_tev,flux_per_tev_cm2_s,ts,nhit_bin,error_status,is_upper_limit,stderr_empty,livetime_days,source_note
+0.56,1.399e-10,12297.1,30-60,3,false,true,1484.36,wcda_crab_sed_pass5_20260616_104941/final_wcda_crab_sed_pass5/sed_J0534+2200.txt
+0.89,5.094e-11,38689.6,60-100,3,false,true,1484.36,wcda_crab_sed_pass5_20260616_104941/final_wcda_crab_sed_pass5/sed_J0534+2200.txt
+1.41,1.648e-11,108612.8,100-200,3,false,true,1484.36,wcda_crab_sed_pass5_20260616_104941/final_wcda_crab_sed_pass5/sed_J0534+2200.txt
+2.51,3.671e-12,77285.8,200-300,3,false,true,1484.36,wcda_crab_sed_pass5_20260616_104941/final_wcda_crab_sed_pass5/sed_J0534+2200.txt
+3.98,1.033e-12,68602.6,300-500,3,false,true,1484.36,wcda_crab_sed_pass5_20260616_104941/final_wcda_crab_sed_pass5/sed_J0534+2200.txt
+7.94,1.471e-13,28980.6,500-800,3,false,true,1484.36,wcda_crab_sed_pass5_20260616_104941/final_wcda_crab_sed_pass5/sed_J0534+2200.txt
+15.85,1.944e-14,11297.9,>800,3,false,true,1484.36,wcda_crab_sed_pass5_20260616_104941/final_wcda_crab_sed_pass5/sed_J0534+2200.txt

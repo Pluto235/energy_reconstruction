@@ -78,6 +78,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--time-split-csv", type=str, default="apply/report/assets/v3-validation/v3_time_split_summary.csv")
     parser.add_argument("--selector-sensitivity-png", type=str, default="apply/report/assets/v3-validation/v3_selector_sensitivity_summary.png")
     parser.add_argument("--response-closure-png", type=str, default="apply/report/assets/v3-validation/v3_response_closure_summary.png")
+    parser.add_argument(
+        "--official-pass5-sed-csv",
+        type=str,
+        default="apply/report/assets/official-pass5/wcda_crab_sed_pass5_20260616_104941.csv",
+    )
+    parser.add_argument(
+        "--official-pass5-overlay-png",
+        type=str,
+        default="apply/report/assets/official-pass5/wcda_pass5_vs_v3_stage_g_sed_overlay.png",
+    )
     return parser.parse_args()
 
 
@@ -303,6 +313,27 @@ def make_sed_compare_rows(nominal_g: Dict[str, object], psf_g: Dict[str, object]
     return rows
 
 
+def official_pass5_rows(rows: Sequence[Dict[str, str]]) -> List[Dict[str, object]]:
+    out: List[Dict[str, object]] = []
+    for row in rows:
+        energy = finite_float(row.get("energy_tev"))
+        flux = finite_float(row.get("flux_per_tev_cm2_s"))
+        e2_flux = energy * energy * flux if energy is not None and flux is not None else None
+        out.append(
+            {
+                "E TeV": fmt(energy, 4),
+                "dN/dE": fmt(flux, 4),
+                "E2 dN/dE": fmt(e2_flux, 4),
+                "TS": fmt(row.get("ts"), 5),
+                "Nhit": row.get("nhit_bin", ""),
+                "Error_status": row.get("error_status", ""),
+                "upper limit": row.get("is_upper_limit", ""),
+                "stderr empty": row.get("stderr_empty", ""),
+            }
+        )
+    return out
+
+
 def plot_sed_overlay(
     output_path: Path,
     nominal_g: Dict[str, object],
@@ -352,6 +383,89 @@ def plot_sed_overlay(
     ax.set_title("Stage G SED points: nominal reference vs PSF borrowing systematic")
     ax.grid(alpha=0.25, which="both", linewidth=0.45)
     ax.legend(fontsize=8)
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path)
+    plt.close(fig)
+    return output_path
+
+
+def plot_official_pass5_overlay(
+    output_path: Path,
+    nominal_g: Dict[str, object],
+    psf_g: Dict[str, object],
+    official_rows: Sequence[Dict[str, str]],
+) -> Optional[Path]:
+    nominal_points = [p for p in nominal_g.get("points", []) if isinstance(p, dict)] if isinstance(nominal_g.get("points"), list) else []
+    psf_points = [p for p in psf_g.get("points", []) if isinstance(p, dict)] if isinstance(psf_g.get("points"), list) else []
+    official_points = []
+    for row in official_rows:
+        energy = finite_float(row.get("energy_tev"))
+        flux = finite_float(row.get("flux_per_tev_cm2_s"))
+        if energy is None or flux is None:
+            continue
+        official_points.append((energy, energy * energy * flux, str(row.get("nhit_bin", ""))))
+    if not official_points:
+        return None
+    try:
+        os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
+        os.environ.setdefault("XDG_CACHE_HOME", "/tmp/.cache")
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception:
+        return None
+
+    def arrays(points: Sequence[Dict[str, object]], grouping: str):
+        selected = [p for p in points if str(p.get("grouping")) == grouping]
+        selected.sort(key=lambda p: finite_float(p.get("effective_energy_tev")) or 0.0)
+        energy = [finite_float(p.get("effective_energy_tev")) for p in selected]
+        flux = [finite_float(p.get("E2_dnde")) for p in selected]
+        err = [finite_float(p.get("E2_dnde_err")) for p in selected]
+        valid = [i for i, (e, f) in enumerate(zip(energy, flux)) if e is not None and f is not None]
+        return (
+            np.asarray([energy[i] for i in valid], dtype=np.float64),
+            np.asarray([flux[i] for i in valid], dtype=np.float64),
+            np.asarray([err[i] if err[i] is not None else 0.0 for i in valid], dtype=np.float64),
+        )
+
+    fig, ax = plt.subplots(figsize=(8.4, 5.4), dpi=150)
+    x = np.asarray([p[0] for p in official_points], dtype=np.float64)
+    y = np.asarray([p[1] for p in official_points], dtype=np.float64)
+    ax.plot(x, y, "D-", color="#111827", markersize=5.0, linewidth=1.4, label="official WCDA pass5 Nhit SED")
+    for grouping, marker, alpha in [("nhit", "o", 0.55), ("predE", "s", 0.42)]:
+        sx, sy, syerr = arrays(nominal_points, grouping)
+        if sx.size:
+            ax.errorbar(
+                sx,
+                sy,
+                yerr=syerr,
+                fmt=marker,
+                markersize=4.0,
+                capsize=2,
+                label=f"v3 nominal Stage G {grouping}",
+                alpha=alpha,
+            )
+        sx, sy, syerr = arrays(psf_points, grouping)
+        if sx.size:
+            ax.errorbar(
+                sx,
+                sy,
+                yerr=syerr,
+                fmt=marker,
+                markersize=4.0,
+                capsize=2,
+                label=f"v3 psfborrow Stage G {grouping}",
+                alpha=alpha,
+            )
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("Energy (TeV)")
+    ax.set_ylabel("E^2 dN/dE (TeV cm^-2 s^-1)")
+    ax.set_title("Official WCDA pass5 Crab SED vs v3 Stage G diagnostics")
+    ax.grid(alpha=0.25, which="both", linewidth=0.45)
+    ax.legend(fontsize=7.5)
     fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path)
@@ -483,6 +597,12 @@ def main() -> None:
     mc_reference_closure_rows = read_csv_rows(abs_path(args.mc_reference_closure_csv))
     offsource_rows = read_csv_rows(abs_path(args.offsource_fake_source_csv))
     time_split_rows = read_csv_rows(abs_path(args.time_split_csv))
+    official_pass5_csv = abs_path(args.official_pass5_sed_csv)
+    official_pass5_raw_rows = read_csv_rows(official_pass5_csv)
+    official_pass5_table_rows = official_pass5_rows(official_pass5_raw_rows)
+    official_pass5_livetime_days = (
+        finite_float(official_pass5_raw_rows[0].get("livetime_days")) if official_pass5_raw_rows else None
+    )
 
     totals_e = stage_e.get("totals") if isinstance(stage_e.get("totals"), dict) else {}
     contract_e = stage_e.get("stage_d_contract") if isinstance(stage_e.get("stage_d_contract"), dict) else {}
@@ -578,6 +698,12 @@ def main() -> None:
         REPORT_DIR / "assets/v3-psfborrow/v3_psfborrow_sed_overlay.png",
         stage_g,
         psfborrow_stage_g,
+    )
+    official_pass5_overlay_path = plot_official_pass5_overlay(
+        abs_path(args.official_pass5_overlay_png),
+        stage_g,
+        psfborrow_stage_g,
+        official_pass5_raw_rows,
     )
     psfborrow_run_rows = [
         {
@@ -1020,6 +1146,12 @@ def main() -> None:
             explanation="Diagnostic SED points built by refitting normalization in reconstructed-energy groups with the Stage F spectral shape fixed. Compare high-energy points with external Crab references and upper limits.",
         ),
         figure(
+            official_pass5_overlay_path or abs_path(args.official_pass5_overlay_png),
+            "Official WCDA pass5 SED versus v3 Stage G diagnostics",
+            wide=True,
+            explanation="Official WCDA pass5 Nhit SED points from the external LHAASO program overlaid with this report's Stage G diagnostic points when local Stage G metadata are available. Official points are shown without error bars because the transferred summary did not include uncertainties.",
+        ),
+        figure(
             stage_g_dir / "sed_points_ratio.png",
             "Stage G SED ratios",
             explanation="Ratio of each diagnostic SED point to the Stage F reference model. A flat ratio near one means Stage G is consistent with the global fit; trends reveal curvature or bin-specific bias.",
@@ -1134,6 +1266,7 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
       <div class="metric"><div class="label">Stage D candidate warnings</div><div class="value">{fmt_int(len(stage_d_warning_ids))}</div><div class="note">mostly excluded low-stat / probe cells</div></div>
       <div class="metric"><div class="label">Stage D baseline warnings</div><div class="value">{fmt_int(len(stage_d_baseline_warning_ids))}</div><div class="note">{h(args.baseline_name)} fit cells affected</div></div>
       <div class="metric"><div class="label">Stage G points</div><div class="value">{fmt_int(len(sed_points))}</div><div class="note">diagnostic SED groups</div></div>
+      <div class="metric"><div class="label">official pass5 points</div><div class="value">{fmt_int(len(official_pass5_table_rows))}</div><div class="note">WCDA Nhit SED, {fmt(official_pass5_livetime_days, 5)} days</div></div>
     </div>
     <div class="metric-grid">
       <div class="metric"><div class="label">background systematics</div><div class="value">{fmt_int(len(background_systematics_rows))}</div><div class="note">annulus/order variants</div></div>
@@ -1196,6 +1329,15 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
   <section>
     <h2>Stage G SED Points</h2>
     {table_from_rows(sed_table_rows, ['grouping', 'group', 'cells', 'E_eff TeV', 'E2 dN/dE', 'err', 'TS/sigma', 'ratio StageF'])}
+  </section>
+
+  <section>
+    <h2>Official WCDA Pass5 SED</h2>
+    <div class="callout">
+      The official LHAASO-WCDA program fit on pass5 z50 data produced seven Crab Nhit SED points with WCDA livetime <code>{fmt(official_pass5_livetime_days, 5)} days</code>. All seven rows have <code>Error_status=3</code>, no upper-limit rows, and empty stderr in the external run summary. The table preserves the official <code>dN/dE</code> values and adds <code>E^2 dN/dE</code> only for comparison with this report's Stage G diagnostic convention. No error bars are drawn for these official points because no uncertainty columns were provided in the transferred summary.
+    </div>
+    <p>Source package: <code>wcda_crab_sed_pass5_20260616_104941/final_wcda_crab_sed_pass5.tar.gz</code>; source table: <code>wcda_crab_sed_pass5_20260616_104941/final_wcda_crab_sed_pass5/sed_J0534+2200.txt</code>.</p>
+    {table_from_rows(official_pass5_table_rows, ['E TeV', 'dN/dE', 'E2 dN/dE', 'TS', 'Nhit', 'Error_status', 'upper limit', 'stderr empty'])}
   </section>
 
   <section>

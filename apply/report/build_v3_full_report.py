@@ -2184,6 +2184,14 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
     <div class="figure-grid">{''.join(item for item in figures if item) or '<p>Figures are not available yet; rerun after Stage artifacts are produced.</p>'}</div>
   </section>
 
+  <section>
+    <h2>Final Diagnostic Conclusion</h2>
+    <div class="callout">
+      <p>The two requested normalization tests are complete. The official/tutorial forward-fold test supports a normalization mismatch: active30 observed excess is larger than the Stage A response prediction for both external spectra, with total observed/expected <code>{fmt(active_pass5_forward.get('total_observed_over_expected'), 5)}</code> for official pass5 and <code>{fmt(active_v099_forward.get('total_observed_over_expected'), 5)}</code> for tutorial v0.99. Most cells are above unity in both cases.</p>
+      <p>The off-source fake-source core-residual test does <strong>not</strong> show positive residuals. The two active30 fake-source controls have negative excess, approximately <code>-2774</code> and <code>-2869</code> counts, so they do not provide direct evidence for a generic 2D background underprediction. The current evidence points instead to a source-local response/background-normalization problem that still needs to be separated.</p>
+    </div>
+  </section>
+
   <footer>Generated from Stage metadata under <code>{h(str(REPO_ROOT / 'apply/output'))}</code>.</footer>
 </main>
 </body>

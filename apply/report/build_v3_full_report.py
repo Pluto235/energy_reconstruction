@@ -102,6 +102,46 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="apply/report/assets/official-v099/wcda_crab_sed_v099_20250731_20260616_123624.csv",
     )
+    parser.add_argument(
+        "--normalization-diagnostics-json",
+        type=str,
+        default="apply/report/assets/v3-normalization-diagnostics/v3_normalization_diagnostics_summary.json",
+    )
+    parser.add_argument(
+        "--official-forward-fold-summary-csv",
+        type=str,
+        default="apply/report/assets/v3-normalization-diagnostics/v3_official_forward_fold_summary.csv",
+    )
+    parser.add_argument(
+        "--official-forward-fold-nhit-csv",
+        type=str,
+        default="apply/report/assets/v3-normalization-diagnostics/v3_official_forward_fold_nhit_summary.csv",
+    )
+    parser.add_argument(
+        "--official-forward-fold-cell-csv",
+        type=str,
+        default="apply/report/assets/v3-normalization-diagnostics/v3_official_forward_fold_cell_counts.csv",
+    )
+    parser.add_argument(
+        "--offsource-core-residual-summary-csv",
+        type=str,
+        default="apply/report/assets/v3-normalization-diagnostics/v3_offsource_core_residual_summary.csv",
+    )
+    parser.add_argument(
+        "--official-forward-fold-counts-png",
+        type=str,
+        default="apply/report/assets/v3-normalization-diagnostics/v3_official_forward_fold_counts_vs_excess.png",
+    )
+    parser.add_argument(
+        "--official-forward-fold-ratio-png",
+        type=str,
+        default="apply/report/assets/v3-normalization-diagnostics/v3_official_forward_fold_ratio_by_cell.png",
+    )
+    parser.add_argument(
+        "--offsource-core-residual-png",
+        type=str,
+        default="apply/report/assets/v3-normalization-diagnostics/v3_offsource_core_residual_by_cell.png",
+    )
     return parser.parse_args()
 
 
@@ -425,6 +465,90 @@ def official_v099_rows(rows: Sequence[Dict[str, str]]) -> List[Dict[str, object]
                 "TS": fmt(row.get("ts"), 5),
                 "WCDAtag": row.get("wcda_tag", ""),
                 "status": row.get("crab_status", ""),
+            }
+        )
+    return out
+
+
+def normalization_forward_summary_rows(rows: Sequence[Dict[str, str]]) -> List[Dict[str, object]]:
+    out: List[Dict[str, object]] = []
+    for row in rows:
+        out.append(
+            {
+                "run": row.get("run", ""),
+                "spectrum": row.get("spectrum", ""),
+                "cells": row.get("cells", ""),
+                "excess": fmt(row.get("total_excess"), 6),
+                "expected": fmt(row.get("total_expected_counts"), 6),
+                "obs/exp": fmt(row.get("total_observed_over_expected"), 5),
+                "median cell obs/exp": fmt(row.get("median_observed_over_expected"), 5),
+                "cells >1": row.get("cells_observed_over_expected_gt_1", ""),
+                "cells >1.5": row.get("cells_observed_over_expected_gt_1p5", ""),
+                "visible days": fmt(row.get("source_visible_live_days"), 5),
+            }
+        )
+    return out
+
+
+def normalization_nhit_rows(rows: Sequence[Dict[str, str]]) -> List[Dict[str, object]]:
+    selected = [row for row in rows if row.get("run") == "active_psfborrow_30cell"]
+    out: List[Dict[str, object]] = []
+    for row in selected:
+        out.append(
+            {
+                "spectrum": row.get("spectrum", ""),
+                "Nhit bin": row.get("nhit_bin", ""),
+                "cells": row.get("cells", ""),
+                "excess": fmt(row.get("total_excess"), 6),
+                "expected": fmt(row.get("total_expected_counts"), 6),
+                "obs/exp": fmt(row.get("total_observed_over_expected"), 5),
+                "median cell obs/exp": fmt(row.get("median_observed_over_expected"), 5),
+                "cells >1": row.get("cells_observed_over_expected_gt_1", ""),
+                "cells >1.5": row.get("cells_observed_over_expected_gt_1p5", ""),
+            }
+        )
+    return out
+
+
+def top_forward_ratio_rows(rows: Sequence[Dict[str, str]], limit: int = 10) -> List[Dict[str, object]]:
+    selected = [
+        row
+        for row in rows
+        if row.get("run") == "active_psfborrow_30cell"
+        and row.get("spectrum") == "tutorial_v099"
+        and finite_float(row.get("observed_over_expected")) is not None
+    ]
+    selected.sort(key=lambda row: finite_float(row.get("observed_over_expected")) or -np.inf, reverse=True)
+    out: List[Dict[str, object]] = []
+    for row in selected[:limit]:
+        out.append(
+            {
+                "cell": row.get("cell_id", ""),
+                "Nhit bin": row.get("nhit_bin", ""),
+                "predE bin": row.get("predE_bin", ""),
+                "excess": fmt(row.get("excess"), 6),
+                "expected": fmt(row.get("expected_counts"), 6),
+                "obs/exp": fmt(row.get("observed_over_expected"), 5),
+                "pull": fmt(row.get("pull_conservative"), 5),
+            }
+        )
+    return out
+
+
+def offsource_core_summary_rows(rows: Sequence[Dict[str, str]]) -> List[Dict[str, object]]:
+    out: List[Dict[str, object]] = []
+    for row in rows:
+        out.append(
+            {
+                "fake source": row.get("fake_source", ""),
+                "selector": row.get("selector", ""),
+                "cells": row.get("cells", ""),
+                "N_on": fmt_int(row.get("N_on")),
+                "B_on": fmt(row.get("B_on"), 6),
+                "excess": fmt(row.get("excess"), 6),
+                "combined sigma": fmt(row.get("combined_known_background_sigma"), 5),
+                "positive cells": row.get("positive_excess_cells", ""),
+                "negative cells": row.get("negative_excess_cells", ""),
             }
         )
     return out
@@ -1157,6 +1281,36 @@ def main() -> None:
     official_v099_csv = abs_path(args.official_v099_sed_csv)
     official_v099_raw_rows = read_csv_rows(official_v099_csv)
     official_v099_table_rows = official_v099_rows(official_v099_raw_rows)
+    normalization_diagnostics = load_json(abs_path(args.normalization_diagnostics_json))
+    forward_summary_rows_raw = read_csv_rows(abs_path(args.official_forward_fold_summary_csv))
+    forward_nhit_rows_raw = read_csv_rows(abs_path(args.official_forward_fold_nhit_csv))
+    forward_cell_rows_raw = read_csv_rows(abs_path(args.official_forward_fold_cell_csv))
+    offsource_core_rows_raw = read_csv_rows(abs_path(args.offsource_core_residual_summary_csv))
+    normalization_forward_table_rows = normalization_forward_summary_rows(forward_summary_rows_raw)
+    normalization_nhit_table_rows = normalization_nhit_rows(forward_nhit_rows_raw)
+    normalization_top_ratio_rows = top_forward_ratio_rows(forward_cell_rows_raw)
+    offsource_core_table_rows = offsource_core_summary_rows(offsource_core_rows_raw)
+    normalization_conclusions = (
+        normalization_diagnostics.get("conclusions")
+        if isinstance(normalization_diagnostics.get("conclusions"), dict)
+        else {}
+    )
+    active_pass5_forward = next(
+        (
+            row
+            for row in forward_summary_rows_raw
+            if row.get("run") == "active_psfborrow_30cell" and row.get("spectrum") == "official_pass5"
+        ),
+        {},
+    )
+    active_v099_forward = next(
+        (
+            row
+            for row in forward_summary_rows_raw
+            if row.get("run") == "active_psfborrow_30cell" and row.get("spectrum") == "tutorial_v099"
+        ),
+        {},
+    )
 
     totals_e = stage_e.get("totals") if isinstance(stage_e.get("totals"), dict) else {}
     contract_e = stage_e.get("stage_d_contract") if isinstance(stage_e.get("stage_d_contract"), dict) else {}
@@ -1763,6 +1917,24 @@ def main() -> None:
             "PSF-borrow Stage G SED ratios",
             explanation="Ratio of the PSF borrowing diagnostic SED points to the corresponding Stage F reference model.",
         ),
+        figure(
+            abs_path(args.official_forward_fold_counts_png),
+            "Official/tutorial forward-fold expected counts versus Stage E excess",
+            wide=True,
+            explanation="The official pass5 and tutorial v0.99 SED points are interpolated as piecewise power laws, folded through the Stage A response and Stage F theta exposure, and compared cell-by-cell with Stage E excess. Points above the dashed diagonal mean observed excess exceeds the official/tutorial expectation.",
+        ),
+        figure(
+            abs_path(args.official_forward_fold_ratio_png),
+            "Official/tutorial forward-fold normalization ratio by cell",
+            wide=True,
+            explanation="Active 30-cell PSF-borrow branch only. The dashed and dotted reference lines mark observed/expected = 1 and 1.5.",
+        ),
+        figure(
+            abs_path(args.offsource_core_residual_png),
+            "Off-source fake-source core residual by cell",
+            wide=True,
+            explanation="Fake-source Stage E residuals in the active 30-cell branch. Positive residuals would support a local background underprediction; the produced controls are dominated by negative residuals.",
+        ),
     ]
 
     html_text = f"""<!doctype html>
@@ -1979,6 +2151,29 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
     <h3>Time-split background stability</h3>
     {table_from_rows(time_split_table_rows, ['validation', 'run', 'MJD min', 'MJD max', 'baseline N', 'baseline B', 'baseline excess', 'baseline sigma', 'all sigma'])}
     <p>The MC reference forward-fold closure uses the Stage A binned MC numerator as the truth definition and folds the denominator through the stored response; it is a production response closure, not an independent holdout sample. Off-source fake-source controls and time-split Stage D/E runs are listed explicitly; failed controls are kept in the report rather than folded back into the frozen selector.</p>
+  </section>
+
+  <section>
+    <h2>Normalization Diagnostics: Official Forward-Fold And Fake Sources</h2>
+    <div class="callout">
+      <p>This final diagnostic addresses the current flux normalization tension directly. The official pass5 Nhit SED and tutorial v0.99 WCDA-only SED are treated as external spectral hypotheses, interpolated in log-log space as piecewise power laws, and forward-folded through our Stage A <code>A_eff(E_true, theta)</code>, Stage F Crab-visible theta exposure, and per-cell <code>containment_r_opt</code>. The resulting expected cell counts are compared to the Stage E excess table from the active <code>v3_baseline_psfborrow</code> 30-cell branch.</p>
+      <p>Result: active30 Stage E excess remains above the official expectation in most cells. Against pass5, total observed/expected is <strong>{fmt(active_pass5_forward.get('total_observed_over_expected'), 5)}</strong> with <strong>{h(active_pass5_forward.get('cells_observed_over_expected_gt_1', ''))}/30</strong> cells above 1 and <strong>{h(active_pass5_forward.get('cells_observed_over_expected_gt_1p5', ''))}/30</strong> above 1.5. Against tutorial v0.99, total observed/expected is <strong>{fmt(active_v099_forward.get('total_observed_over_expected'), 5)}</strong> with <strong>{h(active_v099_forward.get('cells_observed_over_expected_gt_1', ''))}/30</strong> cells above 1 and <strong>{h(active_v099_forward.get('cells_observed_over_expected_gt_1p5', ''))}/30</strong> above 1.5.</p>
+      <p>The fake-source check gives the opposite sign from a simple "background too low everywhere" explanation. At RA <code>93.63 deg</code> and <code>73.63 deg</code> with Dec fixed to Crab, the active30 core residuals are strongly negative: the two totals are approximately <code>-2774</code> and <code>-2869</code> counts, with combined known-background significances around <code>-46</code> and <code>-45</code>. These off-source controls therefore do not show positive residuals; they argue against a generic 2D background underprediction in source-free positions, while leaving a source-local response/background-normalization mismatch as the remaining issue.</p>
+    </div>
+    <h3>Official/tutorial spectrum forward-fold summary</h3>
+    {table_from_rows(normalization_forward_table_rows, ['run', 'spectrum', 'cells', 'excess', 'expected', 'obs/exp', 'median cell obs/exp', 'cells >1', 'cells >1.5', 'visible days'])}
+    <h3>Active 30-cell Nhit grouped ratios</h3>
+    {table_from_rows(normalization_nhit_table_rows, ['spectrum', 'Nhit bin', 'cells', 'excess', 'expected', 'obs/exp', 'median cell obs/exp', 'cells >1', 'cells >1.5'])}
+    <h3>Largest active30 tutorial v0.99 cell ratios</h3>
+    {table_from_rows(normalization_top_ratio_rows, ['cell', 'Nhit bin', 'predE bin', 'excess', 'expected', 'obs/exp', 'pull'])}
+    <h3>Off-source core residual summary</h3>
+    {table_from_rows(offsource_core_table_rows, ['fake source', 'selector', 'cells', 'N_on', 'B_on', 'excess', 'combined sigma', 'positive cells', 'negative cells'])}
+    <div class="figure-grid">
+      {figure(abs_path(args.official_forward_fold_counts_png), 'Official/tutorial forward-fold expected counts versus Stage E excess', wide=True, explanation='Official pass5 and tutorial v0.99 spectra forward-folded through Stage A response and Stage F theta exposure.')}
+      {figure(abs_path(args.official_forward_fold_ratio_png), 'Active30 official/tutorial observed over expected by cell', wide=True, explanation='Cell-by-cell observed/expected ratios for the active PSF-borrow branch.')}
+      {figure(abs_path(args.offsource_core_residual_png), 'Active30 off-source fake-source core residuals', wide=True, explanation='Fake-source residuals are dominated by negative values, not positive background-underprediction residuals.')}
+    </div>
+    <p>Diagnostic status flags: official forward-fold = <code>{h(normalization_conclusions.get('official_forward_fold', 'n/a'))}</code>; fake-source core residual = <code>{h(normalization_conclusions.get('offsource_core_residual', 'n/a'))}</code>. Output assets live under <code>{h(rel(abs_path(args.normalization_diagnostics_json).parent, REPORT_DIR))}</code>.</p>
   </section>
 
   <section>

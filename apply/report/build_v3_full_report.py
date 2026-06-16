@@ -1604,6 +1604,12 @@ def main() -> None:
             explanation="Diagnostic SED points built by refitting normalization in reconstructed-energy groups with the Stage F spectral shape fixed. This report version overlays the official pass5 Nhit SED and tutorial v0.99 WCDA-only SED directly on the Stage G SED plot; pass5 points are shown without error bars because the transferred summary did not include uncertainties.",
         ),
         figure(
+            official_pass5_overlay_path or abs_path(args.official_pass5_overlay_png),
+            "Official/tutorial WCDA SEDs versus v3 Stage G diagnostics",
+            wide=True,
+            explanation="Standalone comparison view for official pass5 Nhit SED and tutorial v0.99 WCDA-only SED points versus v3 Stage G diagnostics. Keep this separate view for checking the two external WCDA products against nominal and PSF-borrow v3 points.",
+        ),
+        figure(
             stage_g_dir / "sed_points_ratio.png",
             "Stage G SED ratios",
             explanation="Ratio of each diagnostic SED point to the Stage F reference model. A flat ratio near one means Stage G is consistent with the global fit; trends reveal curvature or bin-specific bias.",

@@ -88,6 +88,11 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="apply/report/assets/official-pass5/wcda_pass5_vs_v3_stage_g_sed_overlay.png",
     )
+    parser.add_argument(
+        "--official-v099-sed-csv",
+        type=str,
+        default="apply/report/assets/official-v099/wcda_crab_sed_v099_20250731_20260616_123624.csv",
+    )
     return parser.parse_args()
 
 
@@ -334,6 +339,31 @@ def official_pass5_rows(rows: Sequence[Dict[str, str]]) -> List[Dict[str, object
     return out
 
 
+def official_v099_rows(rows: Sequence[Dict[str, str]]) -> List[Dict[str, object]]:
+    out: List[Dict[str, object]] = []
+    for row in rows:
+        energy = finite_float(row.get("energy_tev"))
+        flux_scaled = finite_float(row.get("e2_flux_scaled_1e14_tev_cm2_s"))
+        err_low_scaled = finite_float(row.get("e2_flux_err_low_scaled_1e14"))
+        err_high_scaled = finite_float(row.get("e2_flux_err_high_scaled_1e14"))
+        e2_flux = flux_scaled * 1.0e-14 if flux_scaled is not None else None
+        err_low = err_low_scaled * 1.0e-14 if err_low_scaled is not None else None
+        err_high = err_high_scaled * 1.0e-14 if err_high_scaled is not None else None
+        out.append(
+            {
+                "E TeV": fmt(energy, 4),
+                "E2 flux raw": fmt(flux_scaled, 6),
+                "E2 dN/dE": fmt(e2_flux, 4),
+                "err low": fmt(err_low, 4),
+                "err high": fmt(err_high, 4),
+                "TS": fmt(row.get("ts"), 5),
+                "WCDAtag": row.get("wcda_tag", ""),
+                "status": row.get("crab_status", ""),
+            }
+        )
+    return out
+
+
 def plot_sed_overlay(
     output_path: Path,
     nominal_g: Dict[str, object],
@@ -390,22 +420,39 @@ def plot_sed_overlay(
     return output_path
 
 
-def plot_official_pass5_overlay(
+def plot_official_sed_overlay(
     output_path: Path,
     nominal_g: Dict[str, object],
     psf_g: Dict[str, object],
-    official_rows: Sequence[Dict[str, str]],
+    pass5_rows: Sequence[Dict[str, str]],
+    v099_rows: Sequence[Dict[str, str]],
 ) -> Optional[Path]:
     nominal_points = [p for p in nominal_g.get("points", []) if isinstance(p, dict)] if isinstance(nominal_g.get("points"), list) else []
     psf_points = [p for p in psf_g.get("points", []) if isinstance(p, dict)] if isinstance(psf_g.get("points"), list) else []
-    official_points = []
-    for row in official_rows:
+    pass5_points = []
+    for row in pass5_rows:
         energy = finite_float(row.get("energy_tev"))
         flux = finite_float(row.get("flux_per_tev_cm2_s"))
         if energy is None or flux is None:
             continue
-        official_points.append((energy, energy * energy * flux, str(row.get("nhit_bin", ""))))
-    if not official_points:
+        pass5_points.append((energy, energy * energy * flux))
+    v099_points = []
+    for row in v099_rows:
+        energy = finite_float(row.get("energy_tev"))
+        flux_scaled = finite_float(row.get("e2_flux_scaled_1e14_tev_cm2_s"))
+        err_low_scaled = finite_float(row.get("e2_flux_err_low_scaled_1e14"))
+        err_high_scaled = finite_float(row.get("e2_flux_err_high_scaled_1e14"))
+        if energy is None or flux_scaled is None:
+            continue
+        v099_points.append(
+            (
+                energy,
+                flux_scaled * 1.0e-14,
+                (err_low_scaled or 0.0) * 1.0e-14,
+                (err_high_scaled or 0.0) * 1.0e-14,
+            )
+        )
+    if not pass5_points and not v099_points:
         return None
     try:
         os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
@@ -431,9 +478,30 @@ def plot_official_pass5_overlay(
         )
 
     fig, ax = plt.subplots(figsize=(8.4, 5.4), dpi=150)
-    x = np.asarray([p[0] for p in official_points], dtype=np.float64)
-    y = np.asarray([p[1] for p in official_points], dtype=np.float64)
-    ax.plot(x, y, "D-", color="#111827", markersize=5.0, linewidth=1.4, label="official WCDA pass5 Nhit SED")
+    if pass5_points:
+        x = np.asarray([p[0] for p in pass5_points], dtype=np.float64)
+        y = np.asarray([p[1] for p in pass5_points], dtype=np.float64)
+        ax.plot(x, y, "D-", color="#111827", markersize=5.0, linewidth=1.4, label="official pass5 Nhit SED")
+    if v099_points:
+        x = np.asarray([p[0] for p in v099_points], dtype=np.float64)
+        y = np.asarray([p[1] for p in v099_points], dtype=np.float64)
+        yerr = np.vstack(
+            [
+                np.asarray([p[2] for p in v099_points], dtype=np.float64),
+                np.asarray([p[3] for p in v099_points], dtype=np.float64),
+            ]
+        )
+        ax.errorbar(
+            x,
+            y,
+            yerr=yerr,
+            fmt="^-",
+            color="#b45309",
+            markersize=5.0,
+            linewidth=1.25,
+            capsize=2.5,
+            label="tutorial v0.99 WCDA-only SED",
+        )
     for grouping, marker, alpha in [("nhit", "o", 0.55), ("predE", "s", 0.42)]:
         sx, sy, syerr = arrays(nominal_points, grouping)
         if sx.size:
@@ -463,7 +531,7 @@ def plot_official_pass5_overlay(
     ax.set_yscale("log")
     ax.set_xlabel("Energy (TeV)")
     ax.set_ylabel("E^2 dN/dE (TeV cm^-2 s^-1)")
-    ax.set_title("Official WCDA pass5 Crab SED vs v3 Stage G diagnostics")
+    ax.set_title("Official/tutorial WCDA Crab SEDs vs v3 Stage G diagnostics")
     ax.grid(alpha=0.25, which="both", linewidth=0.45)
     ax.legend(fontsize=7.5)
     fig.tight_layout()
@@ -603,6 +671,9 @@ def main() -> None:
     official_pass5_livetime_days = (
         finite_float(official_pass5_raw_rows[0].get("livetime_days")) if official_pass5_raw_rows else None
     )
+    official_v099_csv = abs_path(args.official_v099_sed_csv)
+    official_v099_raw_rows = read_csv_rows(official_v099_csv)
+    official_v099_table_rows = official_v099_rows(official_v099_raw_rows)
 
     totals_e = stage_e.get("totals") if isinstance(stage_e.get("totals"), dict) else {}
     contract_e = stage_e.get("stage_d_contract") if isinstance(stage_e.get("stage_d_contract"), dict) else {}
@@ -699,11 +770,12 @@ def main() -> None:
         stage_g,
         psfborrow_stage_g,
     )
-    official_pass5_overlay_path = plot_official_pass5_overlay(
+    official_pass5_overlay_path = plot_official_sed_overlay(
         abs_path(args.official_pass5_overlay_png),
         stage_g,
         psfborrow_stage_g,
         official_pass5_raw_rows,
+        official_v099_raw_rows,
     )
     psfborrow_run_rows = [
         {
@@ -1147,9 +1219,9 @@ def main() -> None:
         ),
         figure(
             official_pass5_overlay_path or abs_path(args.official_pass5_overlay_png),
-            "Official WCDA pass5 SED versus v3 Stage G diagnostics",
+            "Official/tutorial WCDA SEDs versus v3 Stage G diagnostics",
             wide=True,
-            explanation="Official WCDA pass5 Nhit SED points from the external LHAASO program overlaid with this report's Stage G diagnostic points when local Stage G metadata are available. Official points are shown without error bars because the transferred summary did not include uncertainties.",
+            explanation="Official pass5 Nhit SED and tutorial v0.99 WCDA-only SED points overlaid with this report's Stage G diagnostics when local Stage G metadata are available. Pass5 points are shown without error bars because the transferred summary did not include uncertainties; v0.99 points use ferrL/ferrU.",
         ),
         figure(
             stage_g_dir / "sed_points_ratio.png",
@@ -1269,6 +1341,12 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
       <div class="metric"><div class="label">official pass5 points</div><div class="value">{fmt_int(len(official_pass5_table_rows))}</div><div class="note">WCDA Nhit SED, {fmt(official_pass5_livetime_days, 5)} days</div></div>
     </div>
     <div class="metric-grid">
+      <div class="metric"><div class="label">tutorial v0.99 points</div><div class="value">{fmt_int(len(official_v099_table_rows))}</div><div class="note">WCDA-only SED_Mor Crab_SED</div></div>
+      <div class="metric"><div class="label">tutorial fit cluster</div><div class="value">2832848</div><div class="note">HepJob/HTCondor fit stage</div></div>
+      <div class="metric"><div class="label">tutorial SED cluster</div><div class="value">2832858</div><div class="note">HepJob/HTCondor SED stage</div></div>
+      <div class="metric"><div class="label">tutorial status</div><div class="value">OK</div><div class="note">7 WCDA points, SHA256 verified</div></div>
+    </div>
+    <div class="metric-grid">
       <div class="metric"><div class="label">background systematics</div><div class="value">{fmt_int(len(background_systematics_rows))}</div><div class="note">annulus/order variants</div></div>
       <div class="metric"><div class="label">high-energy predE points</div><div class="value">{fmt_int(high_energy_ref.get('high_energy_points') if isinstance(high_energy_ref, dict) else None)}</div><div class="note">Stage G high-energy groups</div></div>
       <div class="metric"><div class="label">highest E_eff</div><div class="value">{fmt(highest_high_energy_tev, 4)}</div><div class="note">TeV, response-weighted</div></div>
@@ -1338,6 +1416,15 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
     </div>
     <p>Source package: <code>wcda_crab_sed_pass5_20260616_104941/final_wcda_crab_sed_pass5.tar.gz</code>; source table: <code>wcda_crab_sed_pass5_20260616_104941/final_wcda_crab_sed_pass5/sed_J0534+2200.txt</code>.</p>
     {table_from_rows(official_pass5_table_rows, ['E TeV', 'dN/dE', 'E2 dN/dE', 'TS', 'Nhit', 'Error_status', 'upper limit', 'stderr empty'])}
+  </section>
+
+  <section>
+    <h2>Tutorial v0.99 WCDA-Only SED</h2>
+    <div class="callout">
+      The second tutorial route <code>v0.99</code> produced seven WCDA-only Crab SED points from <code>results/SED_Mor/Crab_SED.txt</code>. The transferred table reports <code>energy flux ferrL ferrU TS WCDAtag</code>; the flux scale matches <code>E^2 dN/dE</code> in units of <code>1e-14 TeV cm^-2 s^-1</code>, so this report stores the raw scaled values and converts them to physical <code>E^2 dN/dE</code> for overlays. All points are WCDA tagged and Crab component/bin/flux-point validation is OK; ROOT output opens and SHA256 verification passed.
+    </div>
+    <p>Package: <code>/home/lhaaso/liushijie/energy/wcda_crab_sed_v099_20250731_20260616_123624/final_wcda_crab_sed_v099_20250731.tar.gz</code>. Fit cluster: <code>2832848</code>; SED cluster: <code>2832858</code>. README warnings for <code>Halo_2_Ecut</code> and <code>Halo_2_F0</code> are boundary/upper-limit related and do not affect the listed Crab SED/TS status.</p>
+    {table_from_rows(official_v099_table_rows, ['E TeV', 'E2 flux raw', 'E2 dN/dE', 'err low', 'err high', 'TS', 'WCDAtag', 'status'])}
   </section>
 
   <section>

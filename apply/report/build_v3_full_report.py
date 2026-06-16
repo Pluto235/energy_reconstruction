@@ -14,6 +14,10 @@ import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REPORT_DIR = Path(".")
+ETO_APPLY_PREFIXES = (
+    Path("/mnt/mydisk/server/projects/energy_reconstruction/apply"),
+    Path("/home/server/projects/energy_reconstruction/apply"),
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -98,7 +102,40 @@ def parse_args() -> argparse.Namespace:
 
 def abs_path(path: str | Path) -> Path:
     p = Path(path)
-    return p if p.is_absolute() else (REPO_ROOT / p).resolve()
+    resolved = p if p.is_absolute() else (REPO_ROOT / p).resolve()
+    if resolved.exists():
+        return resolved
+    for prefix in ETO_APPLY_PREFIXES:
+        try:
+            suffix = resolved.relative_to(prefix)
+        except ValueError:
+            continue
+        local_candidate = REPO_ROOT / "apply" / suffix
+        if local_candidate.exists():
+            return local_candidate
+    return resolved
+
+
+def stage_dir(path: str | Path, metadata_name: str, preferred_run_ids: Sequence[str] = ()) -> Path:
+    base = abs_path(path)
+    if (base / metadata_name).exists():
+        return base
+    root = base.parent if base.name in {"current", "latest"} else base
+    runs_root = root / "runs"
+    if not runs_root.exists():
+        return base
+    for run_id in preferred_run_ids:
+        candidate = runs_root / run_id
+        if (candidate / metadata_name).exists():
+            return candidate
+    candidates = sorted(
+        runs_root.glob(f"*/{metadata_name}"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    if candidates:
+        return candidates[0].parent
+    return base
 
 
 def rel(path: str | Path, start: Path) -> str:
@@ -172,6 +209,10 @@ def selector_ids(rows: Sequence[Dict[str, str]], include: bool) -> List[int]:
         if row_include == include:
             ids.append(int(row["cell_id"]))
     return ids
+
+
+def selector_includes(row: Dict[str, str]) -> bool:
+    return str(row.get("include", "")).strip().lower() in {"1", "true", "yes", "y", "include"}
 
 
 def stage_f_cell_ids(meta: Dict[str, object]) -> List[int]:
@@ -551,6 +592,71 @@ def table_from_rows(rows: Sequence[Dict[str, object]], columns: Sequence[str]) -
     return f'<div class="table-wrap"><table><thead><tr>{head}</tr></thead><tbody>{"".join(body)}</tbody></table></div>'
 
 
+def make_selection_by_nhit_rows(rows: Sequence[Dict[str, str]]) -> List[Dict[str, object]]:
+    grouped: Dict[str, List[Dict[str, str]]] = {}
+    for row in rows:
+        if not selector_includes(row):
+            continue
+        grouped.setdefault(row.get("nhit_bin", ""), []).append(row)
+
+    out: List[Dict[str, object]] = []
+    for nhit_bin, group in grouped.items():
+        group = sorted(group, key=lambda row: int(row.get("cell_id", 0)))
+        borrowed_notes = []
+        psf_notes = []
+        for row in group:
+            borrowed_from = str(row.get("psf_borrowed_from", "")).strip()
+            if borrowed_from:
+                borrowed_notes.append(
+                    f"{row.get('cell_id')} <- {borrowed_from} ({row.get('psf_borrow_method', '')})"
+                )
+            elif str(row.get("psf_quality_flag", "1")).strip().lower() not in {"1", "true", "yes", "y"}:
+                psf_notes.append(f"{row.get('cell_id')} PSF follow-up")
+        out.append(
+            {
+                "Nhit bin": nhit_bin,
+                "kept cells": ",".join(row.get("cell_id", "") for row in group),
+                "predE bins": "; ".join(row.get("predE_bin", "") for row in group),
+                "ridge fractions": ", ".join(fmt(row.get("ridge_peak_fraction"), 3) for row in group),
+                "MC counts": ", ".join(fmt_int(row.get("mc_count")) for row in group),
+                "PSF note": "; ".join(borrowed_notes + psf_notes) or "direct Stage B PSF",
+            }
+        )
+    return out
+
+
+def make_special_selection_rows(rows: Sequence[Dict[str, str]], cell_ids: Sequence[int]) -> List[Dict[str, object]]:
+    by_id = {int(row["cell_id"]): row for row in rows if row.get("cell_id", "").isdigit()}
+    out: List[Dict[str, object]] = []
+    for cell_id in cell_ids:
+        row = by_id.get(cell_id)
+        if not row:
+            continue
+        include = selector_includes(row)
+        borrowed_from = str(row.get("psf_borrowed_from", "")).strip()
+        if include and borrowed_from:
+            decision = "included in v3_psfborrow"
+            reason = f"physical MC ridge; nominal PSF repaired from {borrowed_from}"
+        elif include:
+            decision = "included"
+            reason = row.get("subset_reason", "")
+        else:
+            decision = "excluded"
+            reason = row.get("subset_reason") or row.get("exclusion_source", "")
+        out.append(
+            {
+                "cell": cell_id,
+                "Nhit bin": row.get("nhit_bin", ""),
+                "predE bin": row.get("predE_bin", ""),
+                "ridge frac": fmt(row.get("ridge_peak_fraction"), 3),
+                "MC count": fmt_int(row.get("mc_count")),
+                "decision": decision,
+                "reason": reason,
+            }
+        )
+    return out
+
+
 def figure(path: Path, caption: str, *, wide: bool = False, explanation: str = "") -> str:
     if not path.exists():
         return ""
@@ -603,17 +709,37 @@ def main() -> None:
     REPORT_DIR = output_html.parent
 
     stage_a_dir = abs_path(args.stage_a_dir)
-    stage_b_dir = abs_path(args.stage_b_dir)
-    stage_c_dir = abs_path(args.stage_c_dir)
-    stage_d_dir = abs_path(args.stage_d_dir)
-    stage_e_dir = abs_path(args.stage_e_dir)
-    stage_f_dir = abs_path(args.stage_f_dir)
-    stage_g_dir = abs_path(args.stage_g_dir)
-    psfborrow_stage_b_dir = abs_path(args.psfborrow_stage_b_dir)
-    psfborrow_stage_d_dir = abs_path(args.psfborrow_stage_d_dir)
-    psfborrow_stage_e_dir = abs_path(args.psfborrow_stage_e_dir)
-    psfborrow_stage_f_dir = abs_path(args.psfborrow_stage_f_dir)
-    psfborrow_stage_g_dir = abs_path(args.psfborrow_stage_g_dir)
+    stage_b_dir = stage_dir(args.stage_b_dir, "psf_v3_candidate_metadata.json", ["slurm_42023"])
+    stage_c_dir = stage_dir(args.stage_c_dir, "obs_events_metadata.json", ["v3_stage_c_slurm_42024"])
+    stage_d_dir = stage_dir(args.stage_d_dir, "background_v3_candidate_metadata.json", ["v3_stage_d_slurm_42024"])
+    stage_e_dir = stage_dir(args.stage_e_dir, "signal_v3_candidate_metadata.json", ["v3_stage_e_slurm_42024"])
+    stage_f_dir = stage_dir(args.stage_f_dir, args.stage_f_metadata_name, ["v3_stage_f_slurm_42024"])
+    stage_g_dir = stage_dir(args.stage_g_dir, args.stage_g_metadata_name, ["v3_stage_g_slurm_42024"])
+    psfborrow_stage_b_dir = stage_dir(
+        args.psfborrow_stage_b_dir,
+        "psf_v3_candidate_metadata.json",
+        ["v3_psfborrow_from_nominal"],
+    )
+    psfborrow_stage_d_dir = stage_dir(
+        args.psfborrow_stage_d_dir,
+        args.psfborrow_stage_d_metadata_name,
+        ["v3_stage_d_psfborrow_slurm_42029"],
+    )
+    psfborrow_stage_e_dir = stage_dir(
+        args.psfborrow_stage_e_dir,
+        args.psfborrow_stage_e_metadata_name,
+        ["v3_stage_e_psfborrow_slurm_42029"],
+    )
+    psfborrow_stage_f_dir = stage_dir(
+        args.psfborrow_stage_f_dir,
+        args.psfborrow_stage_f_metadata_name,
+        ["v3_stage_f_psfborrow_slurm_42029"],
+    )
+    psfborrow_stage_g_dir = stage_dir(
+        args.psfborrow_stage_g_dir,
+        args.psfborrow_stage_g_metadata_name,
+        ["v3_stage_g_psfborrow_slurm_42029"],
+    )
 
     raw_rows = read_csv_rows(abs_path(args.raw_ledger_csv))
     selector_rows = read_csv_rows(abs_path(args.baseline_selector_csv))
@@ -818,6 +944,22 @@ def main() -> None:
             "status": psfborrow_result_status,
         },
     ]
+    active_selection_ids = psfborrow_included_ids or included_ids
+    active_selection_label = (
+        "v3_baseline_psfborrow"
+        if psfborrow_included_ids and psfborrow_selector_matches_stage_f and psfborrow_selector_matches_stage_g
+        else args.baseline_name
+    )
+    active_selection_status = (
+        "completed as PSF-borrowing systematic"
+        if active_selection_label == "v3_baseline_psfborrow"
+        else selector_result_status
+    )
+    selection_rows_for_active = (
+        psfborrow_selector_rows if active_selection_label == "v3_baseline_psfborrow" else selector_rows
+    )
+    selection_by_nhit_rows = make_selection_by_nhit_rows(selection_rows_for_active)
+    selection_special_rows = make_special_selection_rows(selection_rows_for_active, [39, 52, 65, 79, 80])
     high_energy_ref = (
         background_systematics.get("high_energy_stage_g_reference")
         if isinstance(background_systematics.get("high_energy_stage_g_reference"), dict)
@@ -1052,7 +1194,7 @@ def main() -> None:
             stage_f_meta_path,
             [
                 f"Included cells: {','.join(str(v) for v in included_ids) or 'n/a'}",
-                f"Result status: {selector_result_status}",
+                f"Result status: nominal reference; active 30-cell result is {active_selection_label}",
                 f"Preferred model: {spectrum_label(preferred_model)} / {preferred_error}",
                 f"Preferred phi0: {fmt(fit_params.get('phi0'), 6) if isinstance(fit_params, dict) else 'n/a'}",
             ],
@@ -1064,7 +1206,7 @@ def main() -> None:
             stage_g_meta_path,
             [
                 f"SED points: {fmt_int(len(sed_points))}",
-                f"Result status: {selector_result_status}",
+                f"Result status: nominal reference; active 30-cell result is {active_selection_label}",
                 "PredE grouping follows reconstructed-energy bins across contributing Nhit cells.",
             ],
         ),
@@ -1356,9 +1498,22 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
       Selector freeze audit: baseline/systematics selectors are read from CSV files and are not defined from Crab <code>N_on/B_on</code>, excess, significance, Stage F pulls, or Stage G residuals. Stage D uses <code>direct_expectation</code>; Li-Ma remains not applicable unless a future off-counts background is produced. Stage D candidate-grid quality may fail when excluded diagnostic/probe cells have fragile annulus fits; the frozen baseline warning count is reported separately. Background systematics compare default versus PSF-shifted annuli and first- versus second-order surfaces using the same Stage D counts maps.
     </div>
     <div class="callout">
-      Current selector status: <strong>{h(selector_result_status)}</strong>. The frozen baseline selector now contains <code>{h(','.join(str(v) for v in included_ids) or 'n/a')}</code>. Existing Stage F/G artifacts contain <code>{h(','.join(str(v) for v in stage_f_ids) or 'n/a')}</code>; pending selector cells are <code>{h(','.join(str(v) for v in selector_pending_ids) or 'none')}</code>, stale result-only cells are <code>{h(','.join(str(v) for v in stale_result_ids) or 'none')}</code>. Treat Stage F/G plots and tables as the previous reference until the 30-cell fit is explicitly rerun.
+      Active 30-cell branch: <strong>{h(active_selection_label)}</strong> (<strong>{h(active_selection_status)}</strong>) with cells <code>{h(','.join(str(v) for v in active_selection_ids) or 'n/a')}</code>. The older nominal Stage F/G artifacts are kept as a reference; they contain <code>{h(','.join(str(v) for v in stage_f_ids) or 'n/a')}</code>, so their pending selector cells are <code>{h(','.join(str(v) for v in selector_pending_ids) or 'none')}</code> and stale result-only cells are <code>{h(','.join(str(v) for v in stale_result_ids) or 'none')}</code>.
     </div>
     <p>{link_html}</p>
+  </section>
+
+  <section>
+    <h2>30-Cell Selection</h2>
+    <div class="callout">
+      <p>The final fit-cell set used in the PSF-borrowing systematic is a frozen prefit MC/response selection, not a Crab-significance selection. It starts from the 84-cell <code>Nhit x predE</code> candidate grid, keeps cells inside the MC central response support, follows the MC occupancy ridge in each Nhit row, requires adequate MC/statistical support and usable PSF information, and then applies the high-Nhit edge veto. The selector is therefore fixed before looking at Stage E excess, Stage F pulls, or Stage G residuals.</p>
+      <p>The active selection contains <strong>{fmt_int(len(active_selection_ids))}</strong> cells: <code>{h(','.join(str(v) for v in active_selection_ids) or 'n/a')}</code>. Cells <code>39/52/65</code> are kept because they are ridge-left physical candidates; their nominal PSF fails the theta-support test, so the <code>v3_psfborrow</code> branch replaces only their PSF with neighboring-cell PSFs. Cells <code>79/80</code> stay excluded because they are high-Nhit edge cells with low-stat/PSF-untrusted behavior.</p>
+    </div>
+    <h3>Selection by Nhit row</h3>
+    {table_from_rows(selection_by_nhit_rows, ['Nhit bin', 'kept cells', 'predE bins', 'ridge fractions', 'MC counts', 'PSF note'])}
+    <h3>Special cell decisions</h3>
+    {table_from_rows(selection_special_rows, ['cell', 'Nhit bin', 'predE bin', 'ridge frac', 'MC count', 'decision', 'reason'])}
+    <p>Read this together with the <strong>MC occupancy ridge fraction</strong> figure: each row is normalized by its own Nhit-row peak, so a value near one marks the dominant MC response bin for that Nhit range, while accepted left/right shoulder cells are retained only when they remain inside the prefit response ridge and pass the additional quality rules.</p>
   </section>
 
   <section>

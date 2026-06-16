@@ -894,6 +894,121 @@ def make_special_selection_rows(rows: Sequence[Dict[str, str]], cell_ids: Sequen
     return out
 
 
+def make_active_psf_rows(
+    psf_rows: Sequence[Dict[str, str]],
+    active_ids: Sequence[int],
+) -> List[Dict[str, object]]:
+    by_id = {int(row["cell_id"]): row for row in psf_rows if row.get("cell_id", "").isdigit()}
+    out: List[Dict[str, object]] = []
+    for cell_id in active_ids:
+        row = by_id.get(cell_id)
+        if not row:
+            continue
+        borrowed = str(row.get("psf_borrowed", "")).strip().lower() in {"1", "true", "yes", "y"}
+        borrowed_from = row.get("borrowed_from", "")
+        original_missing = row.get("original_theta_missing_crab_probability_mass") or row.get(
+            "theta_missing_crab_probability_mass"
+        )
+        out.append(
+            {
+                "cell": cell_id,
+                "Nhit bin": row.get("nhit_bin", ""),
+                "predE bin": row.get("predE_bin", ""),
+                "sigma deg": fmt(row.get("sigma_deg"), 5),
+                "r_opt deg": fmt(row.get("r_opt_deg"), 5),
+                "containment": fmt(row.get("containment_r_opt"), 5),
+                "Neff": fmt(row.get("effective_events"), 5),
+                "missing mass": fmt(row.get("theta_missing_crab_probability_mass"), 5),
+                "PSF source": f"borrowed from {borrowed_from}" if borrowed else "direct",
+                "orig missing": fmt(original_missing, 5) if borrowed else "",
+            }
+        )
+    return out
+
+
+def plot_active_psf_profiles(
+    output_path: Path,
+    npz_path: Path,
+    active_ids: Sequence[int],
+    psf_rows: Sequence[Dict[str, str]],
+) -> Optional[Path]:
+    if not npz_path.exists() or not active_ids:
+        return None
+    try:
+        os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
+        os.environ.setdefault("XDG_CACHE_HOME", "/tmp/.cache")
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception:
+        return None
+
+    by_id = {int(row["cell_id"]): row for row in psf_rows if row.get("cell_id", "").isdigit()}
+    try:
+        with np.load(npz_path, allow_pickle=False) as data:
+            ids = data["cell_id"].astype(int)
+            centers = 0.5 * (data["profile_edges_deg"][:-1] + data["profile_edges_deg"][1:])
+            density = data["profile_density"]
+            sigma = data["sigma_deg"]
+            r_opt = data["r_opt_deg"]
+    except Exception:
+        return None
+
+    index = {int(cell_id): i for i, cell_id in enumerate(ids)}
+    selected_ids = [cell_id for cell_id in active_ids if cell_id in index]
+    if not selected_ids:
+        return None
+    ncols = 5
+    nrows = int(np.ceil(len(selected_ids) / ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(12.8, 2.1 * nrows), dpi=160, sharex=True, sharey=True)
+    axes_arr = np.asarray(axes).reshape(-1)
+    for ax in axes_arr:
+        ax.set_visible(False)
+    for ax, cell_id in zip(axes_arr, selected_ids):
+        ax.set_visible(True)
+        i = index[cell_id]
+        row = by_id.get(cell_id, {})
+        borrowed = str(row.get("psf_borrowed", "")).strip().lower() in {"1", "true", "yes", "y"}
+        color = "#d62728" if borrowed else "#1f77b4"
+        ax.plot(centers, density[i], color=color, lw=1.25)
+        r_value = float(r_opt[i])
+        if np.isfinite(r_value):
+            ax.axvline(r_value, color="#111827", lw=0.8, ls="--", alpha=0.65)
+        ax.set_xlim(0, 2.5)
+        ax.set_ylim(bottom=0)
+        source = f"borrow {row.get('borrowed_from', '')}" if borrowed else "direct"
+        ax.set_title(
+            f"{cell_id} {row.get('nhit_bin', '')}\\n{row.get('predE_bin', '')}",
+            fontsize=7.0,
+            color=color,
+        )
+        ax.text(
+            0.98,
+            0.92,
+            f"s={sigma[i]:.3g} deg\nr={r_opt[i]:.3g} deg\n{source}",
+            transform=ax.transAxes,
+            ha="right",
+            va="top",
+            fontsize=6.4,
+            bbox={"boxstyle": "round,pad=0.18", "facecolor": "white", "edgecolor": "#d1d5db", "alpha": 0.86},
+        )
+        ax.grid(alpha=0.22, lw=0.45)
+    for ax in axes_arr[-ncols:]:
+        if ax.get_visible():
+            ax.set_xlabel("offset angle [deg]", fontsize=7)
+    for row_idx in range(nrows):
+        ax = axes_arr[row_idx * ncols]
+        if ax.get_visible():
+            ax.set_ylabel("density", fontsize=7)
+    fig.suptitle("Active 30-cell PSF radial profiles (v3_baseline_psfborrow)", fontsize=12)
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path)
+    plt.close(fig)
+    return output_path
+
+
 def figure(path: Path, caption: str, *, wide: bool = False, explanation: str = "") -> str:
     if not path.exists():
         return ""
@@ -1006,6 +1121,9 @@ def main() -> None:
     psfborrow_stage_e_meta_path = psfborrow_stage_e_dir / args.psfborrow_stage_e_metadata_name
     psfborrow_stage_f_meta_path = psfborrow_stage_f_dir / args.psfborrow_stage_f_metadata_name
     psfborrow_stage_g_meta_path = psfborrow_stage_g_dir / args.psfborrow_stage_g_metadata_name
+    stage_b_summary_path = stage_b_dir / "psf_v3_candidate_summary.csv"
+    psfborrow_stage_b_summary_path = psfborrow_stage_b_dir / "psf_v3_candidate_summary.csv"
+    psfborrow_stage_b_npz_path = psfborrow_stage_b_dir / "psf_v3_candidate.npz"
 
     stage_a = load_json(stage_a_meta_path)
     stage_b = load_json(stage_b_meta_path)
@@ -1019,6 +1137,8 @@ def main() -> None:
     psfborrow_stage_e = load_json(psfborrow_stage_e_meta_path)
     psfborrow_stage_f = load_json(psfborrow_stage_f_meta_path)
     psfborrow_stage_g = load_json(psfborrow_stage_g_meta_path)
+    stage_b_psf_rows = read_csv_rows(stage_b_summary_path)
+    psfborrow_stage_b_psf_rows = read_csv_rows(psfborrow_stage_b_summary_path)
     background_systematics = load_json(abs_path(args.background_systematics_json))
     background_systematics_rows = read_csv_rows(abs_path(args.background_systematics_csv))
     validation_summary = load_json(abs_path(args.validation_json))
@@ -1203,6 +1323,14 @@ def main() -> None:
     )
     selection_by_nhit_rows = make_selection_by_nhit_rows(selection_rows_for_active)
     selection_special_rows = make_special_selection_rows(selection_rows_for_active, [39, 52, 65, 79, 80])
+    active_psf_source_rows = psfborrow_stage_b_psf_rows or stage_b_psf_rows
+    active_psf_rows = make_active_psf_rows(active_psf_source_rows, active_selection_ids)
+    active_psf_profiles_path = plot_active_psf_profiles(
+        REPORT_DIR / "assets/v3-psfborrow/v3_active_fit_cell_psf_profiles.png",
+        psfborrow_stage_b_npz_path if psfborrow_stage_b_npz_path.exists() else stage_b_dir / "psf_v3_candidate.npz",
+        active_selection_ids,
+        active_psf_source_rows,
+    )
     high_energy_ref = (
         background_systematics.get("high_energy_stage_g_reference")
         if isinstance(background_systematics.get("high_energy_stage_g_reference"), dict)
@@ -1746,6 +1874,20 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
     <h3>Special cell decisions</h3>
     {table_from_rows(selection_special_rows, ['cell', 'Nhit bin', 'predE bin', 'ridge frac', 'MC count', 'decision', 'reason'])}
     <p>Read this together with the <strong>MC occupancy ridge fraction</strong> figure: each row is normalized by its own Nhit-row peak, so a value near one marks the dominant MC response bin for that Nhit range, while accepted left/right shoulder cells are retained only when they remain inside the prefit response ridge and pass the additional quality rules.</p>
+  </section>
+
+  <section>
+    <h2>Active Fit-Cell PSF Diagnostics</h2>
+    <div class="callout">
+      <p>This section shows the PSF actually used by the active <code>{h(active_selection_label)}</code> fit-cell branch. For direct cells the values come from Stage B; for cells <code>39/52/65</code> the active PSF is the borrowed/interpolated neighbor PSF while the original missing theta-support diagnostic is preserved in the table.</p>
+    </div>
+    {figure(active_psf_profiles_path or Path('__missing_active_psf_profiles.png'), 'Active 30-cell PSF radial profiles', wide=True, explanation='Radial PSF density profiles for the active fit cells. Red panels are cells whose active PSF is borrowed/interpolated from neighboring cells; the dashed vertical line marks r_opt used by the aperture optimization.')}
+    {figure(stage_b_dir / 'psf_sigma_deg_grid.png', 'Stage B PSF sigma grid', wide=True, explanation='Candidate-grid Rayleigh-core PSF width sigma in degrees. Smaller sigma means a narrower reconstructed Crab response for that cell.')}
+    {figure(stage_b_dir / 'psf_r_opt_deg_grid.png', 'Stage B PSF r_opt grid', wide=True, explanation='Candidate-grid optimized aperture radius r_opt in degrees, derived from the Stage B PSF model.')}
+    {figure(stage_b_dir / 'psf_containment_grid.png', 'Stage B PSF containment at r_opt grid', wide=True, explanation='Fraction of the PSF contained inside r_opt for each candidate cell. Low containment or warnings indicate a broad tail or low-stat PSF behavior.')}
+    {figure(stage_b_dir / 'psf_effective_events_grid.png', 'Stage B PSF effective-events grid', wide=True, explanation='Effective MC statistics after Crab-declination theta reweighting. Low values are the main reason some visually plausible cells need PSF follow-up or borrowing.')}
+    <h3>Active fit-cell PSF table</h3>
+    {table_from_rows(active_psf_rows, ['cell', 'Nhit bin', 'predE bin', 'sigma deg', 'r_opt deg', 'containment', 'Neff', 'missing mass', 'PSF source', 'orig missing'])}
   </section>
 
   <section>

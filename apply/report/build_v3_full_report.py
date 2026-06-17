@@ -52,6 +52,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--baseline-selector-csv", type=str, default="apply/config/cell_selector_v3_baseline.csv")
     parser.add_argument("--systematics-selector-csv", type=str, default="apply/config/cell_selector_v3_systematics.csv")
     parser.add_argument(
+        "--own-cell-psf-profile-cache",
+        type=str,
+        default="apply/report/assets/v3-psfborrow/v3_own_cell_psf_profile_cache.npz",
+    )
+    parser.add_argument(
         "--high-energy-selector-csv",
         type=str,
         default="apply/config/cell_selector_v3_high_energy_probes.csv",
@@ -1050,6 +1055,31 @@ def make_active_psf_rows(
     return out
 
 
+def load_own_cell_profile_cache(cache_path: Path) -> tuple[Dict[int, np.ndarray], Dict[int, Dict[str, object]], Optional[np.ndarray]]:
+    if not cache_path.exists():
+        return {}, {}, None
+    try:
+        with np.load(cache_path, allow_pickle=False) as data:
+            ids = data["cell_id"].astype(int)
+            density = data["profile_density"].astype(np.float64)
+            edges = data["profile_edges_deg"].astype(np.float64)
+            used_events = data["used_events"] if "used_events" in data.files else np.full(ids.shape, -1)
+            events = data["events"] if "events" in data.files else np.full(ids.shape, -1)
+            status = data["status"] if "status" in data.files else np.asarray(["cached"] * len(ids))
+    except Exception:
+        return {}, {}, None
+    profiles = {int(cell_id): np.asarray(density[idx], dtype=np.float64) for idx, cell_id in enumerate(ids)}
+    meta = {
+        int(cell_id): {
+            "status": str(status[idx]),
+            "events": int(events[idx]),
+            "used_events": int(used_events[idx]),
+        }
+        for idx, cell_id in enumerate(ids)
+    }
+    return profiles, meta, edges
+
+
 def plot_active_psf_profiles(
     output_path: Path,
     npz_path: Path,
@@ -1136,6 +1166,108 @@ def plot_active_psf_profiles(
         fig.suptitle("Active 30-cell normalized PSF radial profiles (v3_baseline_psfborrow)", fontsize=12)
     else:
         fig.suptitle("Active 30-cell PSF radial profiles (v3_baseline_psfborrow)", fontsize=12)
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path)
+    plt.close(fig)
+    return output_path
+
+
+def plot_own_cell_normalized_psf_profiles(
+    output_path: Path,
+    npz_path: Path,
+    active_ids: Sequence[int],
+    active_psf_rows: Sequence[Dict[str, str]],
+    nominal_psf_rows: Sequence[Dict[str, str]],
+    own_profile_cache_path: Path,
+) -> Optional[Path]:
+    if not npz_path.exists() or not active_ids:
+        return None
+    try:
+        os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
+        os.environ.setdefault("XDG_CACHE_HOME", "/tmp/.cache")
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception:
+        return None
+
+    active_by_id = {int(row["cell_id"]): row for row in active_psf_rows if row.get("cell_id", "").isdigit()}
+    nominal_by_id = {int(row["cell_id"]): row for row in nominal_psf_rows if row.get("cell_id", "").isdigit()}
+    try:
+        with np.load(npz_path, allow_pickle=False) as data:
+            ids = data["cell_id"].astype(int)
+            edges = data["profile_edges_deg"]
+            centers = 0.5 * (edges[:-1] + edges[1:])
+            density = data["profile_density"]
+    except Exception:
+        return None
+
+    cached_profiles, cached_meta, cached_edges = load_own_cell_profile_cache(own_profile_cache_path)
+    index = {int(cell_id): i for i, cell_id in enumerate(ids)}
+    selected_ids = [cell_id for cell_id in active_ids if cell_id in index]
+    if not selected_ids:
+        return None
+
+    ncols = 5
+    nrows = int(np.ceil(len(selected_ids) / ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(12.8, 2.1 * nrows), dpi=160, sharex=True, sharey=True)
+    axes_arr = np.asarray(axes).reshape(-1)
+    for ax in axes_arr:
+        ax.set_visible(False)
+
+    for ax, cell_id in zip(axes_arr, selected_ids):
+        ax.set_visible(True)
+        i = index[cell_id]
+        active_row = active_by_id.get(cell_id, {})
+        nominal_row = nominal_by_id.get(cell_id, active_row)
+        borrowed = str(active_row.get("psf_borrowed", "")).strip().lower() in {"1", "true", "yes", "y"}
+        color = "#d62728" if borrowed else "#1f77b4"
+        y_values = np.asarray(density[i], dtype=np.float64)
+        source = "own Stage B"
+        if borrowed and cell_id in cached_profiles:
+            y_values = np.asarray(cached_profiles[cell_id], dtype=np.float64)
+            meta = cached_meta.get(cell_id, {})
+            source = f"own cache {meta.get('used_events', '')} ev"
+            if cached_edges is not None and len(cached_edges) == len(centers) + 1 and not np.allclose(cached_edges, edges):
+                source = "own cache, different edges"
+
+        peak = float(np.nanmax(y_values)) if y_values.size else 0.0
+        if np.isfinite(peak) and peak > 0.0:
+            y_values = y_values / peak
+        ax.plot(centers, y_values, color=color, lw=1.25)
+        ax.set_xlim(0, 2.5)
+        ax.set_ylim(0, 1.08)
+        ax.set_title(
+            f"{cell_id} {nominal_row.get('nhit_bin', '')}\n{nominal_row.get('predE_bin', '')}",
+            fontsize=7.0,
+            color=color,
+        )
+        if borrowed:
+            note = f"{source}\nfit borrows {active_row.get('borrowed_from', '')}"
+        else:
+            note = source
+        ax.text(
+            0.98,
+            0.92,
+            note,
+            transform=ax.transAxes,
+            ha="right",
+            va="top",
+            fontsize=6.4,
+            bbox={"boxstyle": "round,pad=0.18", "facecolor": "white", "edgecolor": "#d1d5db", "alpha": 0.86},
+        )
+        ax.grid(alpha=0.22, lw=0.45)
+
+    for ax in axes_arr[-ncols:]:
+        if ax.get_visible():
+            ax.set_xlabel("offset angle [deg]", fontsize=7)
+    for row_idx in range(nrows):
+        ax = axes_arr[row_idx * ncols]
+        if ax.get_visible():
+            ax.set_ylabel("own-cell peak-normalized density", fontsize=7)
+    fig.suptitle("Active 30-cell own-cell normalized radial profiles", fontsize=12)
     fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path)
@@ -1495,12 +1627,13 @@ def main() -> None:
         active_selection_ids,
         active_psf_source_rows,
     )
-    active_psf_norm_profiles_path = plot_active_psf_profiles(
+    active_psf_norm_profiles_path = plot_own_cell_normalized_psf_profiles(
         REPORT_DIR / "assets/v3-psfborrow/v3_active_fit_cell_psf_profiles_normalized.png",
-        psfborrow_stage_b_npz_path if psfborrow_stage_b_npz_path.exists() else stage_b_dir / "psf_v3_candidate.npz",
+        stage_b_dir / "psf_v3_candidate.npz",
         active_selection_ids,
         active_psf_source_rows,
-        normalize=True,
+        stage_b_psf_rows,
+        abs_path(args.own_cell_psf_profile_cache),
     )
     high_energy_ref = (
         background_systematics.get("high_energy_stage_g_reference")
@@ -2071,7 +2204,7 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
       <p>This section shows the PSF actually used by the active <code>{h(active_selection_label)}</code> fit-cell branch. For direct cells the values come from Stage B; for cells <code>39/52/65</code> the active PSF is the borrowed/interpolated neighbor PSF while the original missing theta-support diagnostic is preserved in the table.</p>
     </div>
     {figure(active_psf_profiles_path or Path('__missing_active_psf_profiles.png'), 'Active 30-cell PSF radial profiles', wide=True, explanation='Radial PSF density profiles for the active fit cells. Red panels are cells whose active PSF is borrowed/interpolated from neighboring cells; the dashed vertical line marks r_opt used by the aperture optimization.')}
-    {figure(active_psf_norm_profiles_path or Path('__missing_active_psf_norm_profiles.png'), 'Active 30-cell normalized PSF radial profiles', wide=True, explanation='Same active fit-cell PSF profiles after dividing each cell by its own peak density. This removes the shared-y-axis compression in the absolute-density view and makes the central peak width and tail shape comparable across cells.')}
+    {figure(active_psf_norm_profiles_path or Path('__missing_active_psf_norm_profiles.png'), 'Active 30-cell own-cell normalized radial profiles', wide=True, explanation='Diagnostic-only view of each selected cell own radial MC distribution, normalized by that cell peak. For borrowed cells 39/52/65, the curve is the cell own distribution for inspection, while the fit still uses the neighboring borrowed/interpolated PSF listed in the table and in the red panel note.')}
     {figure(stage_b_dir / 'psf_sigma_deg_grid.png', 'Stage B PSF sigma grid', wide=True, explanation='Candidate-grid Rayleigh-core PSF width sigma in degrees. Smaller sigma means a narrower reconstructed Crab response for that cell.')}
     {figure(stage_b_dir / 'psf_r_opt_deg_grid.png', 'Stage B PSF r_opt grid', wide=True, explanation='Candidate-grid optimized aperture radius r_opt in degrees, derived from the Stage B PSF model.')}
     {figure(stage_b_dir / 'psf_containment_grid.png', 'Stage B PSF containment at r_opt grid', wide=True, explanation='Fraction of the PSF contained inside r_opt for each candidate cell. Low containment or warnings indicate a broad tail or low-stat PSF behavior.')}

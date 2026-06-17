@@ -1,0 +1,34 @@
+{
+  "profiles": [
+    {
+      "cell_id": 39,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3,3.25)",
+      "input_files": 9340,
+      "events": 27769,
+      "used_events": 27733,
+      "status": "ok",
+      "sumw": 10420547.090393066
+    },
+    {
+      "cell_id": 52,
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[3.25,3.5)",
+      "input_files": 7898,
+      "events": 15783,
+      "used_events": 15783,
+      "status": "ok",
+      "sumw": 5342978.480926514
+    },
+    {
+      "cell_id": 65,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[3.5,3.75)",
+      "input_files": 6624,
+      "events": 10960,
+      "used_events": 10959,
+      "status": "ok",
+      "sumw": 3405312.4759140015
+    }
+  ]
+}

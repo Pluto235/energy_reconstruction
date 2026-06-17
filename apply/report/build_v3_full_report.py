@@ -1055,6 +1055,8 @@ def plot_active_psf_profiles(
     npz_path: Path,
     active_ids: Sequence[int],
     psf_rows: Sequence[Dict[str, str]],
+    *,
+    normalize: bool = False,
 ) -> Optional[Path]:
     if not npz_path.exists() or not active_ids:
         return None
@@ -1095,7 +1097,12 @@ def plot_active_psf_profiles(
         row = by_id.get(cell_id, {})
         borrowed = str(row.get("psf_borrowed", "")).strip().lower() in {"1", "true", "yes", "y"}
         color = "#d62728" if borrowed else "#1f77b4"
-        ax.plot(centers, density[i], color=color, lw=1.25)
+        y_values = np.asarray(density[i], dtype=np.float64)
+        if normalize:
+            peak = float(np.nanmax(y_values)) if y_values.size else 0.0
+            if np.isfinite(peak) and peak > 0.0:
+                y_values = y_values / peak
+        ax.plot(centers, y_values, color=color, lw=1.25)
         r_value = float(r_opt[i])
         if np.isfinite(r_value):
             ax.axvline(r_value, color="#111827", lw=0.8, ls="--", alpha=0.65)
@@ -1124,8 +1131,11 @@ def plot_active_psf_profiles(
     for row_idx in range(nrows):
         ax = axes_arr[row_idx * ncols]
         if ax.get_visible():
-            ax.set_ylabel("density", fontsize=7)
-    fig.suptitle("Active 30-cell PSF radial profiles (v3_baseline_psfborrow)", fontsize=12)
+            ax.set_ylabel("peak-normalized density" if normalize else "density", fontsize=7)
+    if normalize:
+        fig.suptitle("Active 30-cell normalized PSF radial profiles (v3_baseline_psfborrow)", fontsize=12)
+    else:
+        fig.suptitle("Active 30-cell PSF radial profiles (v3_baseline_psfborrow)", fontsize=12)
     fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path)
@@ -1484,6 +1494,13 @@ def main() -> None:
         psfborrow_stage_b_npz_path if psfborrow_stage_b_npz_path.exists() else stage_b_dir / "psf_v3_candidate.npz",
         active_selection_ids,
         active_psf_source_rows,
+    )
+    active_psf_norm_profiles_path = plot_active_psf_profiles(
+        REPORT_DIR / "assets/v3-psfborrow/v3_active_fit_cell_psf_profiles_normalized.png",
+        psfborrow_stage_b_npz_path if psfborrow_stage_b_npz_path.exists() else stage_b_dir / "psf_v3_candidate.npz",
+        active_selection_ids,
+        active_psf_source_rows,
+        normalize=True,
     )
     high_energy_ref = (
         background_systematics.get("high_energy_stage_g_reference")
@@ -2054,6 +2071,7 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
       <p>This section shows the PSF actually used by the active <code>{h(active_selection_label)}</code> fit-cell branch. For direct cells the values come from Stage B; for cells <code>39/52/65</code> the active PSF is the borrowed/interpolated neighbor PSF while the original missing theta-support diagnostic is preserved in the table.</p>
     </div>
     {figure(active_psf_profiles_path or Path('__missing_active_psf_profiles.png'), 'Active 30-cell PSF radial profiles', wide=True, explanation='Radial PSF density profiles for the active fit cells. Red panels are cells whose active PSF is borrowed/interpolated from neighboring cells; the dashed vertical line marks r_opt used by the aperture optimization.')}
+    {figure(active_psf_norm_profiles_path or Path('__missing_active_psf_norm_profiles.png'), 'Active 30-cell normalized PSF radial profiles', wide=True, explanation='Same active fit-cell PSF profiles after dividing each cell by its own peak density. This removes the shared-y-axis compression in the absolute-density view and makes the central peak width and tail shape comparable across cells.')}
     {figure(stage_b_dir / 'psf_sigma_deg_grid.png', 'Stage B PSF sigma grid', wide=True, explanation='Candidate-grid Rayleigh-core PSF width sigma in degrees. Smaller sigma means a narrower reconstructed Crab response for that cell.')}
     {figure(stage_b_dir / 'psf_r_opt_deg_grid.png', 'Stage B PSF r_opt grid', wide=True, explanation='Candidate-grid optimized aperture radius r_opt in degrees, derived from the Stage B PSF model.')}
     {figure(stage_b_dir / 'psf_containment_grid.png', 'Stage B PSF containment at r_opt grid', wide=True, explanation='Fraction of the PSF contained inside r_opt for each candidate cell. Low containment or warnings indicate a broad tail or low-stat PSF behavior.')}

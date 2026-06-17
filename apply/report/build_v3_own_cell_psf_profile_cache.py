@@ -92,23 +92,26 @@ def build_profile(
     loge_min: float,
     loge_max: float,
     profile_edges_deg: np.ndarray,
+    theta_edges_deg: np.ndarray,
     batch_size: str,
-) -> Tuple[np.ndarray, Dict[str, object]]:
+) -> Tuple[np.ndarray, np.ndarray, Dict[str, object]]:
     cell_dir = binned_root / f"nhit_{sanitize_label(str(cell['nhit_bin']))}" / f"predE_{sanitize_label(str(cell['predE_bin']))}"
     files = sorted(cell_dir.glob("*.root"))
     if not files:
         raise FileNotFoundError(f"No ROOT files found for cell {cell['cell_id']} in {cell_dir}")
 
     hist = np.zeros(len(profile_edges_deg) - 1, dtype=np.float64)
+    theta_hist = np.zeros(len(theta_edges_deg) - 1, dtype=np.float64)
     events = 0
     used_events = 0
     input_files = 0
-    branches = ["mc_dangle", "mc_energy", weight_branch]
+    branches = ["mc_dangle", "mc_theta", "mc_energy", weight_branch]
     for file_index, path in enumerate(files, start=1):
         input_files += 1
         source = tree_path(path, tree_name_value)
         for arrays in uproot.iterate(source, branches, library="np", step_size=batch_size):
             dangle = np.asarray(arrays["mc_dangle"], dtype=np.float64)
+            mc_theta = np.asarray(arrays["mc_theta"], dtype=np.float64)
             mc_energy = np.asarray(arrays["mc_energy"], dtype=np.float64)
             weight = np.asarray(arrays[weight_branch], dtype=np.float64)
             events += int(dangle.size)
@@ -127,13 +130,17 @@ def build_profile(
                 r_deg = np.degrees(dangle[valid])
                 values, _ = np.histogram(r_deg, bins=profile_edges_deg, weights=weight[valid])
                 hist += values
+                theta_values, _ = np.histogram(np.degrees(mc_theta[valid]), bins=theta_edges_deg, weights=weight[valid])
+                theta_hist += theta_values
         if file_index % 1000 == 0 or file_index == len(files):
             print(f"cell {cell['cell_id']}: read {file_index}/{len(files)} files, used={used_events}", flush=True)
 
     total = float(np.sum(hist))
     widths = np.diff(profile_edges_deg)
     density = hist / (total * widths) if total > 0.0 else hist
-    return density.astype(np.float32), {
+    theta_total = float(np.sum(theta_hist))
+    theta_probability = theta_hist / theta_total if theta_total > 0.0 else theta_hist
+    return density.astype(np.float32), theta_probability.astype(np.float32), {
         "cell_id": int(cell["cell_id"]),
         "nhit_bin": str(cell["nhit_bin"]),
         "predE_bin": str(cell["predE_bin"]),
@@ -157,15 +164,19 @@ def main() -> None:
     profile_edges_deg = np.asarray(stage_b.get("profile_edges_deg") or np.arange(0.0, 5.0 + 0.05, 0.05), dtype=np.float64)
     if profile_edges_deg.ndim != 1 or profile_edges_deg.size < 2:
         profile_edges_deg = np.arange(0.0, 5.0 + 0.05, 0.05, dtype=np.float64)
+    theta_edges_deg = np.asarray(stage_b.get("theta_edges_deg") or np.arange(0.0, 50.0 + 1.0, 1.0), dtype=np.float64)
+    if theta_edges_deg.ndim != 1 or theta_edges_deg.size < 2:
+        theta_edges_deg = np.arange(0.0, 50.0 + 1.0, 1.0, dtype=np.float64)
 
     requested_ids = [int(value.strip()) for value in args.cell_ids.split(",") if value.strip()]
     cells = {int(row["cell_id"]): row for row in load_cells(abs_path(args.cell_ledger_csv))}
     profiles = []
+    theta_probabilities = []
     summaries = []
     for cell_id in requested_ids:
         if cell_id not in cells:
             raise KeyError(f"Cell {cell_id} missing from {args.cell_ledger_csv}")
-        profile, summary = build_profile(
+        profile, theta_probability, summary = build_profile(
             cell=cells[cell_id],
             binned_root=binned_root,
             tree_name_value=tree_name_value,
@@ -173,9 +184,11 @@ def main() -> None:
             loge_min=loge_min,
             loge_max=loge_max,
             profile_edges_deg=profile_edges_deg,
+            theta_edges_deg=theta_edges_deg,
             batch_size=args.batch_size,
         )
         profiles.append(profile)
+        theta_probabilities.append(theta_probability)
         summaries.append(summary)
 
     output_npz = abs_path(args.output_npz)
@@ -185,6 +198,8 @@ def main() -> None:
         cell_id=np.asarray(requested_ids, dtype=np.int32),
         profile_edges_deg=profile_edges_deg.astype(np.float32),
         profile_density=np.vstack(profiles).astype(np.float32),
+        theta_edges_deg=theta_edges_deg.astype(np.float32),
+        mc_theta_probability=np.vstack(theta_probabilities).astype(np.float32),
         status=np.asarray([row["status"] for row in summaries], dtype="U32"),
         events=np.asarray([row["events"] for row in summaries], dtype=np.int64),
         used_events=np.asarray([row["used_events"] for row in summaries], dtype=np.int64),

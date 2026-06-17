@@ -1055,20 +1055,33 @@ def make_active_psf_rows(
     return out
 
 
-def load_own_cell_profile_cache(cache_path: Path) -> tuple[Dict[int, np.ndarray], Dict[int, Dict[str, object]], Optional[np.ndarray]]:
+def load_own_cell_profile_cache(
+    cache_path: Path,
+) -> tuple[Dict[int, np.ndarray], Dict[int, np.ndarray], Dict[int, Dict[str, object]], Optional[np.ndarray], Optional[np.ndarray]]:
     if not cache_path.exists():
-        return {}, {}, None
+        return {}, {}, {}, None, None
     try:
         with np.load(cache_path, allow_pickle=False) as data:
             ids = data["cell_id"].astype(int)
             density = data["profile_density"].astype(np.float64)
             edges = data["profile_edges_deg"].astype(np.float64)
+            theta_edges = data["theta_edges_deg"].astype(np.float64) if "theta_edges_deg" in data.files else None
+            theta_probability = (
+                data["mc_theta_probability"].astype(np.float64)
+                if "mc_theta_probability" in data.files
+                else np.zeros((len(ids), 0), dtype=np.float64)
+            )
             used_events = data["used_events"] if "used_events" in data.files else np.full(ids.shape, -1)
             events = data["events"] if "events" in data.files else np.full(ids.shape, -1)
             status = data["status"] if "status" in data.files else np.asarray(["cached"] * len(ids))
     except Exception:
-        return {}, {}, None
+        return {}, {}, {}, None, None
     profiles = {int(cell_id): np.asarray(density[idx], dtype=np.float64) for idx, cell_id in enumerate(ids)}
+    theta_profiles = {
+        int(cell_id): np.asarray(theta_probability[idx], dtype=np.float64)
+        for idx, cell_id in enumerate(ids)
+        if theta_probability.shape[1] > 0
+    }
     meta = {
         int(cell_id): {
             "status": str(status[idx]),
@@ -1077,7 +1090,7 @@ def load_own_cell_profile_cache(cache_path: Path) -> tuple[Dict[int, np.ndarray]
         }
         for idx, cell_id in enumerate(ids)
     }
-    return profiles, meta, edges
+    return profiles, theta_profiles, meta, edges, theta_edges
 
 
 def plot_active_psf_profiles(
@@ -1204,7 +1217,7 @@ def plot_own_cell_normalized_psf_profiles(
     except Exception:
         return None
 
-    cached_profiles, cached_meta, cached_edges = load_own_cell_profile_cache(own_profile_cache_path)
+    cached_profiles, _, cached_meta, cached_edges, _ = load_own_cell_profile_cache(own_profile_cache_path)
     index = {int(cell_id): i for i, cell_id in enumerate(ids)}
     selected_ids = [cell_id for cell_id in active_ids if cell_id in index]
     if not selected_ids:
@@ -1268,6 +1281,115 @@ def plot_own_cell_normalized_psf_profiles(
         if ax.get_visible():
             ax.set_ylabel("own-cell peak-normalized density", fontsize=7)
     fig.suptitle("Active 30-cell own-cell normalized radial profiles", fontsize=12)
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path)
+    plt.close(fig)
+    return output_path
+
+
+def plot_active_theta_profiles(
+    output_path: Path,
+    active_ids: Sequence[int],
+    active_psf_rows: Sequence[Dict[str, str]],
+    nominal_psf_rows: Sequence[Dict[str, str]],
+    stage_b_meta: Dict[str, object],
+    own_profile_cache_path: Path,
+) -> Optional[Path]:
+    if not active_ids:
+        return None
+    try:
+        os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
+        os.environ.setdefault("XDG_CACHE_HOME", "/tmp/.cache")
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception:
+        return None
+
+    cells_meta = stage_b_meta.get("cells") if isinstance(stage_b_meta.get("cells"), list) else []
+    meta_by_id = {int(row["cell_id"]): row for row in cells_meta if isinstance(row, dict) and row.get("cell_id") is not None}
+    active_by_id = {int(row["cell_id"]): row for row in active_psf_rows if row.get("cell_id", "").isdigit()}
+    nominal_by_id = {int(row["cell_id"]): row for row in nominal_psf_rows if row.get("cell_id", "").isdigit()}
+    _, cached_theta_profiles, cached_meta, _, cached_theta_edges = load_own_cell_profile_cache(own_profile_cache_path)
+    theta_edges = np.asarray(stage_b_meta.get("theta_edges_deg") or [], dtype=np.float64)
+    if theta_edges.size < 2 and cached_theta_edges is not None:
+        theta_edges = cached_theta_edges
+    if theta_edges.size < 2:
+        return None
+    centers = 0.5 * (theta_edges[:-1] + theta_edges[1:])
+    crab_prob = np.asarray(stage_b_meta.get("crab_theta_probability") or np.zeros_like(centers), dtype=np.float64)
+    if crab_prob.size != centers.size:
+        crab_prob = np.zeros_like(centers)
+
+    selected_ids = [int(cell_id) for cell_id in active_ids if int(cell_id) in meta_by_id or int(cell_id) in cached_theta_profiles]
+    if not selected_ids:
+        return None
+
+    ncols = 5
+    nrows = int(np.ceil(len(selected_ids) / ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(12.8, 2.1 * nrows), dpi=160, sharex=True, sharey=True)
+    axes_arr = np.asarray(axes).reshape(-1)
+    for ax in axes_arr:
+        ax.set_visible(False)
+
+    for ax, cell_id in zip(axes_arr, selected_ids):
+        ax.set_visible(True)
+        active_row = active_by_id.get(cell_id, {})
+        nominal_row = nominal_by_id.get(cell_id, active_row)
+        borrowed = str(active_row.get("psf_borrowed", "")).strip().lower() in {"1", "true", "yes", "y"}
+        color = "#d62728" if borrowed else "#1f77b4"
+        source = "Stage B theta"
+        y_values: Optional[np.ndarray] = None
+        if borrowed and cell_id in cached_theta_profiles:
+            y_values = np.asarray(cached_theta_profiles[cell_id], dtype=np.float64)
+            source = f"own cache {cached_meta.get(cell_id, {}).get('used_events', '')} ev"
+        else:
+            row_meta = meta_by_id.get(cell_id, {})
+            theta_reweight = row_meta.get("theta_reweight") if isinstance(row_meta.get("theta_reweight"), dict) else {}
+            raw = theta_reweight.get("mc_theta_probability")
+            if raw is not None:
+                y_values = np.asarray(raw, dtype=np.float64)
+        if y_values is None or y_values.size != centers.size:
+            y_values = np.zeros_like(centers)
+            source = "theta unavailable"
+        ax.step(centers, y_values, where="mid", color=color, lw=1.25, label="cell MC")
+        if np.any(crab_prob > 0.0):
+            ax.step(centers, crab_prob, where="mid", color="#4b5563", lw=0.95, alpha=0.75, label="Crab target")
+        missing = (crab_prob > 0.0) & ~(y_values > 0.0)
+        if np.any(missing):
+            ax.fill_between(centers, 0.0, crab_prob, where=missing, step="mid", color="#f59e0b", alpha=0.24, lw=0)
+        ax.set_xlim(float(theta_edges[0]), float(theta_edges[-1]))
+        ax.set_ylim(bottom=0)
+        ax.set_title(
+            f"{cell_id} {nominal_row.get('nhit_bin', '')}\n{nominal_row.get('predE_bin', '')}",
+            fontsize=7.0,
+            color=color,
+        )
+        note = source if not borrowed else f"{source}\nfit borrows {active_row.get('borrowed_from', '')}"
+        ax.text(
+            0.98,
+            0.92,
+            note,
+            transform=ax.transAxes,
+            ha="right",
+            va="top",
+            fontsize=6.4,
+            bbox={"boxstyle": "round,pad=0.18", "facecolor": "white", "edgecolor": "#d1d5db", "alpha": 0.86},
+        )
+        ax.grid(alpha=0.22, lw=0.45)
+    for ax in axes_arr[-ncols:]:
+        if ax.get_visible():
+            ax.set_xlabel("theta [deg]", fontsize=7)
+    for row_idx in range(nrows):
+        ax = axes_arr[row_idx * ncols]
+        if ax.get_visible():
+            ax.set_ylabel("probability / theta bin", fontsize=7)
+    visible_axes = [ax for ax in axes_arr if ax.get_visible()]
+    if visible_axes:
+        visible_axes[0].legend(loc="upper left", fontsize=6.4, frameon=True)
+    fig.suptitle("Active 30-cell normalized MC theta profiles", fontsize=12)
     fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path)
@@ -1633,6 +1755,14 @@ def main() -> None:
         active_selection_ids,
         active_psf_source_rows,
         stage_b_psf_rows,
+        abs_path(args.own_cell_psf_profile_cache),
+    )
+    active_theta_profiles_path = plot_active_theta_profiles(
+        REPORT_DIR / "assets/v3-psfborrow/v3_active_fit_cell_theta_profiles.png",
+        active_selection_ids,
+        active_psf_source_rows,
+        stage_b_psf_rows,
+        stage_b,
         abs_path(args.own_cell_psf_profile_cache),
     )
     high_energy_ref = (
@@ -2205,6 +2335,7 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
     </div>
     {figure(active_psf_profiles_path or Path('__missing_active_psf_profiles.png'), 'Active 30-cell PSF radial profiles', wide=True, explanation='Radial PSF density profiles for the active fit cells. Red panels are cells whose active PSF is borrowed/interpolated from neighboring cells; the dashed vertical line marks r_opt used by the aperture optimization.')}
     {figure(active_psf_norm_profiles_path or Path('__missing_active_psf_norm_profiles.png'), 'Active 30-cell own-cell normalized radial profiles', wide=True, explanation='Diagnostic-only view of each selected cell own radial MC distribution, normalized by that cell peak. For borrowed cells 39/52/65, the curve is the cell own distribution for inspection, while the fit still uses the neighboring borrowed/interpolated PSF listed in the table and in the red panel note.')}
+    {figure(active_theta_profiles_path or Path('__missing_active_theta_profiles.png'), 'Active 30-cell normalized MC theta profiles', wide=True, explanation='For each active cell, the colored curve is the cell own normalized MC theta distribution after the Stage B true-energy and positive-weight support cuts; the gray curve is the Crab-visible theta target distribution used for reweighting. Orange shading marks theta bins where Crab has exposure but this cell has no MC support. Cells 39/52/65 still show their own-cell theta support here, while their fit PSF is borrowed/interpolated as noted in the panel and table.')}
     {figure(stage_b_dir / 'psf_sigma_deg_grid.png', 'Stage B PSF sigma grid', wide=True, explanation='Candidate-grid Rayleigh-core PSF width sigma in degrees. Smaller sigma means a narrower reconstructed Crab response for that cell.')}
     {figure(stage_b_dir / 'psf_r_opt_deg_grid.png', 'Stage B PSF r_opt grid', wide=True, explanation='Candidate-grid optimized aperture radius r_opt in degrees, derived from the Stage B PSF model.')}
     {figure(stage_b_dir / 'psf_containment_grid.png', 'Stage B PSF containment at r_opt grid', wide=True, explanation='Fraction of the PSF contained inside r_opt for each candidate cell. Low containment or warnings indicate a broad tail or low-stat PSF behavior.')}

@@ -1189,6 +1189,7 @@ def plot_active_psf_profiles(
 def plot_own_cell_normalized_psf_profiles(
     output_path: Path,
     npz_path: Path,
+    fit_psf_npz_path: Path,
     active_ids: Sequence[int],
     active_psf_rows: Sequence[Dict[str, str]],
     nominal_psf_rows: Sequence[Dict[str, str]],
@@ -1216,6 +1217,22 @@ def plot_own_cell_normalized_psf_profiles(
             density = data["profile_density"]
     except Exception:
         return None
+    fit_centers = centers
+    fit_density_by_id: Dict[int, np.ndarray] = {}
+    if fit_psf_npz_path.exists():
+        try:
+            with np.load(fit_psf_npz_path, allow_pickle=False) as data:
+                fit_ids = data["cell_id"].astype(int)
+                fit_edges = data["profile_edges_deg"]
+                fit_centers = 0.5 * (fit_edges[:-1] + fit_edges[1:])
+                fit_density = data["profile_density"]
+                fit_density_by_id = {
+                    int(cell_id): np.asarray(fit_density[idx], dtype=np.float64)
+                    for idx, cell_id in enumerate(fit_ids)
+                }
+        except Exception:
+            fit_centers = centers
+            fit_density_by_id = {}
 
     cached_profiles, _, cached_meta, cached_edges, _ = load_own_cell_profile_cache(own_profile_cache_path)
     index = {int(cell_id): i for i, cell_id in enumerate(ids)}
@@ -1249,7 +1266,13 @@ def plot_own_cell_normalized_psf_profiles(
         peak = float(np.nanmax(y_values)) if y_values.size else 0.0
         if np.isfinite(peak) and peak > 0.0:
             y_values = y_values / peak
-        ax.plot(centers, y_values, color=color, lw=1.25)
+        fit_y_values = fit_density_by_id.get(cell_id)
+        if fit_y_values is not None:
+            fit_peak = float(np.nanmax(fit_y_values)) if fit_y_values.size else 0.0
+            if np.isfinite(fit_peak) and fit_peak > 0.0:
+                fit_y_values = fit_y_values / fit_peak
+            ax.plot(fit_centers, fit_y_values, color="#6b7280", lw=1.0, ls="--", alpha=0.9, label="fit PSF")
+        ax.plot(centers, y_values, color=color, lw=1.25, label="own cell")
         ax.set_xlim(0, 2.5)
         ax.set_ylim(0, 1.08)
         ax.set_title(
@@ -1273,6 +1296,11 @@ def plot_own_cell_normalized_psf_profiles(
         )
         ax.grid(alpha=0.22, lw=0.45)
 
+    visible_axes = [ax for ax in axes_arr if ax.get_visible()]
+    if visible_axes:
+        handles, labels = visible_axes[0].get_legend_handles_labels()
+        dedup = dict(zip(labels, handles))
+        visible_axes[0].legend(dedup.values(), dedup.keys(), loc="upper left", fontsize=6.4, frameon=True)
     for ax in axes_arr[-ncols:]:
         if ax.get_visible():
             ax.set_xlabel("offset angle [deg]", fontsize=7)
@@ -1746,6 +1774,7 @@ def main() -> None:
     active_psf_norm_profiles_path = plot_own_cell_normalized_psf_profiles(
         REPORT_DIR / "assets/v3-psfborrow/v3_active_fit_cell_psf_profiles_normalized.png",
         stage_b_dir / "psf_v3_candidate.npz",
+        psfborrow_stage_b_npz_path if psfborrow_stage_b_npz_path.exists() else stage_b_dir / "psf_v3_candidate.npz",
         active_selection_ids,
         active_psf_source_rows,
         stage_b_psf_rows,
@@ -2327,7 +2356,7 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
     <div class="callout">
       <p>This section shows the PSF actually used by the active <code>{h(active_selection_label)}</code> fit-cell branch. For direct cells the values come from Stage B; for cells <code>39/52/65</code> the active PSF is the borrowed/interpolated neighbor PSF while the original missing theta-support diagnostic is preserved in the table.</p>
     </div>
-    {figure(active_psf_norm_profiles_path or Path('__missing_active_psf_norm_profiles.png'), 'Active 30-cell own-cell normalized radial profiles', wide=True, explanation='Diagnostic-only view of each selected cell own radial MC distribution, normalized by that cell peak. The only active borrowed-PSF cells are 39, 52, and 65: the fit uses 39 -> 40, 52 -> 2/3*53 + 1/3*54, and 65 -> 2/3*66 + 1/3*67. Cell 69 is direct and does not borrow a PSF. The plotted curves here remain each cell own distribution for inspection.')}
+    {figure(active_psf_norm_profiles_path or Path('__missing_active_psf_norm_profiles.png'), 'Active 30-cell own-cell normalized radial profiles', wide=True, explanation='Diagnostic-only view of each selected cell own radial MC distribution, normalized by that cell peak. Colored solid curves are the cell own MC radial distributions; gray dashed curves are the PSF actually used by the fit. The only active borrowed-PSF cells are 39, 52, and 65: the fit uses 39 -> 40, 52 -> 2/3*53 + 1/3*54, and 65 -> 2/3*66 + 1/3*67. Cell 69 is direct and does not borrow a PSF.')}
     {figure(active_theta_profiles_path or Path('__missing_active_theta_profiles.png'), 'Active 30-cell normalized MC theta profiles', wide=True, explanation='For each active cell, the colored curve is the cell own normalized MC theta distribution after the Stage B true-energy and positive-weight support cuts; the gray curve is the Crab-visible theta target distribution used for reweighting. Orange shading marks theta bins where Crab has exposure but this cell has no MC support. Cells 39/52/65 still show their own-cell theta support here, while their fit PSF is borrowed/interpolated as noted in the panel and table.')}
     {figure(stage_b_dir / 'psf_sigma_deg_grid.png', 'Stage B PSF sigma grid', wide=True, explanation='Candidate-grid Rayleigh-core PSF width sigma in degrees. Smaller sigma means a narrower reconstructed Crab response for that cell.')}
     {figure(stage_b_dir / 'psf_r_opt_deg_grid.png', 'Stage B PSF r_opt grid', wide=True, explanation='Candidate-grid optimized aperture radius r_opt in degrees, derived from the Stage B PSF model.')}

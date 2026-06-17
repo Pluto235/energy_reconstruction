@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-06-17 23:19 · [27e1047] Add Nhit-only SED comparison overlay to the v3 integrated report.
+
 - **energy** · 2026-06-17 22:40 · [71079f1] Add Nhit-only control reports and final v3 diagnostic conclusion.
 
 - **energy** · 2026-06-17 21:44 · [d8b6c39] Add PredE-blind Nhit-only control section to the v3 integrated report.

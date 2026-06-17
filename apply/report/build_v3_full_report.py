@@ -1743,12 +1743,6 @@ def main() -> None:
     selection_special_rows = make_special_selection_rows(selection_rows_for_active, [39, 52, 65, 79, 80])
     active_psf_source_rows = psfborrow_stage_b_psf_rows or stage_b_psf_rows
     active_psf_rows = make_active_psf_rows(active_psf_source_rows, active_selection_ids)
-    active_psf_profiles_path = plot_active_psf_profiles(
-        REPORT_DIR / "assets/v3-psfborrow/v3_active_fit_cell_psf_profiles.png",
-        psfborrow_stage_b_npz_path if psfborrow_stage_b_npz_path.exists() else stage_b_dir / "psf_v3_candidate.npz",
-        active_selection_ids,
-        active_psf_source_rows,
-    )
     active_psf_norm_profiles_path = plot_own_cell_normalized_psf_profiles(
         REPORT_DIR / "assets/v3-psfborrow/v3_active_fit_cell_psf_profiles_normalized.png",
         stage_b_dir / "psf_v3_candidate.npz",
@@ -2333,7 +2327,6 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
     <div class="callout">
       <p>This section shows the PSF actually used by the active <code>{h(active_selection_label)}</code> fit-cell branch. For direct cells the values come from Stage B; for cells <code>39/52/65</code> the active PSF is the borrowed/interpolated neighbor PSF while the original missing theta-support diagnostic is preserved in the table.</p>
     </div>
-    {figure(active_psf_profiles_path or Path('__missing_active_psf_profiles.png'), 'Active 30-cell PSF radial profiles', wide=True, explanation='Radial PSF density profiles for the active fit cells. Red panels are cells whose active PSF is borrowed/interpolated from neighboring cells; the dashed vertical line marks r_opt used by the aperture optimization.')}
     {figure(active_psf_norm_profiles_path or Path('__missing_active_psf_norm_profiles.png'), 'Active 30-cell own-cell normalized radial profiles', wide=True, explanation='Diagnostic-only view of each selected cell own radial MC distribution, normalized by that cell peak. For borrowed cells 39/52/65, the curve is the cell own distribution for inspection, while the fit still uses the neighboring borrowed/interpolated PSF listed in the table and in the red panel note.')}
     {figure(active_theta_profiles_path or Path('__missing_active_theta_profiles.png'), 'Active 30-cell normalized MC theta profiles', wide=True, explanation='For each active cell, the colored curve is the cell own normalized MC theta distribution after the Stage B true-energy and positive-weight support cuts; the gray curve is the Crab-visible theta target distribution used for reweighting. Orange shading marks theta bins where Crab has exposure but this cell has no MC support. Cells 39/52/65 still show their own-cell theta support here, while their fit PSF is borrowed/interpolated as noted in the panel and table.')}
     {figure(stage_b_dir / 'psf_sigma_deg_grid.png', 'Stage B PSF sigma grid', wide=True, explanation='Candidate-grid Rayleigh-core PSF width sigma in degrees. Smaller sigma means a narrower reconstructed Crab response for that cell.')}

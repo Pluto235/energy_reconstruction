@@ -36,6 +36,16 @@ def parse_args() -> argparse.Namespace:
         default="apply/output/stage_f_v3_baseline/runs/v3_stage_f_slurm_42024/fit_v3_baseline.npz",
     )
     parser.add_argument(
+        "--stage-f-npz",
+        action="append",
+        default=None,
+        metavar="LABEL=PATH",
+        help=(
+            "Optional forward-fold run to evaluate. When provided, these runs replace "
+            "--active-stage-f-npz/--legacy-stage-f-npz. May be repeated."
+        ),
+    )
+    parser.add_argument(
         "--official-pass5-sed-csv",
         type=str,
         default="apply/report/assets/official-pass5/wcda_crab_sed_pass5_20260616_104941.csv",
@@ -53,8 +63,24 @@ def parse_args() -> argparse.Namespace:
             "apply/output/stage_e_v3_offsource_control/runs/v3_stage_e_offsource_ra73p63/signal_v3_offsource.npz",
         ],
     )
+    parser.add_argument("--skip-offsource", action="store_true", default=False)
     parser.add_argument("--quadrature-points", type=int, default=96)
     return parser.parse_args()
+
+
+def parse_stage_f_specs(args: argparse.Namespace) -> List[Tuple[str, Path]]:
+    if args.stage_f_npz:
+        specs: List[Tuple[str, Path]] = []
+        for item in args.stage_f_npz:
+            label, sep, path = str(item).partition("=")
+            if not sep or not label.strip() or not path.strip():
+                raise ValueError("--stage-f-npz must use LABEL=PATH")
+            specs.append((label.strip(), resolve(path.strip())))
+        return specs
+    return [
+        ("active_psfborrow_30cell", resolve(args.active_stage_f_npz)),
+        ("legacy_nominal_stagef31", resolve(args.legacy_stage_f_npz)),
+    ]
 
 
 def resolve(path: str | Path) -> Path:
@@ -284,8 +310,7 @@ def offsource_rows(
     *,
     label: str,
     stage_e_npz: Path,
-    active_ids: np.ndarray,
-    legacy_ids: np.ndarray,
+    selector_ids_by_label: Dict[str, np.ndarray],
 ) -> Tuple[List[Dict[str, object]], List[Dict[str, object]]]:
     with np.load(stage_e_npz, allow_pickle=False) as data:
         ids = np.asarray(data["cell_id"], dtype=np.int64)
@@ -298,7 +323,7 @@ def offsource_rows(
 
     cell_rows: List[Dict[str, object]] = []
     summary_rows: List[Dict[str, object]] = []
-    for selector_label, selector_ids in [("active_psfborrow_30cell", active_ids), ("legacy_nominal_stagef31", legacy_ids)]:
+    for selector_label, selector_ids in selector_ids_by_label.items():
         mask = np.isin(ids, selector_ids)
         pull = np.divide(excess[mask], err[mask], out=np.full(np.count_nonzero(mask), np.nan), where=err[mask] > 0.0)
         for local_idx, global_idx in enumerate(np.where(mask)[0]):
@@ -376,9 +401,9 @@ def plot_forward_fold_counts(rows: Sequence[Dict[str, object]], path: Path) -> N
     plt.close(fig)
 
 
-def plot_forward_fold_ratio(rows: Sequence[Dict[str, object]], path: Path) -> None:
+def plot_forward_fold_ratio(rows: Sequence[Dict[str, object]], path: Path, *, focus_run: str) -> None:
     plt = setup_matplotlib()
-    selected = [row for row in rows if row["run"] == "active_psfborrow_30cell"]
+    selected = [row for row in rows if row["run"] == focus_run]
     spectra = sorted({str(row["spectrum"]) for row in selected})
     fig, ax = plt.subplots(figsize=(11.2, 4.8), constrained_layout=True)
     width = 0.36
@@ -393,7 +418,7 @@ def plot_forward_fold_ratio(rows: Sequence[Dict[str, object]], path: Path) -> No
     ax.set_xticks(np.arange(len(cell_labels)))
     ax.set_xticklabels(cell_labels, rotation=90, fontsize=7)
     ax.set_ylabel("Stage E excess / official expected")
-    ax.set_title("Official/tutorial forward-fold normalization ratios, active 30-cell branch")
+    ax.set_title(f"Official/tutorial forward-fold normalization ratios, {focus_run}")
     ax.grid(axis="y", alpha=0.25)
     ax.legend(fontsize=8)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -401,9 +426,9 @@ def plot_forward_fold_ratio(rows: Sequence[Dict[str, object]], path: Path) -> No
     plt.close(fig)
 
 
-def plot_offsource_core(rows: Sequence[Dict[str, object]], path: Path) -> None:
+def plot_offsource_core(rows: Sequence[Dict[str, object]], path: Path, *, focus_selector: str) -> None:
     plt = setup_matplotlib()
-    selected = [row for row in rows if row["selector"] == "active_psfborrow_30cell"]
+    selected = [row for row in rows if row["selector"] == focus_selector]
     fake_sources = sorted({str(row["fake_source"]) for row in selected})
     fig, ax = plt.subplots(figsize=(11.2, 4.8), constrained_layout=True)
     width = 0.36
@@ -417,7 +442,7 @@ def plot_offsource_core(rows: Sequence[Dict[str, object]], path: Path) -> None:
     ax.set_xticks(np.arange(len(cell_labels)))
     ax.set_xticklabels(cell_labels, rotation=90, fontsize=7)
     ax.set_ylabel("fake-source core excess = N_on - B_on")
-    ax.set_title("Off-source core residuals, active 30-cell branch")
+    ax.set_title(f"Off-source core residuals, {focus_selector}")
     ax.grid(axis="y", alpha=0.25)
     ax.legend(fontsize=8)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -441,10 +466,8 @@ def main() -> None:
     forward_cell_rows: List[Dict[str, object]] = []
     forward_summary_rows: List[Dict[str, object]] = []
     forward_nhit_rows: List[Dict[str, object]] = []
-    for run_label, stage_f_npz in [
-        ("active_psfborrow_30cell", resolve(args.active_stage_f_npz)),
-        ("legacy_nominal_stagef31", resolve(args.legacy_stage_f_npz)),
-    ]:
+    stage_f_specs = parse_stage_f_specs(args)
+    for run_label, stage_f_npz in stage_f_specs:
         cell_rows, summary_rows, nhit_rows = run_forward_fold(
             run_label=run_label,
             stage_f_npz=stage_f_npz,
@@ -456,24 +479,24 @@ def main() -> None:
         forward_summary_rows.extend(summary_rows)
         forward_nhit_rows.extend(nhit_rows)
 
-    with np.load(resolve(args.active_stage_f_npz), allow_pickle=False) as active_stage_f:
-        active_ids = np.asarray(active_stage_f["cell_id"], dtype=np.int64)
-    with np.load(resolve(args.legacy_stage_f_npz), allow_pickle=False) as legacy_stage_f:
-        legacy_ids = np.asarray(legacy_stage_f["cell_id"], dtype=np.int64)
+    selector_ids_by_label: Dict[str, np.ndarray] = {}
+    for run_label, stage_f_npz in stage_f_specs:
+        with np.load(stage_f_npz, allow_pickle=False) as stage_f:
+            selector_ids_by_label[run_label] = np.asarray(stage_f["cell_id"], dtype=np.int64)
 
     offsource_cell_rows: List[Dict[str, object]] = []
     offsource_summary_rows: List[Dict[str, object]] = []
-    for path in args.offsource_stage_e_npz:
-        stage_e_npz = resolve(path)
-        label = stage_e_npz.parent.name.replace("v3_stage_e_", "")
-        cell_rows, summary_rows = offsource_rows(
-            label=label,
-            stage_e_npz=stage_e_npz,
-            active_ids=active_ids,
-            legacy_ids=legacy_ids,
-        )
-        offsource_cell_rows.extend(cell_rows)
-        offsource_summary_rows.extend(summary_rows)
+    if not args.skip_offsource:
+        for path in args.offsource_stage_e_npz:
+            stage_e_npz = resolve(path)
+            label = stage_e_npz.parent.name.replace("v3_stage_e_", "")
+            cell_rows, summary_rows = offsource_rows(
+                label=label,
+                stage_e_npz=stage_e_npz,
+                selector_ids_by_label=selector_ids_by_label,
+            )
+            offsource_cell_rows.extend(cell_rows)
+            offsource_summary_rows.extend(summary_rows)
 
     forward_cell_csv = output_dir / "v3_official_forward_fold_cell_counts.csv"
     forward_summary_csv = output_dir / "v3_official_forward_fold_summary.csv"
@@ -572,20 +595,22 @@ def main() -> None:
         ],
     )
 
+    focus_run = stage_f_specs[0][0]
     plot_forward_fold_counts(forward_cell_rows, counts_png)
-    plot_forward_fold_ratio(forward_cell_rows, ratio_png)
-    plot_offsource_core(offsource_cell_rows, offsource_png)
+    plot_forward_fold_ratio(forward_cell_rows, ratio_png, focus_run=focus_run)
+    if not args.skip_offsource:
+        plot_offsource_core(offsource_cell_rows, offsource_png, focus_selector=focus_run)
 
     active_forward = [
-        row for row in forward_summary_rows if row.get("run") == "active_psfborrow_30cell"
+        row for row in forward_summary_rows if row.get("run") == focus_run
     ]
     active_offsource = [
-        row for row in offsource_summary_rows if row.get("selector") == "active_psfborrow_30cell"
+        row for row in offsource_summary_rows if row.get("selector") == focus_run
     ]
     forward_conclusion = "stage_e_excess_above_official_forward_fold"
     if active_forward and all(float(row["total_observed_over_expected"]) <= 1.0 for row in active_forward):
         forward_conclusion = "stage_e_excess_not_above_official_forward_fold"
-    offsource_conclusion = "fake_sources_do_not_show_positive_core_residuals"
+    offsource_conclusion = "offsource_skipped" if args.skip_offsource else "fake_sources_do_not_show_positive_core_residuals"
     if active_offsource and any(float(row["excess"]) > 0.0 for row in active_offsource):
         offsource_conclusion = "at_least_one_fake_source_has_positive_core_residual"
 
@@ -594,11 +619,13 @@ def main() -> None:
         {
             "inputs": {
                 "response_npz": str(resolve(args.response_npz)),
-                "active_stage_f_npz": str(resolve(args.active_stage_f_npz)),
-                "legacy_stage_f_npz": str(resolve(args.legacy_stage_f_npz)),
+                "stage_f_npz": [
+                    {"label": label, "path": str(path)}
+                    for label, path in stage_f_specs
+                ],
                 "official_pass5_sed_csv": str(resolve(args.official_pass5_sed_csv)),
                 "official_v099_sed_csv": str(resolve(args.official_v099_sed_csv)),
-                "offsource_stage_e_npz": [str(resolve(path)) for path in args.offsource_stage_e_npz],
+                "offsource_stage_e_npz": [] if args.skip_offsource else [str(resolve(path)) for path in args.offsource_stage_e_npz],
             },
             "method": {
                 "spectrum_interpolation": "log-log piecewise power-law interpolation; endpoint slopes extrapolate beyond transferred SED points",
@@ -615,7 +642,7 @@ def main() -> None:
                 "offsource_summary_csv": str(offsource_summary_csv),
                 "counts_vs_excess_png": str(counts_png),
                 "ratio_by_cell_png": str(ratio_png),
-                "offsource_core_residual_png": str(offsource_png),
+                "offsource_core_residual_png": None if args.skip_offsource else str(offsource_png),
             },
             "forward_summary": forward_summary_rows,
             "forward_nhit_summary": forward_nhit_rows,

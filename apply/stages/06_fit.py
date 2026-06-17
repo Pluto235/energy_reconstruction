@@ -225,6 +225,8 @@ def promote_successful_run(output_root: Path, run_dir: Path) -> None:
 
 def parse_interval(label: str) -> Tuple[Optional[float], Optional[float]]:
     label = label.strip()
+    if label.lower() in {"all", "*"}:
+        return None, None
     if label.startswith("[") and label.endswith(")"):
         low, high = label[1:-1].split(",", 1)
         return float(low), float(high)
@@ -237,6 +239,8 @@ def parse_interval(label: str) -> Tuple[Optional[float], Optional[float]]:
 
 def interval_key(label: str) -> float:
     low, high = parse_interval(label)
+    if low is None and high is None:
+        return 1.0e30
     if low is None:
         return -1.0e30
     if high is None:

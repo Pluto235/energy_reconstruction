@@ -147,6 +147,49 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="apply/report/assets/v3-normalization-diagnostics/v3_offsource_core_residual_by_cell.png",
     )
+    parser.add_argument("--nhit-only-selector-csv", type=str, default="apply/config/cell_selector_v3_nhit_only.csv")
+    parser.add_argument("--nhit-only-stage-b-dir", type=str, default="apply/output/stage_b_v3_nhit_only/current")
+    parser.add_argument("--nhit-only-stage-c-dir", type=str, default="apply/output/stage_c_v3_nhit_only/current")
+    parser.add_argument("--nhit-only-stage-d-dir", type=str, default="apply/output/stage_d_v3_nhit_only/current")
+    parser.add_argument("--nhit-only-stage-e-dir", type=str, default="apply/output/stage_e_v3_nhit_only/current")
+    parser.add_argument("--nhit-only-stage-f-dir", type=str, default="apply/output/stage_f_v3_nhit_only/current")
+    parser.add_argument("--nhit-only-stage-g-dir", type=str, default="apply/output/stage_g_v3_nhit_only/current")
+    parser.add_argument("--nhit-only-stage-b-metadata-name", type=str, default="psf_v3_nhit_only_metadata.json")
+    parser.add_argument("--nhit-only-stage-d-metadata-name", type=str, default="background_v3_nhit_only_metadata.json")
+    parser.add_argument("--nhit-only-stage-e-metadata-name", type=str, default="signal_v3_nhit_only_metadata.json")
+    parser.add_argument("--nhit-only-stage-f-metadata-name", type=str, default="fit_v3_nhit_only_metadata.json")
+    parser.add_argument("--nhit-only-stage-g-metadata-name", type=str, default="sed_points_v3_nhit_only_metadata.json")
+    parser.add_argument("--nhit-only-stage-g-report-html", type=str, default="apply/report/stage_g_v3_nhit_only_report.html")
+    parser.add_argument(
+        "--nhit-only-normalization-diagnostics-json",
+        type=str,
+        default="apply/report/assets/v3-nhit-only-control/v3_normalization_diagnostics_summary.json",
+    )
+    parser.add_argument(
+        "--nhit-only-forward-fold-summary-csv",
+        type=str,
+        default="apply/report/assets/v3-nhit-only-control/v3_official_forward_fold_summary.csv",
+    )
+    parser.add_argument(
+        "--nhit-only-forward-fold-nhit-csv",
+        type=str,
+        default="apply/report/assets/v3-nhit-only-control/v3_official_forward_fold_nhit_summary.csv",
+    )
+    parser.add_argument(
+        "--nhit-only-forward-fold-cell-csv",
+        type=str,
+        default="apply/report/assets/v3-nhit-only-control/v3_official_forward_fold_cell_counts.csv",
+    )
+    parser.add_argument(
+        "--nhit-only-forward-fold-counts-png",
+        type=str,
+        default="apply/report/assets/v3-nhit-only-control/v3_official_forward_fold_counts_vs_excess.png",
+    )
+    parser.add_argument(
+        "--nhit-only-forward-fold-ratio-png",
+        type=str,
+        default="apply/report/assets/v3-nhit-only-control/v3_official_forward_fold_ratio_by_cell.png",
+    )
     return parser.parse_args()
 
 
@@ -495,8 +538,8 @@ def normalization_forward_summary_rows(rows: Sequence[Dict[str, str]]) -> List[D
     return out
 
 
-def normalization_nhit_rows(rows: Sequence[Dict[str, str]]) -> List[Dict[str, object]]:
-    selected = [row for row in rows if row.get("run") == "active_psfborrow_30cell"]
+def normalization_nhit_rows(rows: Sequence[Dict[str, str]], run_label: str = "active_psfborrow_30cell") -> List[Dict[str, object]]:
+    selected = [row for row in rows if row.get("run") == run_label]
     out: List[Dict[str, object]] = []
     for row in selected:
         out.append(
@@ -515,12 +558,17 @@ def normalization_nhit_rows(rows: Sequence[Dict[str, str]]) -> List[Dict[str, ob
     return out
 
 
-def top_forward_ratio_rows(rows: Sequence[Dict[str, str]], limit: int = 10) -> List[Dict[str, object]]:
+def top_forward_ratio_rows(
+    rows: Sequence[Dict[str, str]],
+    limit: int = 10,
+    run_label: str = "active_psfborrow_30cell",
+    spectrum: str = "tutorial_v099",
+) -> List[Dict[str, object]]:
     selected = [
         row
         for row in rows
-        if row.get("run") == "active_psfborrow_30cell"
-        and row.get("spectrum") == "tutorial_v099"
+        if row.get("run") == run_label
+        and row.get("spectrum") == spectrum
         and finite_float(row.get("observed_over_expected")) is not None
     ]
     selected.sort(key=lambda row: finite_float(row.get("observed_over_expected")) or -np.inf, reverse=True)
@@ -538,6 +586,80 @@ def top_forward_ratio_rows(rows: Sequence[Dict[str, str]], limit: int = 10) -> L
             }
         )
     return out
+
+
+def sed_point_rows(points: Sequence[object]) -> List[Dict[str, object]]:
+    rows: List[Dict[str, object]] = []
+    for point in points:
+        if not isinstance(point, dict):
+            continue
+        rows.append(
+            {
+                "grouping": point.get("grouping", ""),
+                "group": point.get("group_label", ""),
+                "cells": ",".join(str(v) for v in point.get("cell_ids", [])) if isinstance(point.get("cell_ids"), list) else "",
+                "E_eff TeV": fmt(point.get("effective_energy_tev"), 5),
+                "E2 dN/dE": fmt(point.get("E2_dnde"), 5),
+                "err": fmt(point.get("E2_dnde_err"), 4),
+                "TS/sigma": fmt(point.get("known_b_sigma_total", point.get("pull_vs_stage_f_model")), 4),
+                "ratio StageF": fmt(point.get("ratio_to_stage_f_model", point.get("ratio_to_stage_f_pl")), 4),
+            }
+        )
+    return rows
+
+
+def first_forward_row(
+    rows: Sequence[Dict[str, str]],
+    *,
+    run_label: str,
+    spectrum: str,
+) -> Dict[str, str]:
+    return next((row for row in rows if row.get("run") == run_label and row.get("spectrum") == spectrum), {})
+
+
+def numeric_ratio(row: Dict[str, str]) -> Optional[float]:
+    return finite_float(row.get("total_observed_over_expected"))
+
+
+def nhit_only_interpretation(
+    active_pass5: Dict[str, str],
+    active_v099: Dict[str, str],
+    nhit_pass5: Dict[str, str],
+    nhit_v099: Dict[str, str],
+) -> Dict[str, object]:
+    active_pass5_ratio = numeric_ratio(active_pass5)
+    active_v099_ratio = numeric_ratio(active_v099)
+    nhit_pass5_ratio = numeric_ratio(nhit_pass5)
+    nhit_v099_ratio = numeric_ratio(nhit_v099)
+    if nhit_pass5_ratio is None or nhit_v099_ratio is None:
+        status = "pending"
+        conclusion = "Nhit-only control has not produced forward-fold ratios yet."
+    elif nhit_pass5_ratio >= 1.45 and nhit_v099_ratio >= 1.35:
+        status = "persists_without_predE_binning"
+        conclusion = (
+            "The normalization excess persists in the PredE-blind Nhit-only control, "
+            "so PredE cell binning or a globally high PredE model is not the primary explanation."
+        )
+    elif nhit_pass5_ratio <= 1.25 and nhit_v099_ratio <= 1.25:
+        status = "largely_removed_by_predE_blind_control"
+        conclusion = (
+            "The normalization excess largely collapses in the PredE-blind Nhit-only control, "
+            "which points back to PredE-dependent cell assignment or energy-model calibration."
+        )
+    else:
+        status = "partially_reduced_by_predE_blind_control"
+        conclusion = (
+            "The Nhit-only control reduces but does not remove the normalization excess, "
+            "so PredE effects are implicated but cannot be the whole explanation."
+        )
+    return {
+        "status": status,
+        "conclusion": conclusion,
+        "active_pass5_ratio": active_pass5_ratio,
+        "active_v099_ratio": active_v099_ratio,
+        "nhit_pass5_ratio": nhit_pass5_ratio,
+        "nhit_v099_ratio": nhit_v099_ratio,
+    }
 
 
 def offsource_core_summary_rows(rows: Sequence[Dict[str, str]]) -> List[Dict[str, object]]:
@@ -1488,16 +1610,48 @@ def main() -> None:
         args.psfborrow_stage_g_metadata_name,
         ["v3_stage_g_psfborrow_slurm_42029"],
     )
+    nhit_only_stage_b_dir = stage_dir(
+        args.nhit_only_stage_b_dir,
+        args.nhit_only_stage_b_metadata_name,
+        ["v3_stage_b_nhit_only_slurm_42036"],
+    )
+    nhit_only_stage_c_dir = stage_dir(
+        args.nhit_only_stage_c_dir,
+        "obs_events_metadata.json",
+        ["v3_stage_c_nhit_only_slurm_42036"],
+    )
+    nhit_only_stage_d_dir = stage_dir(
+        args.nhit_only_stage_d_dir,
+        args.nhit_only_stage_d_metadata_name,
+        ["v3_stage_d_nhit_only_slurm_42036"],
+    )
+    nhit_only_stage_e_dir = stage_dir(
+        args.nhit_only_stage_e_dir,
+        args.nhit_only_stage_e_metadata_name,
+        ["v3_stage_e_nhit_only_slurm_42036"],
+    )
+    nhit_only_stage_f_dir = stage_dir(
+        args.nhit_only_stage_f_dir,
+        args.nhit_only_stage_f_metadata_name,
+        ["v3_stage_f_nhit_only_slurm_42036"],
+    )
+    nhit_only_stage_g_dir = stage_dir(
+        args.nhit_only_stage_g_dir,
+        args.nhit_only_stage_g_metadata_name,
+        ["v3_stage_g_nhit_only_slurm_42036"],
+    )
 
     raw_rows = read_csv_rows(abs_path(args.raw_ledger_csv))
     selector_rows = read_csv_rows(abs_path(args.baseline_selector_csv))
     psfborrow_selector_rows = read_csv_rows(abs_path(args.psfborrow_selector_csv))
+    nhit_only_selector_rows = read_csv_rows(abs_path(args.nhit_only_selector_csv))
     systematics_rows = read_csv_rows(abs_path(args.systematics_selector_csv))
     high_energy_rows = read_csv_rows(abs_path(args.high_energy_selector_csv))
     included_ids = selector_ids(selector_rows, True)
     excluded_ids = selector_ids(selector_rows, False)
     psfborrow_included_ids = selector_ids(psfborrow_selector_rows, True)
     psfborrow_excluded_ids = selector_ids(psfborrow_selector_rows, False)
+    nhit_only_ids = selector_ids(nhit_only_selector_rows, True)
     systematics_ids = selector_ids(systematics_rows, True)
     high_energy_ids = selector_ids(high_energy_rows, True)
     role_counts: Dict[str, int] = {}
@@ -1517,6 +1671,12 @@ def main() -> None:
     psfborrow_stage_e_meta_path = psfborrow_stage_e_dir / args.psfborrow_stage_e_metadata_name
     psfborrow_stage_f_meta_path = psfborrow_stage_f_dir / args.psfborrow_stage_f_metadata_name
     psfborrow_stage_g_meta_path = psfborrow_stage_g_dir / args.psfborrow_stage_g_metadata_name
+    nhit_only_stage_b_meta_path = nhit_only_stage_b_dir / args.nhit_only_stage_b_metadata_name
+    nhit_only_stage_c_meta_path = nhit_only_stage_c_dir / "obs_events_metadata.json"
+    nhit_only_stage_d_meta_path = nhit_only_stage_d_dir / args.nhit_only_stage_d_metadata_name
+    nhit_only_stage_e_meta_path = nhit_only_stage_e_dir / args.nhit_only_stage_e_metadata_name
+    nhit_only_stage_f_meta_path = nhit_only_stage_f_dir / args.nhit_only_stage_f_metadata_name
+    nhit_only_stage_g_meta_path = nhit_only_stage_g_dir / args.nhit_only_stage_g_metadata_name
     stage_b_summary_path = stage_b_dir / "psf_v3_candidate_summary.csv"
     psfborrow_stage_b_summary_path = psfborrow_stage_b_dir / "psf_v3_candidate_summary.csv"
     psfborrow_stage_b_npz_path = psfborrow_stage_b_dir / "psf_v3_candidate.npz"
@@ -1533,6 +1693,12 @@ def main() -> None:
     psfborrow_stage_e = load_json(psfborrow_stage_e_meta_path)
     psfborrow_stage_f = load_json(psfborrow_stage_f_meta_path)
     psfborrow_stage_g = load_json(psfborrow_stage_g_meta_path)
+    nhit_only_stage_b = load_json(nhit_only_stage_b_meta_path)
+    nhit_only_stage_c = load_json(nhit_only_stage_c_meta_path)
+    nhit_only_stage_d = load_json(nhit_only_stage_d_meta_path)
+    nhit_only_stage_e = load_json(nhit_only_stage_e_meta_path)
+    nhit_only_stage_f = load_json(nhit_only_stage_f_meta_path)
+    nhit_only_stage_g = load_json(nhit_only_stage_g_meta_path)
     stage_b_psf_rows = read_csv_rows(stage_b_summary_path)
     psfborrow_stage_b_psf_rows = read_csv_rows(psfborrow_stage_b_summary_path)
     background_systematics = load_json(abs_path(args.background_systematics_json))
@@ -1558,30 +1724,51 @@ def main() -> None:
     forward_nhit_rows_raw = read_csv_rows(abs_path(args.official_forward_fold_nhit_csv))
     forward_cell_rows_raw = read_csv_rows(abs_path(args.official_forward_fold_cell_csv))
     offsource_core_rows_raw = read_csv_rows(abs_path(args.offsource_core_residual_summary_csv))
+    nhit_only_diagnostics = load_json(abs_path(args.nhit_only_normalization_diagnostics_json))
+    nhit_only_forward_summary_rows_raw = read_csv_rows(abs_path(args.nhit_only_forward_fold_summary_csv))
+    nhit_only_forward_nhit_rows_raw = read_csv_rows(abs_path(args.nhit_only_forward_fold_nhit_csv))
+    nhit_only_forward_cell_rows_raw = read_csv_rows(abs_path(args.nhit_only_forward_fold_cell_csv))
     normalization_forward_table_rows = normalization_forward_summary_rows(forward_summary_rows_raw)
     normalization_nhit_table_rows = normalization_nhit_rows(forward_nhit_rows_raw)
     normalization_top_ratio_rows = top_forward_ratio_rows(forward_cell_rows_raw)
+    nhit_only_forward_table_rows = normalization_forward_summary_rows(nhit_only_forward_summary_rows_raw)
+    nhit_only_nhit_table_rows = normalization_nhit_rows(nhit_only_forward_nhit_rows_raw, run_label="v3_nhit_only")
+    nhit_only_top_ratio_rows = top_forward_ratio_rows(
+        nhit_only_forward_cell_rows_raw,
+        run_label="v3_nhit_only",
+        spectrum="tutorial_v099",
+    )
     offsource_core_table_rows = offsource_core_summary_rows(offsource_core_rows_raw)
     normalization_conclusions = (
         normalization_diagnostics.get("conclusions")
         if isinstance(normalization_diagnostics.get("conclusions"), dict)
         else {}
     )
-    active_pass5_forward = next(
-        (
-            row
-            for row in forward_summary_rows_raw
-            if row.get("run") == "active_psfborrow_30cell" and row.get("spectrum") == "official_pass5"
-        ),
-        {},
+    active_pass5_forward = first_forward_row(
+        forward_summary_rows_raw,
+        run_label="active_psfborrow_30cell",
+        spectrum="official_pass5",
     )
-    active_v099_forward = next(
-        (
-            row
-            for row in forward_summary_rows_raw
-            if row.get("run") == "active_psfborrow_30cell" and row.get("spectrum") == "tutorial_v099"
-        ),
-        {},
+    active_v099_forward = first_forward_row(
+        forward_summary_rows_raw,
+        run_label="active_psfborrow_30cell",
+        spectrum="tutorial_v099",
+    )
+    nhit_only_pass5_forward = first_forward_row(
+        nhit_only_forward_summary_rows_raw,
+        run_label="v3_nhit_only",
+        spectrum="official_pass5",
+    )
+    nhit_only_v099_forward = first_forward_row(
+        nhit_only_forward_summary_rows_raw,
+        run_label="v3_nhit_only",
+        spectrum="tutorial_v099",
+    )
+    nhit_only_result = nhit_only_interpretation(
+        active_pass5_forward,
+        active_v099_forward,
+        nhit_only_pass5_forward,
+        nhit_only_v099_forward,
     )
 
     totals_e = stage_e.get("totals") if isinstance(stage_e.get("totals"), dict) else {}
@@ -1598,6 +1785,8 @@ def main() -> None:
     stage_g_ids = stage_g_required_cell_ids(stage_g)
     psfborrow_stage_f_ids = stage_f_cell_ids(psfborrow_stage_f)
     psfborrow_stage_g_ids = stage_g_required_cell_ids(psfborrow_stage_g)
+    nhit_only_stage_f_ids = stage_f_cell_ids(nhit_only_stage_f)
+    nhit_only_stage_g_ids = stage_g_required_cell_ids(nhit_only_stage_g)
     psfborrow_selector_matches_stage_f = bool(
         psfborrow_included_ids and psfborrow_stage_f_ids and psfborrow_included_ids == psfborrow_stage_f_ids
     )
@@ -1631,6 +1820,9 @@ def main() -> None:
     sed_points = stage_g.get("points", []) if isinstance(stage_g.get("points"), list) else []
     psfborrow_sed_points = (
         psfborrow_stage_g.get("points", []) if isinstance(psfborrow_stage_g.get("points"), list) else []
+    )
+    nhit_only_sed_points = (
+        nhit_only_stage_g.get("points", []) if isinstance(nhit_only_stage_g.get("points"), list) else []
     )
     psfborrow_records = psf_borrow_records(psfborrow_stage_b)
     psfborrow_record_rows = []
@@ -1710,6 +1902,63 @@ def main() -> None:
             ("F", psfborrow_stage_f, psfborrow_stage_f_meta_path),
             ("G", psfborrow_stage_g, psfborrow_stage_g_meta_path),
         ]
+    ]
+    nhit_only_run_rows = [
+        {
+            "stage": label,
+            "run": metadata_run_label(meta),
+            "status": (
+                meta.get("promotion", {}).get("status")
+                if isinstance(meta.get("promotion"), dict)
+                else "missing" if not path.exists() else "available"
+            ),
+            "artifact": rel(path, REPORT_DIR) if path.exists() else "missing",
+        }
+        for label, meta, path in [
+            ("B", nhit_only_stage_b, nhit_only_stage_b_meta_path),
+            ("C", nhit_only_stage_c, nhit_only_stage_c_meta_path),
+            ("D", nhit_only_stage_d, nhit_only_stage_d_meta_path),
+            ("E", nhit_only_stage_e, nhit_only_stage_e_meta_path),
+            ("F", nhit_only_stage_f, nhit_only_stage_f_meta_path),
+            ("G", nhit_only_stage_g, nhit_only_stage_g_meta_path),
+        ]
+    ]
+    nhit_only_fit = preferred_fit_entry(nhit_only_stage_f)
+    nhit_only_params = fit_parameters(nhit_only_stage_f)
+    nhit_only_status_rows = [
+        {
+            "item": "selector",
+            "value": f"{len(nhit_only_ids)} cells: {','.join(str(v) for v in nhit_only_ids) or 'n/a'}",
+            "evidence": rel(abs_path(args.nhit_only_selector_csv), REPORT_DIR) if abs_path(args.nhit_only_selector_csv).exists() else "missing",
+        },
+        {
+            "item": "Stage F cells",
+            "value": f"{len(nhit_only_stage_f_ids)} cells: {','.join(str(v) for v in nhit_only_stage_f_ids) or 'n/a'}",
+            "evidence": rel(nhit_only_stage_f_meta_path, REPORT_DIR) if nhit_only_stage_f_meta_path.exists() else "missing",
+        },
+        {
+            "item": "Stage G cells",
+            "value": f"{len(nhit_only_stage_g_ids)} cells: {','.join(str(v) for v in nhit_only_stage_g_ids) or 'n/a'}",
+            "evidence": rel(nhit_only_stage_g_meta_path, REPORT_DIR) if nhit_only_stage_g_meta_path.exists() else "missing",
+        },
+        {
+            "item": "fit",
+            "value": (
+                f"{spectrum_label(fit_model(nhit_only_stage_f))} {fit_error_mode(nhit_only_stage_f)}; "
+                f"phi0={fmt(nhit_only_params.get('phi0'), 6)}, "
+                f"gamma/alpha={fmt(nhit_only_params.get('gamma', nhit_only_params.get('alpha')), 5)}, "
+                f"beta={fmt(nhit_only_params.get('beta'), 5)}, "
+                f"chi2/ndof={fmt(nhit_only_fit.get('chi2'), 5)}/{h(nhit_only_fit.get('ndof', ''))}"
+            ),
+            "evidence": rel(nhit_only_stage_f_meta_path, REPORT_DIR) if nhit_only_stage_f_meta_path.exists() else "missing",
+        },
+        {
+            "item": "diagnostic conclusion",
+            "value": nhit_only_result["status"],
+            "evidence": rel(abs_path(args.nhit_only_normalization_diagnostics_json), REPORT_DIR)
+            if abs_path(args.nhit_only_normalization_diagnostics_json).exists()
+            else "missing",
+        },
     ]
     psfborrow_selector_table_rows = [
         {
@@ -1903,22 +2152,8 @@ def main() -> None:
                 "evidence": item.get("evidence", ""),
             }
         )
-    sed_table_rows = []
-    for point in sed_points:
-        if not isinstance(point, dict):
-            continue
-        sed_table_rows.append(
-            {
-                "grouping": point.get("grouping", ""),
-                "group": point.get("group_label", ""),
-                "cells": ",".join(str(v) for v in point.get("cell_ids", [])) if isinstance(point.get("cell_ids"), list) else "",
-                "E_eff TeV": fmt(point.get("effective_energy_tev"), 5),
-                "E2 dN/dE": fmt(point.get("E2_dnde"), 5),
-                "err": fmt(point.get("E2_dnde_err"), 4),
-                "TS/sigma": fmt(point.get("known_b_sigma_total", point.get("pull_vs_stage_f_model")), 4),
-                "ratio StageF": fmt(point.get("ratio_to_stage_f_model", point.get("ratio_to_stage_f_pl")), 4),
-            }
-        )
+    sed_table_rows = sed_point_rows(sed_points)
+    nhit_only_sed_table_rows = sed_point_rows(nhit_only_sed_points)
 
     stage_b_warnings = stage_b.get("warning_rows", stage_b.get("warnings", []))
     surface = stage_d.get("background_model") if isinstance(stage_d.get("background_model"), dict) else {}
@@ -2460,6 +2695,32 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
   </section>
 
   <section>
+    <h2>PredE-Blind Nhit-Only Control</h2>
+    <div class="callout">
+      <p>This control removes reconstructed-energy cell binning from the response/fit cell assignment while still requiring finite <code>ml_logE_pred</code> in the observation reduction. The selector contains seven cells, one per Nhit row, all with <code>predE_bin=all</code>. It tests whether the active30 low-energy normalization tension is mainly caused by PredE-dependent cell assignment or by a globally high reconstructed-energy model.</p>
+      <p>Result status: <code>{h(nhit_only_result['status'])}</code>. Active30 total observed/expected is <strong>{fmt(nhit_only_result.get('active_pass5_ratio'), 5)}</strong> against official pass5 and <strong>{fmt(nhit_only_result.get('active_v099_ratio'), 5)}</strong> against tutorial v0.99; the Nhit-only control is <strong>{fmt(nhit_only_result.get('nhit_pass5_ratio'), 5)}</strong> and <strong>{fmt(nhit_only_result.get('nhit_v099_ratio'), 5)}</strong>, respectively.</p>
+      <p>{h(nhit_only_result['conclusion'])}</p>
+    </div>
+    <h3>Nhit-only Stage Status</h3>
+    {table_from_rows(nhit_only_run_rows, ['stage', 'run', 'status', 'artifact'])}
+    <h3>Nhit-only Fit/Validation Summary</h3>
+    {table_from_rows(nhit_only_status_rows, ['item', 'value', 'evidence'])}
+    <h3>Nhit-only Stage G SED Points</h3>
+    {table_from_rows(nhit_only_sed_table_rows, ['grouping', 'group', 'cells', 'E_eff TeV', 'E2 dN/dE', 'err', 'TS/sigma', 'ratio StageF'])}
+    <h3>Nhit-only Official/tutorial Forward-Fold Summary</h3>
+    {table_from_rows(nhit_only_forward_table_rows, ['run', 'spectrum', 'cells', 'excess', 'expected', 'obs/exp', 'median cell obs/exp', 'cells >1', 'cells >1.5', 'visible days'])}
+    <h3>Nhit-only Nhit Grouped Ratios</h3>
+    {table_from_rows(nhit_only_nhit_table_rows, ['spectrum', 'Nhit bin', 'cells', 'excess', 'expected', 'obs/exp', 'median cell obs/exp', 'cells >1', 'cells >1.5'])}
+    <h3>Largest Nhit-only tutorial v0.99 cell ratios</h3>
+    {table_from_rows(nhit_only_top_ratio_rows, ['cell', 'Nhit bin', 'predE bin', 'excess', 'expected', 'obs/exp', 'pull'])}
+    <div class="figure-grid">
+      {figure(abs_path(args.nhit_only_forward_fold_counts_png), 'Nhit-only official/tutorial forward-fold expected counts versus Stage E excess', wide=True, explanation='PredE-blind Nhit-only expected counts compared with the seven Nhit-only Stage E excess cells.')}
+      {figure(abs_path(args.nhit_only_forward_fold_ratio_png), 'Nhit-only official/tutorial observed over expected by cell', wide=True, explanation='Cell-by-cell observed/expected ratios after replacing PredE cells by predE_bin=all Nhit rows.')}
+    </div>
+    <p>Output assets live under <code>{h(rel(abs_path(args.nhit_only_normalization_diagnostics_json).parent, REPORT_DIR))}</code>. Diagnostics JSON status: <code>{h((nhit_only_diagnostics.get('conclusions') if isinstance(nhit_only_diagnostics.get('conclusions'), dict) else {}).get('official_forward_fold', 'n/a'))}</code>.</p>
+  </section>
+
+  <section>
     <h2>Figures</h2>
     <div class="callout">
       图表读法：candidate-grid 图通常按行显示 Nhit bin、按列显示 predE bin；白色圆圈表示 <code>rho=6 deg</code> fiducial ROI，中心标记是 Crab。空白或破碎 panel 通常来自 excluded diagnostic/probe cells 的零统计或低统计，不代表 baseline fit cells 全部失败。先看 counts 和 training mask，再看 fitted background、annulus residual，最后看 excess 和 Stage F/G 结果。
@@ -2472,6 +2733,7 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
     <div class="callout">
       <p>The two requested normalization tests are complete. The official/tutorial forward-fold test supports a normalization mismatch: active30 observed excess is larger than the Stage A response prediction for both external spectra, with total observed/expected <code>{fmt(active_pass5_forward.get('total_observed_over_expected'), 5)}</code> for official pass5 and <code>{fmt(active_v099_forward.get('total_observed_over_expected'), 5)}</code> for tutorial v0.99. Most cells are above unity in both cases.</p>
       <p>The off-source fake-source core-residual test does <strong>not</strong> show positive residuals. The two active30 fake-source controls have negative excess, approximately <code>-2774</code> and <code>-2869</code> counts, so they do not provide direct evidence for a generic 2D background underprediction. The current evidence points instead to a source-local response/background-normalization problem that still needs to be separated.</p>
+      <p>The PredE-blind / Nhit-only control status is <code>{h(nhit_only_result['status'])}</code>: Nhit-only observed/expected is <code>{fmt(nhit_only_result.get('nhit_pass5_ratio'), 5)}</code> for official pass5 and <code>{fmt(nhit_only_result.get('nhit_v099_ratio'), 5)}</code> for tutorial v0.99. {h(nhit_only_result['conclusion'])}</p>
     </div>
   </section>
 

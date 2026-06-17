@@ -190,6 +190,11 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="apply/report/assets/v3-nhit-only-control/v3_official_forward_fold_ratio_by_cell.png",
     )
+    parser.add_argument(
+        "--nhit-only-sed-comparison-png",
+        type=str,
+        default="apply/report/assets/v3-nhit-only-control/v3_nhit_only_vs_official_and_2dmap_sed_overlay.png",
+    )
     return parser.parse_args()
 
 
@@ -852,6 +857,142 @@ def plot_official_sed_overlay(
     ax.grid(alpha=0.25, which="both", linewidth=0.45)
     ax.legend(fontsize=7.5)
     fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path)
+    plt.close(fig)
+    return output_path
+
+
+def plot_nhit_only_sed_comparison(
+    output_path: Path,
+    nominal_g: Dict[str, object],
+    psf_g: Dict[str, object],
+    nhit_only_g: Dict[str, object],
+    pass5_rows: Sequence[Dict[str, str]],
+    v099_rows: Sequence[Dict[str, str]],
+) -> Optional[Path]:
+    def stage_g_nhit_arrays(stage_g: Dict[str, object]):
+        points = [p for p in stage_g.get("points", []) if isinstance(p, dict)] if isinstance(stage_g.get("points"), list) else []
+        selected = [
+            p
+            for p in points
+            if str(p.get("grouping")) == "nhit"
+            and finite_float(p.get("effective_energy_tev")) is not None
+            and finite_float(p.get("E2_dnde")) is not None
+        ]
+        selected.sort(key=lambda p: finite_float(p.get("effective_energy_tev")) or 0.0)
+        return (
+            np.asarray([finite_float(p.get("effective_energy_tev")) for p in selected], dtype=np.float64),
+            np.asarray([finite_float(p.get("E2_dnde")) for p in selected], dtype=np.float64),
+            np.asarray([finite_float(p.get("E2_dnde_err")) or 0.0 for p in selected], dtype=np.float64),
+        )
+
+    pass5_points = []
+    for row in pass5_rows:
+        energy = finite_float(row.get("energy_tev"))
+        flux = finite_float(row.get("flux_per_tev_cm2_s"))
+        if energy is not None and flux is not None:
+            pass5_points.append((energy, energy * energy * flux))
+
+    v099_points = []
+    for row in v099_rows:
+        energy = finite_float(row.get("energy_tev"))
+        flux_scaled = finite_float(row.get("e2_flux_scaled_1e14_tev_cm2_s"))
+        err_low_scaled = finite_float(row.get("e2_flux_err_low_scaled_1e14"))
+        err_high_scaled = finite_float(row.get("e2_flux_err_high_scaled_1e14"))
+        if energy is None or flux_scaled is None:
+            continue
+        v099_points.append(
+            (
+                energy,
+                flux_scaled * 1.0e-14,
+                (err_low_scaled or 0.0) * 1.0e-14,
+                (err_high_scaled or 0.0) * 1.0e-14,
+            )
+        )
+
+    nominal_x, nominal_y, nominal_yerr = stage_g_nhit_arrays(nominal_g)
+    psf_x, psf_y, psf_yerr = stage_g_nhit_arrays(psf_g)
+    nhit_x, nhit_y, nhit_yerr = stage_g_nhit_arrays(nhit_only_g)
+    if not pass5_points and not v099_points and not nominal_x.size and not psf_x.size and not nhit_x.size:
+        return None
+
+    try:
+        os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
+        os.environ.setdefault("XDG_CACHE_HOME", "/tmp/.cache")
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception:
+        return None
+
+    fig, ax = plt.subplots(figsize=(8.6, 5.5), dpi=180, constrained_layout=True)
+    if pass5_points:
+        x = np.asarray([p[0] for p in pass5_points], dtype=np.float64)
+        y = np.asarray([p[1] for p in pass5_points], dtype=np.float64)
+        ax.plot(
+            x,
+            y,
+            marker="D",
+            markersize=5.0,
+            linewidth=1.45,
+            color="#111827",
+            label="official pass5 Nhit SED",
+            zorder=5,
+        )
+    if v099_points:
+        x = np.asarray([p[0] for p in v099_points], dtype=np.float64)
+        y = np.asarray([p[1] for p in v099_points], dtype=np.float64)
+        yerr = np.vstack(
+            [
+                np.asarray([p[2] for p in v099_points], dtype=np.float64),
+                np.asarray([p[3] for p in v099_points], dtype=np.float64),
+            ]
+        )
+        ax.errorbar(
+            x,
+            y,
+            yerr=yerr,
+            fmt="^-",
+            markersize=5.0,
+            linewidth=1.35,
+            capsize=2.5,
+            color="#E69F00",
+            label="tutorial v0.99 WCDA-only SED",
+            zorder=4,
+        )
+
+    stage_styles = [
+        (nominal_x, nominal_y, nominal_yerr, "o", "#0072B2", "v3 2D-map nominal Nhit points", 0.88),
+        (psf_x, psf_y, psf_yerr, "s", "#009E73", "v3 2D-map PSF-borrow Nhit points", 0.88),
+        (nhit_x, nhit_y, nhit_yerr, "P", "#D55E00", "v3 Nhit-only points", 0.96),
+    ]
+    for x, y, yerr, marker, color, label, alpha in stage_styles:
+        if not x.size:
+            continue
+        ax.errorbar(
+            x,
+            y,
+            yerr=yerr,
+            fmt=marker,
+            markersize=5.1,
+            linewidth=0.95,
+            capsize=2.5,
+            color=color,
+            ecolor=color,
+            alpha=alpha,
+            label=label,
+            zorder=3,
+        )
+
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("Energy (TeV)")
+    ax.set_ylabel("E^2 dN/dE (TeV cm^-2 s^-1)")
+    ax.set_title("WCDA Crab SED comparison: official/tutorial, 2D-map, and Nhit-only")
+    ax.grid(alpha=0.22, which="both", linewidth=0.45)
+    ax.legend(fontsize=7.2, ncol=1)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path)
     plt.close(fig)
@@ -1884,6 +2025,14 @@ def main() -> None:
         official_pass5_raw_rows,
         official_v099_raw_rows,
     )
+    nhit_only_sed_comparison_path = plot_nhit_only_sed_comparison(
+        abs_path(args.nhit_only_sed_comparison_png),
+        stage_g,
+        psfborrow_stage_g,
+        nhit_only_stage_g,
+        official_pass5_raw_rows,
+        official_v099_raw_rows,
+    )
     psfborrow_run_rows = [
         {
             "stage": label,
@@ -2714,6 +2863,7 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
     <h3>Largest Nhit-only tutorial v0.99 cell ratios</h3>
     {table_from_rows(nhit_only_top_ratio_rows, ['cell', 'Nhit bin', 'predE bin', 'excess', 'expected', 'obs/exp', 'pull'])}
     <div class="figure-grid">
+      {figure(nhit_only_sed_comparison_path or abs_path(args.nhit_only_sed_comparison_png), 'Nhit-only SED versus official/tutorial and v3 2D-map SEDs', wide=True, explanation='Direct comparison of the PredE-blind Nhit-only Stage G SED points against official pass5, tutorial v0.99, and the two prior 2D-map Stage G Nhit-point products: nominal and PSF-borrow.')}
       {figure(abs_path(args.nhit_only_forward_fold_counts_png), 'Nhit-only official/tutorial forward-fold expected counts versus Stage E excess', wide=True, explanation='PredE-blind Nhit-only expected counts compared with the seven Nhit-only Stage E excess cells.')}
       {figure(abs_path(args.nhit_only_forward_fold_ratio_png), 'Nhit-only official/tutorial observed over expected by cell', wide=True, explanation='Cell-by-cell observed/expected ratios after replacing PredE cells by predE_bin=all Nhit rows.')}
     </div>

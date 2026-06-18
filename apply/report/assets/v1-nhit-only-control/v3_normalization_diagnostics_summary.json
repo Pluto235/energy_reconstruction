@@ -1,0 +1,281 @@
+{
+  "inputs": {
+    "response_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v1_nhit_only/response_2d_v1_nhit_only.npz",
+    "stage_f_npz": [
+      {
+        "label": "v1_nhit_only",
+        "path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v1_nhit_only/runs/v1_stage_f_nhit_only_slurm_42040/fit_v1_nhit_only.npz"
+      }
+    ],
+    "official_pass5_sed_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/official-pass5/wcda_crab_sed_pass5_20260616_104941.csv",
+    "official_v099_sed_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/official-v099/wcda_crab_sed_v099_20250731_20260616_123624.csv",
+    "offsource_stage_e_npz": []
+  },
+  "method": {
+    "spectrum_interpolation": "log-log piecewise power-law interpolation; endpoint slopes extrapolate beyond transferred SED points",
+    "counts_formula": "containment_r_opt * 1e4 * sum_E,theta(A_eff_m2 * theta_exposure_sec * integral_flux_TeV)",
+    "energy_grid": "Stage A log10(E_true/GeV) bin edges",
+    "theta_exposure": "Stage F Crab-visible theta exposure from Stage C source_files.csv",
+    "quadrature_points": 96
+  },
+  "outputs": {
+    "forward_cell_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v1-nhit-only-control/v3_official_forward_fold_cell_counts.csv",
+    "forward_summary_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v1-nhit-only-control/v3_official_forward_fold_summary.csv",
+    "forward_nhit_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v1-nhit-only-control/v3_official_forward_fold_nhit_summary.csv",
+    "offsource_cell_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v1-nhit-only-control/v3_offsource_core_residual_cells.csv",
+    "offsource_summary_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v1-nhit-only-control/v3_offsource_core_residual_summary.csv",
+    "counts_vs_excess_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v1-nhit-only-control/v3_official_forward_fold_counts_vs_excess.png",
+    "ratio_by_cell_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v1-nhit-only-control/v3_official_forward_fold_ratio_by_cell.png",
+    "offsource_core_residual_png": null
+  },
+  "forward_summary": [
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "official_pass5",
+      "cells": 8,
+      "total_excess": 17996.661744618712,
+      "total_expected_counts": 16885.59078360643,
+      "total_observed_over_expected": 1.0657999459569385,
+      "source_visible_live_days": 15.611713218574396,
+      "valid_ratio_cells": 7,
+      "median_observed_over_expected": 1.3287409574033786,
+      "cells_observed_over_expected_gt_1": 7,
+      "cells_observed_over_expected_gt_1p5": 2,
+      "spectrum_method": "loglog_piecewise_powerlaw_interpolation_with_endpoint_slope_extrapolation",
+      "energy_min_tev": 0.56,
+      "energy_max_tev": 15.85
+    },
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "tutorial_v099",
+      "cells": 8,
+      "total_excess": 17996.661744618712,
+      "total_expected_counts": 17998.084687201157,
+      "total_observed_over_expected": 0.9999209392217464,
+      "source_visible_live_days": 15.611713218574396,
+      "valid_ratio_cells": 7,
+      "median_observed_over_expected": 1.2392392344409056,
+      "cells_observed_over_expected_gt_1": 6,
+      "cells_observed_over_expected_gt_1p5": 2,
+      "spectrum_method": "loglog_piecewise_powerlaw_interpolation_with_endpoint_slope_extrapolation",
+      "energy_min_tev": 0.581,
+      "energy_max_tev": 14.38
+    }
+  ],
+  "forward_nhit_summary": [
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "official_pass5",
+      "nhit_bin": "[100,200)",
+      "cells": 1,
+      "total_excess": 9724.774811689625,
+      "total_expected_counts": 5760.698326844611,
+      "total_observed_over_expected": 1.6881242967319752,
+      "valid_ratio_cells": 1,
+      "median_observed_over_expected": 1.6881242967319752,
+      "cells_observed_over_expected_gt_1": 1,
+      "cells_observed_over_expected_gt_1p5": 1
+    },
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "official_pass5",
+      "nhit_bin": "[1100,2000)",
+      "cells": 1,
+      "total_excess": 338.1421211249114,
+      "total_expected_counts": 289.78853952868934,
+      "total_observed_over_expected": 1.1668581568990413,
+      "valid_ratio_cells": 1,
+      "median_observed_over_expected": 1.1668581568990413,
+      "cells_observed_over_expected_gt_1": 1,
+      "cells_observed_over_expected_gt_1p5": 0
+    },
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "official_pass5",
+      "nhit_bin": "[200,300)",
+      "cells": 1,
+      "total_excess": 3679.5001457466824,
+      "total_expected_counts": 3527.2447182777128,
+      "total_observed_over_expected": 1.0431655412736185,
+      "valid_ratio_cells": 1,
+      "median_observed_over_expected": 1.0431655412736185,
+      "cells_observed_over_expected_gt_1": 1,
+      "cells_observed_over_expected_gt_1p5": 0
+    },
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "official_pass5",
+      "nhit_bin": "[30,60)",
+      "cells": 1,
+      "total_excess": 810.6751788904658,
+      "total_expected_counts": 183.88636502635305,
+      "total_observed_over_expected": 4.4085660118099925,
+      "valid_ratio_cells": 1,
+      "median_observed_over_expected": 4.4085660118099925,
+      "cells_observed_over_expected_gt_1": 1,
+      "cells_observed_over_expected_gt_1p5": 1
+    },
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "official_pass5",
+      "nhit_bin": "[300,500)",
+      "cells": 1,
+      "total_excess": 4446.368373305411,
+      "total_expected_counts": 3346.3018871597747,
+      "total_observed_over_expected": 1.3287409574033786,
+      "valid_ratio_cells": 1,
+      "median_observed_over_expected": 1.3287409574033786,
+      "cells_observed_over_expected_gt_1": 1,
+      "cells_observed_over_expected_gt_1p5": 0
+    },
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "official_pass5",
+      "nhit_bin": "[500,800)",
+      "cells": 1,
+      "total_excess": 1984.5204338870794,
+      "total_expected_counts": 1755.0185265194043,
+      "total_observed_over_expected": 1.1307689371364238,
+      "valid_ratio_cells": 1,
+      "median_observed_over_expected": 1.1307689371364238,
+      "cells_observed_over_expected_gt_1": 1,
+      "cells_observed_over_expected_gt_1p5": 0
+    },
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "official_pass5",
+      "nhit_bin": "[60,100)",
+      "cells": 1,
+      "total_excess": -3728.763697722403,
+      "total_expected_counts": 1467.4514601050155,
+      "total_observed_over_expected": -2.5409792412864958,
+      "valid_ratio_cells": 0,
+      "median_observed_over_expected": "",
+      "cells_observed_over_expected_gt_1": 0,
+      "cells_observed_over_expected_gt_1p5": 0
+    },
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "official_pass5",
+      "nhit_bin": "[800,1100)",
+      "cells": 1,
+      "total_excess": 741.4443776969393,
+      "total_expected_counts": 555.2009601448699,
+      "total_observed_over_expected": 1.33545226129197,
+      "valid_ratio_cells": 1,
+      "median_observed_over_expected": 1.33545226129197,
+      "cells_observed_over_expected_gt_1": 1,
+      "cells_observed_over_expected_gt_1p5": 0
+    },
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "tutorial_v099",
+      "nhit_bin": "[100,200)",
+      "cells": 1,
+      "total_excess": 9724.774811689625,
+      "total_expected_counts": 6153.6240981265755,
+      "total_observed_over_expected": 1.5803329317190922,
+      "valid_ratio_cells": 1,
+      "median_observed_over_expected": 1.5803329317190922,
+      "cells_observed_over_expected_gt_1": 1,
+      "cells_observed_over_expected_gt_1p5": 1
+    },
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "tutorial_v099",
+      "nhit_bin": "[1100,2000)",
+      "cells": 1,
+      "total_excess": 338.1421211249114,
+      "total_expected_counts": 314.5845366931898,
+      "total_observed_over_expected": 1.0748847501512668,
+      "valid_ratio_cells": 1,
+      "median_observed_over_expected": 1.0748847501512668,
+      "cells_observed_over_expected_gt_1": 1,
+      "cells_observed_over_expected_gt_1p5": 0
+    },
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "tutorial_v099",
+      "nhit_bin": "[200,300)",
+      "cells": 1,
+      "total_excess": 3679.5001457466824,
+      "total_expected_counts": 3747.9766985127735,
+      "total_observed_over_expected": 0.9817297282575788,
+      "valid_ratio_cells": 1,
+      "median_observed_over_expected": 0.9817297282575788,
+      "cells_observed_over_expected_gt_1": 0,
+      "cells_observed_over_expected_gt_1p5": 0
+    },
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "tutorial_v099",
+      "nhit_bin": "[30,60)",
+      "cells": 1,
+      "total_excess": 810.6751788904658,
+      "total_expected_counts": 197.57195221240767,
+      "total_observed_over_expected": 4.103189596562355,
+      "valid_ratio_cells": 1,
+      "median_observed_over_expected": 4.103189596562355,
+      "cells_observed_over_expected_gt_1": 1,
+      "cells_observed_over_expected_gt_1p5": 1
+    },
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "tutorial_v099",
+      "nhit_bin": "[300,500)",
+      "cells": 1,
+      "total_excess": 4446.368373305411,
+      "total_expected_counts": 3544.7524716289568,
+      "total_observed_over_expected": 1.254352288034974,
+      "valid_ratio_cells": 1,
+      "median_observed_over_expected": 1.254352288034974,
+      "cells_observed_over_expected_gt_1": 1,
+      "cells_observed_over_expected_gt_1p5": 0
+    },
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "tutorial_v099",
+      "nhit_bin": "[500,800)",
+      "cells": 1,
+      "total_excess": 1984.5204338870794,
+      "total_expected_counts": 1867.2178159461118,
+      "total_observed_over_expected": 1.0628221394093387,
+      "valid_ratio_cells": 1,
+      "median_observed_over_expected": 1.0628221394093387,
+      "cells_observed_over_expected_gt_1": 1,
+      "cells_observed_over_expected_gt_1p5": 0
+    },
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "tutorial_v099",
+      "nhit_bin": "[60,100)",
+      "cells": 1,
+      "total_excess": -3728.763697722403,
+      "total_expected_counts": 1574.051026692416,
+      "total_observed_over_expected": -2.3688963283215325,
+      "valid_ratio_cells": 0,
+      "median_observed_over_expected": "",
+      "cells_observed_over_expected_gt_1": 0,
+      "cells_observed_over_expected_gt_1p5": 0
+    },
+    {
+      "run": "v1_nhit_only",
+      "spectrum": "tutorial_v099",
+      "nhit_bin": "[800,1100)",
+      "cells": 1,
+      "total_excess": 741.4443776969393,
+      "total_expected_counts": 598.3060873887268,
+      "total_observed_over_expected": 1.2392392344409056,
+      "valid_ratio_cells": 1,
+      "median_observed_over_expected": 1.2392392344409056,
+      "cells_observed_over_expected_gt_1": 1,
+      "cells_observed_over_expected_gt_1p5": 0
+    }
+  ],
+  "offsource_summary": [],
+  "conclusions": {
+    "official_forward_fold": "stage_e_excess_above_official_forward_fold",
+    "offsource_core_residual": "offsource_skipped",
+    "interpretation": "Active v3 Stage E excess is compared against official/tutorial spectra using the same Stage A response and Stage F exposure. Fake-source controls test the sign of core residuals in source-free positions."
+  }
+}

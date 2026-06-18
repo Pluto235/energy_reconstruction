@@ -1,0 +1,9 @@
+cell_id,include,subset_version,subset_reason,nhit_bin,predE_bin,mc_count,cell_role
+1,1,v1_nhit_only,PredE-blind Nhit-only control using v1 Nhit bins,"[30,60)",all,0,baseline_fit
+2,1,v1_nhit_only,PredE-blind Nhit-only control using v1 Nhit bins,"[60,100)",all,0,baseline_fit
+3,1,v1_nhit_only,PredE-blind Nhit-only control using v1 Nhit bins,"[100,200)",all,0,baseline_fit
+4,1,v1_nhit_only,PredE-blind Nhit-only control using v1 Nhit bins,"[200,300)",all,0,baseline_fit
+5,1,v1_nhit_only,PredE-blind Nhit-only control using v1 Nhit bins,"[300,500)",all,0,baseline_fit
+6,1,v1_nhit_only,PredE-blind Nhit-only control using v1 Nhit bins,"[500,800)",all,0,baseline_fit
+7,1,v1_nhit_only,PredE-blind Nhit-only control using v1 Nhit bins,"[800,1100)",all,0,baseline_fit
+8,1,v1_nhit_only,PredE-blind Nhit-only control using v1 Nhit bins,"[1100,2000)",all,0,baseline_fit

@@ -18,7 +18,7 @@ DEFAULT_TARGET_ROOT = "/mnt/mydisk/WCDA_simulation_binned_response_v3_nhit_only"
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Create a PredE-blind v3 Nhit-only MC cache by linking all predE child "
+            "Create a PredE-blind Nhit-only MC cache by linking all predE child "
             "ROOT files under each selected Nhit bin into predE_all."
         )
     )
@@ -130,7 +130,7 @@ def build_cache(args: argparse.Namespace) -> Dict[str, object]:
         )
 
     metadata = {
-        "description": "PredE-blind v3 Nhit-only symlink cache for Stage A/B control runs.",
+        "description": "PredE-blind Nhit-only symlink cache for Stage A/B control runs.",
         "created_at_unix": int(time.time()),
         "selector_csv": str(selector_csv),
         "source_root": str(source_root),

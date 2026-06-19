@@ -2703,7 +2703,7 @@ def main() -> None:
             abs_path(args.before_after_dec_profile_png),
             "Before/after Dec profile comparison for v3 baseline fit cells",
             wide=True,
-            explanation="Compares Dec-direction behavior before and after applying the v3 background method. The goal is to reduce Dec-gradient residuals without erasing the central Crab excess.",
+            explanation="Compares unnormalized summed Dec profiles before and after applying the v3 background method, using the baseline fit cells and the same |RA offset|<1 deg band. The goal is to see the absolute Dec-gradient residual rather than peak-normalized shapes.",
         ),
         figure(
             abs_path(args.background_sensitivity_png),

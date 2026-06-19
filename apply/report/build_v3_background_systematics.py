@@ -46,6 +46,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--exposure-sample-step-sec", type=float, default=60.0)
     parser.add_argument("--energy-quadrature-points", type=int, default=64)
     parser.add_argument("--profile-half-width-deg", type=float, default=1.0)
+    parser.add_argument(
+        "--plot-before-after-only",
+        action="store_true",
+        help="Only regenerate the before/after Dec profile PNG from the existing Stage D maps.",
+    )
     return parser.parse_args()
 
 
@@ -460,7 +465,7 @@ def plot_sensitivity_summary(rows: Sequence[Dict[str, object]], output: Path) ->
     plt.close(fig)
 
 
-def normalized_dec_profile(
+def summed_dec_profile(
     maps: np.ndarray,
     x_centers: np.ndarray,
     *,
@@ -474,9 +479,6 @@ def normalized_dec_profile(
     profile = clean.sum(axis=(0, 2), dtype=np.float64)
     y_mask = np.any(mask[:, x_band], axis=1)
     profile = np.where(y_mask, profile, np.nan)
-    peak = np.nanmax(np.abs(profile))
-    if peak > 0.0 and np.isfinite(peak):
-        profile = profile / peak
     return profile, y_mask
 
 
@@ -491,21 +493,21 @@ def plot_before_after_dec_profiles(
     half_width: float,
     output: Path,
 ) -> None:
-    counts_profile, keep = normalized_dec_profile(
+    counts_profile, keep = summed_dec_profile(
         counts_map.astype(np.float64),
         x_centers,
         mask=fiducial_mask,
         fit_mask=fit_mask,
         half_width=half_width,
     )
-    background_profile, _ = normalized_dec_profile(
+    background_profile, _ = summed_dec_profile(
         background_map.astype(np.float64),
         x_centers,
         mask=fiducial_mask,
         fit_mask=fit_mask,
         half_width=half_width,
     )
-    excess_profile, _ = normalized_dec_profile(
+    excess_profile, _ = summed_dec_profile(
         counts_map.astype(np.float64) - background_map.astype(np.float64),
         x_centers,
         mask=fiducial_mask,
@@ -521,7 +523,7 @@ def plot_before_after_dec_profiles(
     ax.axhline(0.0, color="#777777", linewidth=0.8, linestyle="--")
     ax.set_xlim(float(np.nanmin(y_centers[keep])), float(np.nanmax(y_centers[keep])))
     ax.set_xlabel("Dec offset from Crab [deg]")
-    ax.set_ylabel("normalized summed profile")
+    ax.set_ylabel("summed events per Dec bin")
     ax.set_title("v3 baseline before/after Dec profile comparison")
     ax.grid(alpha=0.25)
     ax.legend(fontsize=8)
@@ -529,6 +531,28 @@ def plot_before_after_dec_profiles(
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output)
     plt.close(fig)
+
+
+def plot_before_after_only(args: argparse.Namespace) -> None:
+    output_dir = resolve(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    stage_d = load_npz_dict(resolve(args.stage_d_npz))
+    baseline_ids = selector_ids(resolve(args.baseline_selector_csv))
+    fit_mask = baseline_mask(np.asarray(stage_d["cell_id"], dtype=np.int64), baseline_ids)
+    plot_before_after_dec_profiles(
+        counts_map=np.asarray(stage_d["counts_map"], dtype=np.float64),
+        background_map=np.asarray(stage_d["background_map"], dtype=np.float64),
+        x_centers=np.asarray(stage_d["x_centers_deg"], dtype=np.float64),
+        y_centers=np.asarray(stage_d["y_centers_deg"], dtype=np.float64),
+        fiducial_mask=np.asarray(stage_d["fiducial_mask"], dtype=bool),
+        fit_mask=fit_mask,
+        half_width=float(args.profile_half_width_deg),
+        output=output_dir / "v3_background_before_after_dec_profile.png",
+    )
+    print(json.dumps({
+        "before_after_dec_profile_png": str(output_dir / "v3_background_before_after_dec_profile.png"),
+        "normalized": False,
+    }, indent=2))
 
 
 def write_summary_csv(path: Path, rows: Sequence[Dict[str, object]]) -> None:
@@ -561,6 +585,10 @@ def write_summary_csv(path: Path, rows: Sequence[Dict[str, object]]) -> None:
 
 def main() -> None:
     args = parse_args()
+    if args.plot_before_after_only:
+        plot_before_after_only(args)
+        return
+
     output_dir = resolve(args.output_dir)
     signal_root = resolve(args.signal_output_dir)
     fit_root = resolve(args.fit_output_dir)

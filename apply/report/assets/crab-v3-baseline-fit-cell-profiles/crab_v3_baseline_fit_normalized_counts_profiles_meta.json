@@ -129,6 +129,8 @@
   "profile_axis_definition": "RA profile sums map rows with |Dec offset| < profile_half_width_deg; Dec profile sums map columns with |RA offset cos(dec)| < profile_half_width_deg.",
   "normalization": "Each 1D counts profile is divided by its own positive peak.",
   "highlight_style": "Fit cells use a light green panel background and green border.",
+  "annulus_span_axis": "ra",
+  "annulus_span_style": "If enabled, light gray spans mark each cell's Stage D annulus-training radii projected onto the profile axis as [-outer, -inner] and [inner, outer].",
   "outputs": {
     "ra_normalized_counts_profiles_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/crab-v3-baseline-fit-cell-profiles/crab_v3_baseline_fit_ra_normalized_counts_profiles.png",
     "dec_normalized_counts_profiles_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/crab-v3-baseline-fit-cell-profiles/crab_v3_baseline_fit_dec_normalized_counts_profiles.png"
@@ -141,6 +143,8 @@
       "stage_d_source_index": 0,
       "in_fit_selector": true,
       "grid_events": 1558143,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 2274.0,
       "dec_counts_profile_peak": 2330.0
     },
@@ -151,6 +155,8 @@
       "stage_d_source_index": 1,
       "in_fit_selector": true,
       "grid_events": 3379918,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 5009.0,
       "dec_counts_profile_peak": 4967.0
     },
@@ -161,6 +167,8 @@
       "stage_d_source_index": 2,
       "in_fit_selector": true,
       "grid_events": 698726,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 1037.0,
       "dec_counts_profile_peak": 1079.0
     },
@@ -171,6 +179,8 @@
       "stage_d_source_index": 3,
       "in_fit_selector": true,
       "grid_events": 310849,
+      "annulus_inner_deg": 2.5,
+      "annulus_outer_deg": 4.5,
       "ra_counts_profile_peak": 461.0,
       "dec_counts_profile_peak": 473.0
     },
@@ -181,6 +191,8 @@
       "stage_d_source_index": 4,
       "in_fit_selector": false,
       "grid_events": 145873,
+      "annulus_inner_deg": 3.0,
+      "annulus_outer_deg": 5.0,
       "ra_counts_profile_peak": 231.0,
       "dec_counts_profile_peak": 241.0
     },
@@ -191,6 +203,8 @@
       "stage_d_source_index": 5,
       "in_fit_selector": false,
       "grid_events": 62631,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 104.0,
       "dec_counts_profile_peak": 105.0
     },
@@ -201,6 +215,8 @@
       "stage_d_source_index": 6,
       "in_fit_selector": false,
       "grid_events": 23882,
+      "annulus_inner_deg": 4.0,
+      "annulus_outer_deg": 6.0,
       "ra_counts_profile_peak": 44.0,
       "dec_counts_profile_peak": 51.0
     },
@@ -211,6 +227,8 @@
       "stage_d_source_index": 7,
       "in_fit_selector": false,
       "grid_events": 8573,
+      "annulus_inner_deg": 4.5,
+      "annulus_outer_deg": 6.5,
       "ra_counts_profile_peak": 18.0,
       "dec_counts_profile_peak": 17.0
     },
@@ -221,6 +239,8 @@
       "stage_d_source_index": 8,
       "in_fit_selector": false,
       "grid_events": 3274,
+      "annulus_inner_deg": 4.5,
+      "annulus_outer_deg": 6.5,
       "ra_counts_profile_peak": 8.0,
       "dec_counts_profile_peak": 9.0
     },
@@ -231,6 +251,8 @@
       "stage_d_source_index": 9,
       "in_fit_selector": false,
       "grid_events": 1310,
+      "annulus_inner_deg": 4.5,
+      "annulus_outer_deg": 6.5,
       "ra_counts_profile_peak": 4.0,
       "dec_counts_profile_peak": 5.0
     },
@@ -241,6 +263,8 @@
       "stage_d_source_index": 10,
       "in_fit_selector": false,
       "grid_events": 947,
+      "annulus_inner_deg": 4.5,
+      "annulus_outer_deg": 6.5,
       "ra_counts_profile_peak": 5.0,
       "dec_counts_profile_peak": 3.0
     },
@@ -251,6 +275,8 @@
       "stage_d_source_index": 11,
       "in_fit_selector": false,
       "grid_events": 4,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     },
@@ -261,6 +287,8 @@
       "stage_d_source_index": 12,
       "in_fit_selector": false,
       "grid_events": 82531,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 137.0,
       "dec_counts_profile_peak": 153.0
     },
@@ -271,6 +299,8 @@
       "stage_d_source_index": 13,
       "in_fit_selector": true,
       "grid_events": 1298938,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 2103.0,
       "dec_counts_profile_peak": 2147.0
     },
@@ -281,6 +311,8 @@
       "stage_d_source_index": 14,
       "in_fit_selector": true,
       "grid_events": 548846,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 908.0,
       "dec_counts_profile_peak": 941.0
     },
@@ -291,6 +323,8 @@
       "stage_d_source_index": 15,
       "in_fit_selector": true,
       "grid_events": 232475,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 364.0,
       "dec_counts_profile_peak": 380.0
     },
@@ -301,6 +335,8 @@
       "stage_d_source_index": 16,
       "in_fit_selector": true,
       "grid_events": 105993,
+      "annulus_inner_deg": 2.5,
+      "annulus_outer_deg": 4.5,
       "ra_counts_profile_peak": 172.0,
       "dec_counts_profile_peak": 168.0
     },
@@ -311,6 +347,8 @@
       "stage_d_source_index": 17,
       "in_fit_selector": false,
       "grid_events": 49690,
+      "annulus_inner_deg": 3.0,
+      "annulus_outer_deg": 5.0,
       "ra_counts_profile_peak": 86.0,
       "dec_counts_profile_peak": 86.0
     },
@@ -321,6 +359,8 @@
       "stage_d_source_index": 18,
       "in_fit_selector": false,
       "grid_events": 19860,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 45.0,
       "dec_counts_profile_peak": 39.0
     },
@@ -331,6 +371,8 @@
       "stage_d_source_index": 19,
       "in_fit_selector": false,
       "grid_events": 7019,
+      "annulus_inner_deg": 4.0,
+      "annulus_outer_deg": 6.0,
       "ra_counts_profile_peak": 18.0,
       "dec_counts_profile_peak": 17.0
     },
@@ -341,6 +383,8 @@
       "stage_d_source_index": 20,
       "in_fit_selector": false,
       "grid_events": 2345,
+      "annulus_inner_deg": 4.5,
+      "annulus_outer_deg": 6.5,
       "ra_counts_profile_peak": 7.0,
       "dec_counts_profile_peak": 6.0
     },
@@ -351,6 +395,8 @@
       "stage_d_source_index": 21,
       "in_fit_selector": false,
       "grid_events": 745,
+      "annulus_inner_deg": 4.5,
+      "annulus_outer_deg": 6.5,
       "ra_counts_profile_peak": 4.0,
       "dec_counts_profile_peak": 5.0
     },
@@ -361,6 +407,8 @@
       "stage_d_source_index": 22,
       "in_fit_selector": false,
       "grid_events": 407,
+      "annulus_inner_deg": 4.5,
+      "annulus_outer_deg": 6.5,
       "ra_counts_profile_peak": 2.0,
       "dec_counts_profile_peak": 2.0
     },
@@ -371,6 +419,8 @@
       "stage_d_source_index": 23,
       "in_fit_selector": false,
       "grid_events": 0,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     },
@@ -381,6 +431,8 @@
       "stage_d_source_index": 24,
       "in_fit_selector": false,
       "grid_events": 437,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 4.0,
       "dec_counts_profile_peak": 3.0
     },
@@ -391,6 +443,8 @@
       "stage_d_source_index": 25,
       "in_fit_selector": true,
       "grid_events": 281862,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 539.0,
       "dec_counts_profile_peak": 570.0
     },
@@ -401,6 +455,8 @@
       "stage_d_source_index": 26,
       "in_fit_selector": true,
       "grid_events": 461238,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 965.0,
       "dec_counts_profile_peak": 1003.0
     },
@@ -411,6 +467,8 @@
       "stage_d_source_index": 27,
       "in_fit_selector": true,
       "grid_events": 272242,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 530.0,
       "dec_counts_profile_peak": 569.0
     },
@@ -421,6 +479,8 @@
       "stage_d_source_index": 28,
       "in_fit_selector": true,
       "grid_events": 94566,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 178.0,
       "dec_counts_profile_peak": 169.0
     },
@@ -431,6 +491,8 @@
       "stage_d_source_index": 29,
       "in_fit_selector": true,
       "grid_events": 38954,
+      "annulus_inner_deg": 2.5,
+      "annulus_outer_deg": 4.5,
       "ra_counts_profile_peak": 68.0,
       "dec_counts_profile_peak": 70.0
     },
@@ -441,6 +503,8 @@
       "stage_d_source_index": 30,
       "in_fit_selector": false,
       "grid_events": 15587,
+      "annulus_inner_deg": 3.0,
+      "annulus_outer_deg": 5.0,
       "ra_counts_profile_peak": 33.0,
       "dec_counts_profile_peak": 33.0
     },
@@ -451,6 +515,8 @@
       "stage_d_source_index": 31,
       "in_fit_selector": false,
       "grid_events": 6069,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 18.0,
       "dec_counts_profile_peak": 18.0
     },
@@ -461,6 +527,8 @@
       "stage_d_source_index": 32,
       "in_fit_selector": false,
       "grid_events": 2326,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 8.0,
       "dec_counts_profile_peak": 8.0
     },
@@ -471,6 +539,8 @@
       "stage_d_source_index": 33,
       "in_fit_selector": false,
       "grid_events": 798,
+      "annulus_inner_deg": 4.0,
+      "annulus_outer_deg": 6.0,
       "ra_counts_profile_peak": 4.0,
       "dec_counts_profile_peak": 5.0
     },
@@ -481,6 +551,8 @@
       "stage_d_source_index": 34,
       "in_fit_selector": false,
       "grid_events": 381,
+      "annulus_inner_deg": 4.5,
+      "annulus_outer_deg": 6.5,
       "ra_counts_profile_peak": 2.0,
       "dec_counts_profile_peak": 2.0
     },
@@ -491,6 +563,8 @@
       "stage_d_source_index": 35,
       "in_fit_selector": false,
       "grid_events": 0,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     },
@@ -501,6 +575,8 @@
       "stage_d_source_index": 36,
       "in_fit_selector": false,
       "grid_events": 0,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     },
@@ -511,6 +587,8 @@
       "stage_d_source_index": 37,
       "in_fit_selector": false,
       "grid_events": 1789,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 7.0,
       "dec_counts_profile_peak": 9.0
     },
@@ -521,6 +599,8 @@
       "stage_d_source_index": 38,
       "in_fit_selector": true,
       "grid_events": 68794,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 190.0,
       "dec_counts_profile_peak": 187.0
     },
@@ -531,6 +611,8 @@
       "stage_d_source_index": 39,
       "in_fit_selector": true,
       "grid_events": 186586,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 461.0,
       "dec_counts_profile_peak": 522.0
     },
@@ -541,6 +623,8 @@
       "stage_d_source_index": 40,
       "in_fit_selector": true,
       "grid_events": 97387,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 213.0,
       "dec_counts_profile_peak": 241.0
     },
@@ -551,6 +635,8 @@
       "stage_d_source_index": 41,
       "in_fit_selector": true,
       "grid_events": 26650,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 70.0,
       "dec_counts_profile_peak": 56.0
     },
@@ -561,6 +647,8 @@
       "stage_d_source_index": 42,
       "in_fit_selector": true,
       "grid_events": 7206,
+      "annulus_inner_deg": 2.5,
+      "annulus_outer_deg": 4.5,
       "ra_counts_profile_peak": 21.0,
       "dec_counts_profile_peak": 19.0
     },
@@ -571,6 +659,8 @@
       "stage_d_source_index": 43,
       "in_fit_selector": false,
       "grid_events": 2019,
+      "annulus_inner_deg": 3.0,
+      "annulus_outer_deg": 5.0,
       "ra_counts_profile_peak": 7.0,
       "dec_counts_profile_peak": 8.0
     },
@@ -581,6 +671,8 @@
       "stage_d_source_index": 44,
       "in_fit_selector": false,
       "grid_events": 741,
+      "annulus_inner_deg": 3.0,
+      "annulus_outer_deg": 5.0,
       "ra_counts_profile_peak": 6.0,
       "dec_counts_profile_peak": 4.0
     },
@@ -591,6 +683,8 @@
       "stage_d_source_index": 45,
       "in_fit_selector": false,
       "grid_events": 302,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 2.0,
       "dec_counts_profile_peak": 3.0
     },
@@ -601,6 +695,8 @@
       "stage_d_source_index": 46,
       "in_fit_selector": false,
       "grid_events": 149,
+      "annulus_inner_deg": 4.0,
+      "annulus_outer_deg": 6.0,
       "ra_counts_profile_peak": 2.0,
       "dec_counts_profile_peak": 2.0
     },
@@ -611,6 +707,8 @@
       "stage_d_source_index": 47,
       "in_fit_selector": false,
       "grid_events": 0,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     },
@@ -621,6 +719,8 @@
       "stage_d_source_index": 48,
       "in_fit_selector": false,
       "grid_events": 0,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     },
@@ -631,6 +731,8 @@
       "stage_d_source_index": 49,
       "in_fit_selector": false,
       "grid_events": 0,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     },
@@ -641,6 +743,8 @@
       "stage_d_source_index": 50,
       "in_fit_selector": false,
       "grid_events": 992,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 5.0,
       "dec_counts_profile_peak": 7.0
     },
@@ -651,6 +755,8 @@
       "stage_d_source_index": 51,
       "in_fit_selector": true,
       "grid_events": 21484,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 92.0,
       "dec_counts_profile_peak": 92.0
     },
@@ -661,6 +767,8 @@
       "stage_d_source_index": 52,
       "in_fit_selector": true,
       "grid_events": 47830,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 145.0,
       "dec_counts_profile_peak": 141.0
     },
@@ -671,6 +779,8 @@
       "stage_d_source_index": 53,
       "in_fit_selector": true,
       "grid_events": 26734,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 76.0,
       "dec_counts_profile_peak": 58.0
     },
@@ -681,6 +791,8 @@
       "stage_d_source_index": 54,
       "in_fit_selector": true,
       "grid_events": 7545,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 25.0,
       "dec_counts_profile_peak": 28.0
     },
@@ -691,6 +803,8 @@
       "stage_d_source_index": 55,
       "in_fit_selector": false,
       "grid_events": 1485,
+      "annulus_inner_deg": 2.5,
+      "annulus_outer_deg": 4.5,
       "ra_counts_profile_peak": 6.0,
       "dec_counts_profile_peak": 5.0
     },
@@ -701,6 +815,8 @@
       "stage_d_source_index": 56,
       "in_fit_selector": false,
       "grid_events": 237,
+      "annulus_inner_deg": 3.0,
+      "annulus_outer_deg": 5.0,
       "ra_counts_profile_peak": 2.0,
       "dec_counts_profile_peak": 2.0
     },
@@ -711,6 +827,8 @@
       "stage_d_source_index": 57,
       "in_fit_selector": false,
       "grid_events": 33,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 1.0,
       "dec_counts_profile_peak": 1.0
     },
@@ -721,6 +839,8 @@
       "stage_d_source_index": 58,
       "in_fit_selector": false,
       "grid_events": 12,
+      "annulus_inner_deg": 4.0,
+      "annulus_outer_deg": 6.0,
       "ra_counts_profile_peak": 1.0,
       "dec_counts_profile_peak": 1.0
     },
@@ -731,6 +851,8 @@
       "stage_d_source_index": 59,
       "in_fit_selector": false,
       "grid_events": 0,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     },
@@ -741,6 +863,8 @@
       "stage_d_source_index": 60,
       "in_fit_selector": false,
       "grid_events": 0,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     },
@@ -751,6 +875,8 @@
       "stage_d_source_index": 61,
       "in_fit_selector": false,
       "grid_events": 0,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     },
@@ -761,6 +887,8 @@
       "stage_d_source_index": 62,
       "in_fit_selector": false,
       "grid_events": 6,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 1.0,
       "dec_counts_profile_peak": 1.0
     },
@@ -771,6 +899,8 @@
       "stage_d_source_index": 63,
       "in_fit_selector": false,
       "grid_events": 623,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 6.0,
       "dec_counts_profile_peak": 4.0
     },
@@ -781,6 +911,8 @@
       "stage_d_source_index": 64,
       "in_fit_selector": true,
       "grid_events": 8664,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 37.0,
       "dec_counts_profile_peak": 41.0
     },
@@ -791,6 +923,8 @@
       "stage_d_source_index": 65,
       "in_fit_selector": true,
       "grid_events": 20073,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 73.0,
       "dec_counts_profile_peak": 80.0
     },
@@ -801,6 +935,8 @@
       "stage_d_source_index": 66,
       "in_fit_selector": true,
       "grid_events": 17290,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 59.0,
       "dec_counts_profile_peak": 55.0
     },
@@ -811,6 +947,8 @@
       "stage_d_source_index": 67,
       "in_fit_selector": true,
       "grid_events": 9040,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 24.0,
       "dec_counts_profile_peak": 27.0
     },
@@ -821,6 +959,8 @@
       "stage_d_source_index": 68,
       "in_fit_selector": true,
       "grid_events": 3384,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 18.0,
       "dec_counts_profile_peak": 14.0
     },
@@ -831,6 +971,8 @@
       "stage_d_source_index": 69,
       "in_fit_selector": false,
       "grid_events": 1272,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 7.0,
       "dec_counts_profile_peak": 7.0
     },
@@ -841,6 +983,8 @@
       "stage_d_source_index": 70,
       "in_fit_selector": false,
       "grid_events": 472,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 4.0,
       "dec_counts_profile_peak": 4.0
     },
@@ -851,6 +995,8 @@
       "stage_d_source_index": 71,
       "in_fit_selector": false,
       "grid_events": 0,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     },
@@ -861,6 +1007,8 @@
       "stage_d_source_index": 72,
       "in_fit_selector": false,
       "grid_events": 0,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     },
@@ -871,6 +1019,8 @@
       "stage_d_source_index": 73,
       "in_fit_selector": false,
       "grid_events": 0,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     },
@@ -881,6 +1031,8 @@
       "stage_d_source_index": 74,
       "in_fit_selector": false,
       "grid_events": 0,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     },
@@ -891,6 +1043,8 @@
       "stage_d_source_index": 75,
       "in_fit_selector": false,
       "grid_events": 0,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     },
@@ -901,6 +1055,8 @@
       "stage_d_source_index": 76,
       "in_fit_selector": false,
       "grid_events": 0,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     },
@@ -911,6 +1067,8 @@
       "stage_d_source_index": 77,
       "in_fit_selector": false,
       "grid_events": 7,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 1.0,
       "dec_counts_profile_peak": 1.0
     },
@@ -921,6 +1079,8 @@
       "stage_d_source_index": 78,
       "in_fit_selector": false,
       "grid_events": 136,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 3.0,
       "dec_counts_profile_peak": 3.0
     },
@@ -931,6 +1091,8 @@
       "stage_d_source_index": 79,
       "in_fit_selector": false,
       "grid_events": 564,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 5.0,
       "dec_counts_profile_peak": 4.0
     },
@@ -941,6 +1103,8 @@
       "stage_d_source_index": 80,
       "in_fit_selector": true,
       "grid_events": 2241,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 9.0,
       "dec_counts_profile_peak": 10.0
     },
@@ -951,6 +1115,8 @@
       "stage_d_source_index": 81,
       "in_fit_selector": true,
       "grid_events": 4370,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 13.0,
       "dec_counts_profile_peak": 12.0
     },
@@ -961,6 +1127,8 @@
       "stage_d_source_index": 82,
       "in_fit_selector": true,
       "grid_events": 7143,
+      "annulus_inner_deg": 2.0,
+      "annulus_outer_deg": 4.0,
       "ra_counts_profile_peak": 16.0,
       "dec_counts_profile_peak": 16.0
     },
@@ -971,6 +1139,8 @@
       "stage_d_source_index": 83,
       "in_fit_selector": false,
       "grid_events": 3,
+      "annulus_inner_deg": 3.5,
+      "annulus_outer_deg": 5.5,
       "ra_counts_profile_peak": 0.0,
       "dec_counts_profile_peak": 0.0
     }

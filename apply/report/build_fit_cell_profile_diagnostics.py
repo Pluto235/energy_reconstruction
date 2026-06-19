@@ -43,6 +43,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-prefix", type=str, default="crab_v2_baseline24_fit")
     parser.add_argument("--title-prefix", type=str, default="v2_baseline24 fit-cell")
     parser.add_argument("--profile-half-width-deg", type=float, default=1.0)
+    parser.add_argument(
+        "--annulus-span-axis",
+        choices=["none", "ra", "dec", "both"],
+        default="none",
+        help=(
+            "Overlay each cell's Stage D annulus-training radii as light gray spans "
+            "projected onto the requested profile axis."
+        ),
+    )
     parser.add_argument("--y-min", type=float, default=-0.35)
     parser.add_argument("--y-max", type=float, default=1.15)
     return parser.parse_args()
@@ -128,6 +137,27 @@ def metadata_cell_events(path: Path) -> Dict[int, int]:
     return events
 
 
+def metadata_cell_annulus_spans(path: Path) -> Dict[int, Tuple[float, float]]:
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as f:
+        meta = json.load(f)
+    spans: Dict[int, Tuple[float, float]] = {}
+    for cell in meta.get("cells", []):
+        if not isinstance(cell, dict):
+            continue
+        inner = cell.get("annulus_inner_deg")
+        outer = cell.get("annulus_outer_deg")
+        if inner is None or outer is None:
+            continue
+        inner_f = float(inner)
+        outer_f = float(outer)
+        if outer_f <= inner_f:
+            continue
+        spans[int(cell["cell_id"])] = (inner_f, outer_f)
+    return spans
+
+
 def normalize_profiles(profile: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     normalized = np.full(profile.shape, np.nan, dtype=np.float64)
     peaks = np.full(profile.shape[0], np.nan, dtype=np.float64)
@@ -183,6 +213,7 @@ def plot_profile_grid(
     centers: np.ndarray,
     cells: Sequence[Cell],
     per_cell_roi_events: Dict[int, int],
+    annulus_spans: Dict[int, Tuple[float, float]],
     output_path: Path,
     title: str,
     x_label: str,
@@ -222,10 +253,22 @@ def plot_profile_grid(
                 ax.set_facecolor("#ffffff")
 
             values = normalized_profile[cell.source_index]
+            annulus_span = annulus_spans.get(cell.cell_id)
+            if annulus_span is not None:
+                inner, outer = annulus_span
+                for left, right in ((-outer, -inner), (inner, outer)):
+                    ax.axvspan(
+                        left,
+                        right,
+                        color="#cfd4dc",
+                        alpha=0.33,
+                        linewidth=0.0,
+                        zorder=0.6,
+                    )
             ax.axhline(0.0, color="#777777", linewidth=0.7, alpha=0.85)
             ax.axhline(0.5, color="#999999", linestyle="--", linewidth=0.65, alpha=0.75)
             ax.axvline(0.0, color="#222222", linewidth=0.75, alpha=0.7)
-            ax.step(centers, values, where="mid", color="#1f4e79", linewidth=1.05)
+            ax.step(centers, values, where="mid", color="#1f4e79", linewidth=1.05, zorder=2.4)
             ax.grid(alpha=0.22, linewidth=0.35)
             ax.set_ylim(float(y_min), float(y_max))
             roi_events = per_cell_roi_events.get(cell.cell_id, 0)
@@ -263,6 +306,7 @@ def main() -> None:
     fit_ids = selector_included_ids(selector_csv)
     cells = load_cells(data, fit_ids)
     per_cell_roi_events = metadata_cell_events(stage_d_metadata)
+    per_cell_annulus_spans = metadata_cell_annulus_spans(stage_d_metadata)
     label = map_label(str(args.map_key))
     profiles = compute_profiles(
         data[args.map_key],
@@ -279,6 +323,7 @@ def main() -> None:
         centers=data["x_centers_deg"].astype(np.float64),
         cells=cells,
         per_cell_roi_events=per_cell_roi_events,
+        annulus_spans=per_cell_annulus_spans if str(args.annulus_span_axis) in {"ra", "both"} else {},
         output_path=ra_png,
         title=f"{args.title_prefix} normalized RA-offset {label} profiles",
         x_label="RA offset cos(dec) (deg)",
@@ -291,6 +336,7 @@ def main() -> None:
         centers=data["y_centers_deg"].astype(np.float64),
         cells=cells,
         per_cell_roi_events=per_cell_roi_events,
+        annulus_spans=per_cell_annulus_spans if str(args.annulus_span_axis) in {"dec", "both"} else {},
         output_path=dec_png,
         title=f"{args.title_prefix} normalized Dec-offset {label} profiles",
         x_label="Dec offset (deg)",
@@ -315,6 +361,11 @@ def main() -> None:
         "profile_axis_definition": "RA profile sums map rows with |Dec offset| < profile_half_width_deg; Dec profile sums map columns with |RA offset cos(dec)| < profile_half_width_deg.",
         "normalization": f"Each 1D {label} profile is divided by its own positive peak.",
         "highlight_style": "Fit cells use a light green panel background and green border.",
+        "annulus_span_axis": str(args.annulus_span_axis),
+        "annulus_span_style": (
+            "If enabled, light gray spans mark each cell's Stage D annulus-training radii "
+            "projected onto the profile axis as [-outer, -inner] and [inner, outer]."
+        ),
         "outputs": {
             f"ra_normalized_{label}_profiles_png": str(ra_png),
             f"dec_normalized_{label}_profiles_png": str(dec_png),
@@ -327,6 +378,8 @@ def main() -> None:
                 "stage_d_source_index": cell.source_index,
                 "in_fit_selector": cell.in_fit,
                 "grid_events": per_cell_roi_events.get(cell.cell_id),
+                "annulus_inner_deg": per_cell_annulus_spans.get(cell.cell_id, (None, None))[0],
+                "annulus_outer_deg": per_cell_annulus_spans.get(cell.cell_id, (None, None))[1],
                 f"ra_{label}_profile_peak": float(profiles["ra_peak"][cell.source_index]),
                 f"dec_{label}_profile_peak": float(profiles["dec_peak"][cell.source_index]),
             }

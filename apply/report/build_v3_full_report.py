@@ -2643,7 +2643,7 @@ def main() -> None:
             abs_path(args.fit_cell_ra_profile),
             f"candidate-grid normalized RA-offset counts profiles ({args.baseline_name} fit cells highlighted)",
             wide=True,
-            explanation="For every candidate cell, counts are summed in a |Dec offset|<1 deg band and divided by that cell's own peak. Empty panels mean the profile peak is zero or the cell has no usable events in the profile band; highlighted panels are baseline fit cells.",
+            explanation="For every candidate cell, counts are summed in a |Dec offset|<1 deg band and divided by that cell's own peak. Light gray bands mark that cell's Stage D annulus-training radii projected onto the RA-offset slice as [-outer,-inner] and [inner,outer]; highlighted panels are baseline fit cells. Empty panels mean the profile peak is zero or the cell has no usable events in the profile band.",
         ),
         figure(
             abs_path(args.fit_cell_dec_profile),

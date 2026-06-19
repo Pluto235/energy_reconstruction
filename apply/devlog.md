@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-06-19 11:35 · [2e1584a] Mark Stage D annulus bands on v3 RA profile diagnostics.
+
 - **energy** · 2026-06-18 14:02 · [020306a] Add v1-bin Nhit-only control workflow, results, and SED overlay comparison.
 
 - **energy** · 2026-06-17 23:19 · [27e1047] Add Nhit-only SED comparison overlay to the v3 integrated report.

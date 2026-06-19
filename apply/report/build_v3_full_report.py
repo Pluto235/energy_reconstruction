@@ -2679,7 +2679,7 @@ def main() -> None:
             stage_d_dir / "roi_background_grid.png",
             "Fitted 2D background surface grid",
             wide=True,
-            explanation="This is the fitted background expectation, not data and not excess. Stage D fits a quadratic 2D surface on the annulus and extrapolates it across the ROI; smooth surfaces are good, while holes, crescent shapes, or sharp edge features usually flag low-stat or failed diagnostic cells.",
+            explanation="This is the fitted background expectation, not data and not excess. Stage D fits each cell's annulus with the quadratic surface B(x,y)=c0+c1*x+c2*y+c3*x^2+c4*x*y+c5*y^2, where x is RA offset cos(dec) and y is Dec offset from Crab in degrees, then extrapolates that surface across the ROI. Smooth surfaces are good, while holes, crescent shapes, or sharp edge features usually flag low-stat or failed diagnostic cells.",
         ),
         figure(
             stage_d_dir / "annulus_residual_grid.png",

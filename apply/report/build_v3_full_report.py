@@ -78,6 +78,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--background-systematics-json", type=str, default="apply/report/assets/v3-background-systematics/v3_background_systematics_summary.json")
     parser.add_argument("--background-sensitivity-png", type=str, default="apply/report/assets/v3-background-systematics/v3_background_method_sensitivity_summary.png")
     parser.add_argument("--before-after-dec-profile-png", type=str, default="apply/report/assets/v3-background-systematics/v3_background_before_after_dec_profile.png")
+    parser.add_argument("--annnorm-stage-d-dir", type=str, default="apply/output/stage_d_v3_candidate_annnorm/current")
+    parser.add_argument("--annnorm-stage-e-dir", type=str, default="apply/output/stage_e_v3_candidate_annnorm/current")
+    parser.add_argument("--annnorm-stage-f-dir", type=str, default="apply/output/stage_f_v3_baseline_annnorm/current")
+    parser.add_argument("--annnorm-stage-g-dir", type=str, default="apply/output/stage_g_v3_baseline_annnorm/current")
+    parser.add_argument("--annnorm-stage-d-metadata-name", type=str, default="background_v3_candidate_annnorm_metadata.json")
+    parser.add_argument("--annnorm-stage-e-metadata-name", type=str, default="signal_v3_candidate_annnorm_metadata.json")
+    parser.add_argument("--annnorm-stage-f-metadata-name", type=str, default="fit_v3_baseline_annnorm_metadata.json")
+    parser.add_argument("--annnorm-stage-g-metadata-name", type=str, default="sed_points_v3_baseline_annnorm_metadata.json")
+    parser.add_argument("--annnorm-stage-f-report-html", type=str, default="apply/report/stage_f_v3_baseline_annnorm_report.html")
+    parser.add_argument("--annnorm-stage-g-report-html", type=str, default="apply/report/stage_g_v3_baseline_annnorm_report.html")
+    parser.add_argument("--annnorm-diagnostics-json", type=str, default="apply/report/assets/v3-annnorm/v3_annnorm_summary.json")
+    parser.add_argument("--annnorm-diagnostics-csv", type=str, default="apply/report/assets/v3-annnorm/v3_annnorm_summary.csv")
+    parser.add_argument("--annnorm-scale-grid-png", type=str, default="apply/report/assets/v3-annnorm/v3_annnorm_surface_scale_grid.png")
+    parser.add_argument("--annnorm-dec-profile-png", type=str, default="apply/report/assets/v3-annnorm/v3_annnorm_dec_profile_comparison.png")
+    parser.add_argument("--annnorm-sed-overlay-png", type=str, default="apply/report/assets/v3-annnorm/v3_annnorm_stage_g_sed_overlay.png")
     parser.add_argument("--validation-json", type=str, default="apply/report/assets/v3-validation/v3_validation_summary.json")
     parser.add_argument("--selector-systematics-csv", type=str, default="apply/report/assets/v3-validation/v3_selector_systematics_summary.csv")
     parser.add_argument("--selector-fit-comparison-csv", type=str, default="apply/report/assets/v3-validation/v3_selector_fit_comparison.csv")
@@ -525,6 +540,36 @@ def make_sed_compare_rows(nominal_g: Dict[str, object], psf_g: Dict[str, object]
             }
         )
     return rows
+
+
+def make_annnorm_result_rows(rows: Sequence[Dict[str, str]]) -> List[Dict[str, object]]:
+    out: List[Dict[str, object]] = []
+    by_variant = {row.get("variant", ""): row for row in rows}
+    reference = by_variant.get("active_reference", {})
+    for variant in ["active_reference", "annulus_normalized_surface"]:
+        row = by_variant.get(variant, {})
+        if not row:
+            continue
+        out.append(
+            {
+                "variant": variant,
+                "B_on": compare_value(row.get("stage_e_B_on"), reference.get("stage_e_B_on"), 5),
+                "excess": compare_value(row.get("stage_e_excess"), reference.get("stage_e_excess"), 5),
+                "sigma": compare_value(row.get("stage_e_sigma"), reference.get("stage_e_sigma"), 5),
+                "model": spectrum_label(row.get("stage_f_model")),
+                "phi0": compare_value(row.get("stage_f_phi0"), reference.get("stage_f_phi0"), 6),
+                "gamma/alpha": compare_value(
+                    row.get("stage_f_gamma_or_alpha"),
+                    reference.get("stage_f_gamma_or_alpha"),
+                    5,
+                ),
+                "beta": compare_value(row.get("stage_f_beta"), reference.get("stage_f_beta"), 5),
+                "chi2/ndof": f"{fmt(row.get('stage_f_chi2'), 5)} / {h(row.get('stage_f_ndof', ''))}",
+                "SED pts": row.get("stage_g_points", ""),
+                "run": row.get("stage_g_run", ""),
+            }
+        )
+    return out
 
 
 def official_pass5_rows(rows: Sequence[Dict[str, str]]) -> List[Dict[str, object]]:
@@ -1811,6 +1856,26 @@ def main() -> None:
         args.psfborrow_stage_g_metadata_name,
         ["v3_stage_g_psfborrow_slurm_42029"],
     )
+    annnorm_stage_d_dir = stage_dir(
+        args.annnorm_stage_d_dir,
+        args.annnorm_stage_d_metadata_name,
+        ["v3_stage_d_annnorm"],
+    )
+    annnorm_stage_e_dir = stage_dir(
+        args.annnorm_stage_e_dir,
+        args.annnorm_stage_e_metadata_name,
+        ["v3_stage_e_annnorm"],
+    )
+    annnorm_stage_f_dir = stage_dir(
+        args.annnorm_stage_f_dir,
+        args.annnorm_stage_f_metadata_name,
+        ["v3_stage_f_annnorm"],
+    )
+    annnorm_stage_g_dir = stage_dir(
+        args.annnorm_stage_g_dir,
+        args.annnorm_stage_g_metadata_name,
+        ["v3_stage_g_annnorm"],
+    )
     nhit_only_stage_b_dir = stage_dir(
         args.nhit_only_stage_b_dir,
         args.nhit_only_stage_b_metadata_name,
@@ -1904,6 +1969,10 @@ def main() -> None:
     psfborrow_stage_e_meta_path = psfborrow_stage_e_dir / args.psfborrow_stage_e_metadata_name
     psfborrow_stage_f_meta_path = psfborrow_stage_f_dir / args.psfborrow_stage_f_metadata_name
     psfborrow_stage_g_meta_path = psfborrow_stage_g_dir / args.psfborrow_stage_g_metadata_name
+    annnorm_stage_d_meta_path = annnorm_stage_d_dir / args.annnorm_stage_d_metadata_name
+    annnorm_stage_e_meta_path = annnorm_stage_e_dir / args.annnorm_stage_e_metadata_name
+    annnorm_stage_f_meta_path = annnorm_stage_f_dir / args.annnorm_stage_f_metadata_name
+    annnorm_stage_g_meta_path = annnorm_stage_g_dir / args.annnorm_stage_g_metadata_name
     nhit_only_stage_b_meta_path = nhit_only_stage_b_dir / args.nhit_only_stage_b_metadata_name
     nhit_only_stage_c_meta_path = nhit_only_stage_c_dir / "obs_events_metadata.json"
     nhit_only_stage_d_meta_path = nhit_only_stage_d_dir / args.nhit_only_stage_d_metadata_name
@@ -1932,6 +2001,10 @@ def main() -> None:
     psfborrow_stage_e = load_json(psfborrow_stage_e_meta_path)
     psfborrow_stage_f = load_json(psfborrow_stage_f_meta_path)
     psfborrow_stage_g = load_json(psfborrow_stage_g_meta_path)
+    annnorm_stage_d = load_json(annnorm_stage_d_meta_path)
+    annnorm_stage_e = load_json(annnorm_stage_e_meta_path)
+    annnorm_stage_f = load_json(annnorm_stage_f_meta_path)
+    annnorm_stage_g = load_json(annnorm_stage_g_meta_path)
     nhit_only_stage_b = load_json(nhit_only_stage_b_meta_path)
     nhit_only_stage_c = load_json(nhit_only_stage_c_meta_path)
     nhit_only_stage_d = load_json(nhit_only_stage_d_meta_path)
@@ -1948,6 +2021,8 @@ def main() -> None:
     psfborrow_stage_b_psf_rows = read_csv_rows(psfborrow_stage_b_summary_path)
     background_systematics = load_json(abs_path(args.background_systematics_json))
     background_systematics_rows = read_csv_rows(abs_path(args.background_systematics_csv))
+    annnorm_diagnostics = load_json(abs_path(args.annnorm_diagnostics_json))
+    annnorm_diagnostics_rows = read_csv_rows(abs_path(args.annnorm_diagnostics_csv))
     validation_summary = load_json(abs_path(args.validation_json))
     selector_systematics_rows = read_csv_rows(abs_path(args.selector_systematics_csv))
     selector_fit_rows = read_csv_rows(abs_path(args.selector_fit_comparison_csv))
@@ -2146,6 +2221,26 @@ def main() -> None:
         psfborrow_stage_f_ids,
     )
     psfborrow_sed_compare_rows = make_sed_compare_rows(stage_g, psfborrow_stage_g)
+    annnorm_result_rows = make_annnorm_result_rows(annnorm_diagnostics_rows)
+    annnorm_run_rows = [
+        {
+            "stage": label,
+            "run": metadata_run_label(meta),
+            "status": (
+                meta.get("promotion", {}).get("status")
+                if isinstance(meta.get("promotion"), dict)
+                else ("missing" if not meta_path.exists() else "available")
+            ),
+            "artifact": rel(meta_path, REPORT_DIR) if meta_path.exists() else "missing",
+        }
+        for label, meta, meta_path in [
+            ("D", annnorm_stage_d, annnorm_stage_d_meta_path),
+            ("E", annnorm_stage_e, annnorm_stage_e_meta_path),
+            ("F", annnorm_stage_f, annnorm_stage_f_meta_path),
+            ("G", annnorm_stage_g, annnorm_stage_g_meta_path),
+        ]
+    ]
+    annnorm_assets = annnorm_diagnostics.get("assets") if isinstance(annnorm_diagnostics.get("assets"), dict) else {}
     psfborrow_sed_overlay_path = plot_sed_overlay(
         REPORT_DIR / "assets/v3-psfborrow/v3_psfborrow_sed_overlay.png",
         stage_g,
@@ -2712,6 +2807,24 @@ def main() -> None:
             explanation="Compares nominal and alternative background variants such as annulus placement and surface order. Large shifts in flux or sigma indicate background-model systematic risk.",
         ),
         figure(
+            abs_path(args.annnorm_scale_grid_png),
+            "Annulus-normalized surface scale grid",
+            wide=True,
+            explanation="Scale applied after the weighted least-squares quadratic fit: scale_b=sum_annulus(counts_b)/sum_annulus(max(B_raw_b,0)). Values above one mean the original WLS surface underpredicted the annulus total counts; outlined cells are the active fit-cell selector.",
+        ),
+        figure(
+            abs_path(args.annnorm_dec_profile_png),
+            "Dec profile comparison with annulus-normalized background",
+            wide=True,
+            explanation="Unnormalized summed Dec profiles for active fit cells. The blue curve shows counts minus the annulus-count-normalized background, directly testing whether the previous positive residual baseline around Dec is reduced.",
+        ),
+        figure(
+            abs_path(args.annnorm_sed_overlay_png),
+            "Annulus-normalized background Stage G SED overlay",
+            wide=True,
+            explanation="Stage G diagnostic points from the active reference branch and the annulus-normalized background branch. This is a background systematic check, not a new nominal promotion unless the downstream validation is accepted.",
+        ),
+        figure(
             abs_path(args.selector_sensitivity_png),
             "Cell-selection sensitivity summary",
             wide=True,
@@ -2999,6 +3112,16 @@ footer {{ margin-top:48px; padding-top:18px; border-top:1px solid var(--border);
     <h2>Background Systematics</h2>
     {table_from_rows(systematics_table_rows, ['variant', 'annulus', 'order', 'fit family', 'B_on', 'excess', 'sigma', 'valid cells', 'LogPar phi0', 'alpha', 'beta', 'chi2'])}
     <p>High-energy predE groups: <code>{h(', '.join(str(v) for v in high_energy_labels) or 'n/a')}</code></p>
+    <h3>Annulus-Normalized 2D Surface Test</h3>
+    <div class="callout">
+      <p>The new background branch keeps the same quadratic shape fit in the annulus, <code>B_raw(x,y)=c0+c1*x+c2*y+c3*x^2+c4*x*y+c5*y^2</code>, with the same weighted least-squares weights as the existing Stage D. After clipping negative predictions to zero, it applies one scalar per cell: <code>scale_b=sum_annulus(counts_b)/sum_annulus(max(B_raw_b,0))</code>, then uses <code>B_final_b(x,y)=scale_b*max(B_raw_b(x,y),0)</code> for both the skymap and <code>B_on</code>.</p>
+      <p>This deliberately fixes the annulus total-count closure problem seen in the raw Dec profile. It does not change the surface curvature model, the source mask, the annulus radii, or the active 30-cell selector; it should therefore be read as a focused background-normalization systematic.</p>
+    </div>
+    <h3>Annulus-normalized run artifacts</h3>
+    {table_from_rows(annnorm_run_rows, ['stage', 'run', 'status', 'artifact'])}
+    <h3>Annulus-normalized result comparison</h3>
+    {table_from_rows(annnorm_result_rows, ['variant', 'B_on', 'excess', 'sigma', 'model', 'phi0', 'gamma/alpha', 'beta', 'chi2/ndof', 'SED pts', 'run'])}
+    <p>Diagnostic asset summary: <code>{h(rel(abs_path(args.annnorm_diagnostics_json), REPORT_DIR)) if abs_path(args.annnorm_diagnostics_json).exists() else 'missing'}</code>. Scale-grid asset from summary: <code>{h(annnorm_assets.get('scale_grid_png', 'n/a') if isinstance(annnorm_assets, dict) else 'n/a')}</code>.</p>
   </section>
 
   <section>

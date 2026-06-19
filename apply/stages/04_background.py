@@ -140,6 +140,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--roi-surface-order", type=int, choices=[1, 2], default=2)
     parser.add_argument("--surface-condition-max", type=float, default=1.0e8)
     parser.add_argument("--surface-min-training-pixels", type=int, default=80)
+    parser.add_argument(
+        "--annulus-normalize-surface",
+        action="store_true",
+        default=False,
+        help=(
+            "For annulus-quadratic ROI backgrounds, keep the weighted least-squares surface shape "
+            "but rescale each cell so the model integral over the training annulus equals the "
+            "observed annulus counts."
+        ),
+    )
 
     parser.add_argument("--batch-size", type=int, default=500000)
     parser.add_argument("--workers", type=int, default=1, help="Reserved for Slurm resource accounting; scanning is vectorized.")
@@ -1024,6 +1034,7 @@ def estimate_roi_annulus_surface_background(
     surface_order: int,
     condition_max: float,
     min_training_pixels: int,
+    annulus_normalize_surface: bool = False,
 ) -> Tuple[
     np.ndarray,
     np.ndarray,
@@ -1062,6 +1073,11 @@ def estimate_roi_annulus_surface_background(
     annulus_pixels = np.zeros(n_cells, dtype=np.int64)
     residual_mean = np.full(n_cells, np.nan, dtype=np.float64)
     residual_rms = np.full(n_cells, np.nan, dtype=np.float64)
+    surface_scale = np.ones(n_cells, dtype=np.float64)
+    annulus_model_counts_raw = np.full(n_cells, np.nan, dtype=np.float64)
+    annulus_model_counts_final = np.full(n_cells, np.nan, dtype=np.float64)
+    annulus_count_residual_raw = np.full(n_cells, np.nan, dtype=np.float64)
+    annulus_count_residual_final = np.full(n_cells, np.nan, dtype=np.float64)
     rank = np.zeros(n_cells, dtype=np.int64)
     negative_pixels = np.zeros(n_cells, dtype=np.int64)
     core_warning = np.zeros(n_cells, dtype=bool)
@@ -1128,12 +1144,28 @@ def estimate_roi_annulus_surface_background(
             core_warning[cell_idx] = True
         pred_clipped = np.maximum(pred_full, 0.0)
         pred_clipped[~fiducial_mask] = np.nan
-        background_map[cell_idx] = pred_clipped.astype(np.float32)
-        core_background_map[cell_idx][on_mask] = pred_clipped[on_mask].astype(np.float32)
+        valid_annulus_model = annulus_mask & np.isfinite(pred_clipped)
+        raw_annulus_sum = float(np.nansum(pred_clipped[valid_annulus_model]))
+        annulus_model_counts_raw[cell_idx] = raw_annulus_sum
+        annulus_count_residual_raw[cell_idx] = float(annulus_counts[cell_idx] - raw_annulus_sum)
+        scale = 1.0
+        if annulus_normalize_surface:
+            if raw_annulus_sum > 0.0 and np.isfinite(raw_annulus_sum):
+                scale = float(annulus_counts[cell_idx] / raw_annulus_sum)
+            else:
+                core_warning[cell_idx] = True
+        surface_scale[cell_idx] = scale
+        pred_final = pred_clipped * scale
+        pred_final[~fiducial_mask] = np.nan
+        final_annulus_sum = float(np.nansum(pred_final[valid_annulus_model]))
+        annulus_model_counts_final[cell_idx] = final_annulus_sum
+        annulus_count_residual_final[cell_idx] = float(annulus_counts[cell_idx] - final_annulus_sum)
+        background_map[cell_idx] = pred_final.astype(np.float32)
+        core_background_map[cell_idx][on_mask] = pred_final[on_mask].astype(np.float32)
         residual = np.full((n_y, n_x), np.nan, dtype=np.float64)
-        valid_bg = annulus_mask & np.isfinite(pred_clipped)
-        residual[valid_bg] = (counts_map[cell_idx][valid_bg] - pred_clipped[valid_bg]) / np.sqrt(
-            np.maximum(pred_clipped[valid_bg], 1.0)
+        valid_bg = annulus_mask & np.isfinite(pred_final)
+        residual[valid_bg] = (counts_map[cell_idx][valid_bg] - pred_final[valid_bg]) / np.sqrt(
+            np.maximum(pred_final[valid_bg], 1.0)
         )
         residual_map[cell_idx] = residual.astype(np.float32)
         ann_resid = residual[valid_bg]
@@ -1141,7 +1173,7 @@ def estimate_roi_annulus_surface_background(
         residual_rms[cell_idx] = float(np.sqrt(np.nanmean(ann_resid * ann_resid))) if ann_resid.size else np.nan
         coeffs[cell_idx] = padded_coefficients(coeff, int(surface_order))
         covariances[cell_idx] = padded_covariance(cov, int(surface_order))
-        b_on[cell_idx] = float(np.nansum(pred_clipped[on_mask]))
+        b_on[cell_idx] = float(np.nansum(pred_final[on_mask]))
         if b_on[cell_idx] <= 0.0 or on_pixels[cell_idx] <= 0:
             core_warning[cell_idx] = True
         fit_success[cell_idx] = not bool(core_warning[cell_idx])
@@ -1161,6 +1193,11 @@ def estimate_roi_annulus_surface_background(
         "annulus_pixels": annulus_pixels.astype(np.int64),
         "annulus_residual_mean": residual_mean.astype(np.float64),
         "annulus_residual_rms": residual_rms.astype(np.float64),
+        "annulus_surface_scale": surface_scale.astype(np.float64),
+        "annulus_model_counts_raw": annulus_model_counts_raw.astype(np.float64),
+        "annulus_model_counts_final": annulus_model_counts_final.astype(np.float64),
+        "annulus_count_residual_raw": annulus_count_residual_raw.astype(np.float64),
+        "annulus_count_residual_final": annulus_count_residual_final.astype(np.float64),
         "core_extrapolation_warning": core_warning.astype(bool),
         "negative_background_pixels": negative_pixels.astype(np.int64),
         "surface_fit_success": fit_success.astype(bool),
@@ -1820,6 +1857,9 @@ def write_summary_csv(path: Path, rows: Sequence[Dict[str, object]]) -> None:
         "surface_fit_ndof",
         "surface_condition_number",
         "annulus_residual_rms",
+        "annulus_surface_scale",
+        "annulus_count_residual_raw",
+        "annulus_count_residual_final",
     ]
     with path.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -2012,6 +2052,7 @@ def run_crab_roi_local_background(
             surface_order=int(args.roi_surface_order),
             condition_max=float(args.surface_condition_max),
             min_training_pixels=int(args.surface_min_training_pixels),
+            annulus_normalize_surface=bool(args.annulus_normalize_surface),
         )
         off_counts = np.asarray(annulus_diagnostics["annulus_off_counts"], dtype=np.float64)
         off_pixels = np.asarray(annulus_diagnostics["annulus_off_pixels"], dtype=np.int64)
@@ -2098,6 +2139,15 @@ def run_crab_roi_local_background(
                 ),
                 "annulus_residual_rms": (
                     float(annulus_diagnostics["annulus_residual_rms"][idx]) if annulus_diagnostics else ""
+                ),
+                "annulus_surface_scale": (
+                    float(annulus_diagnostics["annulus_surface_scale"][idx]) if annulus_diagnostics else ""
+                ),
+                "annulus_count_residual_raw": (
+                    float(annulus_diagnostics["annulus_count_residual_raw"][idx]) if annulus_diagnostics else ""
+                ),
+                "annulus_count_residual_final": (
+                    float(annulus_diagnostics["annulus_count_residual_final"][idx]) if annulus_diagnostics else ""
                 ),
                 "warnings": warnings,
             }
@@ -2271,6 +2321,16 @@ def run_crab_roi_local_background(
         quality_status = "ok"
         promotable = True
         quality_reason = "ROI-local background passed basic positivity and training-pixel checks"
+    if annulus_diagnostics:
+        if bool(args.annulus_normalize_surface):
+            b_on_formula = (
+                "integral of annulus-count-normalized weighted least-squares annulus "
+                "quadratic surface over on aperture"
+            )
+        else:
+            b_on_formula = "integral of weighted least-squares annulus quadratic surface over on aperture"
+    else:
+        b_on_formula = "sum_y mean(counts in same y strip training pixels) * on_pixels_y"
     metadata: Dict[str, object] = {
         "description": "Stage D ROI-local background for configured (Nhit, predicted logE) Crab SED cells.",
         "run_id": run_id,
@@ -2330,17 +2390,19 @@ def run_crab_roi_local_background(
             "background_mode": "crab_roi_local",
             "method": background_method,
             "background_form": "direct_expectation",
-            "B_on_formula": (
-                "integral of weighted least-squares annulus quadratic surface over on aperture"
-                if annulus_diagnostics
-                else "sum_y mean(counts in same y strip training pixels) * on_pixels_y"
-            ),
+            "B_on_formula": b_on_formula,
             "alpha_b": None,
             "N_off_b": None,
             "alpha_N_off_note": "ROI-local direct expectation outputs B_on,b; traditional alpha/N_off is not defined.",
             "on_region_radius_source": f"Stage B PSF NPZ r_opt_deg: {Path(args.psf_npz).resolve()}",
             "surface_order": int(args.roi_surface_order) if annulus_diagnostics else None,
             "surface_basis": ["1", "x", "y", "x^2", "x*y", "y^2"] if int(args.roi_surface_order) == 2 else ["1", "x", "y"],
+            "annulus_normalize_surface": bool(args.annulus_normalize_surface) if annulus_diagnostics else None,
+            "surface_normalization_formula": (
+                "scale_b=sum_annulus(counts_b)/sum_annulus(max(B_raw_b,0)); B_final_b=scale_b*max(B_raw_b,0)"
+                if annulus_diagnostics and bool(args.annulus_normalize_surface)
+                else None
+            ),
             "annulus_default_inner_deg": float(args.annulus_default_inner_deg) if annulus_diagnostics else None,
             "annulus_width_deg": float(args.annulus_width_deg) if annulus_diagnostics else None,
             "annulus_max_inner_deg": float(args.annulus_max_inner_deg) if annulus_diagnostics else None,

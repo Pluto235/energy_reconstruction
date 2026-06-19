@@ -129,7 +129,7 @@
   "profile_axis_definition": "RA profile sums map rows with |Dec offset| < profile_half_width_deg; Dec profile sums map columns with |RA offset cos(dec)| < profile_half_width_deg.",
   "normalization": "Each 1D counts profile is divided by its own positive peak.",
   "highlight_style": "Fit cells use a light green panel background and green border.",
-  "annulus_span_axis": "ra",
+  "annulus_span_axis": "both",
   "annulus_span_style": "If enabled, light gray spans mark each cell's Stage D annulus-training radii projected onto the profile axis as [-outer, -inner] and [inner, outer].",
   "outputs": {
     "ra_normalized_counts_profiles_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/crab-v3-baseline-fit-cell-profiles/crab_v3_baseline_fit_ra_normalized_counts_profiles.png",

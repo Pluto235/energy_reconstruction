@@ -2649,7 +2649,7 @@ def main() -> None:
             abs_path(args.fit_cell_dec_profile),
             f"candidate-grid normalized Dec-offset counts profiles ({args.baseline_name} fit cells highlighted)",
             wide=True,
-            explanation="For every candidate cell, counts are summed in a |RA offset|<1 deg band and normalized by the cell's peak. Compare this with the RA profile to check Dec-direction imbalance and PSF width changes across cells.",
+            explanation="For every candidate cell, counts are summed in a |RA offset|<1 deg band and normalized by the cell's peak. Light gray bands mark that cell's Stage D annulus-training radii projected onto the Dec-offset slice as [-outer,-inner] and [inner,outer]. Compare this with the RA profile to check Dec-direction imbalance and PSF width changes across cells.",
         ),
         figure(
             abs_path(args.fit_cell_excess_ra_profile),

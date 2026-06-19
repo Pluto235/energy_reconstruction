@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-06-19 11:50 · [843db7e] Document the v3 Stage D fitted 2D background surface formula in the report.
+
 - **energy** · 2026-06-19 11:46 · [c46b281] Mark Stage D annulus bands on v3 Dec count profile diagnostics.
 
 - **energy** · 2026-06-19 11:42 · [c093a93] Restore raw summed Dec profiles in the v3 background comparison figure.

@@ -179,12 +179,17 @@ def dec_profile(npz_path: Path, fit_ids: Sequence[int]) -> Optional[Tuple[np.nda
     if not npz_path.exists():
         return None
     with np.load(npz_path, allow_pickle=False) as data:
-        required = {"counts_map", "background_map", "xy_edges_deg", "cell_id"}
+        required = {"counts_map", "background_map", "cell_id"}
         if not required.issubset(set(data.files)):
+            return None
+        if "xy_edges_deg" in data.files:
+            edges = np.asarray(data["xy_edges_deg"], dtype=np.float64)
+        elif "x_edges_deg" in data.files:
+            edges = np.asarray(data["x_edges_deg"], dtype=np.float64)
+        else:
             return None
         counts = np.asarray(data["counts_map"], dtype=np.float64)
         background = np.asarray(data["background_map"], dtype=np.float64)
-        edges = np.asarray(data["xy_edges_deg"], dtype=np.float64)
         cell_id = np.asarray(data["cell_id"], dtype=np.int64)
     centers = 0.5 * (edges[:-1] + edges[1:])
     x_mask = np.abs(centers) < 1.0

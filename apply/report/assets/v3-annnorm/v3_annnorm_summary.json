@@ -1,0 +1,346 @@
+{
+  "annulus_fit_cell_rows": [
+    {
+      "B_on": 20166.67191083177,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 3775.3677702965215,
+      "annulus_surface_scale": 1.0099058093846907,
+      "cell_id": 1,
+      "nhit_bin": "[125,200)",
+      "predE_bin": "[2,2.5)"
+    },
+    {
+      "B_on": 36636.02456968762,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 3718.3095670961775,
+      "annulus_surface_scale": 1.004509191606418,
+      "cell_id": 2,
+      "nhit_bin": "[125,200)",
+      "predE_bin": "[2.5,3)"
+    },
+    {
+      "B_on": 8804.991051593839,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 3811.925258218893,
+      "annulus_surface_scale": 1.022853395704503,
+      "cell_id": 3,
+      "nhit_bin": "[125,200)",
+      "predE_bin": "[3,3.25)"
+    },
+    {
+      "B_on": 7565.296604484195,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 4646.731656222604,
+      "annulus_surface_scale": 1.0559750961964711,
+      "cell_id": 4,
+      "nhit_bin": "[125,200)",
+      "predE_bin": "[3.25,3.5)"
+    },
+    {
+      "B_on": 8162.742528325416,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 3901.030740234186,
+      "annulus_surface_scale": 1.01236428591451,
+      "cell_id": 14,
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[2.5,3)"
+    },
+    {
+      "B_on": 3144.754706932895,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 3839.8411543655675,
+      "annulus_surface_scale": 1.0296347702205082,
+      "cell_id": 15,
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[3,3.25)"
+    },
+    {
+      "B_on": 2503.606538623724,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 3984.58230634316,
+      "annulus_surface_scale": 1.0760657185379803,
+      "cell_id": 16,
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[3.25,3.5)"
+    },
+    {
+      "B_on": 2335.53914749889,
+      "annulus_count_residual_final": 3.637978807091713e-12,
+      "annulus_count_residual_raw": 5068.615277562745,
+      "annulus_surface_scale": 1.203212937895357,
+      "cell_id": 17,
+      "nhit_bin": "[200,300)",
+      "predE_bin": "[3.5,3.75)"
+    },
+    {
+      "B_on": 1008.1763984630026,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 4070.4532869093237,
+      "annulus_surface_scale": 1.061717909160002,
+      "cell_id": 26,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[2.5,3)"
+    },
+    {
+      "B_on": 1545.419045004803,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 4013.52659481905,
+      "annulus_surface_scale": 1.0370185029383039,
+      "cell_id": 27,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3,3.25)"
+    },
+    {
+      "B_on": 905.5029146436214,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 3905.6412212850846,
+      "annulus_surface_scale": 1.0633483933179235,
+      "cell_id": 28,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3.25,3.5)"
+    },
+    {
+      "B_on": 755.9538111908837,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 4386.408758655951,
+      "annulus_surface_scale": 1.2390987949611916,
+      "cell_id": 29,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3.5,3.75)"
+    },
+    {
+      "B_on": 785.7225555577202,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 3477.4364292875307,
+      "annulus_surface_scale": 1.4633144995076544,
+      "cell_id": 30,
+      "nhit_bin": "[300,500)",
+      "predE_bin": "[3.75,4.0)"
+    },
+    {
+      "B_on": 148.5245130827103,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 4356.985812513871,
+      "annulus_surface_scale": 1.3439902836062287,
+      "cell_id": 39,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3,3.25)"
+    },
+    {
+      "B_on": 396.8788199362221,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 4178.188449439942,
+      "annulus_surface_scale": 1.1021716560774517,
+      "cell_id": 40,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.25,3.5)"
+    },
+    {
+      "B_on": 195.55135881066178,
+      "annulus_count_residual_final": -3.637978807091713e-12,
+      "annulus_count_residual_raw": 4878.475729617403,
+      "annulus_surface_scale": 1.2657335446884335,
+      "cell_id": 41,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.5,3.75)"
+    },
+    {
+      "B_on": 158.51301047074116,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 2008.3987359643743,
+      "annulus_surface_scale": 1.4431984675932832,
+      "cell_id": 42,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[3.75,4.0)"
+    },
+    {
+      "B_on": 144.93814658241652,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 333.6631736888651,
+      "annulus_surface_scale": 1.1960030286203076,
+      "cell_id": 43,
+      "nhit_bin": "[500,800)",
+      "predE_bin": "[4.0,4.25)"
+    },
+    {
+      "B_on": 31.844042170756428,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 1559.9845450011226,
+      "annulus_surface_scale": 1.4231022527681803,
+      "cell_id": 52,
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[3.25,3.5)"
+    },
+    {
+      "B_on": 72.54814598870522,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 3554.5498046744433,
+      "annulus_surface_scale": 1.4377281701352689,
+      "cell_id": 53,
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[3.5,3.75)"
+    },
+    {
+      "B_on": 55.02882674107502,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 2008.3640471324006,
+      "annulus_surface_scale": 1.4519641276725985,
+      "cell_id": 54,
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[3.75,4.0)"
+    },
+    {
+      "B_on": 38.063762432081,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 328.9937089924017,
+      "annulus_surface_scale": 1.215309132513752,
+      "cell_id": 55,
+      "nhit_bin": "[800,1100)",
+      "predE_bin": "[4.0,4.25)"
+    },
+    {
+      "B_on": 9.076647017636056,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 408.6382354223206,
+      "annulus_surface_scale": 1.24552248442574,
+      "cell_id": 65,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[3.5,3.75)"
+    },
+    {
+      "B_on": 20.70683964618334,
+      "annulus_count_residual_final": 9.094947017729282e-13,
+      "annulus_count_residual_raw": 1394.7094860115621,
+      "annulus_surface_scale": 1.4039953996803853,
+      "cell_id": 66,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[3.75,4.0)"
+    },
+    {
+      "B_on": 17.83737579388189,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 1152.555705821852,
+      "annulus_surface_scale": 1.3837446587759115,
+      "cell_id": 67,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[4.0,4.25)"
+    },
+    {
+      "B_on": 20.0113172395596,
+      "annulus_count_residual_final": -4.547473508864641e-13,
+      "annulus_count_residual_raw": 429.2649357479445,
+      "annulus_surface_scale": 1.2287296400672418,
+      "cell_id": 68,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[4.25,4.5)"
+    },
+    {
+      "B_on": 18.928737590024877,
+      "annulus_count_residual_final": -1.1368683772161603e-13,
+      "annulus_count_residual_raw": 80.92627128169238,
+      "annulus_surface_scale": 1.105225634760089,
+      "cell_id": 69,
+      "nhit_bin": "[1100,2000)",
+      "predE_bin": "[4.5,4.75)"
+    },
+    {
+      "B_on": 1.8890073367277047,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 46.666825467101944,
+      "annulus_surface_scale": 1.0907326763619387,
+      "cell_id": 81,
+      "nhit_bin": "[2000,3000)",
+      "predE_bin": "[4.5,4.75)"
+    },
+    {
+      "B_on": 6.792576891202502,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 122.83375363504467,
+      "annulus_surface_scale": 1.127929672699988,
+      "cell_id": 82,
+      "nhit_bin": "[2000,3000)",
+      "predE_bin": "[4.75,5.0)"
+    },
+    {
+      "B_on": 12.864504552004535,
+      "annulus_count_residual_final": 0.0,
+      "annulus_count_residual_raw": 280.50808768436036,
+      "annulus_surface_scale": 1.1927239068186104,
+      "cell_id": 83,
+      "nhit_bin": "[2000,3000)",
+      "predE_bin": "[5,6)"
+    }
+  ],
+  "assets": {
+    "dec_profile_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v3-annnorm/v3_annnorm_dec_profile_comparison.png",
+    "scale_grid_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v3-annnorm/v3_annnorm_surface_scale_grid.png",
+    "sed_overlay_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v3-annnorm/v3_annnorm_stage_g_sed_overlay.png"
+  },
+  "comparison": [
+    {
+      "stage_e_B_on": 107235.24039428649,
+      "stage_e_N_on": 128987,
+      "stage_e_excess": 21751.75960571351,
+      "stage_e_sigma": 64.34940639541944,
+      "stage_f_beta": 0.13279850950123362,
+      "stage_f_chi2": 264.2942827621865,
+      "stage_f_error": "conservative",
+      "stage_f_gamma_or_alpha": 2.8015747382288296,
+      "stage_f_model": "logpar",
+      "stage_f_ndof": 27,
+      "stage_f_phi0": 3.013386785068258e-12,
+      "stage_g_points": 18,
+      "stage_g_run": "v3_stage_g_psfborrow_slurm_42029",
+      "variant": "active_reference"
+    },
+    {
+      "stage_e_B_on": 113387.29360551313,
+      "stage_e_N_on": 128987,
+      "stage_e_excess": 15599.706394486871,
+      "stage_e_sigma": 45.32136539019827,
+      "stage_f_beta": 0.1527288567296091,
+      "stage_f_chi2": 105.80809794251391,
+      "stage_f_error": "conservative",
+      "stage_f_gamma_or_alpha": 2.8510848884830637,
+      "stage_f_model": "logpar",
+      "stage_f_ndof": 27,
+      "stage_f_phi0": 2.748865488621457e-12,
+      "stage_g_points": 18,
+      "stage_g_run": "v3_stage_g_annnorm_from_psfborrow",
+      "variant": "annulus_normalized_surface"
+    }
+  ],
+  "description": "v3 annulus-normalized 2D background diagnostic assets",
+  "fit_cell_ids": [
+    1,
+    2,
+    3,
+    4,
+    14,
+    15,
+    16,
+    17,
+    26,
+    27,
+    28,
+    29,
+    30,
+    39,
+    40,
+    41,
+    42,
+    43,
+    52,
+    53,
+    54,
+    55,
+    65,
+    66,
+    67,
+    68,
+    69,
+    81,
+    82,
+    83
+  ]
+}

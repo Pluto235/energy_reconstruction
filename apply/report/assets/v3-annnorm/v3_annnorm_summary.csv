@@ -1,0 +1,3 @@
+variant,stage_e_N_on,stage_e_B_on,stage_e_excess,stage_e_sigma,stage_f_model,stage_f_error,stage_f_phi0,stage_f_gamma_or_alpha,stage_f_beta,stage_f_chi2,stage_f_ndof,stage_g_points,stage_g_run
+active_reference,128987,107235.24039428649,21751.75960571351,64.34940639541944,logpar,conservative,3.013386785068258e-12,2.8015747382288296,0.13279850950123362,264.2942827621865,27,18,v3_stage_g_psfborrow_slurm_42029
+annulus_normalized_surface,128987,113387.29360551313,15599.706394486871,45.32136539019827,logpar,conservative,2.748865488621457e-12,2.8510848884830637,0.1527288567296091,105.80809794251391,27,18,v3_stage_g_annnorm_from_psfborrow

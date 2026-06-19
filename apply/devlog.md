@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-06-19 14:35 · [1d1f04a] Add v3 annulus-normalized derived background run and report comparison.
+
 - **energy** · 2026-06-19 14:02 · [60a69f3] Add v3 annulus-normalized background option and report diagnostics.
 
 - **energy** · 2026-06-19 11:50 · [843db7e] Document the v3 Stage D fitted 2D background surface formula in the report.

@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-06-22 16:08 · [85eab87] Remove the unnormalized active PSF radial profile figure from the v3 report.
+
 - **energy** · 2026-06-22 15:51 · [3bb1c76] Add v4 annnorm official pass5 forward-fold report and diagnostics.
 
 - **energy** · 2026-06-22 15:35 · [e445b21] Restore Stage B PSF diagnostics in the latest v3 background report.

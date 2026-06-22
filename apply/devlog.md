@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-06-22 20:36 · [f64499c] Add v4 drop4 cell-selection bias control report and diagnostics.
+
 - **energy** · 2026-06-22 19:59 · [1e2459d] Remove borrowed-cell red styling from the direct PSF profile diagnostic.
 
 - **energy** · 2026-06-22 18:54 · [787ebfe] Switch the v3 annnorm report to direct own-cell PSFs for cells 39/52/65.

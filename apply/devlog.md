@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-06-22 22:08 · [c6e870a] Add v4 empirical r68 aperture control and SED comparison.
+
 - **energy** · 2026-06-22 21:51 · [4a7f379] Add v4 response containment audit for low-energy SED bias.
 
 - **energy** · 2026-06-22 21:35 · [5ac07c2] Switch v4 Stage B PSF fit-cell highlighting from orange to green.

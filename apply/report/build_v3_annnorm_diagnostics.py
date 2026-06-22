@@ -208,6 +208,12 @@ def plot_dec_profiles(nominal_npz: Path, annnorm_npz: Path, output: Path, fit_id
         return None
     y, counts_nom, excess_nom = nominal
     _, counts_new, excess_new = annnorm
+    roi_mask = np.abs(y) <= 6.0
+    y = y[roi_mask]
+    counts_nom = counts_nom[roi_mask]
+    excess_nom = excess_nom[roi_mask]
+    counts_new = counts_new[roi_mask]
+    excess_new = excess_new[roi_mask]
     plt = setup_matplotlib()
     fig, ax = plt.subplots(figsize=(8.6, 4.8), dpi=150)
     ax.plot(y, counts_nom, color="#6b7280", lw=1.0, label="counts, nominal")
@@ -216,6 +222,7 @@ def plot_dec_profiles(nominal_npz: Path, annnorm_npz: Path, output: Path, fit_id
     ax.plot(y, excess_new, color="#2563eb", lw=1.5, label="counts - background, annulus-normalized")
     ax.axhline(0.0, color="#111111", lw=0.8, ls="--")
     ax.axvspan(-1.0, 1.0, color="#e5e7eb", alpha=0.45, label="central |Dec offset|<1 deg")
+    ax.set_xlim(-6.0, 6.0)
     ax.set_xlabel("Dec offset from Crab (deg)")
     ax.set_ylabel("summed counts in |RA offset|<1 deg")
     ax.set_title("Before/after Dec profile comparison for active v3 fit cells")

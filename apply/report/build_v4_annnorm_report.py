@@ -207,11 +207,11 @@ def plot_v4_candidate_psf_profiles(fit_rows: list[dict[str, str]]) -> Path | Non
 
     overlay = Image.new("RGBA", base.size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(overlay)
-    fill = (255, 247, 237, 96)
-    edge = (213, 94, 0, 235)
-    label_fill = (254, 215, 170, 238)
-    label_edge = (253, 186, 116, 245)
-    label_text = (154, 52, 18, 255)
+    fill = (236, 253, 245, 110)
+    edge = (0, 158, 115, 235)
+    label_fill = (209, 250, 229, 238)
+    label_edge = (110, 231, 183, 245)
+    label_text = (6, 95, 70, 255)
 
     try:
         font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 13)
@@ -236,7 +236,7 @@ def plot_v4_candidate_psf_profiles(fit_rows: list[dict[str, str]]) -> Path | Non
         draw.rounded_rectangle(label_box, radius=4, fill=label_fill, outline=label_edge)
         draw.text((x0 + 14, y0 + 7), "fit", fill=label_text, font=small_font)
 
-    legend_text = f"pale orange panels = current v4 fit cells ({len(fit_ids)})"
+    legend_text = f"pale green panels = current v4 fit cells ({len(fit_ids)})"
     legend_box = (70, 43, 590, 72)
     draw.rounded_rectangle(legend_box, radius=7, fill=(255, 255, 255, 230), outline=(209, 213, 219, 255))
     draw.rectangle((88, 52, 112, 64), fill=fill, outline=edge)
@@ -253,7 +253,7 @@ def psf_diagnostics_section(fit_rows: list[dict[str, str]]) -> str:
     fit_ids = ", ".join(str(row.get("cell_id")) for row in fit_rows)
     return (
         "<p>These Stage B diagnostics are MC-side PSF provenance for the current v4 drop4 fit. "
-        "The radial profile grid below keeps the nominal full candidate grid, but panels with a pale orange background are the cells that actually enter the current v4 Stage F/G fit.</p>"
+        "The radial profile grid below keeps the nominal full candidate grid, but panels with a pale green background are the cells that actually enter the current v4 Stage F/G fit.</p>"
         '<div class="note">'
         "In each panel, blue is the Crab-theta-reweighted MC radial histogram, orange is the Rayleigh-core model fitted inside the Stage B core range, and the dashed line is r_opt. "
         f"Highlighted v4 fit cells: <code>{v3.esc(fit_ids)}</code>."
@@ -262,7 +262,7 @@ def psf_diagnostics_section(fit_rows: list[dict[str, str]]) -> str:
         + v3.figure(
             highlighted_grid,
             "Stage B candidate-grid radial PSF profiles (v4 fit cells highlighted)",
-            "Pale orange panels are the current v4 drop4 fit cells. Non-highlighted panels remain visible as candidate-grid PSF context.",
+            "Pale green panels are the current v4 drop4 fit cells. Non-highlighted panels remain visible as candidate-grid PSF context.",
         )
         + v3.figure(
             v3.STAGE_B_NOMINAL_DIR / "psf_sigma_deg_grid.png",

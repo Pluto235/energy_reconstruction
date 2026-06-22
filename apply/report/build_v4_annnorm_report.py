@@ -13,7 +13,20 @@ REPORT_DIR = v3.REPORT_DIR
 REPORT_PATH = REPORT_DIR / "crab_sed_v4_stage_a_to_g_report.html"
 V4_ASSET_DIR = REPORT_DIR / "assets" / "v4-annnorm"
 V4_FINAL_SED_PNG = V4_ASSET_DIR / "v4_annnorm_final_sed_with_official_and_old_v3.png"
-FORWARD_DIR = REPORT_DIR / "assets" / "v4-annnorm-normalization-diagnostics"
+ACTIVE30_FORWARD_DIR = REPORT_DIR / "assets" / "v4-annnorm-normalization-diagnostics"
+DROP4_FORWARD_DIR = REPORT_DIR / "assets" / "v4-drop4-normalization-diagnostics"
+FORWARD_DIR = DROP4_FORWARD_DIR
+DROP4_SELECTOR_CSV = REPO_ROOT / "apply/config/cell_selector_v4_drop4_psfborrow.csv"
+DROP4_STAGE_F_DIR = (
+    REPO_ROOT
+    / "apply/output/stage_f_v4_drop4_annnorm/runs/v4_stage_f_annnorm_drop_cells_4_17_39_43"
+)
+DROP4_STAGE_G_DIR = (
+    REPO_ROOT
+    / "apply/output/stage_g_v4_drop4_annnorm/runs/v4_stage_g_annnorm_drop_cells_4_17_39_43"
+)
+DROP4_STAGE_F_META = DROP4_STAGE_F_DIR / "fit_v4_drop4_annnorm_metadata.json"
+DROP4_STAGE_G_META = DROP4_STAGE_G_DIR / "sed_points_v4_drop4_annnorm_metadata.json"
 
 
 def to_float(value: Any) -> float | None:
@@ -56,8 +69,8 @@ def plot_v4_final_sed(current_meta: dict[str, Any], old_meta: dict[str, Any]) ->
         )
 
     for grouping, marker, color, label in [
-        ("nhit", "o", "#2563eb", "v4/latest annnorm Nhit points"),
-        ("predE", "D", "#059669", "v4/latest annnorm predE points"),
+        ("nhit", "o", "#2563eb", "v4 drop4 annnorm Nhit points"),
+        ("predE", "D", "#059669", "v4 drop4 annnorm predE points"),
     ]:
         energy, flux, err = v3.point_arrays(current_meta, grouping)
         if energy:
@@ -102,7 +115,7 @@ def plot_v4_final_sed(current_meta: dict[str, Any], old_meta: dict[str, Any]) ->
     ax.set_yscale("log")
     ax.set_xlabel("Energy (TeV)")
     ax.set_ylabel(r"$E^2\,dN/dE$ (TeV cm$^{-2}$ s$^{-1}$)")
-    ax.set_title("Crab SED v4: latest annnorm result versus official/tutorial references")
+    ax.set_title("Crab SED v4 drop4: annnorm result versus official/tutorial references")
     ax.grid(True, which="both", alpha=0.24, lw=0.45)
     ax.legend(fontsize=7.2, ncol=1)
     fig.tight_layout()
@@ -110,6 +123,92 @@ def plot_v4_final_sed(current_meta: dict[str, Any], old_meta: dict[str, Any]) ->
     fig.savefig(V4_FINAL_SED_PNG)
     plt.close(fig)
     return V4_FINAL_SED_PNG
+
+
+def selector_rows_from(path: Path, *, included_only: bool = True) -> list[dict[str, str]]:
+    rows = v3.read_csv_rows(path)
+    if not included_only:
+        return rows
+    return [row for row in rows if str(row.get("include", "")).strip().lower() in {"1", "true", "yes", "y"}]
+
+
+def fit_cell_table_from(rows: list[dict[str, str]]) -> str:
+    return v3.fit_cell_table(rows)
+
+
+def fold_summary_by_spectrum(path: Path, spectrum: str = "official_pass5") -> dict[str, str]:
+    return next((row for row in v3.read_csv_rows(path) if row.get("spectrum") == spectrum), {})
+
+
+def fold_nhit_rows(path: Path, spectrum: str = "official_pass5") -> list[dict[str, str]]:
+    rows = [row for row in v3.read_csv_rows(path) if row.get("spectrum") == spectrum]
+    rows.sort(key=lambda row: v3.interval_key(row.get("nhit_bin")))
+    return rows
+
+
+def active30_vs_drop4_section(active_f_meta: dict[str, Any], drop4_f_meta: dict[str, Any]) -> str:
+    active_summary = fold_summary_by_spectrum(ACTIVE30_FORWARD_DIR / "v3_official_forward_fold_summary.csv")
+    drop_summary = fold_summary_by_spectrum(DROP4_FORWARD_DIR / "v3_official_forward_fold_summary.csv")
+    active_nhit = {row.get("nhit_bin"): row for row in fold_nhit_rows(ACTIVE30_FORWARD_DIR / "v3_official_forward_fold_nhit_summary.csv")}
+    drop_nhit = {row.get("nhit_bin"): row for row in fold_nhit_rows(DROP4_FORWARD_DIR / "v3_official_forward_fold_nhit_summary.csv")}
+
+    def fit_row(label: str, meta: dict[str, Any], summary: dict[str, str]) -> list[Any]:
+        preferred = meta.get("preferred_fit", {}) if isinstance(meta.get("preferred_fit"), dict) else {}
+        key = f"{preferred.get('model')}_{preferred.get('error_mode')}"
+        fit = meta.get("fits", {}).get(key, {}) if isinstance(meta.get("fits"), dict) else {}
+        params = fit.get("parameters", {}) if isinstance(fit.get("parameters"), dict) else {}
+        subset = meta.get("validation", {}).get("cell_subset", {}) if isinstance(meta.get("validation"), dict) else {}
+        return [
+            v3.esc(label),
+            v3.esc(subset.get("n_included_cells")),
+            v3.fmt(summary.get("total_observed_over_expected"), 4),
+            v3.fmt(params.get("phi0"), 5),
+            v3.fmt(params.get("alpha", params.get("gamma")), 5),
+            v3.fmt(params.get("beta"), 5),
+            f"{v3.fmt(fit.get('chi2'), 4)} / {v3.fmt(fit.get('ndof'), 3)}",
+        ]
+
+    nhit_rows = []
+    for label in sorted(set(active_nhit) | set(drop_nhit), key=v3.interval_key):
+        active = active_nhit.get(label, {})
+        drop = drop_nhit.get(label, {})
+        nhit_rows.append(
+            [
+                v3.esc(label),
+                v3.esc(active.get("cells")),
+                v3.fmt(active.get("total_observed_over_expected"), 4),
+                v3.esc(drop.get("cells")),
+                v3.fmt(drop.get("total_observed_over_expected"), 4),
+                v3.fmt(
+                    (to_float(drop.get("total_observed_over_expected")) or float("nan"))
+                    - (to_float(active.get("total_observed_over_expected")) or float("nan")),
+                    4,
+                ),
+            ]
+        )
+
+    return (
+        "<p>This control removes cells <code>4, 17, 39, 43</code> from the original active30 list, then reruns Stage F/G using the same latest annulus-normalized Stage E signal. "
+        "The purpose is to test whether these visually/diagnostically suspect cells are driving the low-Nhit excess.</p>"
+        '<div class="note">'
+        "Result: dropping these four cells does not reduce the official-pass5 underprediction. "
+        "The total observed/expected ratio changes from 1.422x to 1.448x, and the two lowest Nhit bins remain at 1.536x and 1.516x. "
+        "So this specific four-cell removal is not evidence that those cells are the main source of the low-energy high flux."
+        "</div>"
+        + v3.table(
+            ["selector", "cells", "official obs/exp", "phi0", "alpha/gamma", "beta", "LogPar chi2/ndof"],
+            [
+                fit_row("active30", active_f_meta, active_summary),
+                fit_row("drop4: remove 4,17,39,43", drop4_f_meta, drop_summary),
+            ],
+            cls="compact",
+        )
+        + v3.table(
+            ["Nhit bin", "active cells", "active obs/exp", "drop4 cells", "drop4 obs/exp", "drop-active"],
+            nhit_rows,
+            cls="compact",
+        )
+    )
 
 
 def forward_fold_section() -> str:
@@ -195,10 +294,10 @@ def forward_fold_section() -> str:
     total_excess = v3.fmt(official_summary.get("total_excess"), 6)
     total_expected = v3.fmt(official_summary.get("total_expected_counts"), 6)
     return (
-        "<p>This v4 test folds the official pass5 WCDA spectrum through our Stage A response, active30 cell list, "
+        "<p>This v4 test folds the official pass5 WCDA spectrum through our Stage A response, the drop4 26-cell list, "
         "cell containment, and theta exposure, then compares the predicted source counts with the latest annulus-normalized Stage E/F excess.</p>"
         '<div class="note">'
-        f"Official pass5 predicts {total_expected} counts for active30, while the latest annnorm excess is {total_excess}; "
+        f"Official pass5 predicts {total_expected} counts for the drop4 26-cell selector, while the latest annnorm excess is {total_excess}; "
         f"the total observed/expected ratio is {total_ratio}x. Low-Nhit bins remain high after this forward fold: {low_ratio_text}. "
         "So the low-energy discrepancy is not removed by the latest background map alone; the next suspect should be response normalization, "
         "cell-selection normalization, or energy-migration/containment consistency. The highest-Nhit ratios are less decisive because the absolute excess is small."
@@ -212,12 +311,12 @@ def forward_fold_section() -> str:
         + '<div class="grid2">'
         + v3.figure(
             FORWARD_DIR / "v3_official_forward_fold_counts_vs_excess.png",
-            "Official/tutorial forward-fold counts versus annnorm excess",
-            "Each active30 cell compares latest annnorm excess with the expected source counts from official pass5 and tutorial spectra through our response. Points above equality are cells where observed excess exceeds folded official expectation.",
+            "Drop4 official/tutorial forward-fold counts versus annnorm excess",
+            "Each drop4 fit cell compares latest annnorm excess with the expected source counts from official pass5 and tutorial spectra through our response. Points above equality are cells where observed excess exceeds folded official expectation.",
         )
         + v3.figure(
             FORWARD_DIR / "v3_official_forward_fold_ratio_by_cell.png",
-            "Observed/expected ratio by active30 cell",
+            "Observed/expected ratio by drop4 fit cell",
             "Cell-level ratio of latest annnorm excess to folded official/tutorial expected counts. Persistent low-Nhit ratios above 1 point to response/cell normalization rather than only a residual background-map problem.",
         )
         + "</div>"
@@ -265,27 +364,28 @@ def build_report() -> None:
     c_meta = v3.load_json(v3.STAGE_C_META)
     d_meta = v3.load_json(v3.STAGE_D_META)
     e_meta = v3.load_json(v3.STAGE_E_META)
-    f_meta = v3.load_json(v3.STAGE_F_META)
-    g_meta = v3.load_json(v3.STAGE_G_META)
+    active_f_meta = v3.load_json(v3.STAGE_F_META)
+    f_meta = v3.load_json(DROP4_STAGE_F_META)
+    g_meta = v3.load_json(DROP4_STAGE_G_META)
     old_g_meta = v3.load_json(v3.OLD_STAGE_G_META)
-    fit_rows = v3.selector_rows()
+    fit_rows = selector_rows_from(DROP4_SELECTOR_CSV)
 
     plot_v4_final_sed(g_meta, old_g_meta)
 
     intro = (
         '<div class="note">'
         "This v4 report does not replace the v3 HTML. It starts from the latest v3 annulus-normalized background result, "
-        "then adds an official-pass5 forward-fold diagnostic to test whether the official spectrum remains too low after passing through our response and active30 cell selection."
+        "then applies a cell-selection-bias control: cells 4, 17, 39, and 43 are removed from the original active30 fit set and Stage F/G are rerun."
         "</div>"
         + v3.summary_cards(e_meta, f_meta, g_meta, d_meta)
     )
 
     cells_body = (
-        "<p>The tested cell set is the same active30 v3_baseline_psfborrow selector evaluated with the latest annulus-normalized Stage D/E background. "
-        "Cells 39, 52, and 65 remain included through neighbor PSF borrowing.</p>"
+        "<p>The tested cell set starts from the active30 v3_baseline_psfborrow selector but excludes cells <code>4, 17, 39, 43</code>. "
+        "Cells 52 and 65 remain included through neighbor PSF borrowing; cell 39 is excluded in this control.</p>"
         f"<p><strong>Included cell ids:</strong> {v3.esc(', '.join(str(row.get('cell_id')) for row in fit_rows))}</p>"
         "<details open><summary>Fit-cell selector table</summary>"
-        + v3.fit_cell_table(fit_rows)
+        + fit_cell_table_from(fit_rows)
         + "</details>"
     )
 
@@ -331,10 +431,10 @@ def build_report() -> None:
         "<p>The preferred spectrum is selected by the Stage F metadata. For the latest bkg branch, LogPar remains preferred over PL under conservative sqrt(N_on+B_on) errors.</p>"
         + v3.stage_f_table(f_meta)
         + '<div class="grid2">'
-        + v3.figure(v3.STAGE_F_DIR / "model_counts_vs_excess.png", "Stage F model counts versus excess", "Current annnorm fit-cell excess compared with the preferred spectral model expectation.")
-        + v3.figure(v3.STAGE_F_DIR / "pull_grid_logpar.png", "Stage F LogPar pull grid", "Per-cell residual pull under the current preferred LogPar fit.")
-        + v3.figure(v3.STAGE_F_DIR / "theta_exposure.png", "Stage F theta exposure", "Zenith-angle exposure diagnostic used by the forward-folding response.")
-        + v3.figure(v3.STAGE_F_DIR / "pull_grid_pl.png", "Stage F PL pull grid", "Power-law residual grid kept as a model-comparison diagnostic.")
+        + v3.figure(DROP4_STAGE_F_DIR / "model_counts_vs_excess.png", "Stage F drop4 model counts versus excess", "Drop4 annnorm fit-cell excess compared with the preferred spectral model expectation.")
+        + v3.figure(DROP4_STAGE_F_DIR / "pull_grid_logpar.png", "Stage F drop4 LogPar pull grid", "Per-cell residual pull under the current preferred LogPar fit.")
+        + v3.figure(DROP4_STAGE_F_DIR / "theta_exposure.png", "Stage F drop4 theta exposure", "Zenith-angle exposure diagnostic used by the forward-folding response.")
+        + v3.figure(DROP4_STAGE_F_DIR / "pull_grid_pl.png", "Stage F drop4 PL pull grid", "Power-law residual grid kept as a model-comparison diagnostic.")
         + "</div>"
     )
 
@@ -343,9 +443,9 @@ def build_report() -> None:
         "The final figure overlays official/tutorial WCDA references and the old v3 psfborrow points for visual comparison.</p>"
         + v3.stage_g_table(g_meta)
         + '<div class="grid2">'
-        + v3.figure(v3.STAGE_G_DIR / "sed_points_stage_f_fullarray_pool1.png", "Latest-bkg Stage G SED points", "Native Stage G diagnostic plot from v3_stage_g_annnorm_from_psfborrow.")
-        + v3.figure(v3.STAGE_G_DIR / "sed_points_ratio.png", "Latest-bkg Stage G ratio plot", "Diagnostic ratios to the frozen Stage F model / reference curves.")
-        + v3.figure(v3.STAGE_G_DIR / "sed_point_cell_counts.png", "Stage G cell counts per point", "Which fit cells enter each diagnostic SED point.")
+        + v3.figure(DROP4_STAGE_G_DIR / "sed_points_stage_f_fullarray_pool1.png", "Drop4 Stage G SED points", "Native Stage G diagnostic plot from v4_stage_g_annnorm_drop_cells_4_17_39_43.")
+        + v3.figure(DROP4_STAGE_G_DIR / "sed_points_ratio.png", "Drop4 Stage G ratio plot", "Diagnostic ratios to the frozen Stage F model / reference curves.")
+        + v3.figure(DROP4_STAGE_G_DIR / "sed_point_cell_counts.png", "Drop4 Stage G cell counts per point", "Which fit cells enter each diagnostic SED point.")
         + v3.figure(V4_FINAL_SED_PNG, "V4 final SED comparison with old v3 reference", "Blue/green markers are the latest annnorm v4 points. Grey open markers are the previous v3 psfborrow points. Black/brown markers are official pass5/tutorial WCDA references.")
         + "</div>"
     )
@@ -353,11 +453,12 @@ def build_report() -> None:
     body = (
         "<!doctype html><html><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-        "<title>Crab SED v4 annnorm forward-fold report</title>"
+        "<title>Crab SED v4 drop4 annnorm forward-fold report</title>"
         f"<style>{css()}</style></head><body>"
-        "<header><h1>Crab SED v4 Annnorm Forward-Fold Report</h1>"
-        "<p>Primary question: after latest annulus-normalized background, does official pass5 still underpredict active30 low-Nhit excess when folded through our response?</p></header><main>"
+        "<header><h1>Crab SED v4 Drop4 Annnorm Forward-Fold Report</h1>"
+        "<p>Primary question: does removing cells 4, 17, 39, and 43 reduce the low-Nhit excess relative to official pass5 forward-fold expectations?</p></header><main>"
         + v3.section("V4 Result Summary", intro)
+        + v3.section("Cell-Selection Bias Control: Active30 Versus Drop4", active30_vs_drop4_section(active_f_meta, f_meta))
         + v3.section("Official Pass5 Forward-Fold Test", forward_fold_section())
         + v3.section("Current A-G Inputs", v3.stage_table(a_meta, b_meta, c_meta, d_meta, e_meta, f_meta, g_meta))
         + v3.section("Fit Cell Definition", cells_body)

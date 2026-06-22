@@ -14,9 +14,12 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 REPORT_DIR = REPO_ROOT / "apply" / "report"
 REPORT_PATH = REPORT_DIR / "crab_sed_v3_stage_a_to_g_report.html"
 ASSET_DIR = REPORT_DIR / "assets" / "v3-annnorm"
+PSFBORROW_ASSET_DIR = REPORT_DIR / "assets" / "v3-psfborrow"
 
 STAGE_A_META = REPO_ROOT / "apply/output/stage_a_v3_candidate/response_2d_v3_candidate_metadata.json"
 STAGE_B_META = REPO_ROOT / "apply/output/stage_b_v3_candidate_psfborrow/runs/v3_psfborrow_from_nominal/psf_v3_candidate_metadata.json"
+STAGE_B_NOMINAL_DIR = REPO_ROOT / "apply/output/stage_b_v3_candidate/runs/slurm_42023"
+STAGE_B_PSF_DIR = REPO_ROOT / "apply/output/stage_b_v3_candidate_psfborrow/runs/v3_psfborrow_from_nominal"
 STAGE_C_META = REPO_ROOT / "apply/output/stage_c_v3_candidate/runs/v3_stage_c_slurm_42024/obs_events_metadata.json"
 STAGE_D_DIR = REPO_ROOT / "apply/output/stage_d_v3_candidate_annnorm/runs/v3_stage_d_annnorm_from_psfborrow"
 STAGE_E_DIR = REPO_ROOT / "apply/output/stage_e_v3_candidate_annnorm/runs/v3_stage_e_annnorm_from_psfborrow"
@@ -27,6 +30,7 @@ STAGE_D_META = STAGE_D_DIR / "background_v3_candidate_annnorm_metadata.json"
 STAGE_E_META = STAGE_E_DIR / "signal_v3_candidate_annnorm_metadata.json"
 STAGE_F_META = STAGE_F_DIR / "fit_v3_baseline_annnorm_metadata.json"
 STAGE_G_META = STAGE_G_DIR / "sed_points_v3_baseline_annnorm_metadata.json"
+STAGE_B_PSF_SUMMARY = STAGE_B_PSF_DIR / "psf_v3_candidate_summary.csv"
 OLD_STAGE_G_META = (
     REPO_ROOT
     / "apply/output/stage_g_v3_baseline_psfborrow/runs/v3_stage_g_psfborrow_slurm_42029/"
@@ -318,6 +322,113 @@ def fit_cell_table(rows: list[dict[str, str]]) -> str:
     )
 
 
+def active_psf_table(fit_rows: list[dict[str, str]]) -> str:
+    psf_rows = {str(row.get("cell_id")): row for row in read_csv_rows(STAGE_B_PSF_SUMMARY)}
+    selector_rows_by_id = {str(row.get("cell_id")): row for row in fit_rows}
+    rows = []
+    for cell_id in selector_rows_by_id:
+        psf = psf_rows.get(cell_id, {})
+        selector = selector_rows_by_id[cell_id]
+        borrowed = str(psf.get("psf_borrowed", "")).strip().lower() in {"1", "true", "yes", "y"}
+        if borrowed:
+            source = f"borrowed from {psf.get('borrowed_from') or selector.get('psf_borrowed_from')}"
+            method = psf.get("borrow_method") or selector.get("psf_borrow_method")
+            weights = psf.get("borrow_weights")
+            if method:
+                source += f" ({method})"
+            if weights:
+                source += f"; weights {weights}"
+        else:
+            source = "direct Stage B PSF"
+        rows.append(
+            [
+                esc(cell_id),
+                esc(selector.get("nhit_bin") or psf.get("nhit_bin")),
+                esc(selector.get("predE_bin") or psf.get("predE_bin")),
+                fmt(psf.get("sigma_deg"), 4),
+                fmt(psf.get("r_opt_deg"), 4),
+                fmt(psf.get("containment_r_opt"), 4),
+                fmt(psf.get("effective_events"), 5),
+                fmt(psf.get("theta_missing_crab_probability_mass"), 5),
+                esc(source),
+                fmt(psf.get("original_theta_missing_crab_probability_mass"), 5),
+            ]
+        )
+    return table(
+        [
+            "cell",
+            "Nhit",
+            "predE",
+            "sigma deg",
+            "r_opt deg",
+            "containment",
+            "Neff",
+            "missing mass",
+            "PSF source",
+            "orig missing",
+        ],
+        rows,
+        cls="compact",
+    )
+
+
+def psf_diagnostics_section(fit_rows: list[dict[str, str]]) -> str:
+    return (
+        "<p>These Stage B diagnostics are restored because the PSF construction is upstream of the latest annulus-normalized Stage D background. "
+        "The current mainline still uses the latest annnorm background for Stage D/E/F/G; the PSF figures below only document the active 30-cell PSF inputs and the 39/52/65 neighbor-borrowing systematic.</p>"
+        '<div class="grid2">'
+        + figure(
+            PSFBORROW_ASSET_DIR / "v3_active_fit_cell_psf_profiles_normalized.png",
+            "Active 30-cell own-cell normalized radial profiles",
+            "Each selected cell's own MC radial distribution is normalized by its peak so the PSF widths can be compared. Dashed markers indicate the fit PSF sigma. Cells 39/52/65 are kept in the selector but use borrowed/interpolated neighbor PSFs in the active branch.",
+        )
+        + figure(
+            PSFBORROW_ASSET_DIR / "v3_active_fit_cell_psf_profiles.png",
+            "Active 30-cell own-cell radial PSF profiles",
+            "Unnormalized own-cell radial MC profiles for the active fit-cell list. This is diagnostic context for the PSF fit statistics, not a new background estimate.",
+        )
+        + figure(
+            PSFBORROW_ASSET_DIR / "v3_active_fit_cell_theta_profiles.png",
+            "Active 30-cell normalized MC theta profiles",
+            "Colored curves are each selected cell's own MC theta support after the Stage B cuts; gray is the Crab-visible theta target used for reweighting. Orange missing-support bins explain why 39/52/65 borrow neighboring PSFs.",
+        )
+        + figure(
+            STAGE_B_NOMINAL_DIR / "psf_sigma_deg_grid.png",
+            "Stage B PSF sigma grid",
+            "Candidate-grid Rayleigh-core PSF width sigma in degrees. Smaller sigma means a narrower reconstructed Crab response for that cell.",
+        )
+        + figure(
+            STAGE_B_NOMINAL_DIR / "psf_r_opt_deg_grid.png",
+            "Stage B PSF r_opt grid",
+            "Candidate-grid aperture radius used for the on-region integration. In v3 this is tied to the fitted PSF width, approximately r_opt = 1.58 * sigma.",
+        )
+        + figure(
+            STAGE_B_NOMINAL_DIR / "psf_containment_grid.png",
+            "Stage B PSF containment at r_opt grid",
+            "Fraction of the cell PSF contained inside r_opt. Low containment or warnings indicate broad tails or fragile low-stat PSF behavior.",
+        )
+        + figure(
+            STAGE_B_NOMINAL_DIR / "psf_effective_events_grid.png",
+            "Stage B PSF effective-events grid",
+            "Effective MC statistics after Crab-declination theta reweighting, Neff = (sum w)^2 / sum(w^2). Low Neff means the PSF is dominated by a small number of weighted MC events.",
+        )
+        + figure(
+            STAGE_B_NOMINAL_DIR / "psf_radial_profiles_grid.png",
+            "Stage B candidate-grid radial PSF profiles",
+            "Full candidate-grid radial PSF profile diagnostic from nominal Stage B. This is retained as PSF-computation provenance for the active selector.",
+        )
+        + "</div>"
+        "<h3>Active fit-cell PSF table</h3>"
+        + active_psf_table(fit_rows)
+        + "<h3>PSF theta-support notes</h3>"
+        "<p><code>theta_missing_crab_probability_mass</code> is the fraction of the Crab-visible theta exposure for which a cell has no conditional MC support after the cell, true-energy, finite-angle, and positive-weight cuts. "
+        "It is therefore a coverage diagnostic for the PSF reweighting, not a statement that the global MC sample is small.</p>"
+        "<p>Cells <code>39/52/65</code> are ridge-left physical candidates with visible Crab excess, but their own-cell theta support misses too much Crab theta probability mass. "
+        "The active PSF-borrow branch keeps these cells in the 30-cell fit selector and replaces only their PSF input: <code>39 -> 40</code>, <code>52 -> 2/3*53 + 1/3*54</code>, and <code>65 -> 2/3*66 + 1/3*67</code>. "
+        "Those PSF choices remain compatible with the latest bkg branch because Stage D changes the background estimation, while Stage B defines the PSF/on-region response used downstream.</p>"
+    )
+
+
 def stage_table(
     a_meta: dict[str, Any],
     b_meta: dict[str, Any],
@@ -503,7 +614,8 @@ def build_report() -> None:
     intro = (
         '<div class="note">'
         "This HTML is the current v3 report rebuilt around the latest annulus-normalized 2D background branch. "
-        "Older nominal/old-background diagnostics have been removed from the main body; the previous v3 psfborrow Stage G points are kept only as grey reference markers in the final SED comparison."
+        "Old-background Stage D/E/F/G result sections are removed from the main body, while upstream Stage B PSF diagnostics are retained because they define the active PSF-borrowing cell response. "
+        "The previous v3 psfborrow Stage G points are kept only as grey reference markers in the final SED comparison."
         "</div>"
         + summary_cards(e_meta, f_meta, g_meta, d_meta)
     )
@@ -595,6 +707,7 @@ def build_report() -> None:
         + section("Current Result Summary", intro)
         + section("Current A-G Inputs", stage_table(a_meta, b_meta, c_meta, d_meta, e_meta, f_meta, g_meta) + diagnostic_note)
         + section("Fit Cell Definition", cells_body)
+        + section("Stage B / PSF Diagnostics", psf_diagnostics_section(fit_rows))
         + section("Stage D: Latest 2D Background", stage_d_body)
         + section("Profile Diagnostics: Latest Background", profile_diagnostics_section())
         + section("Stage E: Current Excess", stage_e_body)

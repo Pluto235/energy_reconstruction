@@ -28,6 +28,7 @@ DROP4_STAGE_G_DIR = (
 DROP4_STAGE_F_META = DROP4_STAGE_F_DIR / "fit_v4_drop4_annnorm_metadata.json"
 DROP4_STAGE_G_META = DROP4_STAGE_G_DIR / "sed_points_v4_drop4_annnorm_metadata.json"
 ROOT_CAUSE_DIR = REPORT_DIR / "assets" / "v4-root-cause-diagnostics"
+V4_PSF_RADIAL_PROFILE_GRID_PNG = V4_ASSET_DIR / "v4_stage_b_candidate_radial_psf_profiles_fit_highlight.png"
 
 
 def to_float(value: Any) -> float | None:
@@ -47,7 +48,12 @@ def ratio_cell_rows(rows: list[dict[str, str]], *, max_rows: int = 14) -> list[d
 
 
 def plot_v4_final_sed(current_meta: dict[str, Any], old_meta: dict[str, Any]) -> Path:
-    plt = v3.setup_matplotlib()
+    try:
+        plt = v3.setup_matplotlib()
+    except ModuleNotFoundError:
+        if v3.exists(V4_FINAL_SED_PNG):
+            return V4_FINAL_SED_PNG
+        raise
     fig, ax = plt.subplots(figsize=(8.6, 5.6), dpi=160)
 
     e_pass5, y_pass5 = v3.pass5_points()
@@ -135,6 +141,158 @@ def selector_rows_from(path: Path, *, included_only: bool = True) -> list[dict[s
 
 def fit_cell_table_from(rows: list[dict[str, str]]) -> str:
     return v3.fit_cell_table(rows)
+
+
+def plot_v4_candidate_psf_profiles(fit_rows: list[dict[str, str]]) -> Path | None:
+    source_png = v3.STAGE_B_NOMINAL_DIR / "psf_radial_profiles_grid.png"
+    if not v3.exists(source_png):
+        return None
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except Exception:
+        return None
+
+    fit_ids = {
+        int(row["cell_id"])
+        for row in fit_rows
+        if str(row.get("cell_id", "")).strip().isdigit()
+    }
+    if not fit_ids:
+        return None
+
+    base = Image.open(source_png).convert("RGBA")
+    width, height = base.size
+    rgb = base.convert("RGB")
+    pix = rgb.load()
+
+    def dark_count_x(x: int) -> int:
+        total = 0
+        for y in range(80, height - 20):
+            r, g, b = pix[x, y]
+            if r < 80 and g < 80 and b < 80:
+                total += 1
+        return total
+
+    def dark_count_y(y: int) -> int:
+        total = 0
+        for x in range(width):
+            r, g, b = pix[x, y]
+            if r < 80 and g < 80 and b < 80:
+                total += 1
+        return total
+
+    def contiguous_groups(values: list[int]) -> list[tuple[int, int]]:
+        if not values:
+            return []
+        groups: list[tuple[int, int]] = []
+        start = previous = values[0]
+        for value in values[1:]:
+            if value == previous + 1:
+                previous = value
+            else:
+                groups.append((start, previous))
+                start = previous = value
+        groups.append((start, previous))
+        return groups
+
+    x_groups = contiguous_groups([x for x in range(width) if dark_count_x(x) > 1000])
+    y_groups = contiguous_groups([y for y in range(height) if dark_count_y(y) > 2600])
+    if len(x_groups) < 24 or len(y_groups) < 14:
+        return None
+
+    x_lines = [int(round((lo + hi) / 2.0)) for lo, hi in x_groups[:24]]
+    y_lines = [int(round((lo + hi) / 2.0)) for lo, hi in y_groups[:14]]
+    x_bounds = [(x_lines[i], x_lines[i + 1]) for i in range(0, 24, 2)]
+    y_bounds = [(y_lines[i], y_lines[i + 1]) for i in range(0, 14, 2)]
+
+    overlay = Image.new("RGBA", base.size, (255, 255, 255, 0))
+    draw = ImageDraw.Draw(overlay)
+    fill = (255, 247, 237, 96)
+    edge = (213, 94, 0, 235)
+    label_fill = (254, 215, 170, 238)
+    label_edge = (253, 186, 116, 245)
+    label_text = (154, 52, 18, 255)
+
+    try:
+        font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 13)
+        small_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 12)
+    except Exception:
+        font = ImageFont.load_default()
+        small_font = ImageFont.load_default()
+
+    ncols = 12
+    for cell_id in sorted(fit_ids):
+        idx = cell_id - 1
+        row = idx // ncols
+        col = idx % ncols
+        if row >= len(y_bounds) or col >= len(x_bounds):
+            continue
+        x0, x1 = x_bounds[col]
+        y0, y1 = y_bounds[row]
+        draw.rectangle((x0, y0, x1, y1), fill=fill)
+        for inset in range(3):
+            draw.rectangle((x0 - inset, y0 - inset, x1 + inset, y1 + inset), outline=edge)
+        label_box = (x0 + 7, y0 + 6, x0 + 39, y0 + 23)
+        draw.rounded_rectangle(label_box, radius=4, fill=label_fill, outline=label_edge)
+        draw.text((x0 + 14, y0 + 7), "fit", fill=label_text, font=small_font)
+
+    legend_text = f"pale orange panels = current v4 fit cells ({len(fit_ids)})"
+    legend_box = (70, 43, 590, 72)
+    draw.rounded_rectangle(legend_box, radius=7, fill=(255, 255, 255, 230), outline=(209, 213, 219, 255))
+    draw.rectangle((88, 52, 112, 64), fill=fill, outline=edge)
+    draw.text((122, 48), legend_text, fill=(17, 24, 39, 255), font=font)
+
+    highlighted = Image.alpha_composite(base, overlay)
+    V4_PSF_RADIAL_PROFILE_GRID_PNG.parent.mkdir(parents=True, exist_ok=True)
+    highlighted.convert("RGB").save(V4_PSF_RADIAL_PROFILE_GRID_PNG)
+    return V4_PSF_RADIAL_PROFILE_GRID_PNG
+
+
+def psf_diagnostics_section(fit_rows: list[dict[str, str]]) -> str:
+    highlighted_grid = plot_v4_candidate_psf_profiles(fit_rows) or V4_PSF_RADIAL_PROFILE_GRID_PNG
+    fit_ids = ", ".join(str(row.get("cell_id")) for row in fit_rows)
+    return (
+        "<p>These Stage B diagnostics are MC-side PSF provenance for the current v4 drop4 fit. "
+        "The radial profile grid below keeps the nominal full candidate grid, but panels with a pale orange background are the cells that actually enter the current v4 Stage F/G fit.</p>"
+        '<div class="note">'
+        "In each panel, blue is the Crab-theta-reweighted MC radial histogram, orange is the Rayleigh-core model fitted inside the Stage B core range, and the dashed line is r_opt. "
+        f"Highlighted v4 fit cells: <code>{v3.esc(fit_ids)}</code>."
+        "</div>"
+        '<div class="grid2">'
+        + v3.figure(
+            highlighted_grid,
+            "Stage B candidate-grid radial PSF profiles (v4 fit cells highlighted)",
+            "Pale orange panels are the current v4 drop4 fit cells. Non-highlighted panels remain visible as candidate-grid PSF context.",
+        )
+        + v3.figure(
+            v3.STAGE_B_NOMINAL_DIR / "psf_sigma_deg_grid.png",
+            "Stage B PSF sigma grid",
+            "Candidate-grid Rayleigh-core PSF width sigma in degrees. Smaller sigma means a narrower reconstructed Crab response for that cell.",
+        )
+        + v3.figure(
+            v3.STAGE_B_NOMINAL_DIR / "psf_r_opt_deg_grid.png",
+            "Stage B PSF r_opt grid",
+            "Candidate-grid aperture radius used for the on-region integration. In v3/v4 this is tied to the fitted PSF width, approximately r_opt = 1.58 * sigma.",
+        )
+        + v3.figure(
+            v3.STAGE_B_NOMINAL_DIR / "psf_containment_grid.png",
+            "Stage B PSF containment at r_opt grid",
+            "Fraction of the cell PSF contained inside r_opt. Low containment or warnings indicate broad tails or fragile low-stat PSF behavior.",
+        )
+        + v3.figure(
+            v3.STAGE_B_NOMINAL_DIR / "psf_effective_events_grid.png",
+            "Stage B PSF effective-events grid",
+            "Effective MC statistics after Crab-declination theta reweighting, Neff = (sum w)^2 / sum(w^2). Low Neff means the PSF is dominated by a small number of weighted MC events.",
+        )
+        + v3.figure(
+            v3.PSFBORROW_ASSET_DIR / "v3_active_fit_cell_theta_profiles.png",
+            "Active-cell normalized MC theta profiles",
+            "MC theta support after the Stage B cuts; gray is the Crab-visible theta target used for reweighting. This remains useful as PSF-support provenance for the v4 selector.",
+        )
+        + "</div>"
+        "<h3>Current v4 fit-cell PSF table</h3>"
+        + v3.active_psf_table(fit_rows)
+    )
 
 
 def fold_summary_by_spectrum(path: Path, spectrum: str = "official_pass5") -> dict[str, str]:
@@ -607,7 +765,7 @@ def build_report() -> None:
         + v3.section("Root-Cause Diagnostics", root_cause_diagnostics_section())
         + v3.section("Current A-G Inputs", v3.stage_table(a_meta, b_meta, c_meta, d_meta, e_meta, f_meta, g_meta))
         + v3.section("Fit Cell Definition", cells_body)
-        + v3.section("Stage B / PSF Diagnostics", v3.psf_diagnostics_section(fit_rows))
+        + v3.section("Stage B / PSF Diagnostics", psf_diagnostics_section(fit_rows))
         + v3.section("Stage D: Latest 2D Background", stage_d_body)
         + v3.section("Profile Diagnostics: Latest Background", v3.profile_diagnostics_section())
         + v3.section("Stage E: Current Excess", stage_e_body)

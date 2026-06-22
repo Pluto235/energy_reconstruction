@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-06-22 21:28 · [d2d39e7] Highlight current v4 fit cells on the Stage B candidate radial PSF grid.
+
 - **energy** · 2026-06-22 20:57 · [d6180ba] Add v4 low-energy SED root-cause diagnostics.
 
 - **energy** · 2026-06-22 20:36 · [f64499c] Add v4 drop4 cell-selection bias control report and diagnostics.

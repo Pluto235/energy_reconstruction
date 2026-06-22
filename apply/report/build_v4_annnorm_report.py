@@ -29,6 +29,10 @@ DROP4_STAGE_F_META = DROP4_STAGE_F_DIR / "fit_v4_drop4_annnorm_metadata.json"
 DROP4_STAGE_G_META = DROP4_STAGE_G_DIR / "sed_points_v4_drop4_annnorm_metadata.json"
 ROOT_CAUSE_DIR = REPORT_DIR / "assets" / "v4-root-cause-diagnostics"
 V4_PSF_RADIAL_PROFILE_GRID_PNG = V4_ASSET_DIR / "v4_stage_b_candidate_radial_psf_profiles_fit_highlight.png"
+RESPONSE_AUDIT_DIR = REPORT_DIR / "assets" / "v4-response-audit"
+CONTAINMENT1_STAGE_G_DIR = (
+    REPO_ROOT / "apply/output/stage_g_v4_containment1_drop4_annnorm/runs/v4_stage_g_annnorm_containment1_drop4"
+)
 
 
 def to_float(value: Any) -> float | None:
@@ -625,6 +629,150 @@ def root_cause_diagnostics_section() -> str:
     )
 
 
+def response_audit_section() -> str:
+    summary_rows = v3.read_csv_rows(RESPONSE_AUDIT_DIR / "official_pass5_containment_ablation_by_selector_nhit.csv")
+    fit_rows = v3.read_csv_rows(RESPONSE_AUDIT_DIR / "stage_f_nominal_vs_containment1_summary.csv")
+    cell_rows = v3.read_csv_rows(RESPONSE_AUDIT_DIR / "official_pass5_containment_ablation_by_cell.csv")
+    summary = v3.load_json(RESPONSE_AUDIT_DIR / "v4_response_audit_summary.json")
+    summary_payload = summary.get("summary", {}) if isinstance(summary.get("summary"), dict) else {}
+
+    def row_for(selector: str, mode: str, nhit: str) -> dict[str, str]:
+        return next(
+            (
+                row
+                for row in summary_rows
+                if row.get("selector") == selector and row.get("containment_mode") == mode and row.get("nhit_bin") == nhit
+            ),
+            {},
+        )
+
+    overview_rows = []
+    for selector in ["all84", "active30", "drop4"]:
+        nominal = row_for(selector, "nominal_containment", "all")
+        cont1 = row_for(selector, "containment_1", "all")
+        overview_rows.append(
+            [
+                v3.esc(selector),
+                v3.esc(nominal.get("cells")),
+                v3.fmt(nominal.get("observed_over_expected"), 4),
+                v3.fmt(cont1.get("observed_over_expected"), 4),
+                v3.fmt(nominal.get("effective_containment_factor"), 4),
+                v3.fmt(nominal.get("excess"), 6),
+                v3.fmt(nominal.get("official_expected_counts"), 6),
+                v3.fmt(cont1.get("official_expected_counts"), 6),
+            ]
+        )
+
+    low_nhit_rows = []
+    for nhit in ["[125,200)", "[200,300)", "[300,500)", "[500,800)"]:
+        nominal = row_for("drop4", "nominal_containment", nhit)
+        cont1 = row_for("drop4", "containment_1", nhit)
+        low_nhit_rows.append(
+            [
+                v3.esc(nhit),
+                v3.esc(nominal.get("cells")),
+                v3.fmt(nominal.get("observed_over_expected"), 4),
+                v3.fmt(cont1.get("observed_over_expected"), 4),
+                v3.fmt(nominal.get("effective_containment_factor"), 4),
+                v3.fmt(nominal.get("excess"), 5),
+                v3.fmt(nominal.get("B_on"), 5),
+            ]
+        )
+
+    fit_table_rows = [
+        [
+            v3.esc(row.get("run")),
+            v3.esc(row.get("preferred_model")),
+            v3.esc(row.get("cells")),
+            v3.fmt(row.get("phi0"), 5),
+            v3.fmt(row.get("alpha") or row.get("gamma"), 5),
+            v3.fmt(row.get("beta"), 5),
+            f"{v3.fmt(row.get('chi2'), 4)} / {v3.fmt(row.get('ndof'), 3)}",
+        ]
+        for row in fit_rows
+    ]
+
+    high_residual_cells = [
+        row
+        for row in cell_rows
+        if row.get("drop4") == "1" and row.get("nhit_bin") in {"[125,200)", "[200,300)", "[300,500)", "[500,800)"}
+    ]
+    high_residual_cells.sort(
+        key=lambda row: v3.finite_float(row.get("ratio_nominal")) or -1.0e99,
+        reverse=True,
+    )
+    cell_table_rows = [
+        [
+            v3.esc(row.get("cell_id")),
+            v3.esc(row.get("nhit_bin")),
+            v3.esc(row.get("predE_bin")),
+            v3.fmt(row.get("containment_r_opt"), 4),
+            v3.fmt(row.get("ratio_nominal"), 4),
+            v3.fmt(row.get("ratio_containment1"), 4),
+            v3.fmt(100.0 * (v3.finite_float(row.get("required_delta_b_over_b_nominal")) or 0.0), 3) + "%",
+            v3.fmt(100.0 * (v3.finite_float(row.get("required_delta_b_over_b_containment1")) or 0.0), 3) + "%",
+        ]
+        for row in high_residual_cells[:12]
+    ]
+
+    return (
+        "<p>This audit isolates response/aperture effects without changing the Stage E background: the same N_on, B_on, excess, cells, response, and exposure are used, but one diagnostic run sets <code>containment_r_opt=1</code> before Stage F/G.</p>"
+        '<div class="note">'
+        "Current strongest evidence: the low-energy high SED is mainly caused by the containment/aperture factor used in Stage F/G, not by the latest annnorm background map alone. "
+        f"For drop4, official pass5 obs/expected changes from <code>{v3.fmt(summary_payload.get('drop4_nominal_official_obs_over_expected'), 4)}x</code> to <code>{v3.fmt(summary_payload.get('drop4_containment1_official_obs_over_expected'), 4)}x</code> when <code>containment_r_opt</code> is removed. "
+        "This points to a response containment consistency problem: Stage A's numerator is built from the binned MC event cache, while Stage F/G multiply by a separate PSF containment factor. "
+        "The remaining definitive check is to rebuild Stage A from a no-dangle, all-direction numerator cache or explicitly define the response as aperture-conditioned."
+        "</div>"
+        + v3.table(
+            ["selector", "cells", "obs/official current", "obs/official containment=1", "effective containment", "excess", "expected current", "expected c=1"],
+            overview_rows,
+            cls="compact",
+        )
+        + "<h3>Drop4 low-Nhit containment ablation</h3>"
+        + v3.table(
+            ["Nhit", "cells", "obs/official current", "obs/official c=1", "effective containment", "excess", "B_on"],
+            low_nhit_rows,
+            cls="compact",
+        )
+        + '<div class="grid2">'
+        + v3.figure(
+            RESPONSE_AUDIT_DIR / "official_pass5_containment_ablation_by_nhit.png",
+            "Official pass5 forward-fold ratios with/without containment",
+            "Left: current Stage F convention multiplies response counts by containment_r_opt. Right: diagnostic ablation with containment fixed to one. The low-Nhit ratios collapse toward unity in the ablation.",
+        )
+        + v3.figure(
+            RESPONSE_AUDIT_DIR / "containment_r_opt_by_nhit.png",
+            "Containment factors by Nhit",
+            "The current Stage B containment factors are typically 0.6-0.7 in low/mid Nhit. Multiplying by these factors suppresses expected counts by the same scale and raises fitted flux.",
+        )
+        + "</div>"
+        + "<h3>Stage F fit impact</h3>"
+        + v3.table(
+            ["run", "model", "cells", "phi0", "alpha/gamma", "beta", "chi2/ndof"],
+            fit_table_rows,
+            cls="compact",
+        )
+        + '<div class="grid2">'
+        + v3.figure(
+            RESPONSE_AUDIT_DIR / "v4_sed_nominal_vs_containment1.png",
+            "SED impact of containment ablation",
+            "Red markers use the containment=1 diagnostic run. They move substantially downward relative to the current nominal v4 points, especially at low energy.",
+        )
+        + v3.figure(
+            CONTAINMENT1_STAGE_G_DIR / "sed_points_stage_f_fullarray_pool1.png",
+            "Native Stage G plot for containment=1 ablation",
+            "Stage G rerun using the same drop4 cells and same background, but with containment_r_opt forced to one in the Stage E signal clone.",
+        )
+        + "</div>"
+        + "<h3>Largest drop4 low-Nhit cell changes</h3>"
+        + v3.table(
+            ["cell", "Nhit", "predE", "containment", "ratio current", "ratio c=1", "delta B/B current", "delta B/B c=1"],
+            cell_table_rows,
+            cls="compact",
+        )
+    )
+
+
 def css() -> str:
     return """
     :root { color-scheme: light; --ink:#111827; --muted:#4b5563; --line:#d1d5db; --soft:#f3f4f6; --accent:#2563eb; }
@@ -763,6 +911,7 @@ def build_report() -> None:
         + v3.section("Cell-Selection Bias Control: Active30 Versus Drop4", active30_vs_drop4_section(active_f_meta, f_meta))
         + v3.section("Official Pass5 Forward-Fold Test", forward_fold_section())
         + v3.section("Root-Cause Diagnostics", root_cause_diagnostics_section())
+        + v3.section("Response / Containment Audit", response_audit_section())
         + v3.section("Current A-G Inputs", v3.stage_table(a_meta, b_meta, c_meta, d_meta, e_meta, f_meta, g_meta))
         + v3.section("Fit Cell Definition", cells_body)
         + v3.section("Stage B / PSF Diagnostics", psf_diagnostics_section(fit_rows))

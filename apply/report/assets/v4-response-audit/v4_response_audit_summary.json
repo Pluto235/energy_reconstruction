@@ -1,0 +1,21 @@
+{
+  "summary": {
+    "dominant_current_hypothesis": "Stage F/G currently multiply by containment_r_opt even though the response numerator is built from a source-region MC cache; this likely underpredicts expected counts and drives high SED normalization.",
+    "drop4_nominal_official_obs_over_expected": 1.4477519400385246,
+    "drop4_containment1_official_obs_over_expected": 0.9365913956189119,
+    "drop4_nominal_effective_containment_factor": 0.64692808879537,
+    "stage_a_response_type": "primary_thrown_response",
+    "stage_a_effective_area_formula": "a_eff_m2 = s0_m2 * cos(theta_true_bin_center) * eta",
+    "stage_a_upstream_cache": "/mnt/mydisk/WCDA_simulation_binned_response_v3_candidate",
+    "stage_a_metadata_mc_dangle_cut": null,
+    "caveat": "The upstream binned cache does not preserve full CLI provenance in its run_summary.json. The next definitive test is to rebuild Stage A from an uncut all-direction numerator cache or explicitly encode aperture conditioning in the response."
+  },
+  "outputs": {
+    "selector_nhit_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v4-response-audit/official_pass5_containment_ablation_by_selector_nhit.csv",
+    "cell_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v4-response-audit/official_pass5_containment_ablation_by_cell.csv",
+    "stage_f_summary_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v4-response-audit/stage_f_nominal_vs_containment1_summary.csv",
+    "ratio_plot": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v4-response-audit/official_pass5_containment_ablation_by_nhit.png",
+    "containment_plot": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v4-response-audit/containment_r_opt_by_nhit.png",
+    "sed_plot": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v4-response-audit/v4_sed_nominal_vs_containment1.png"
+  }
+}

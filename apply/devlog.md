@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-06-22 21:51 · [uncommitted] Add v4 response containment audit for low-energy SED bias.
+
 - **energy** · 2026-06-22 21:35 · [5ac07c2] Switch v4 Stage B PSF fit-cell highlighting from orange to green.
 
 - **energy** · 2026-06-22 21:28 · [b882e18] Highlight current v4 fit cells on the Stage B candidate radial PSF grid.

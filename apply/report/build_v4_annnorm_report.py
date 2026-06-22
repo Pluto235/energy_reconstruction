@@ -33,6 +33,17 @@ RESPONSE_AUDIT_DIR = REPORT_DIR / "assets" / "v4-response-audit"
 CONTAINMENT1_STAGE_G_DIR = (
     REPO_ROOT / "apply/output/stage_g_v4_containment1_drop4_annnorm/runs/v4_stage_g_annnorm_containment1_drop4"
 )
+R68_STAGE_B_DIR = REPO_ROOT / "apply/output/stage_b_v4_aperture_variants/runs/v4_r68_from_psfborrow"
+R68_STAGE_D_DIR = REPO_ROOT / "apply/output/stage_d_v4_r68_aperture/runs/v4_r68_aperture_drop4_stage_d"
+R68_STAGE_E_DIR = REPO_ROOT / "apply/output/stage_e_v4_r68_aperture/runs/v4_r68_aperture_drop4_stage_e"
+R68_STAGE_F_DIR = REPO_ROOT / "apply/output/stage_f_v4_r68_aperture/runs/v4_r68_aperture_drop4_stage_f"
+R68_STAGE_G_DIR = REPO_ROOT / "apply/output/stage_g_v4_r68_aperture/runs/v4_r68_aperture_drop4_stage_g"
+R68_STAGE_B_META = R68_STAGE_B_DIR / "psf_v4_r68_aperture_metadata.json"
+R68_STAGE_D_META = R68_STAGE_D_DIR / "background_v4_r68_aperture_metadata.json"
+R68_STAGE_E_META = R68_STAGE_E_DIR / "signal_v4_r68_aperture_metadata.json"
+R68_STAGE_F_META = R68_STAGE_F_DIR / "fit_v4_r68_aperture_metadata.json"
+R68_STAGE_G_META = R68_STAGE_G_DIR / "sed_points_v4_r68_aperture_metadata.json"
+R68_SED_COMPARE_PNG = V4_ASSET_DIR / "v4_r68_aperture_sed_comparison.png"
 
 
 def to_float(value: Any) -> float | None:
@@ -134,6 +145,203 @@ def plot_v4_final_sed(current_meta: dict[str, Any], old_meta: dict[str, Any]) ->
     fig.savefig(V4_FINAL_SED_PNG)
     plt.close(fig)
     return V4_FINAL_SED_PNG
+
+
+def plot_r68_sed_comparison(nominal_meta: dict[str, Any], r68_meta: dict[str, Any]) -> Path | None:
+    if not r68_meta:
+        return None
+    try:
+        plt = v3.setup_matplotlib()
+    except ModuleNotFoundError:
+        return R68_SED_COMPARE_PNG if v3.exists(R68_SED_COMPARE_PNG) else None
+
+    fig, ax = plt.subplots(figsize=(8.6, 5.6), dpi=160)
+    e_pass5, y_pass5 = v3.pass5_points()
+    if e_pass5:
+        ax.plot(e_pass5, y_pass5, "o", ms=5.2, color="#111827", label="Official pass5 WCDA")
+
+    for meta, style_prefix, label_prefix in [
+        (nominal_meta, "nominal", "nominal r_opt=1.58*sigma"),
+        (r68_meta, "r68", "empirical r68 aperture"),
+    ]:
+        for grouping, marker in [("nhit", "o"), ("predE", "D")]:
+            energy, flux, err = v3.point_arrays(meta, grouping)
+            if not energy:
+                continue
+            if style_prefix == "nominal":
+                color = "#9ca3af" if grouping == "nhit" else "#6b7280"
+                kwargs = {
+                    "markerfacecolor": "none",
+                    "markeredgewidth": 1.0,
+                    "alpha": 0.86,
+                    "zorder": 3,
+                }
+            else:
+                color = "#2563eb" if grouping == "nhit" else "#059669"
+                kwargs = {"zorder": 5}
+            ax.errorbar(
+                energy,
+                flux,
+                yerr=err,
+                fmt=marker,
+                ms=5.0,
+                lw=1.0,
+                color=color,
+                ecolor=color,
+                capsize=2.4,
+                label=f"{label_prefix} {grouping}",
+                **kwargs,
+            )
+
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("Energy (TeV)")
+    ax.set_ylabel(r"$E^2\,dN/dE$ (TeV cm$^{-2}$ s$^{-1}$)")
+    ax.set_title("V4 aperture control: nominal versus empirical r68")
+    ax.grid(True, which="both", alpha=0.24, lw=0.45)
+    ax.legend(fontsize=7.0, ncol=1)
+    fig.tight_layout()
+    V4_ASSET_DIR.mkdir(parents=True, exist_ok=True)
+    fig.savefig(R68_SED_COMPARE_PNG)
+    plt.close(fig)
+    return R68_SED_COMPARE_PNG
+
+
+def point_by_group(meta: dict[str, Any], grouping: str) -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
+    for point in meta.get("points", []) if isinstance(meta.get("points"), list) else []:
+        if not isinstance(point, dict):
+            continue
+        if point.get("grouping") != grouping:
+            continue
+        label = str(point.get("group_label") or "")
+        if label:
+            out[label] = point
+    return out
+
+
+def fit_summary_row(label: str, meta: dict[str, Any]) -> list[Any]:
+    preferred = meta.get("preferred_fit", {}) if isinstance(meta.get("preferred_fit"), dict) else {}
+    key = f"{preferred.get('model')}_{preferred.get('error_mode')}"
+    fit = meta.get("fits", {}).get(key, {}) if isinstance(meta.get("fits"), dict) else {}
+    params = fit.get("parameters", {}) if isinstance(fit.get("parameters"), dict) else {}
+    validation = meta.get("validation", {}) if isinstance(meta.get("validation"), dict) else {}
+    subset = validation.get("cell_subset", {}) if isinstance(validation.get("cell_subset"), dict) else {}
+    return [
+        label,
+        v3.esc(subset.get("n_included_cells", validation.get("n_cells", ""))),
+        v3.esc(preferred.get("model")),
+        v3.fmt(params.get("phi0"), 5),
+        v3.fmt(params.get("alpha", params.get("gamma")), 5),
+        v3.fmt(params.get("beta"), 5),
+        f"{v3.fmt(fit.get('chi2'), 4)} / {v3.fmt(fit.get('ndof'), 3)}",
+    ]
+
+
+def r68_aperture_section(
+    *,
+    nominal_e_meta: dict[str, Any],
+    nominal_f_meta: dict[str, Any],
+    nominal_g_meta: dict[str, Any],
+    r68_b_meta: dict[str, Any],
+    r68_e_meta: dict[str, Any],
+    r68_f_meta: dict[str, Any],
+    r68_g_meta: dict[str, Any],
+) -> str:
+    if not (r68_b_meta and r68_e_meta and r68_f_meta and r68_g_meta):
+        return (
+            "<p>This requested control is configured but the r68 Stage E/F/G outputs are not available yet.</p>"
+            '<div class="note">'
+            "Expected branch: <code>run_v4_r68_aperture_pipeline.sh</code> builds a Stage B contract with "
+            "<code>r_opt_deg := r68_deg</code>, reruns Stage D background integration, rescans Stage E N_on, and then reruns Stage F/G."
+            "</div>"
+        )
+
+    plot_path = plot_r68_sed_comparison(nominal_g_meta, r68_g_meta)
+    aperture_summary = r68_b_meta.get("summary", {}) if isinstance(r68_b_meta.get("summary"), dict) else {}
+    nominal_totals = nominal_e_meta.get("totals", {}) if isinstance(nominal_e_meta.get("totals"), dict) else {}
+    r68_totals = r68_e_meta.get("totals", {}) if isinstance(r68_e_meta.get("totals"), dict) else {}
+
+    nhit_nom = point_by_group(nominal_g_meta, "nhit")
+    nhit_r68 = point_by_group(r68_g_meta, "nhit")
+    nhit_rows = []
+    for label in sorted(set(nhit_nom) | set(nhit_r68), key=v3.interval_key):
+        n = nhit_nom.get(label, {})
+        r = nhit_r68.get(label, {})
+        n_flux = to_float(n.get("e2_dnde"))
+        r_flux = to_float(r.get("e2_dnde"))
+        nhit_rows.append(
+            [
+                v3.esc(label),
+                v3.esc(n.get("n_cells", r.get("n_cells", ""))),
+                v3.fmt(n.get("effective_energy_tev"), 4),
+                v3.fmt(n_flux, 5),
+                v3.fmt(r.get("effective_energy_tev"), 4),
+                v3.fmt(r_flux, 5),
+                v3.fmt((r_flux / n_flux) if n_flux and r_flux else None, 4),
+            ]
+        )
+
+    fit_rows = [
+        fit_summary_row("nominal r_opt=1.58*sigma", nominal_f_meta),
+        fit_summary_row("empirical r68 aperture", r68_f_meta),
+    ]
+
+    on_rows = [
+        [
+            "nominal r_opt=1.58*sigma",
+            v3.fmt(nominal_totals.get("N_on"), 7),
+            v3.fmt(nominal_totals.get("B_on"), 7),
+            v3.fmt(nominal_totals.get("excess"), 7),
+            v3.fmt(nominal_totals.get("formal_sigma"), 5),
+        ],
+        [
+            "empirical r68 aperture",
+            v3.fmt(r68_totals.get("N_on"), 7),
+            v3.fmt(r68_totals.get("B_on"), 7),
+            v3.fmt(r68_totals.get("excess"), 7),
+            v3.fmt(r68_totals.get("formal_sigma"), 5),
+        ],
+    ]
+
+    first_nom = to_float(nhit_nom.get("[125,200)", {}).get("e2_dnde"))
+    first_r68 = to_float(nhit_r68.get("[125,200)", {}).get("e2_dnde"))
+    first_ratio = (first_r68 / first_nom) if first_nom and first_r68 else None
+    second_nom = to_float(nhit_nom.get("[200,300)", {}).get("e2_dnde"))
+    second_r68 = to_float(nhit_r68.get("[200,300)", {}).get("e2_dnde"))
+    second_ratio = (second_r68 / second_nom) if second_nom and second_r68 else None
+
+    return (
+        "<p>This control replaces the analytic optimum aperture <code>r_opt = 1.58*sigma</code> with the MC empirical "
+        "<code>r68</code> radius for every candidate cell. Stage D integrates the fitted 2D background inside the same r68 aperture, "
+        "Stage E rescans observation events to recompute N_on, and Stage F/G use <code>containment_r_opt = 0.68</code>.</p>"
+        '<div class="note">'
+        f"Fit-cell aperture scale changed by median <code>{v3.fmt(aperture_summary.get('median_new_over_original_r_opt'), 4)}x</code> over the full candidate grid. "
+        f"For the first two Nhit SED points, r68/nominal flux ratios are <code>{v3.fmt(first_ratio, 4)}</code> and <code>{v3.fmt(second_ratio, 4)}</code>. "
+        "If these ratios are well below one, the high low-energy flux was partly driven by the previous aperture/containment convention; "
+        "if they stay near one, the problem is not solved by changing aperture alone."
+        "</div>"
+        + v3.table(["branch", "N_on", "B_on", "excess", "formal sigma"], on_rows, cls="compact")
+        + v3.table(["branch", "cells", "model", "phi0", "alpha/gamma", "beta", "chi2/ndof"], fit_rows, cls="compact")
+        + "<h3>Nhit SED point movement</h3>"
+        + v3.table(
+            ["Nhit bin", "cells", "E nominal", "E2dN/dE nominal", "E r68", "E2dN/dE r68", "r68/nominal"],
+            nhit_rows,
+            cls="compact",
+        )
+        + '<div class="grid2">'
+        + v3.figure(
+            plot_path if plot_path is not None else R68_SED_COMPARE_PNG,
+            "V4 aperture control SED comparison",
+            "Grey open markers are the current nominal v4 drop4 points. Blue/green markers are the empirical r68-aperture rerun. Black points are official pass5.",
+        )
+        + v3.figure(
+            R68_STAGE_G_DIR / "sed_points_stage_f_fullarray_pool1.png",
+            "Native Stage G r68-aperture SED points",
+            "Stage G rerun after replacing the on-region aperture and response containment by the MC empirical r68 contract.",
+        )
+        + "</div>"
+    )
 
 
 def selector_rows_from(path: Path, *, included_only: bool = True) -> list[dict[str, str]]:
@@ -818,9 +1026,15 @@ def build_report() -> None:
     f_meta = v3.load_json(DROP4_STAGE_F_META)
     g_meta = v3.load_json(DROP4_STAGE_G_META)
     old_g_meta = v3.load_json(v3.OLD_STAGE_G_META)
+    r68_b_meta = v3.load_json(R68_STAGE_B_META) if R68_STAGE_B_META.exists() else {}
+    r68_e_meta = v3.load_json(R68_STAGE_E_META) if R68_STAGE_E_META.exists() else {}
+    r68_f_meta = v3.load_json(R68_STAGE_F_META) if R68_STAGE_F_META.exists() else {}
+    r68_g_meta = v3.load_json(R68_STAGE_G_META) if R68_STAGE_G_META.exists() else {}
     fit_rows = selector_rows_from(DROP4_SELECTOR_CSV)
 
     plot_v4_final_sed(g_meta, old_g_meta)
+    if r68_g_meta:
+        plot_r68_sed_comparison(g_meta, r68_g_meta)
 
     intro = (
         '<div class="note">'
@@ -912,6 +1126,18 @@ def build_report() -> None:
         + v3.section("Official Pass5 Forward-Fold Test", forward_fold_section())
         + v3.section("Root-Cause Diagnostics", root_cause_diagnostics_section())
         + v3.section("Response / Containment Audit", response_audit_section())
+        + v3.section(
+            "R68 Empirical Aperture Control",
+            r68_aperture_section(
+                nominal_e_meta=e_meta,
+                nominal_f_meta=f_meta,
+                nominal_g_meta=g_meta,
+                r68_b_meta=r68_b_meta,
+                r68_e_meta=r68_e_meta,
+                r68_f_meta=r68_f_meta,
+                r68_g_meta=r68_g_meta,
+            ),
+        )
         + v3.section("Current A-G Inputs", v3.stage_table(a_meta, b_meta, c_meta, d_meta, e_meta, f_meta, g_meta))
         + v3.section("Fit Cell Definition", cells_body)
         + v3.section("Stage B / PSF Diagnostics", psf_diagnostics_section(fit_rows))

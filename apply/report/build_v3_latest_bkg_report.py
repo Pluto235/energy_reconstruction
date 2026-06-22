@@ -38,6 +38,8 @@ PASS5_CSV = REPORT_DIR / "assets/official-pass5/wcda_crab_sed_pass5_20260616_104
 V099_CSV = REPORT_DIR / "assets/official-v099/wcda_crab_sed_v099_20250731_20260616_123624.csv"
 SUMMARY_JSON = ASSET_DIR / "v3_annnorm_summary.json"
 FINAL_SED_PNG = ASSET_DIR / "v3_annnorm_final_sed_with_official_and_old_v3.png"
+PROFILE_DIR = REPORT_DIR / "assets/crab-v3-annnorm-fit-cell-profiles"
+PROFILE_PREFIX = "crab_v3_annnorm_fit"
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -417,6 +419,40 @@ def stage_g_table(g_meta: dict[str, Any]) -> str:
     return table(["group", "bin", "cells", "Eeff TeV", "E2 dN/dE", "err", "chi2/ndof"], rows, cls="compact")
 
 
+def profile_diagnostics_section() -> str:
+    counts_ra = PROFILE_DIR / f"{PROFILE_PREFIX}_ra_normalized_counts_profiles.png"
+    counts_dec = PROFILE_DIR / f"{PROFILE_PREFIX}_dec_normalized_counts_profiles.png"
+    excess_ra = PROFILE_DIR / f"{PROFILE_PREFIX}_ra_normalized_excess_profiles.png"
+    excess_dec = PROFILE_DIR / f"{PROFILE_PREFIX}_dec_normalized_excess_profiles.png"
+    return (
+        "<p>These diagnostics are rebuilt from the latest annulus-normalized Stage D maps, not copied from the old v3 report. "
+        "Counts profiles use <code>counts_map</code>; excess profiles use the current <code>excess_map = counts_map - B_final</code>. "
+        "Each 1D profile is divided by its own positive peak so that widths and residual asymmetries can be compared across cells.</p>"
+        '<div class="grid2">'
+        + figure(
+            counts_ra,
+            "candidate-grid normalized RA-offset counts profiles",
+            "For every candidate cell, counts are summed in a |Dec offset|<1 deg band and normalized by that cell's own peak. Green panels are the current 30 fit cells; light gray spans mark that cell's Stage D annulus-training radii projected onto the RA-offset axis.",
+        )
+        + figure(
+            counts_dec,
+            "candidate-grid normalized Dec-offset counts profiles",
+            "For every candidate cell, counts are summed in a |RA offset cos(dec)|<1 deg band and normalized by that cell's own peak. The same annulus-ring spans are shown in gray.",
+        )
+        + figure(
+            excess_ra,
+            "candidate-grid normalized RA-offset excess profiles after latest bkg subtraction",
+            "Same RA projection after subtracting the latest annulus-normalized fitted 2D background. This checks whether the Crab-centered excess remains narrow and centered after the new bkg method.",
+        )
+        + figure(
+            excess_dec,
+            "candidate-grid normalized Dec-offset excess profiles after latest bkg subtraction",
+            "Same Dec projection after subtracting the latest annulus-normalized fitted 2D background. This is the direct Dec-direction residual check for the new bkg method.",
+        )
+        + "</div>"
+    )
+
+
 def build_report() -> None:
     a_meta = load_json(STAGE_A_META)
     b_meta = load_json(STAGE_B_META)
@@ -560,6 +596,7 @@ def build_report() -> None:
         + section("Current A-G Inputs", stage_table(a_meta, b_meta, c_meta, d_meta, e_meta, f_meta, g_meta) + diagnostic_note)
         + section("Fit Cell Definition", cells_body)
         + section("Stage D: Latest 2D Background", stage_d_body)
+        + section("Profile Diagnostics: Latest Background", profile_diagnostics_section())
         + section("Stage E: Current Excess", stage_e_body)
         + section("Stage F: Current Forward-Folding Fit", stage_f_body)
         + section("Stage G: Current SED Points", stage_g_body)

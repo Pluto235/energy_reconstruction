@@ -1,0 +1,17 @@
+{
+  "outputs": {
+    "required_background_shift_cells": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v4-root-cause-diagnostics/required_background_shift_cells.csv",
+    "required_background_shift_nhit_summary": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v4-root-cause-diagnostics/required_background_shift_nhit_summary.csv",
+    "offsource_core_residual_summary": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v4-root-cause-diagnostics/offsource_core_residual_summary.csv",
+    "official_pass5_true_energy_contribution_by_cell": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v4-root-cause-diagnostics/official_pass5_true_energy_contribution_by_cell.csv",
+    "official_pass5_low_energy_extrapolation_sensitivity": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v4-root-cause-diagnostics/official_pass5_low_energy_extrapolation_sensitivity.csv",
+    "selector_dependence_forward_fold_summary": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v4-root-cause-diagnostics/selector_dependence_forward_fold_summary.csv",
+    "official_pass5_response_closure_fit_summary": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v4-root-cause-diagnostics/official_pass5_response_closure_fit_summary.csv"
+  },
+  "conclusions": {
+    "required_background_shift": "The lowest Nhit bin can be moved by a few-percent B_on shift, but [200,800) requires much larger on-core B_on increases, so background alone is not a uniform explanation unless off-source controls show comparable positive residuals.",
+    "offsource": "Existing RA-shifted pseudo-Crab controls are strongly negative for active/drop4 selectors, not positive; this argues against a simple positive excess caused by annnorm background underestimation.",
+    "low_energy_extrapolation": "The lowest Nhit expected counts are sensitive to pass5 extrapolation below the first official point; this affects interpretation of [125,200).",
+    "selector_dependence": "Drop4 does not reduce official underprediction: active30 ratio=1.422, drop4 ratio=1.448."
+  }
+}

@@ -1,0 +1,4 @@
+selector,run,spectrum,cells,total_excess,total_expected_counts,total_observed_over_expected,source_visible_live_days,valid_ratio_cells,median_observed_over_expected,cells_observed_over_expected_gt_1,cells_observed_over_expected_gt_1p5,spectrum_method,energy_min_tev,energy_max_tev
+active30,active30,official_pass5,30,15533.600584879026,10925.098601889915,1.4218270379904758,15.611713218574396,30,1.3120184348577018,27,11,loglog_piecewise_powerlaw_interpolation_with_endpoint_slope_extrapolation,0.56,15.85
+drop4,drop4,official_pass5,26,15102.898996527238,10431.965987298452,1.4477519400385246,15.611713218574396,26,1.3146313105380099,24,10,loglog_piecewise_powerlaw_interpolation_with_endpoint_slope_extrapolation,0.56,15.85
+nhit_only,nhit_only,official_pass5,7,13103.703764314272,4712.344154647692,2.78071875361445,15.611713218574396,7,4.939970291020128,6,5,loglog_piecewise_powerlaw_interpolation_with_endpoint_slope_extrapolation,0.56,15.85

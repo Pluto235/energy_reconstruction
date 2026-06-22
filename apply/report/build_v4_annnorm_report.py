@@ -27,6 +27,7 @@ DROP4_STAGE_G_DIR = (
 )
 DROP4_STAGE_F_META = DROP4_STAGE_F_DIR / "fit_v4_drop4_annnorm_metadata.json"
 DROP4_STAGE_G_META = DROP4_STAGE_G_DIR / "sed_points_v4_drop4_annnorm_metadata.json"
+ROOT_CAUSE_DIR = REPORT_DIR / "assets" / "v4-root-cause-diagnostics"
 
 
 def to_float(value: Any) -> float | None:
@@ -323,6 +324,149 @@ def forward_fold_section() -> str:
     )
 
 
+def root_cause_diagnostics_section() -> str:
+    required_rows = v3.read_csv_rows(ROOT_CAUSE_DIR / "required_background_shift_nhit_summary.csv")
+    offsource_rows = v3.read_csv_rows(ROOT_CAUSE_DIR / "offsource_core_residual_summary.csv")
+    extrap_rows = v3.read_csv_rows(ROOT_CAUSE_DIR / "official_pass5_low_energy_extrapolation_sensitivity.csv")
+    closure_rows = v3.read_csv_rows(ROOT_CAUSE_DIR / "official_pass5_response_closure_fit_summary.csv")
+    energy_rows = v3.read_csv_rows(ROOT_CAUSE_DIR / "official_pass5_true_energy_contribution_by_cell.csv")
+
+    required_table_rows = []
+    for row in required_rows:
+        if row.get("selector") not in {"active30", "drop4"}:
+            continue
+        required_table_rows.append(
+            [
+                v3.esc(row.get("selector")),
+                v3.esc(row.get("nhit_bin")),
+                v3.esc(row.get("cells")),
+                v3.fmt(row.get("observed_over_expected"), 4),
+                v3.fmt(100.0 * (v3.finite_float(row.get("required_delta_b_over_b")) or 0.0), 4) + "%",
+                v3.fmt(row.get("total_required_delta_b"), 5),
+            ]
+        )
+
+    offsource_table_rows = [
+        [
+            v3.esc(row.get("fake_source")),
+            v3.esc(row.get("selector")),
+            v3.esc(row.get("cells")),
+            v3.fmt(row.get("excess"), 5),
+            v3.fmt(row.get("combined_known_background_sigma"), 4),
+            v3.esc(row.get("positive_excess_cells")),
+            v3.esc(row.get("negative_excess_cells")),
+        ]
+        for row in offsource_rows
+        if row.get("selector") in {"active30", "drop4"}
+    ]
+
+    closure_table_rows = [
+        [
+            v3.esc(row.get("selector")),
+            v3.esc(row.get("model")),
+            v3.esc(row.get("cells")),
+            f"{v3.fmt(row.get('chi2'), 4)} / {v3.fmt(row.get('ndof'), 3)}",
+            v3.fmt(row.get("phi0"), 5),
+            v3.fmt(row.get("gamma") or row.get("alpha"), 5),
+            v3.fmt(row.get("beta"), 5),
+            v3.fmt(row.get("max_abs_pull"), 4),
+        ]
+        for row in closure_rows
+        if row.get("selector") in {"active30", "drop4"}
+    ]
+
+    extrap_keep = {"pass5_endpoint_extrap", "pass5_cut_below_min"}
+    extrap_table_rows = [
+        [
+            v3.esc(row.get("selector")),
+            v3.esc(row.get("variant")),
+            v3.esc(row.get("nhit_bin")),
+            v3.esc(row.get("cells")),
+            v3.fmt(row.get("observed_over_expected"), 4),
+        ]
+        for row in extrap_rows
+        if row.get("selector") in {"active30", "drop4"}
+        and row.get("variant") in extrap_keep
+        and row.get("nhit_bin") in {"[125,200)", "[200,300)", "[300,500)"}
+    ]
+
+    energy_table_rows = [
+        [
+            v3.esc(row.get("selector")),
+            v3.esc(row.get("cell_id")),
+            v3.esc(row.get("nhit_bin")),
+            v3.esc(row.get("predE_bin")),
+            v3.fmt(row.get("true_e50_tev"), 4),
+            v3.fmt(100.0 * (v3.finite_float(row.get("frac_below_pass5_min")) or 0.0), 4) + "%",
+            v3.fmt(100.0 * (v3.finite_float(row.get("frac_below_1tev")) or 0.0), 4) + "%",
+        ]
+        for row in energy_rows
+        if row.get("selector") == "drop4" and row.get("nhit_bin") in {"[125,200)", "[200,300)"}
+    ]
+
+    return (
+        "<p>These diagnostics turn the current hypotheses into falsifiable checks: how much B_on shift would be needed, whether off-source pseudo-Crab regions show a positive residual, whether official pass5 low-energy extrapolation matters, whether Stage F closes on pseudo-data, and whether selector changes reduce the discrepancy.</p>"
+        '<div class="note">'
+        "Current evidence: the off-source controls are strongly negative rather than positive, Stage F closes on official-pass5 pseudo-data with LogPar chi2/ndof near 0.1, and the drop4 selector does not reduce the low-Nhit official underprediction. "
+        "The most likely remaining issue is therefore response normalization / energy migration / active-cell conditioning, with the caveat that the lowest [125,200) bin is also sensitive to official-pass5 extrapolation below 0.56 TeV."
+        "</div>"
+        "<h3>Required background shift</h3>"
+        + v3.table(
+            ["selector", "Nhit", "cells", "obs/official", "required delta B / B_on", "required delta B"],
+            required_table_rows,
+            cls="compact",
+        )
+        + '<div class="grid2">'
+        + v3.figure(
+            ROOT_CAUSE_DIR / "required_background_shift_by_nhit.png",
+            "Required B_on shift by Nhit",
+            "The B_on increase needed to force official pass5 folded source counts to match the observed excess. A few percent is plausible; tens of percent would require a large background failure.",
+        )
+        + v3.figure(
+            ROOT_CAUSE_DIR / "offsource_pseudocrab_residual_sigma.png",
+            "Off-source pseudo-Crab residual sigma",
+            "RA-shifted fake-source controls using existing off-source Stage E products. Strong negative residuals argue against a simple positive bkg-underestimate explanation.",
+        )
+        + "</div>"
+        + "<h3>Off-source pseudo-Crab summary</h3>"
+        + v3.table(
+            ["fake source", "selector", "cells", "excess", "combined sigma", "positive cells", "negative cells"],
+            offsource_table_rows,
+            cls="compact",
+        )
+        + "<h3>Low-energy extrapolation sensitivity</h3>"
+        + v3.table(
+            ["selector", "variant", "Nhit", "cells", "obs/expected"],
+            extrap_table_rows,
+            cls="compact",
+        )
+        + '<div class="grid2">'
+        + v3.figure(
+            ROOT_CAUSE_DIR / "low_energy_extrapolation_sensitivity.png",
+            "Official pass5 low-energy extrapolation sensitivity",
+            "Endpoint extrapolation, flat-below-min, and cut-below-min variants. The lowest Nhit bins depend strongly on how flux below the first official pass5 point is handled.",
+        )
+        + v3.figure(
+            ROOT_CAUSE_DIR / "required_background_shift_by_nhit.png",
+            "Background-shift diagnostic repeated for comparison",
+            "Shown again beside the extrapolation plot to compare the background and response interpretations.",
+        )
+        + "</div>"
+        + "<h3>True-energy support of low-Nhit cells</h3>"
+        + v3.table(
+            ["selector", "cell", "Nhit", "predE", "E50 TeV", "below pass5 min", "below 1 TeV"],
+            energy_table_rows,
+            cls="compact",
+        )
+        + "<h3>Official-pass5 response closure</h3>"
+        + v3.table(
+            ["selector", "model", "cells", "chi2/ndof", "phi0", "gamma/alpha", "beta", "max abs pull"],
+            closure_table_rows,
+            cls="compact",
+        )
+    )
+
+
 def css() -> str:
     return """
     :root { color-scheme: light; --ink:#111827; --muted:#4b5563; --line:#d1d5db; --soft:#f3f4f6; --accent:#2563eb; }
@@ -460,6 +604,7 @@ def build_report() -> None:
         + v3.section("V4 Result Summary", intro)
         + v3.section("Cell-Selection Bias Control: Active30 Versus Drop4", active30_vs_drop4_section(active_f_meta, f_meta))
         + v3.section("Official Pass5 Forward-Fold Test", forward_fold_section())
+        + v3.section("Root-Cause Diagnostics", root_cause_diagnostics_section())
         + v3.section("Current A-G Inputs", v3.stage_table(a_meta, b_meta, c_meta, d_meta, e_meta, f_meta, g_meta))
         + v3.section("Fit Cell Definition", cells_body)
         + v3.section("Stage B / PSF Diagnostics", v3.psf_diagnostics_section(fit_rows))

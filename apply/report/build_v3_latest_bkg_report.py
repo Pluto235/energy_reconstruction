@@ -17,14 +17,14 @@ ASSET_DIR = REPORT_DIR / "assets" / "v3-annnorm"
 PSFBORROW_ASSET_DIR = REPORT_DIR / "assets" / "v3-psfborrow"
 
 STAGE_A_META = REPO_ROOT / "apply/output/stage_a_v3_candidate/response_2d_v3_candidate_metadata.json"
-STAGE_B_META = REPO_ROOT / "apply/output/stage_b_v3_candidate_psfborrow/runs/v3_psfborrow_from_nominal/psf_v3_candidate_metadata.json"
+STAGE_B_META = REPO_ROOT / "apply/output/stage_b_v3_candidate_directpsf/runs/v3_directpsf_from_psfborrow/psf_v3_candidate_metadata.json"
 STAGE_B_NOMINAL_DIR = REPO_ROOT / "apply/output/stage_b_v3_candidate/runs/slurm_42023"
-STAGE_B_PSF_DIR = REPO_ROOT / "apply/output/stage_b_v3_candidate_psfborrow/runs/v3_psfborrow_from_nominal"
+STAGE_B_PSF_DIR = REPO_ROOT / "apply/output/stage_b_v3_candidate_directpsf/runs/v3_directpsf_from_psfborrow"
 STAGE_C_META = REPO_ROOT / "apply/output/stage_c_v3_candidate/runs/v3_stage_c_slurm_42024/obs_events_metadata.json"
-STAGE_D_DIR = REPO_ROOT / "apply/output/stage_d_v3_candidate_annnorm/runs/v3_stage_d_annnorm_from_psfborrow"
-STAGE_E_DIR = REPO_ROOT / "apply/output/stage_e_v3_candidate_annnorm/runs/v3_stage_e_annnorm_from_psfborrow"
-STAGE_F_DIR = REPO_ROOT / "apply/output/stage_f_v3_baseline_annnorm/runs/v3_stage_f_annnorm_from_psfborrow"
-STAGE_G_DIR = REPO_ROOT / "apply/output/stage_g_v3_baseline_annnorm/runs/v3_stage_g_annnorm_from_psfborrow"
+STAGE_D_DIR = REPO_ROOT / "apply/output/stage_d_v3_candidate_annnorm/runs/v3_stage_d_annnorm_from_directpsf"
+STAGE_E_DIR = REPO_ROOT / "apply/output/stage_e_v3_candidate_annnorm/runs/v3_stage_e_annnorm_from_directpsf"
+STAGE_F_DIR = REPO_ROOT / "apply/output/stage_f_v3_baseline_annnorm/runs/v3_stage_f_annnorm_from_directpsf"
+STAGE_G_DIR = REPO_ROOT / "apply/output/stage_g_v3_baseline_annnorm/runs/v3_stage_g_annnorm_from_directpsf"
 
 STAGE_D_META = STAGE_D_DIR / "background_v3_candidate_annnorm_metadata.json"
 STAGE_E_META = STAGE_E_DIR / "signal_v3_candidate_annnorm_metadata.json"
@@ -37,7 +37,7 @@ OLD_STAGE_G_META = (
     / "sed_points_v3_baseline_psfborrow_metadata.json"
 )
 
-SELECTOR_CSV = REPO_ROOT / "apply/config/cell_selector_v3_baseline_psfborrow.csv"
+SELECTOR_CSV = REPO_ROOT / "apply/config/cell_selector_v3_baseline_directpsf.csv"
 PASS5_CSV = REPORT_DIR / "assets/official-pass5/wcda_crab_sed_pass5_20260616_104941.csv"
 V099_CSV = REPORT_DIR / "assets/official-v099/wcda_crab_sed_v099_20250731_20260616_123624.csv"
 SUMMARY_JSON = ASSET_DIR / "v3_annnorm_summary.json"
@@ -303,7 +303,13 @@ def fit_cell_table(rows: list[dict[str, str]]) -> str:
     body = []
     for row in rows:
         borrowed = row.get("psf_borrowed_from") or ""
-        psf_note = f"borrowed from {esc(borrowed)}" if borrowed else "native"
+        direct = str(row.get("psf_direct_own_cell", "")).strip().lower() in {"1", "true", "yes", "y"}
+        if direct:
+            psf_note = "direct own-cell"
+        elif borrowed:
+            psf_note = f"borrowed from {esc(borrowed)}"
+        else:
+            psf_note = "native"
         body.append(
             [
                 esc(row.get("cell_id")),
@@ -330,7 +336,13 @@ def active_psf_table(fit_rows: list[dict[str, str]]) -> str:
         psf = psf_rows.get(cell_id, {})
         selector = selector_rows_by_id[cell_id]
         borrowed = str(psf.get("psf_borrowed", "")).strip().lower() in {"1", "true", "yes", "y"}
-        if borrowed:
+        direct = str(psf.get("psf_direct_own_cell", "")).strip().lower() in {"1", "true", "yes", "y"}
+        if direct:
+            source = "direct own-cell PSF"
+            previous = psf.get("previous_psf_source")
+            if previous:
+                source += f"; previous {previous}"
+        elif borrowed:
             source = f"borrowed from {psf.get('borrowed_from') or selector.get('psf_borrowed_from')}"
             method = psf.get("borrow_method") or selector.get("psf_borrow_method")
             weights = psf.get("borrow_weights")
@@ -375,17 +387,24 @@ def active_psf_table(fit_rows: list[dict[str, str]]) -> str:
 def psf_diagnostics_section(fit_rows: list[dict[str, str]]) -> str:
     return (
         "<p>These Stage B diagnostics are restored because the PSF construction is upstream of the latest annulus-normalized Stage D background. "
-        "The current mainline still uses the latest annnorm background for Stage D/E/F/G; the PSF figures below only document the active 30-cell PSF inputs and the 39/52/65 neighbor-borrowing systematic.</p>"
+        "The current mainline uses the direct-own-cell PSF variant for cells 39/52/65, while retaining the latest annnorm background for Stage D/E/F/G. "
+        "The neighbor-borrowing result is kept only as an old comparison branch.</p>"
         '<div class="grid2">'
         + figure(
             PSFBORROW_ASSET_DIR / "v3_active_fit_cell_psf_profiles_normalized.png",
             "Active 30-cell own-cell normalized radial profiles",
-            "Each selected cell's own MC radial distribution is normalized by its peak so the PSF widths can be compared. Dashed markers indicate the fit PSF sigma. Cells 39/52/65 are kept in the selector but use borrowed/interpolated neighbor PSFs in the active branch.",
+            "Each selected cell's own MC radial distribution is normalized by its peak so the PSF widths can be compared. Cells 39/52/65 now use these direct own-cell PSFs in the active branch.",
         )
         + figure(
             PSFBORROW_ASSET_DIR / "v3_active_fit_cell_theta_profiles.png",
             "Active 30-cell normalized MC theta profiles",
-            "Colored curves are each selected cell's own MC theta support after the Stage B cuts; gray is the Crab-visible theta target used for reweighting. Orange missing-support bins explain why 39/52/65 borrow neighboring PSFs.",
+            "Colored curves are each selected cell's own MC theta support after the Stage B cuts; gray is the Crab-visible theta target used for reweighting. Orange missing-support bins remain the audit trail for 39/52/65.",
+        )
+        + figure(
+            REPO_ROOT
+            / "apply/output/stage_b_v3_candidate_direct_ownpsf_focus/diagnostics/direct_owncell_vs_borrowed_psf_cells_39_52_65.png",
+            "Direct own-cell versus borrowed PSF for cells 39/52/65",
+            "Focused comparison used for the decision to switch the active v3 branch from neighbor borrowing to direct own-cell PSFs.",
         )
         + figure(
             STAGE_B_NOMINAL_DIR / "psf_sigma_deg_grid.png",
@@ -419,8 +438,8 @@ def psf_diagnostics_section(fit_rows: list[dict[str, str]]) -> str:
         "<p><code>theta_missing_crab_probability_mass</code> is the fraction of the Crab-visible theta exposure for which a cell has no conditional MC support after the cell, true-energy, finite-angle, and positive-weight cuts. "
         "It is therefore a coverage diagnostic for the PSF reweighting, not a statement that the global MC sample is small.</p>"
         "<p>Cells <code>39/52/65</code> are ridge-left physical candidates with visible Crab excess, but their own-cell theta support misses too much Crab theta probability mass. "
-        "The active PSF-borrow branch keeps these cells in the 30-cell fit selector and replaces only their PSF input: <code>39 -> 40</code>, <code>52 -> 2/3*53 + 1/3*54</code>, and <code>65 -> 2/3*66 + 1/3*67</code>. "
-        "Those PSF choices remain compatible with the latest bkg branch because Stage D changes the background estimation, while Stage B defines the PSF/on-region response used downstream.</p>"
+        "The active directpsf branch keeps these cells in the 30-cell fit selector and uses their direct own-cell PSFs despite incomplete theta support. "
+        "This makes the aperture/background integration self-contained per cell; the previous neighbor-borrowing PSFs are retained only as a systematic comparison.</p>"
     )
 
 
@@ -435,7 +454,7 @@ def stage_table(
 ) -> str:
     rows = [
         ["A", "2D response", esc(a_meta.get("response_type", "primary_thrown_response")), esc(STAGE_A_META.relative_to(REPO_ROOT))],
-        ["B", "PSF with neighbor borrowing", esc(b_meta.get("run_id")), esc(STAGE_B_META.relative_to(REPO_ROOT))],
+        ["B", "direct own-cell PSF for 39/52/65", esc(b_meta.get("run_id")), esc(STAGE_B_META.relative_to(REPO_ROOT))],
         ["C", "observation event reduction", esc(c_meta.get("run_id")), esc(STAGE_C_META.relative_to(REPO_ROOT))],
         ["D", "annulus-normalized 2D background", esc(d_meta.get("run_id")), esc(STAGE_D_META.relative_to(REPO_ROOT))],
         ["E", "on-region excess from latest bkg", esc(e_meta.get("run_id")), esc(STAGE_E_META.relative_to(REPO_ROOT))],
@@ -609,15 +628,15 @@ def build_report() -> None:
     intro = (
         '<div class="note">'
         "This HTML is the current v3 report rebuilt around the latest annulus-normalized 2D background branch. "
-        "Old-background Stage D/E/F/G result sections are removed from the main body, while upstream Stage B PSF diagnostics are retained because they define the active PSF-borrowing cell response. "
+        "Old-background Stage D/E/F/G result sections are removed from the main body, while upstream Stage B PSF diagnostics are retained because they define the active direct-own-cell PSF response. "
         "The previous v3 psfborrow Stage G points are kept only as grey reference markers in the final SED comparison."
         "</div>"
         + summary_cards(e_meta, f_meta, g_meta, d_meta)
     )
 
     cells_body = (
-        "<p>The active baseline still uses the 30-cell v3_baseline_psfborrow selector, now evaluated with the annulus-normalized Stage D/E background. "
-        "Cells 39, 52, and 65 remain included with neighbor PSF borrowing recorded in the selector.</p>"
+        "<p>The active baseline uses the same 30-cell v3 selector, evaluated with the annulus-normalized Stage D/E background. "
+        "Cells 39, 52, and 65 remain included and now use direct own-cell PSFs instead of neighbor borrowing.</p>"
         f"<p><strong>Included cell ids:</strong> {esc(', '.join(str(row.get('cell_id')) for row in fit_rows))}</p>"
         "<details open><summary>Fit-cell selector table</summary>"
         + fit_cell_table(fit_rows)
@@ -678,7 +697,7 @@ def build_report() -> None:
         "The table below lists the current latest-bkg points; the final figure overlays official/tutorial WCDA references and the old v3 psfborrow points only for visual comparison.</p>"
         + stage_g_table(g_meta)
         + '<div class="grid2">'
-        + figure(STAGE_G_DIR / "sed_points_stage_f_fullarray_pool1.png", "Latest-bkg Stage G SED points", "Native Stage G diagnostic plot from v3_stage_g_annnorm_from_psfborrow.")
+        + figure(STAGE_G_DIR / "sed_points_stage_f_fullarray_pool1.png", "Latest-bkg Stage G SED points", "Native Stage G diagnostic plot from v3_stage_g_annnorm_from_directpsf.")
         + figure(STAGE_G_DIR / "sed_points_ratio.png", "Latest-bkg Stage G ratio plot", "Diagnostic ratios to the frozen Stage F model / reference curves.")
         + figure(STAGE_G_DIR / "sed_point_cell_counts.png", "Stage G cell counts per point", "Which fit cells enter each diagnostic SED point.")
         + figure(FINAL_SED_PNG, "Final SED comparison with old v3 reference", "Blue/green markers are the latest-bkg v3 points. Grey open markers are the previous v3 psfborrow points, retained only for comparison. Black/brown markers are official pass5/tutorial WCDA references.")
@@ -698,7 +717,7 @@ def build_report() -> None:
         "<title>Crab SED v3 latest background report</title>"
         f"<style>{css}</style></head><body>"
         "<header><h1>Crab SED v3 Latest Background Report</h1>"
-        "<p>Primary result: annulus-normalized quadratic 2D background, PSF-borrowing cell set, Stage A-G diagnostics.</p></header><main>"
+        "<p>Primary result: annulus-normalized quadratic 2D background, direct own-cell PSF for 39/52/65, Stage A-G diagnostics.</p></header><main>"
         + section("Current Result Summary", intro)
         + section("Current A-G Inputs", stage_table(a_meta, b_meta, c_meta, d_meta, e_meta, f_meta, g_meta) + diagnostic_note)
         + section("Fit Cell Definition", cells_body)

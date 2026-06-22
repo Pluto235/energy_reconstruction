@@ -1,9 +1,9 @@
 {
   "description": "Normalized Stage D counts profiles for all cells in the Stage D NPZ; fit-selector cells are highlighted.",
   "map_key": "counts_map",
-  "selector_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v3_baseline_psfborrow.csv",
-  "stage_d_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v3_candidate_annnorm/runs/v3_stage_d_annnorm_from_psfborrow/background_v3_candidate_annnorm.npz",
-  "stage_d_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v3_candidate_annnorm/runs/v3_stage_d_annnorm_from_psfborrow/background_v3_candidate_annnorm_metadata.json",
+  "selector_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v3_baseline_directpsf.csv",
+  "stage_d_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v3_candidate_annnorm/runs/v3_stage_d_annnorm_from_directpsf/background_v3_candidate_annnorm.npz",
+  "stage_d_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v3_candidate_annnorm/runs/v3_stage_d_annnorm_from_directpsf/background_v3_candidate_annnorm_metadata.json",
   "cell_ids": [
     1,
     2,

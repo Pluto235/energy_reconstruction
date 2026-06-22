@@ -75,6 +75,21 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--cell-selection-csv", type=str, default="apply/config/cell_ledger_v3_candidate.csv")
     parser.add_argument("--baseline-selector-csv", type=str, default="apply/config/cell_selector_v3_baseline_psfborrow.csv")
+    parser.add_argument(
+        "--psf-npz",
+        type=str,
+        default="",
+        help=(
+            "Optional Stage B PSF NPZ supplying r_opt/sigma/containment for the derived Stage D product. "
+            "When omitted, these arrays are reused from --source-stage-d-npz."
+        ),
+    )
+    parser.add_argument(
+        "--psf-metadata",
+        type=str,
+        default="",
+        help="Optional Stage B PSF metadata paired with --psf-npz, recorded for provenance.",
+    )
     parser.add_argument("--stage-d-output-dir", type=str, default="apply/output/stage_d_v3_candidate_annnorm")
     parser.add_argument("--stage-d-run-id", type=str, default="v3_stage_d_annnorm_from_psfborrow")
     parser.add_argument("--stage-e-output-dir", type=str, default="apply/output/stage_e_v3_candidate_annnorm")
@@ -206,6 +221,8 @@ def build_stage_d(
     source_d_npz: Path,
     source_d_metadata_path: Path,
     source_d_metadata: Dict[str, object],
+    psf_npz: Optional[Path],
+    psf_metadata_path: Optional[Path],
     cells: Sequence[object],
     fit_ids: Sequence[int],
 ) -> Tuple[Path, Path, Path, Dict[str, object]]:
@@ -228,9 +245,11 @@ def build_stage_d(
 
     order = order_for_cell_ids(source["cell_id"], cells)
     counts_map = np.asarray(source["counts_map"][order], dtype=np.int64)
-    r_opt_deg = np.asarray(source["r_opt_deg"][order], dtype=np.float64)
-    sigma_deg = np.asarray(source["sigma_deg"][order], dtype=np.float64)
-    containment_r_opt = np.asarray(source["containment_r_opt"][order], dtype=np.float64)
+    psf_payload = load_npz_arrays(psf_npz) if psf_npz is not None else source
+    psf_order = order_for_cell_ids(psf_payload["cell_id"], cells)
+    r_opt_deg = np.asarray(psf_payload["r_opt_deg"][psf_order], dtype=np.float64)
+    sigma_deg = np.asarray(psf_payload["sigma_deg"][psf_order], dtype=np.float64)
+    containment_r_opt = np.asarray(psf_payload["containment_r_opt"][psf_order], dtype=np.float64)
     xy_edges = np.asarray(source["x_edges_deg"], dtype=np.float64)
     xy_centers = np.asarray(source["x_centers_deg"], dtype=np.float64)
 
@@ -549,14 +568,22 @@ def build_stage_d(
             "source_stage_d_npz": str(source_d_npz),
             "source_stage_d_metadata": str(source_d_metadata_path),
             "source_stage_d_run_id": source_d_metadata.get("run_id"),
-            "note": "Reuses the existing full Stage D counts_map and recomputes only the annulus quadratic background.",
+            "psf_npz": str(psf_npz) if psf_npz is not None else str(source_d_npz),
+            "psf_metadata": str(psf_metadata_path) if psf_metadata_path is not None else None,
+            "note": (
+                "Reuses the existing full Stage D counts_map and recomputes the annulus quadratic background. "
+                "If psf_npz is supplied, on-region masks and B_on use that PSF aperture."
+            ),
         },
         "inputs": {
             "stage_c_dir": source_d_metadata.get("inputs", {}).get("stage_c_dir") if isinstance(source_d_metadata.get("inputs"), dict) else None,
             "obs_events_dir": source_d_metadata.get("inputs", {}).get("obs_events_dir") if isinstance(source_d_metadata.get("inputs"), dict) else None,
             "stage_c_metadata_json": source_d_metadata.get("inputs", {}).get("stage_c_metadata_json") if isinstance(source_d_metadata.get("inputs"), dict) else None,
             "source_files_csv": source_d_metadata.get("inputs", {}).get("source_files_csv") if isinstance(source_d_metadata.get("inputs"), dict) else None,
-            "psf_npz": source_d_metadata.get("inputs", {}).get("psf_npz") if isinstance(source_d_metadata.get("inputs"), dict) else None,
+            "psf_npz": str(psf_npz) if psf_npz is not None else (
+                source_d_metadata.get("inputs", {}).get("psf_npz") if isinstance(source_d_metadata.get("inputs"), dict) else None
+            ),
+            "psf_metadata_json": str(psf_metadata_path) if psf_metadata_path is not None else None,
             "cell_selection_csv": str(path(args.cell_selection_csv)),
             "source_stage_d_npz": str(source_d_npz),
         },
@@ -876,7 +903,14 @@ def main() -> None:
     source_d_metadata_path = path(args.source_stage_d_metadata)
     source_e_npz = path(args.source_stage_e_npz)
     source_e_metadata_path = path(args.source_stage_e_metadata)
-    for required_path in [source_d_npz, source_d_metadata_path, source_e_npz, source_e_metadata_path]:
+    psf_npz = path(args.psf_npz) if str(args.psf_npz or "").strip() else None
+    psf_metadata_path = path(args.psf_metadata) if str(args.psf_metadata or "").strip() else None
+    required_paths = [source_d_npz, source_d_metadata_path, source_e_npz, source_e_metadata_path]
+    if psf_npz is not None:
+        required_paths.append(psf_npz)
+    if psf_metadata_path is not None:
+        required_paths.append(psf_metadata_path)
+    for required_path in required_paths:
         if not required_path.exists():
             raise FileNotFoundError(required_path)
 
@@ -889,6 +923,8 @@ def main() -> None:
         source_d_npz=source_d_npz,
         source_d_metadata_path=source_d_metadata_path,
         source_d_metadata=source_d_metadata,
+        psf_npz=psf_npz,
+        psf_metadata_path=psf_metadata_path,
         cells=cells,
         fit_ids=fit_ids,
     )

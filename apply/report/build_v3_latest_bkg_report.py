@@ -383,11 +383,6 @@ def psf_diagnostics_section(fit_rows: list[dict[str, str]]) -> str:
             "Each selected cell's own MC radial distribution is normalized by its peak so the PSF widths can be compared. Dashed markers indicate the fit PSF sigma. Cells 39/52/65 are kept in the selector but use borrowed/interpolated neighbor PSFs in the active branch.",
         )
         + figure(
-            PSFBORROW_ASSET_DIR / "v3_active_fit_cell_psf_profiles.png",
-            "Active 30-cell own-cell radial PSF profiles",
-            "Unnormalized own-cell radial MC profiles for the active fit-cell list. This is diagnostic context for the PSF fit statistics, not a new background estimate.",
-        )
-        + figure(
             PSFBORROW_ASSET_DIR / "v3_active_fit_cell_theta_profiles.png",
             "Active 30-cell normalized MC theta profiles",
             "Colored curves are each selected cell's own MC theta support after the Stage B cuts; gray is the Crab-visible theta target used for reweighting. Orange missing-support bins explain why 39/52/65 borrow neighboring PSFs.",

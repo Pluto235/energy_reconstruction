@@ -39,6 +39,7 @@ DROP4_STAGE_G_META = DROP4_STAGE_G_DIR / "sed_points_v4_drop4_annnorm_metadata.j
 ROOT_CAUSE_DIR = REPORT_DIR / "assets" / "v4-root-cause-diagnostics"
 V4_PSF_RADIAL_PROFILE_GRID_PNG = V4_ASSET_DIR / "v4_stage_b_candidate_radial_psf_profiles_fit_highlight.png"
 RESPONSE_AUDIT_DIR = REPORT_DIR / "assets" / "v4-response-audit"
+V4_RESPONSE_CONTRACT_OVERLAY_PNG = RESPONSE_AUDIT_DIR / "v4_response_contract_stage_g_external_overlay.png"
 CONTAINMENT1_STAGE_G_DIR = (
     REPO_ROOT / "apply/output/stage_g_v4_containment1_drop4_annnorm/runs/v4_stage_g_annnorm_containment1_drop4"
 )
@@ -233,6 +234,236 @@ def plot_v4_final_sed(current_meta: dict[str, Any], old_meta: dict[str, Any]) ->
     fig.savefig(V4_FINAL_SED_PNG)
     plt.close(fig)
     return V4_FINAL_SED_PNG
+
+
+def e2_curve_for_spectrum(energy_tev: Any, spectrum: dict[str, Any]) -> Any:
+    import numpy as np
+
+    energy = np.asarray(energy_tev, dtype=float)
+    pivot = float(spectrum.get("pivot_tev") or 3.0)
+    phi0 = float(spectrum["phi0"])
+    model = str(spectrum.get("model") or "logpar").lower()
+    ratio = energy / pivot
+    if model == "pl":
+        gamma = float(spectrum["gamma"])
+        dnde = phi0 * np.power(ratio, -gamma)
+    elif model == "logpar":
+        alpha = float(spectrum["alpha"])
+        beta = float(spectrum["beta"])
+        log_ratio = np.log(ratio)
+        dnde = phi0 * np.exp((-alpha - beta * log_ratio) * log_ratio)
+    else:
+        raise ValueError(f"Unsupported spectrum model for plotting: {model}")
+    return energy * energy * dnde
+
+
+def fit_logpar_to_e2_points(label: str, energy: list[float], e2_flux: list[float], *, pivot_tev: float = 3.0) -> dict[str, Any] | None:
+    import numpy as np
+
+    e = np.asarray(energy, dtype=float)
+    e2 = np.asarray(e2_flux, dtype=float)
+    valid = np.isfinite(e) & np.isfinite(e2) & (e > 0.0) & (e2 > 0.0)
+    if np.count_nonzero(valid) < 3:
+        return None
+    x = np.log(e[valid] / float(pivot_tev))
+    y = np.log(e2[valid] / (e[valid] * e[valid]))
+    c2, c1, c0 = np.polyfit(x, y, 2)
+    return {
+        "label": label,
+        "model": "logpar",
+        "phi0": float(np.exp(c0)),
+        "alpha": float(-c1),
+        "beta": float(-c2),
+        "pivot_tev": float(pivot_tev),
+        "n_points": int(np.count_nonzero(valid)),
+        "fit_note": "unweighted log-space fit to plotted SED points",
+    }
+
+
+def v4_frozen_spectrum(g_meta: dict[str, Any], f_meta: dict[str, Any]) -> dict[str, Any]:
+    frozen = g_meta.get("frozen_spectrum") if isinstance(g_meta.get("frozen_spectrum"), dict) else {}
+    if frozen:
+        return dict(frozen)
+    preferred = f_meta.get("preferred_fit", {}) if isinstance(f_meta.get("preferred_fit"), dict) else {}
+    key = f"{preferred.get('model')}_{preferred.get('error_mode')}"
+    fit = f_meta.get("fits", {}).get(key, {}) if isinstance(f_meta.get("fits"), dict) else {}
+    params = dict(fit.get("parameters", {}) if isinstance(fit.get("parameters"), dict) else {})
+    params["model"] = preferred.get("model")
+    params["pivot_tev"] = 3.0
+    params["stage_f_chi2"] = fit.get("chi2")
+    params["stage_f_ndof"] = fit.get("ndof")
+    return params
+
+
+def spectrum_param_line(label: str, spectrum: dict[str, Any], *, include_chi2: bool = False) -> str:
+    model = str(spectrum.get("model") or "logpar").lower()
+    pivot = float(spectrum.get("pivot_tev") or 3.0)
+    phi0 = float(spectrum["phi0"])
+    if model == "pl":
+        line = f"{label}: PL phi0={phi0:.3e}, gamma={float(spectrum['gamma']):.3f}, E0={pivot:g} TeV"
+    else:
+        line = (
+            f"{label}: LogPar phi0={phi0:.3e}, alpha={float(spectrum['alpha']):.3f}, "
+            f"beta={float(spectrum['beta']):.3f}, E0={pivot:g} TeV"
+        )
+    if include_chi2 and spectrum.get("stage_f_chi2") is not None and spectrum.get("stage_f_ndof") is not None:
+        line += f", chi2/ndof={float(spectrum['stage_f_chi2']):.1f}/{int(spectrum['stage_f_ndof'])}"
+    return line
+
+
+def plot_response_contract_external_overlay(g_meta: dict[str, Any], f_meta: dict[str, Any]) -> Path:
+    try:
+        plt = v3.setup_matplotlib()
+        import numpy as np
+    except ModuleNotFoundError:
+        if v3.exists(V4_RESPONSE_CONTRACT_OVERLAY_PNG):
+            return V4_RESPONSE_CONTRACT_OVERLAY_PNG
+        raise
+
+    fig, ax = plt.subplots(figsize=(10.4, 6.6), dpi=170)
+
+    e_pass5, y_pass5 = v3.pass5_points()
+    pass5_fit = fit_logpar_to_e2_points("official pass5", e_pass5, y_pass5)
+    if e_pass5:
+        ax.plot(e_pass5, y_pass5, "o", ms=5.4, color="#111827", label="official pass5 WCDA points", zorder=7)
+
+    e_v099, y_v099, ylo_v099, yhi_v099 = v3.v099_points()
+    v099_fit = fit_logpar_to_e2_points("tutorial v0.99", e_v099, y_v099)
+    if e_v099:
+        ax.errorbar(
+            e_v099,
+            y_v099,
+            yerr=[ylo_v099, yhi_v099],
+            fmt="s",
+            ms=5.0,
+            lw=0.9,
+            color="#9a3412",
+            ecolor="#9a3412",
+            capsize=2.4,
+            label="tutorial v0.99 WCDA points",
+            zorder=7,
+        )
+
+    external_points = (
+        g_meta.get("external_crab_sed_references", {}).get("points", [])
+        if isinstance(g_meta.get("external_crab_sed_references"), dict)
+        else []
+    )
+    external_styles = {
+        "magic_joint_crab": {"fmt": "v", "color": "#7c3aed", "label": "MAGIC"},
+        "hess_2024_stereo": {"fmt": "D", "color": "#db2777", "label": "H.E.S.S."},
+    }
+    for dataset, style in external_styles.items():
+        selected = [
+            point
+            for point in external_points
+            if isinstance(point, dict)
+            and str(point.get("dataset")) == dataset
+            and not bool(point.get("is_upper_limit"))
+            and (to_float(point.get("energy_tev")) or 0.0) > 0.0
+            and (to_float(point.get("e2_dnde")) or 0.0) > 0.0
+        ]
+        if not selected:
+            continue
+        ax.errorbar(
+            [float(point["energy_tev"]) for point in selected],
+            [float(point["e2_dnde"]) for point in selected],
+            yerr=[float(point.get("e2_dnde_err") or 0.0) for point in selected],
+            ms=4.0,
+            lw=0.65,
+            capsize=1.8,
+            alpha=0.68,
+            zorder=3,
+            **style,
+        )
+
+    v4_spectrum = v4_frozen_spectrum(g_meta, f_meta)
+    curves = [fit for fit in [pass5_fit, v099_fit, v4_spectrum] if fit]
+    all_energies: list[float] = []
+    for values in [e_pass5, e_v099]:
+        all_energies.extend(values)
+    for grouping in ["nhit", "predE"]:
+        energy, _, _ = v3.point_arrays(g_meta, grouping)
+        all_energies.extend(energy)
+    if external_points:
+        all_energies.extend(
+            [
+                float(point["energy_tev"])
+                for point in external_points
+                if isinstance(point, dict)
+                and str(point.get("dataset")) in external_styles
+                and not bool(point.get("is_upper_limit"))
+                and (to_float(point.get("energy_tev")) or 0.0) > 0.0
+            ]
+        )
+    emin = max(0.1, min(all_energies or [0.3]) / 1.35)
+    emax = min(250.0, max(all_energies or [120.0]) * 1.35)
+    x = np.geomspace(emin, emax, 320)
+
+    if pass5_fit:
+        ax.plot(x, e2_curve_for_spectrum(x, pass5_fit), color="#111827", lw=1.7, ls="-", label="official pass5 point-fit LogPar")
+    if v099_fit:
+        ax.plot(x, e2_curve_for_spectrum(x, v099_fit), color="#9a3412", lw=1.7, ls="--", label="tutorial v0.99 point-fit LogPar")
+    if v4_spectrum:
+        ax.plot(x, e2_curve_for_spectrum(x, v4_spectrum), color="#2563eb", lw=2.2, label="v4 primary Stage F LogPar")
+
+    for grouping, marker, color, label in [
+        ("nhit", "o", "#2563eb", "v4 primary Stage G Nhit points"),
+        ("predE", "D", "#059669", "v4 primary Stage G predE points"),
+    ]:
+        energy, flux, err = v3.point_arrays(g_meta, grouping)
+        if not energy:
+            continue
+        ax.errorbar(
+            energy,
+            flux,
+            yerr=err,
+            fmt=marker,
+            ms=5.2,
+            lw=1.0,
+            color=color,
+            ecolor=color,
+            capsize=2.4,
+            markeredgecolor="white",
+            markeredgewidth=0.35,
+            label=label,
+            zorder=8,
+        )
+
+    note_lines = [
+        r"$dN/dE=\phi_0(E/E_0)^{-\alpha-\beta\ln(E/E_0)}$",
+        spectrum_param_line("v4 primary", v4_spectrum, include_chi2=True),
+    ]
+    if pass5_fit:
+        note_lines.append(spectrum_param_line("pass5 point-fit", pass5_fit))
+    if v099_fit:
+        note_lines.append(spectrum_param_line("v0.99 point-fit", v099_fit))
+    note_lines.append("pass5/v0.99 curves: unweighted log-space fits to plotted points")
+    ax.text(
+        0.035,
+        0.045,
+        "\n".join(note_lines),
+        transform=ax.transAxes,
+        ha="left",
+        va="bottom",
+        fontsize=7.1,
+        color="#111827",
+        bbox={"boxstyle": "round,pad=0.35", "fc": "white", "ec": "#d1d5db", "alpha": 0.88},
+    )
+
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlim(emin, emax)
+    ax.set_xlabel("Energy (TeV)")
+    ax.set_ylabel(r"$E^2\,dN/dE$ (TeV cm$^{-2}$ s$^{-1}$)")
+    ax.set_title("Native Stage G response-contract overlay")
+    ax.grid(True, which="both", alpha=0.23, lw=0.45)
+    ax.legend(fontsize=7.1, ncol=2, frameon=True, framealpha=0.9, loc="upper right")
+    fig.tight_layout()
+    RESPONSE_AUDIT_DIR.mkdir(parents=True, exist_ok=True)
+    fig.savefig(V4_RESPONSE_CONTRACT_OVERLAY_PNG)
+    plt.close(fig)
+    return V4_RESPONSE_CONTRACT_OVERLAY_PNG
 
 
 def plot_r68_sed_comparison(nominal_meta: dict[str, Any], r68_meta: dict[str, Any]) -> Path | None:
@@ -1166,9 +1397,9 @@ def response_audit_section() -> str:
             "Blue is the current branch, red is all-direction response x 1, and green is aperture-conditioned response x 1 when the full Stage A rebuild is available.",
         )
         + v3.figure(
-            (APERTURE_CONDITIONED_STAGE_G_DIR if has_aperture_response else CONTAINMENT1_STAGE_G_DIR) / "sed_points_stage_f_fullarray_pool1.png",
+            V4_RESPONSE_CONTRACT_OVERLAY_PNG,
             "Native Stage G response-contract plot",
-            "Uses the aperture-conditioned Stage A branch when available; otherwise this panel shows the existing all-direction response x 1 ablation.",
+            "Overlay version of the native Stage G diagnostic: v4 primary Stage G points and Stage F fit, official pass5 and tutorial v0.99 points with point-fit LogPar curves, plus H.E.S.S. and MAGIC external measurements. The fit parameters are annotated inside the plot.",
         )
         + "</div>"
         + "<h3>Largest drop4 low-Nhit cell changes</h3>"
@@ -1355,6 +1586,7 @@ def build_report() -> None:
         output_dir=EMPIRICAL_PSF_DIR,
     )
     plot_v4_final_sed(g_meta, old_g_meta)
+    plot_response_contract_external_overlay(g_meta, f_meta)
     if r68_g_meta:
         plot_r68_sed_comparison(g_meta, r68_g_meta)
 

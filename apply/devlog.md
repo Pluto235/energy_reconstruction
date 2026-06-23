@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-06-23 13:39 · [e2dce69] Add v4 cell-level root-cause localization crossmatch to the report.
+
 - **energy** · 2026-06-23 13:00 · [22d6b61] Add v4 response-contract SED overlay with official, v0.99, H.E.S.S., and MAGIC references.
 
 - **energy** · 2026-06-23 00:00 · [11a80e1] Promote aperture-conditioned response branch to the primary v4 report result.

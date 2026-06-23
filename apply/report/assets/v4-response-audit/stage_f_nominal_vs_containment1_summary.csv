@@ -1,3 +1,4 @@
 run,run_id,cells,preferred_model,error_mode,phi0,gamma,alpha,beta,chi2,ndof,chi2_over_ndof
 v4_drop4_nominal_containment,v4_stage_f_annnorm_drop_cells_4_17_39_43,26,logpar,conservative,2.7735577599895715e-12,,2.8625581980585832,0.16218999242877105,101.96792963502814,23,4.433388245001224
 v4_drop4_containment_1,v4_stage_f_annnorm_containment1_drop4,26,logpar,conservative,1.8379439813117637e-12,,2.767765253333814,0.13178516109640492,119.95189894963958,23,5.215299954332155
+v4_drop4_aperture_response_containment_1,v4_stage_f_aperture_conditioned_drop4,26,logpar,conservative,2.3678384316162437e-12,,2.76152182132255,0.1453590035940586,117.29485852619563,23,5.099776457660679

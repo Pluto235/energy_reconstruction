@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import build_v3_latest_bkg_report as v3
+import build_v4_empirical_psf_diagnostics as empirical_psf
 
 
 REPO_ROOT = v3.REPO_ROOT
@@ -33,6 +34,9 @@ RESPONSE_AUDIT_DIR = REPORT_DIR / "assets" / "v4-response-audit"
 CONTAINMENT1_STAGE_G_DIR = (
     REPO_ROOT / "apply/output/stage_g_v4_containment1_drop4_annnorm/runs/v4_stage_g_annnorm_containment1_drop4"
 )
+APERTURE_CONDITIONED_STAGE_G_DIR = (
+    REPO_ROOT / "apply/output/stage_g_v4_aperture_conditioned/runs/v4_stage_g_aperture_conditioned_drop4"
+)
 R68_STAGE_B_DIR = REPO_ROOT / "apply/output/stage_b_v4_aperture_variants/runs/v4_r68_from_psfborrow"
 R68_STAGE_D_DIR = REPO_ROOT / "apply/output/stage_d_v4_r68_aperture/runs/v4_r68_aperture_drop4_stage_d"
 R68_STAGE_E_DIR = REPO_ROOT / "apply/output/stage_e_v4_r68_aperture/runs/v4_r68_aperture_drop4_stage_e"
@@ -44,6 +48,10 @@ R68_STAGE_E_META = R68_STAGE_E_DIR / "signal_v4_r68_aperture_metadata.json"
 R68_STAGE_F_META = R68_STAGE_F_DIR / "fit_v4_r68_aperture_metadata.json"
 R68_STAGE_G_META = R68_STAGE_G_DIR / "sed_points_v4_r68_aperture_metadata.json"
 R68_SED_COMPARE_PNG = V4_ASSET_DIR / "v4_r68_aperture_sed_comparison.png"
+EMPIRICAL_PSF_DIR = REPORT_DIR / "assets" / "v4-empirical-psf"
+EMPIRICAL_PSF_SUMMARY_JSON = EMPIRICAL_PSF_DIR / "empirical_psf_summary.json"
+EMPIRICAL_PSF_CELL_CSV = EMPIRICAL_PSF_DIR / "empirical_psf_cell_summary.csv"
+EMPIRICAL_PSF_GROUP_CSV = EMPIRICAL_PSF_DIR / "empirical_psf_nhit_group_summary.csv"
 
 
 def to_float(value: Any) -> float | None:
@@ -60,6 +68,24 @@ def ratio_cell_rows(rows: list[dict[str, str]], *, max_rows: int = 14) -> list[d
 
     selected.sort(key=residual, reverse=True)
     return selected[:max_rows]
+
+
+def v4_summary_cards(e_meta: dict[str, Any], f_meta: dict[str, Any], g_meta: dict[str, Any], d_meta: dict[str, Any]) -> str:
+    totals = e_meta.get("totals", {}) if isinstance(e_meta.get("totals"), dict) else {}
+    preferred = f_meta.get("preferred_fit", {}) if isinstance(f_meta.get("preferred_fit"), dict) else {}
+    key = f"{preferred.get('model')}_{preferred.get('error_mode')}"
+    fit = f_meta.get("fits", {}).get(key, {}) if isinstance(f_meta.get("fits"), dict) else {}
+    params = fit.get("parameters", {}) if isinstance(fit.get("parameters"), dict) else {}
+    validation = g_meta.get("validation", {}) if isinstance(g_meta.get("validation"), dict) else {}
+    cells = validation.get("required_cell_ids") or validation.get("stage_f_subset_included") or []
+    return (
+        '<div class="cards">'
+        f'<div class="card"><div class="k">latest background</div><div class="v">B_on {v3.fmt(totals.get("B_on"), 6)}</div><p>N_on {v3.fmt_int(totals.get("N_on"))}; excess {v3.fmt(totals.get("excess"), 6)}</p></div>'
+        f'<div class="card"><div class="k">detection diagnostic</div><div class="v">{v3.fmt(totals.get("known_b_sigma_aggregate"), 4)} sigma</div><p>known-background Poisson aggregate; Li-Ma is not defined for direct expectation bkg.</p></div>'
+        f'<div class="card"><div class="k">Stage F preferred fit</div><div class="v">{v3.esc(preferred.get("model"))}</div><p>phi0 {v3.fmt(params.get("phi0"), 5)}, alpha/gamma {v3.fmt(params.get("alpha", params.get("gamma")), 5)}, beta {v3.fmt(params.get("beta"), 5)}; chi2/ndof {v3.fmt(fit.get("chi2"), 4)}/{v3.fmt(fit.get("ndof"), 3)}</p></div>'
+        f'<div class="card"><div class="k">fit cells / SED points</div><div class="v">{len(cells)} cells / {len(g_meta.get("points", []))} points</div><p>Stage D active-fit warnings: {len(d_meta.get("quality", {}).get("active_fit_warning_cell_ids", [])) if isinstance(d_meta.get("quality"), dict) else "n/a"}</p></div>'
+        "</div>"
+    )
 
 
 def plot_v4_final_sed(current_meta: dict[str, Any], old_meta: dict[str, Any]) -> Path:
@@ -843,6 +869,7 @@ def response_audit_section() -> str:
     cell_rows = v3.read_csv_rows(RESPONSE_AUDIT_DIR / "official_pass5_containment_ablation_by_cell.csv")
     summary = v3.load_json(RESPONSE_AUDIT_DIR / "v4_response_audit_summary.json")
     summary_payload = summary.get("summary", {}) if isinstance(summary.get("summary"), dict) else {}
+    has_aperture_response = any(row.get("containment_mode") == "aperture_response_containment_1" for row in summary_rows)
 
     def row_for(selector: str, mode: str, nhit: str) -> dict[str, str]:
         return next(
@@ -854,20 +881,32 @@ def response_audit_section() -> str:
             {},
         )
 
+    def expected_factor(row: dict[str, str]) -> str:
+        return v3.fmt(
+            row.get("expected_over_all_direction_c1")
+            if row.get("expected_over_all_direction_c1") not in {None, ""}
+            else row.get("effective_containment_factor"),
+            4,
+        )
+
     overview_rows = []
     for selector in ["all84", "active30", "drop4"]:
         nominal = row_for(selector, "nominal_containment", "all")
         cont1 = row_for(selector, "containment_1", "all")
+        aperture = row_for(selector, "aperture_response_containment_1", "all")
         overview_rows.append(
             [
                 v3.esc(selector),
                 v3.esc(nominal.get("cells")),
                 v3.fmt(nominal.get("observed_over_expected"), 4),
                 v3.fmt(cont1.get("observed_over_expected"), 4),
-                v3.fmt(nominal.get("effective_containment_factor"), 4),
+                v3.fmt(aperture.get("observed_over_expected"), 4),
+                expected_factor(nominal),
+                expected_factor(aperture),
                 v3.fmt(nominal.get("excess"), 6),
                 v3.fmt(nominal.get("official_expected_counts"), 6),
                 v3.fmt(cont1.get("official_expected_counts"), 6),
+                v3.fmt(aperture.get("official_expected_counts"), 6),
             ]
         )
 
@@ -875,13 +914,16 @@ def response_audit_section() -> str:
     for nhit in ["[125,200)", "[200,300)", "[300,500)", "[500,800)"]:
         nominal = row_for("drop4", "nominal_containment", nhit)
         cont1 = row_for("drop4", "containment_1", nhit)
+        aperture = row_for("drop4", "aperture_response_containment_1", nhit)
         low_nhit_rows.append(
             [
                 v3.esc(nhit),
                 v3.esc(nominal.get("cells")),
                 v3.fmt(nominal.get("observed_over_expected"), 4),
                 v3.fmt(cont1.get("observed_over_expected"), 4),
-                v3.fmt(nominal.get("effective_containment_factor"), 4),
+                v3.fmt(aperture.get("observed_over_expected"), 4),
+                expected_factor(nominal),
+                expected_factor(aperture),
                 v3.fmt(nominal.get("excess"), 5),
                 v3.fmt(nominal.get("B_on"), 5),
             ]
@@ -917,36 +959,85 @@ def response_audit_section() -> str:
             v3.fmt(row.get("containment_r_opt"), 4),
             v3.fmt(row.get("ratio_nominal"), 4),
             v3.fmt(row.get("ratio_containment1"), 4),
+            v3.fmt(row.get("ratio_aperture_response"), 4),
             v3.fmt(100.0 * (v3.finite_float(row.get("required_delta_b_over_b_nominal")) or 0.0), 3) + "%",
             v3.fmt(100.0 * (v3.finite_float(row.get("required_delta_b_over_b_containment1")) or 0.0), 3) + "%",
+            v3.fmt(100.0 * (v3.finite_float(row.get("required_delta_b_over_b_aperture_response")) or 0.0), 3) + "%",
         ]
         for row in high_residual_cells[:12]
     ]
 
+    interpretation = str(summary_payload.get("double_containment_interpretation") or "pending_aperture_conditioned_stage_a")
+    if interpretation == "scalar_containment_suppresses_expectation_beyond_aperture_conditioned_response":
+        verdict = (
+            "Reading the contract from expected counts, aperture-conditioned Stage A with <code>containment_r_opt=1</code> predicts "
+            f"<code>{v3.fmt(summary_payload.get('drop4_aperture_expected_over_nominal'), 4)}x</code> the current expected counts. "
+            "So the current scalar-containment branch suppresses the source expectation more than a direct aperture-conditioned response does. "
+            "This supports a response/containment contract bias, but it is not a full factor-of-containment double count."
+        )
+    elif interpretation == "aperture_conditioned_response_matches_containment1_nominal_containment_inconsistent":
+        verdict = (
+            "Aperture-conditioned Stage A with <code>containment_r_opt=1</code> lands closer to the all-direction response x 1 ablation. "
+            "That would mean the scalar containment convention used by the current branch is inconsistent with the response contract."
+        )
+    elif interpretation == "aperture_conditioned_response_matches_nominal_containment_no_double_containment":
+        verdict = (
+            "Aperture-conditioned Stage A with <code>containment_r_opt=1</code> lands closer to the current all-direction response x containment branch. "
+            "That argues against a simple double-containment error."
+        )
+    else:
+        verdict = (
+            "The aperture-conditioned Stage A full response is still pending. Until that branch exists, the containment=1 run is only an ablation, not the final response-contract answer."
+        )
+
     return (
-        "<p>This audit isolates response/aperture effects without changing the Stage E background: the same N_on, B_on, excess, cells, response, and exposure are used, but one diagnostic run sets <code>containment_r_opt=1</code> before Stage F/G.</p>"
+        "<p>This audit isolates response/aperture effects without changing the Stage E background. "
+        "It compares three contracts: the current all-direction Stage A response multiplied by <code>containment_r_opt</code>, "
+        "the same all-direction response with containment fixed to one, and the definitive aperture-conditioned Stage A response with containment fixed to one.</p>"
         '<div class="note">'
-        "Current strongest evidence: the low-energy high SED is mainly caused by the containment/aperture factor used in Stage F/G, not by the latest annnorm background map alone. "
-        f"For drop4, official pass5 obs/expected changes from <code>{v3.fmt(summary_payload.get('drop4_nominal_official_obs_over_expected'), 4)}x</code> to <code>{v3.fmt(summary_payload.get('drop4_containment1_official_obs_over_expected'), 4)}x</code> when <code>containment_r_opt</code> is removed. "
-        "This points to a response containment consistency problem: Stage A's numerator is built from the binned MC event cache, while Stage F/G multiply by a separate PSF containment factor. "
-        "The remaining definitive check is to rebuild Stage A from a no-dangle, all-direction numerator cache or explicitly define the response as aperture-conditioned."
+        f"For drop4, official pass5 obs/expected is <code>{v3.fmt(summary_payload.get('drop4_nominal_official_obs_over_expected'), 4)}x</code> in the current branch, "
+        f"<code>{v3.fmt(summary_payload.get('drop4_containment1_official_obs_over_expected'), 4)}x</code> with all-direction response x 1, and "
+        f"<code>{v3.fmt(summary_payload.get('drop4_aperture_conditioned_official_obs_over_expected'), 4)}x</code> with aperture-conditioned response x 1. "
+        f"{verdict}"
         "</div>"
         + v3.table(
-            ["selector", "cells", "obs/official current", "obs/official containment=1", "effective containment", "excess", "expected current", "expected c=1"],
+            [
+                "selector",
+                "cells",
+                "obs/official current",
+                "obs/official all-dir c=1",
+                "obs/official aperture c=1",
+                "current expected / all-dir",
+                "aperture expected / all-dir",
+                "excess",
+                "expected current",
+                "expected all-dir",
+                "expected aperture",
+            ],
             overview_rows,
             cls="compact",
         )
-        + "<h3>Drop4 low-Nhit containment ablation</h3>"
+        + "<h3>Drop4 low-Nhit response-contract comparison</h3>"
         + v3.table(
-            ["Nhit", "cells", "obs/official current", "obs/official c=1", "effective containment", "excess", "B_on"],
+            [
+                "Nhit",
+                "cells",
+                "obs/official current",
+                "obs/official all-dir c=1",
+                "obs/official aperture c=1",
+                "current expected / all-dir",
+                "aperture expected / all-dir",
+                "excess",
+                "B_on",
+            ],
             low_nhit_rows,
             cls="compact",
         )
         + '<div class="grid2">'
         + v3.figure(
             RESPONSE_AUDIT_DIR / "official_pass5_containment_ablation_by_nhit.png",
-            "Official pass5 forward-fold ratios with/without containment",
-            "Left: current Stage F convention multiplies response counts by containment_r_opt. Right: diagnostic ablation with containment fixed to one. The low-Nhit ratios collapse toward unity in the ablation.",
+            "Official pass5 forward-fold ratios by response contract",
+            "Current branch: all-direction Stage A response x containment_r_opt. Ablation: all-direction response x 1. Definitive check, when available: aperture-conditioned response x 1.",
         )
         + v3.figure(
             RESPONSE_AUDIT_DIR / "containment_r_opt_by_nhit.png",
@@ -963,21 +1054,139 @@ def response_audit_section() -> str:
         + '<div class="grid2">'
         + v3.figure(
             RESPONSE_AUDIT_DIR / "v4_sed_nominal_vs_containment1.png",
-            "SED impact of containment ablation",
-            "Red markers use the containment=1 diagnostic run. They move substantially downward relative to the current nominal v4 points, especially at low energy.",
+            "SED impact of response/aperture contract",
+            "Blue is the current branch, red is all-direction response x 1, and green is aperture-conditioned response x 1 when the full Stage A rebuild is available.",
         )
         + v3.figure(
-            CONTAINMENT1_STAGE_G_DIR / "sed_points_stage_f_fullarray_pool1.png",
-            "Native Stage G plot for containment=1 ablation",
-            "Stage G rerun using the same drop4 cells and same background, but with containment_r_opt forced to one in the Stage E signal clone.",
+            (APERTURE_CONDITIONED_STAGE_G_DIR if has_aperture_response else CONTAINMENT1_STAGE_G_DIR) / "sed_points_stage_f_fullarray_pool1.png",
+            "Native Stage G response-contract plot",
+            "Uses the aperture-conditioned Stage A branch when available; otherwise this panel shows the existing all-direction response x 1 ablation.",
         )
         + "</div>"
         + "<h3>Largest drop4 low-Nhit cell changes</h3>"
         + v3.table(
-            ["cell", "Nhit", "predE", "containment", "ratio current", "ratio c=1", "delta B/B current", "delta B/B c=1"],
+            [
+                "cell",
+                "Nhit",
+                "predE",
+                "containment",
+                "ratio current",
+                "ratio all-dir c=1",
+                "ratio aperture c=1",
+                "delta B/B current",
+                "delta B/B all-dir c=1",
+                "delta B/B aperture c=1",
+            ],
             cell_table_rows,
             cls="compact",
         )
+    )
+
+
+def empirical_psf_section() -> str:
+    summary_meta = v3.load_json(EMPIRICAL_PSF_SUMMARY_JSON) if EMPIRICAL_PSF_SUMMARY_JSON.exists() else {}
+    summary = summary_meta.get("summary", {}) if isinstance(summary_meta.get("summary"), dict) else {}
+    cell_rows = v3.read_csv_rows(EMPIRICAL_PSF_CELL_CSV) if EMPIRICAL_PSF_CELL_CSV.exists() else []
+    group_rows = v3.read_csv_rows(EMPIRICAL_PSF_GROUP_CSV) if EMPIRICAL_PSF_GROUP_CSV.exists() else []
+
+    def reliable_label(row: dict[str, str]) -> str:
+        reliable = str(row.get("fit_reliable", "")).strip() == "1"
+        if reliable:
+            return '<span class="pill">reliable</span>'
+        reason = row.get("unreliable_reason") or "unreliable"
+        return v3.esc(reason)
+
+    cell_table_rows = [
+        [
+            v3.esc(row.get("cell_id")),
+            v3.esc(row.get("nhit_bin")),
+            v3.esc(row.get("predE_bin")),
+            v3.fmt(row.get("N_on"), 6),
+            v3.fmt(row.get("B_on"), 6),
+            v3.fmt(row.get("excess"), 5),
+            v3.fmt(row.get("significance"), 4),
+            reliable_label(row),
+            v3.fmt(row.get("sigma_obs_over_mc"), 4),
+            v3.fmt(row.get("r68_obs_over_mc"), 4),
+            v3.fmt(row.get("profile_residual_rms"), 4),
+        ]
+        for row in cell_rows
+    ]
+    group_table_rows = [
+        [
+            v3.esc(row.get("nhit_bin")),
+            v3.esc(row.get("n_cells")),
+            v3.esc(row.get("cell_ids")),
+            v3.fmt(row.get("N_on"), 6),
+            v3.fmt(row.get("B_on"), 6),
+            v3.fmt(row.get("excess"), 5),
+            v3.fmt(row.get("significance"), 4),
+            reliable_label(row),
+            v3.fmt(row.get("sigma_obs_deg"), 4),
+            v3.fmt(row.get("r68_obs_deg"), 4),
+        ]
+        for row in group_rows
+    ]
+    unreliable = [row for row in cell_rows if str(row.get("fit_reliable", "")).strip() != "1"]
+    risk_rows = [row for row in cell_rows if str(row.get("psf_risk_cell", "")).strip() == "1"]
+    risk_text = ", ".join(
+        f"cell {v3.esc(row.get('cell_id'))}: {reliable_label(row)}"
+        for row in risk_rows
+    ) or "none in current selector"
+
+    return (
+        "<p>This diagnostic fits an empirical/effective PSF directly from observed Crab excess maps. "
+        "It keeps the latest annulus-normalized Stage D background fixed, so it is a PSF/containment check rather than a new background fit or a replacement for the MC response.</p>"
+        '<div class="note">'
+        f"Current v4 drop4 fit cells: <code>{v3.esc(str(summary.get('cells', 'n/a')))}</code>; "
+        f"single-cell empirical PSF fits passing the preset statistics gate: <code>{v3.esc(str(summary.get('reliable_cells', 'n/a')))}</code>. "
+        f"Reliable-cell median sigma_obs/MC is <code>{v3.fmt(summary.get('median_sigma_obs_over_mc_reliable'), 4)}</code>; "
+        f"median r68_obs/MC is <code>{v3.fmt(summary.get('median_r68_obs_over_mc_reliable'), 4)}</code>. "
+        f"Profile integration closure max absolute error is <code>{v3.fmt(summary.get('profile_check_max_abs_error'), 4)}</code>. "
+        "Interpretation: if low-energy high-excess cells showed a coherent sigma_obs/MC or r68_obs/MC shift, spatial containment would be implicated; if not, continue prioritizing response normalization, energy migration, and cell-selection normalization."
+        "</div>"
+        '<div class="grid2">'
+        + v3.figure(
+            EMPIRICAL_PSF_DIR / "observed_vs_mc_radial_profiles_grid.png",
+            "Observed empirical PSF versus MC PSF",
+            "Orange curves are peak-normalized observed excess radial profiles from counts minus fixed Stage D background. Blue curves are the Stage B MC PSF profiles. Black curves are simple Rayleigh/Gaussian fits to the observed excess core. Red titles mark cells failing the statistics gate.",
+        )
+        + v3.figure(
+            EMPIRICAL_PSF_DIR / "observed_radial_profile_components_grid.png",
+            "Observed radial profile components",
+            "Raw radial sums for counts, fitted background, and counts-background. This checks whether the empirical PSF fit is being driven by source excess or by residual background shape.",
+        )
+        + v3.figure(
+            EMPIRICAL_PSF_DIR / "sigma_obs_over_mc_grid.png",
+            "sigma_obs / sigma_MC grid",
+            "Cell-grid ratio of observed empirical Rayleigh width to Stage B MC sigma. Starred cells are plotted but not used for strong single-cell conclusions because they fail the statistics gate.",
+        )
+        + v3.figure(
+            EMPIRICAL_PSF_DIR / "r68_obs_over_mc_grid.png",
+            "r68_obs / r68_MC grid",
+            "Cell-grid ratio of observed empirical r68 to Stage B MC r68. This is the containment-width comparison most directly related to aperture consistency.",
+        )
+        + v3.figure(
+            EMPIRICAL_PSF_DIR / "nhit_group_empirical_psf_overlays.png",
+            "Nhit-group empirical PSF fallback overlays",
+            "Fit-cell profiles summed by Nhit bin. This grouped fallback is the safer view when individual high-Nhit cells have too few observed counts for stable PSF fitting.",
+        )
+        + "</div>"
+        "<h3>Single-cell empirical PSF reliability</h3>"
+        + v3.table(
+            ["cell", "Nhit", "predE", "N_on", "B_on", "excess", "sig", "gate", "sigma/MC", "r68/MC", "profile RMS"],
+            cell_table_rows,
+            cls="compact",
+        )
+        + "<h3>Nhit-group fallback fits</h3>"
+        + v3.table(
+            ["Nhit", "cells", "cell ids", "N_on", "B_on", "excess", "sig", "gate", "sigma_obs", "r68_obs"],
+            group_table_rows,
+            cls="compact",
+        )
+        + "<h3>Low-stat and PSF-risk notes</h3>"
+        + f"<p>Cells failing the single-cell gate are kept in the plots but should not drive a PSF conclusion by themselves. Historical PSF-risk cells in the current v4 selector: {risk_text}.</p>"
+        "<p>Because this is an observed effective PSF, it contains the true Crab spectrum, energy migration, zenith distribution, cell selection, and residual background-model effects. It should not be used to replace MC effective area or energy dispersion directly.</p>"
     )
 
 
@@ -1032,6 +1241,10 @@ def build_report() -> None:
     r68_g_meta = v3.load_json(R68_STAGE_G_META) if R68_STAGE_G_META.exists() else {}
     fit_rows = selector_rows_from(DROP4_SELECTOR_CSV)
 
+    empirical_psf.build_diagnostics(
+        stage_f_metadata=DROP4_STAGE_F_META,
+        output_dir=EMPIRICAL_PSF_DIR,
+    )
     plot_v4_final_sed(g_meta, old_g_meta)
     if r68_g_meta:
         plot_r68_sed_comparison(g_meta, r68_g_meta)
@@ -1041,7 +1254,7 @@ def build_report() -> None:
         "This v4 report does not replace the v3 HTML. It starts from the latest v3 annulus-normalized background result, "
         "then applies a cell-selection-bias control: cells 4, 17, 39, and 43 are removed from the original active30 fit set and Stage F/G are rerun."
         "</div>"
-        + v3.summary_cards(e_meta, f_meta, g_meta, d_meta)
+        + v4_summary_cards(e_meta, f_meta, g_meta, d_meta)
     )
 
     cells_body = (
@@ -1126,6 +1339,7 @@ def build_report() -> None:
         + v3.section("Official Pass5 Forward-Fold Test", forward_fold_section())
         + v3.section("Root-Cause Diagnostics", root_cause_diagnostics_section())
         + v3.section("Response / Containment Audit", response_audit_section())
+        + v3.section("Observed PSF Diagnostics", empirical_psf_section())
         + v3.section(
             "R68 Empirical Aperture Control",
             r68_aperture_section(

@@ -1,14 +1,32 @@
 {
   "summary": {
-    "dominant_current_hypothesis": "Stage F/G currently multiply by containment_r_opt even though the response numerator is built from a source-region MC cache; this likely underpredicts expected counts and drives high SED normalization.",
+    "dominant_current_hypothesis": "Default Stage A is an all-direction cell response and Stage F/G multiply by containment_r_opt to predict on-aperture source counts. The definitive contract check is the new aperture-conditioned Stage A response used downstream with containment_r_opt=1.",
+    "double_containment_interpretation": "scalar_containment_suppresses_expectation_beyond_aperture_conditioned_response",
+    "aperture_conditioned_available": true,
     "drop4_nominal_official_obs_over_expected": 1.4477519400385246,
     "drop4_containment1_official_obs_over_expected": 0.9365913956189119,
-    "drop4_nominal_effective_containment_factor": 0.64692808879537,
+    "drop4_aperture_conditioned_official_obs_over_expected": 1.181097741659134,
+    "drop4_nominal_expected_over_all_direction_c1": 0.64692808879537,
+    "drop4_aperture_expected_over_all_direction_c1": 0.7929838171591501,
+    "drop4_aperture_expected_over_nominal": 1.2257681045133582,
+    "drop4_nominal_expected_over_aperture": 0.8158149949553547,
     "stage_a_response_type": "primary_thrown_response",
     "stage_a_effective_area_formula": "a_eff_m2 = s0_m2 * cos(theta_true_bin_center) * eta",
     "stage_a_upstream_cache": "/mnt/mydisk/WCDA_simulation_binned_response_v3_candidate",
+    "stage_a_response_aperture_conditioning": null,
     "stage_a_metadata_mc_dangle_cut": null,
-    "caveat": "The upstream binned cache does not preserve full CLI provenance in its run_summary.json. The next definitive test is to rebuild Stage A from an uncut all-direction numerator cache or explicitly encode aperture conditioning in the response."
+    "aperture_stage_a_response_type": "primary_thrown_aperture_conditioned_response",
+    "aperture_stage_a_response_aperture_conditioning": {
+      "mode": "mc_dangle_le_r_opt",
+      "psf_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v3_candidate_psfborrow/runs/v3_psfborrow_from_nominal/psf_v3_candidate.npz",
+      "angle_branch": "mc_dangle",
+      "radius_source": "Stage B PSF NPZ r_opt_deg",
+      "min_r_opt_deg": 0.2023904025554657,
+      "median_r_opt_deg": 1.5520156621932983,
+      "max_r_opt_deg": 2.2743749618530273,
+      "note": "Numerator is restricted by the configured aperture. Use with Stage F/G containment_r_opt=1 to avoid applying the same aperture twice."
+    },
+    "caveat": "The response-contract comparison should be read from expected counts, not only obs/expected ratios. Aperture-conditioned response x 1 is the closest direct definition of on-aperture effective area. If the current all-direction x scalar-containment expectation is below that branch, the scalar containment is over-suppressing expected counts relative to the aperture-conditioned response."
   },
   "outputs": {
     "selector_nhit_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v4-response-audit/official_pass5_containment_ablation_by_selector_nhit.csv",

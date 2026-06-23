@@ -760,9 +760,9 @@ def validate_inputs(
     if response_cells != signal_cells:
         raise ValueError("Stage A response cells do not match Stage E signal cells in order and labels")
 
+    response_type = response_metadata.get("response_type") if isinstance(response_metadata, dict) else None
     if response_metadata:
         expected = {
-            "response_type": "primary_thrown_response",
             "absolute_effective_area_status": "available",
             "weighting": "mc_weight_baseline",
         }
@@ -771,8 +771,21 @@ def validate_inputs(
             for key, value in expected.items()
             if response_metadata.get(key) != value
         ]
+        if response_type not in {"primary_thrown_response", "primary_thrown_aperture_conditioned_response"}:
+            mismatches.append(
+                f"response_type={response_type!r}, expected 'primary_thrown_response' "
+                "or 'primary_thrown_aperture_conditioned_response'"
+            )
+        if response_type == "primary_thrown_aperture_conditioned_response":
+            conditioning = response_metadata.get("response_aperture_conditioning")
+            mode = conditioning.get("mode") if isinstance(conditioning, dict) else None
+            if mode != "mc_dangle_le_r_opt":
+                mismatches.append(f"response_aperture_conditioning.mode={mode!r}, expected 'mc_dangle_le_r_opt'")
+            containment = np.asarray(signal["containment_r_opt"], dtype=np.float64)
+            if not np.all(np.isfinite(containment)) or not np.allclose(containment, 1.0, rtol=0.0, atol=1.0e-10):
+                mismatches.append("aperture-conditioned Stage A response requires Stage E containment_r_opt == 1")
         if mismatches:
-            raise ValueError("Stage A metadata is not the current production response: " + "; ".join(mismatches))
+            raise ValueError("Stage A metadata is not an accepted response contract: " + "; ".join(mismatches))
 
     quality = signal_metadata.get("quality_gate") if isinstance(signal_metadata, dict) else None
     signal_promotable = bool(isinstance(quality, dict) and quality.get("promotable"))
@@ -792,6 +805,7 @@ def validate_inputs(
         "signal_quality_status": quality.get("status") if isinstance(quality, dict) else None,
         "background_mode": background_mode,
         "background_form": background_form,
+        "stage_a_response_type": response_type,
         "cell_selection_versions": sorted(set(cell_versions)),
         "cell_selection_version": sorted(set(cell_versions))[0] if len(set(cell_versions)) == 1 else None,
     }

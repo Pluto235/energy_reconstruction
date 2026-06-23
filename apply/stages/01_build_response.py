@@ -119,6 +119,22 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--allow-missing-weight", action="store_true", default=False)
     parser.add_argument("--s0-m2", type=float, default=DEFAULT_S0_M2)
+    parser.add_argument(
+        "--aperture-psf-npz",
+        type=str,
+        default="",
+        help=(
+            "Optional Stage B PSF NPZ used to build an aperture-conditioned response. "
+            "When set, numerator MC events are additionally cut with mc_dangle <= r_opt_deg(cell). "
+            "Leave empty for the default all-direction cell response."
+        ),
+    )
+    parser.add_argument(
+        "--aperture-angle-branch",
+        type=str,
+        default="mc_dangle",
+        help="ROOT branch in radians used for the optional aperture-conditioned numerator cut.",
+    )
     parser.add_argument("--npz-name", type=str, default="response_2d.npz")
     parser.add_argument("--metadata-name", type=str, default="response_2d_metadata.json")
     return parser.parse_args()
@@ -163,6 +179,39 @@ def load_cells(selection_csv: Path) -> List[CellSpec]:
     if not cells:
         raise ValueError(f"No cells loaded from {selection_csv}")
     return cells
+
+
+def load_aperture_radii(cells: Sequence[CellSpec], psf_npz: Optional[Path]) -> Tuple[Optional[np.ndarray], Optional[Dict[str, object]]]:
+    if psf_npz is None:
+        return None, None
+    if not psf_npz.exists():
+        raise FileNotFoundError(f"Aperture PSF NPZ does not exist: {psf_npz}")
+    with np.load(psf_npz, allow_pickle=False) as data:
+        required = {"cell_id", "r_opt_deg"}
+        missing = required - set(data.files)
+        if missing:
+            raise ValueError(f"{psf_npz} is missing required arrays for aperture response: {sorted(missing)}")
+        source_cell_id = np.asarray(data["cell_id"], dtype=np.int64)
+        source_r_opt = np.asarray(data["r_opt_deg"], dtype=np.float64)
+    by_cell = {int(cid): float(radius) for cid, radius in zip(source_cell_id, source_r_opt)}
+    radii = np.asarray([by_cell.get(int(cell.cell_id), np.nan) for cell in cells], dtype=np.float64)
+    invalid = [
+        int(cell.cell_id)
+        for cell, radius in zip(cells, radii)
+        if not math.isfinite(float(radius)) or float(radius) <= 0.0
+    ]
+    if invalid:
+        raise ValueError(f"Aperture PSF has invalid/missing r_opt_deg for cells: {invalid}")
+    meta = {
+        "mode": "mc_dangle_le_r_opt",
+        "psf_npz": str(psf_npz),
+        "angle_branch": "mc_dangle",
+        "radius_source": "Stage B PSF NPZ r_opt_deg",
+        "min_r_opt_deg": float(np.nanmin(radii)),
+        "median_r_opt_deg": float(np.nanmedian(radii)),
+        "max_r_opt_deg": float(np.nanmax(radii)),
+    }
+    return radii, meta
 
 
 def binned_cell_dir(binned_root: Path, cell: CellSpec) -> Path:
@@ -503,6 +552,8 @@ def accumulate_numerators(
     theta_edges_deg: np.ndarray,
     weight_branch: str,
     allow_missing_weight: bool,
+    aperture_r_opt_deg: Optional[np.ndarray],
+    aperture_angle_branch: str,
     max_files_per_cell: Optional[int],
     allow_missing_cell_dirs: bool,
     numerator_workers: int,
@@ -522,6 +573,8 @@ def accumulate_numerators(
             "input_files": 0,
             "input_dir": str(binned_cell_dir(binned_root, cell)),
             "events": 0,
+            "aperture_kept_events": 0 if aperture_r_opt_deg is not None else "",
+            "aperture_kept_fraction": "" if aperture_r_opt_deg is None else 0.0,
             "truth_range_events": 0,
             "sumw_total": 0.0,
         }
@@ -550,6 +603,12 @@ def accumulate_numerators(
                     "theta_edges_deg": theta_edges_deg,
                     "weight_branch": weight_branch,
                     "allow_missing_weight": allow_missing_weight,
+                    "aperture_r_opt_deg": (
+                        None
+                        if aperture_r_opt_deg is None
+                        else float(aperture_r_opt_deg[cell_idx])
+                    ),
+                    "aperture_angle_branch": aperture_angle_branch,
                 }
             )
 
@@ -563,6 +622,8 @@ def accumulate_numerators(
         numerator_sumw[cell_idx] += result["sumw"]
         numerator_count[cell_idx] += result["count"]
         summaries[cell_idx]["events"] += int(result["events"])
+        if result.get("aperture_kept_events") is not None:
+            summaries[cell_idx]["aperture_kept_events"] += int(result["aperture_kept_events"])
         summaries[cell_idx]["truth_range_events"] += int(result["truth_range_events"])
         summaries[cell_idx]["sumw_total"] += float(result["sumw_total"])
 
@@ -584,6 +645,10 @@ def accumulate_numerators(
                     print(f"[numerator] {task_idx}/{len(worker_kwargs)} tasks complete", flush=True)
 
     for cell_idx, cell in enumerate(cells):
+        if summaries[cell_idx].get("aperture_kept_events") != "":
+            events = int(summaries[cell_idx]["events"])
+            kept = int(summaries[cell_idx]["aperture_kept_events"])
+            summaries[cell_idx]["aperture_kept_fraction"] = float(kept / events) if events > 0 else 0.0
         print(
             f"[numerator] cell {cell_idx + 1}/{len(cells)} "
             f"{cell.nhit_bin} {cell.predE_bin} | "
@@ -606,10 +671,15 @@ def numerator_chunk_hist_worker(kwargs: Dict[str, object]) -> Dict[str, object]:
     theta_edges_deg = np.asarray(kwargs["theta_edges_deg"], dtype=np.float64)
     weight_branch = str(kwargs["weight_branch"])
     allow_missing_weight = bool(kwargs["allow_missing_weight"])
+    aperture_r_opt_deg = kwargs.get("aperture_r_opt_deg")
+    aperture_angle_branch = str(kwargs.get("aperture_angle_branch") or "mc_dangle")
+    use_aperture = aperture_r_opt_deg is not None
+    aperture_r_opt_rad = math.radians(float(aperture_r_opt_deg)) if use_aperture else None
     shape = (len(loge_edges) - 1, len(theta_edges_deg) - 1)
     sumw = np.zeros(shape, dtype=np.float64)
     count = np.zeros(shape, dtype=np.float64)
     events = 0
+    aperture_kept_events = 0
     truth_range_events = 0
     cell_sumw_total = 0.0
 
@@ -620,12 +690,21 @@ def numerator_chunk_hist_worker(kwargs: Dict[str, object]) -> Dict[str, object]:
             optional_branches.append(weight_branch)
         else:
             branches.append(weight_branch)
+        if use_aperture:
+            branches.append(aperture_angle_branch)
         arrays = arrays_for_tree(path, tree_name, branches, optional_branches=optional_branches)
         n_events = len(arrays["mc_energy"])
         events += int(n_events)
         weight = load_weight(arrays, weight_branch=weight_branch, allow_missing_weight=allow_missing_weight)
         loge = np.log10(np.asarray(arrays["mc_energy"], dtype=np.float64))
         theta_deg = np.degrees(np.asarray(arrays["mc_theta"], dtype=np.float64))
+        if use_aperture:
+            dangle = np.asarray(arrays[aperture_angle_branch], dtype=np.float64)
+            aperture_mask = np.isfinite(dangle) & (dangle <= float(aperture_r_opt_rad))
+            aperture_kept_events += int(np.count_nonzero(aperture_mask))
+            loge = loge[aperture_mask]
+            theta_deg = theta_deg[aperture_mask]
+            weight = weight[aperture_mask]
         truth_range_events += int(np.count_nonzero(valid_truth_mask(loge, theta_deg, loge_edges, theta_edges_deg)))
         hist_sumw, hist_count = fill_histograms(loge, theta_deg, weight, loge_edges, theta_edges_deg)
         sumw += hist_sumw
@@ -637,6 +716,7 @@ def numerator_chunk_hist_worker(kwargs: Dict[str, object]) -> Dict[str, object]:
         "sumw": sumw,
         "count": count,
         "events": int(events),
+        "aperture_kept_events": int(aperture_kept_events) if use_aperture else None,
         "truth_range_events": int(truth_range_events),
         "sumw_total": float(cell_sumw_total),
         "files": int(len(paths)),
@@ -757,12 +837,13 @@ def write_markdown_summary(
         f.write(f"- Empty denominator bins: {empty_denominator_bins}\n")
         f.write(f"- Denominator bins with count < 10: {low_denominator_bins}\n")
         f.write(f"- NPZ: `{metadata['npz_path']}`\n\n")
-        f.write("| cell_id | nhit_bin | predE_bin | files | events | sumw_total |\n")
-        f.write("| ---: | --- | --- | ---: | ---: | ---: |\n")
+        f.write("| cell_id | nhit_bin | predE_bin | files | events | aperture kept | aperture fraction | sumw_total |\n")
+        f.write("| ---: | --- | --- | ---: | ---: | ---: | ---: | ---: |\n")
         for row in cell_summaries:
             f.write(
                 f"| {row['cell_id']} | {row['nhit_bin']} | {row['predE_bin']} | "
-                f"{row['input_files']} | {row['events']} | {row['sumw_total']:.6g} |\n"
+                f"{row['input_files']} | {row['events']} | {row.get('aperture_kept_events', '')} | "
+                f"{row.get('aperture_kept_fraction', '')} | {row['sumw_total']:.6g} |\n"
             )
 
 
@@ -779,6 +860,10 @@ def main() -> None:
     core_box = tuple(args.core_box) if args.core_box is not None else None
 
     cells = load_cells(selection_csv)
+    aperture_psf_npz = Path(args.aperture_psf_npz).resolve() if str(args.aperture_psf_npz).strip() else None
+    aperture_r_opt_deg, aperture_meta = load_aperture_radii(cells, aperture_psf_npz)
+    if aperture_meta is not None:
+        aperture_meta["angle_branch"] = str(args.aperture_angle_branch)
     run_config = read_run_config(run_dir)
     loge_edges = make_edges(args.logE_min, args.logE_max, args.logE_step)
     theta_edges_deg = make_edges(args.theta_min_deg, args.theta_max_deg, args.theta_step_deg)
@@ -811,7 +896,7 @@ def main() -> None:
             loge_edges=loge_edges,
             theta_edges_deg=theta_edges_deg,
         )
-        response_type = "primary_thrown_response"
+        response_type = "primary_thrown_aperture_conditioned_response" if aperture_r_opt_deg is not None else "primary_thrown_response"
         absolute_effective_area_status = "available"
 
     numerator_sumw, numerator_count, cell_summaries = accumulate_numerators(
@@ -822,6 +907,8 @@ def main() -> None:
         theta_edges_deg=theta_edges_deg,
         weight_branch=args.weight_branch,
         allow_missing_weight=args.allow_missing_weight,
+        aperture_r_opt_deg=aperture_r_opt_deg,
+        aperture_angle_branch=str(args.aperture_angle_branch),
         max_files_per_cell=args.max_binned_files_per_cell,
         allow_missing_cell_dirs=args.allow_missing_cell_dirs,
         numerator_workers=args.numerator_workers,
@@ -857,6 +944,11 @@ def main() -> None:
         cell_id=np.asarray([cell.cell_id for cell in cells], dtype=np.int32),
         nhit_bin=np.asarray([cell.nhit_bin for cell in cells], dtype="U32"),
         predE_bin=np.asarray([cell.predE_bin for cell in cells], dtype="U32"),
+        aperture_r_opt_deg=np.asarray(
+            np.full(len(cells), np.nan, dtype=np.float32)
+            if aperture_r_opt_deg is None
+            else aperture_r_opt_deg.astype(np.float32)
+        ),
     )
 
     empty_denominator_bins = int(np.count_nonzero(denominator_count <= 0))
@@ -899,13 +991,24 @@ def main() -> None:
         "thrown_area": thrown_area_metadata(float(args.s0_m2)),
         "effective_area_formula": "a_eff_m2 = s0_m2 * cos(theta_true_bin_center) * eta",
         "cos_theta_source": "theta_true_bin_center",
+        "response_aperture_conditioning": (
+            {
+                **aperture_meta,
+                "note": (
+                    "Numerator is restricted by the configured aperture. "
+                    "Use with Stage F/G containment_r_opt=1 to avoid applying the same aperture twice."
+                ),
+            }
+            if aperture_meta is not None
+            else {"mode": "none", "note": "Default all-direction cell response; Stage F/G should apply PSF containment for on-aperture excess."}
+        ),
         "cuts": {
             "pincness_lt": float(args.cut_pinc_max),
             "fitstat_equals": int(args.cut_fitstat_equals),
             "theta_reco_deg_lt": float(args.cut_theta_max_deg),
             "dcedge_gt": None if args.cut_dcedge_min is None else float(args.cut_dcedge_min),
             "core_box": None if core_box is None else [float(v) for v in core_box],
-            "mc_dangle_cut": None,
+            "mc_dangle_cut": None if aperture_r_opt_deg is None else "cell-dependent r_opt_deg from aperture_psf_npz",
         },
         "allow_missing_cell_dirs": bool(args.allow_missing_cell_dirs),
         "denominator": denominator_meta,

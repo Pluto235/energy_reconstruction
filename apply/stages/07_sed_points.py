@@ -655,8 +655,8 @@ def validate_inputs(
         "Stage F fit",
     )
 
+    response_type = response_metadata.get("response_type") if isinstance(response_metadata, dict) else None
     response_expected = {
-        "response_type": "primary_thrown_response",
         "absolute_effective_area_status": "available",
         "weighting": "mc_weight_baseline",
     }
@@ -665,8 +665,21 @@ def validate_inputs(
         for key, value in response_expected.items()
         if response_metadata.get(key) != value
     ]
+    if response_type not in {"primary_thrown_response", "primary_thrown_aperture_conditioned_response"}:
+        response_mismatches.append(
+            f"response_type={response_type!r}, expected 'primary_thrown_response' "
+            "or 'primary_thrown_aperture_conditioned_response'"
+        )
+    if response_type == "primary_thrown_aperture_conditioned_response":
+        conditioning = response_metadata.get("response_aperture_conditioning")
+        mode = conditioning.get("mode") if isinstance(conditioning, dict) else None
+        if mode != "mc_dangle_le_r_opt":
+            response_mismatches.append(f"response_aperture_conditioning.mode={mode!r}, expected 'mc_dangle_le_r_opt'")
+        containment = np.asarray(signal["containment_r_opt"], dtype=np.float64)
+        if not np.all(np.isfinite(containment)) or not np.allclose(containment, 1.0, rtol=0.0, atol=1.0e-10):
+            response_mismatches.append("aperture-conditioned Stage A response requires Stage E containment_r_opt == 1")
     if response_mismatches:
-        raise ValueError("Stage A metadata is not the current production response: " + "; ".join(response_mismatches))
+        raise ValueError("Stage A metadata is not an accepted response contract: " + "; ".join(response_mismatches))
 
     stage_f_run_id = str(stage_f_metadata.get("run_id") or "")
     enforce_expected = not bool(args.skip_expected_stage_f_validation)

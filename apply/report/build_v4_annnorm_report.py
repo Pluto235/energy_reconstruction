@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import csv
 import math
 from pathlib import Path
 from typing import Any
@@ -74,6 +75,8 @@ EMPIRICAL_PSF_DIR = REPORT_DIR / "assets" / "v4-empirical-psf"
 EMPIRICAL_PSF_SUMMARY_JSON = EMPIRICAL_PSF_DIR / "empirical_psf_summary.json"
 EMPIRICAL_PSF_CELL_CSV = EMPIRICAL_PSF_DIR / "empirical_psf_cell_summary.csv"
 EMPIRICAL_PSF_GROUP_CSV = EMPIRICAL_PSF_DIR / "empirical_psf_nhit_group_summary.csv"
+CELL_ROOT_CAUSE_CROSSMATCH_CSV = ROOT_CAUSE_DIR / "v4_drop4_cell_root_cause_crossmatch.csv"
+CELL_ROOT_CAUSE_PNG = ROOT_CAUSE_DIR / "v4_drop4_cell_root_cause_crossmatch.png"
 
 
 def to_float(value: Any) -> float | None:
@@ -90,6 +93,262 @@ def ratio_cell_rows(rows: list[dict[str, str]], *, max_rows: int = 14) -> list[d
 
     selected.sort(key=residual, reverse=True)
     return selected[:max_rows]
+
+
+def truthy(value: Any) -> bool:
+    return str(value).strip().lower() in {"1", "1.0", "true", "yes", "y"}
+
+
+def mean(values: list[float]) -> float | None:
+    finite = [value for value in values if math.isfinite(value)]
+    return None if not finite else sum(finite) / len(finite)
+
+
+def by_cell(rows: list[dict[str, str]], *, selector: str | None = None) -> dict[int, dict[str, str]]:
+    indexed: dict[int, dict[str, str]] = {}
+    for row in rows:
+        if selector is not None and row.get("selector") != selector:
+            continue
+        cell_id = v3.finite_float(row.get("cell_id"))
+        if cell_id is None:
+            continue
+        indexed[int(cell_id)] = row
+    return indexed
+
+
+def write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({key: row.get(key, "") for key in fieldnames})
+
+
+def build_cell_root_cause_crossmatch() -> list[dict[str, Any]]:
+    """Merge current drop4 cell diagnostics into one lightweight table."""
+    fit_rows = v3.read_csv_rows(PRIMARY_STAGE_F_DIR / "fit_v4_aperture_conditioned_drop4_summary.csv")
+    fold_rows = [
+        row
+        for row in v3.read_csv_rows(RESPONSE_AUDIT_DIR / "official_pass5_containment_ablation_by_cell.csv")
+        if truthy(row.get("drop4"))
+    ]
+    stage_a_rows = v3.read_csv_rows(REPO_ROOT / "apply/output/stage_a_v4_aperture_conditioned/cell_response_summary.csv")
+    psf_rows = v3.read_csv_rows(
+        REPO_ROOT
+        / "apply/output/stage_b_v3_candidate_psfborrow/runs/v3_psfborrow_from_nominal/psf_v3_candidate_summary.csv"
+    )
+    empirical_rows = v3.read_csv_rows(EMPIRICAL_PSF_CELL_CSV) if EMPIRICAL_PSF_CELL_CSV.exists() else []
+    energy_rows = [
+        row
+        for row in v3.read_csv_rows(ROOT_CAUSE_DIR / "official_pass5_true_energy_contribution_by_cell.csv")
+        if row.get("selector") == "drop4"
+    ]
+    offsource_rows = [
+        row
+        for row in v3.read_csv_rows(ROOT_CAUSE_DIR / "offsource_core_residual_cells.csv")
+        if row.get("selector") == "drop4"
+    ]
+
+    fold_by = by_cell(fold_rows)
+    stage_a_by = by_cell(stage_a_rows)
+    psf_by = by_cell(psf_rows)
+    empirical_by = by_cell(empirical_rows)
+    energy_by = by_cell(energy_rows)
+    offsource_by: dict[int, dict[str, Any]] = {}
+    for row in offsource_rows:
+        cell_id = v3.finite_float(row.get("cell_id"))
+        if cell_id is None:
+            continue
+        bucket = offsource_by.setdefault(int(cell_id), {"sigmas": [], "excesses": []})
+        sigma = v3.finite_float(row.get("excess_over_sqrt_N_plus_B"))
+        excess = v3.finite_float(row.get("excess"))
+        if sigma is not None:
+            bucket["sigmas"].append(sigma)
+        if excess is not None:
+            bucket["excesses"].append(excess)
+
+    rows: list[dict[str, Any]] = []
+    for fit in fit_rows:
+        cell_id_number = v3.finite_float(fit.get("cell_id"))
+        if cell_id_number is None:
+            continue
+        cell_id = int(cell_id_number)
+        fold = fold_by.get(cell_id, {})
+        stage_a = stage_a_by.get(cell_id, {})
+        psf = psf_by.get(cell_id, {})
+        empirical = empirical_by.get(cell_id, {})
+        energy = energy_by.get(cell_id, {})
+        off = offsource_by.get(cell_id, {"sigmas": [], "excesses": []})
+
+        excess = v3.finite_float(fit.get("excess"))
+        logpar_model = v3.finite_float(fit.get("logpar_model"))
+        err = v3.finite_float(fit.get("error_conservative"))
+        official_expected = v3.finite_float(fold.get("official_expected_aperture_response"))
+        official_delta = None if excess is None or official_expected is None else excess - official_expected
+        official_pull = None if official_delta is None or err is None or err <= 0 else official_delta / err
+        stagef_ratio = None if excess is None or logpar_model is None or logpar_model <= 0 else excess / logpar_model
+        sigmas = list(off.get("sigmas", []))
+        excesses = list(off.get("excesses", []))
+
+        rows.append(
+            {
+                "cell_id": cell_id,
+                "nhit_bin": fit.get("nhit_bin"),
+                "predE_bin": fit.get("predE_bin"),
+                "N_on": fit.get("N_on"),
+                "B_on": fit.get("B_on"),
+                "excess": fit.get("excess"),
+                "error_conservative": fit.get("error_conservative"),
+                "logpar_model": fit.get("logpar_model"),
+                "logpar_pull": fit.get("logpar_pull"),
+                "stagef_model_ratio": stagef_ratio,
+                "official_expected_aperture_response": official_expected,
+                "ratio_aperture_response": fold.get("ratio_aperture_response"),
+                "fit_minus_official_pass5_aperture_counts": official_delta,
+                "fit_vs_official_pass5_aperture_pull": official_pull,
+                "required_delta_b_over_b_aperture_response": fold.get(
+                    "required_delta_b_over_b_aperture_response"
+                ),
+                "offsource_mean_sigma": mean(sigmas),
+                "offsource_min_sigma": min(sigmas) if sigmas else None,
+                "offsource_max_sigma": max(sigmas) if sigmas else None,
+                "offsource_mean_excess": mean(excesses),
+                "events": stage_a.get("events"),
+                "aperture_kept_fraction": stage_a.get("aperture_kept_fraction"),
+                "truth_range_events": stage_a.get("truth_range_events"),
+                "effective_events": psf.get("effective_events"),
+                "core_fit_effective_events": psf.get("core_fit_effective_events"),
+                "theta_missing_crab_probability_mass": psf.get("theta_missing_crab_probability_mass"),
+                "sigma_deg": psf.get("sigma_deg"),
+                "r_opt_deg": psf.get("r_opt_deg"),
+                "stageb_containment_r_opt": psf.get("containment_r_opt"),
+                "r68_deg": psf.get("r68_deg"),
+                "r90_deg": psf.get("r90_deg"),
+                "containment_warning": psf.get("containment_warning"),
+                "psf_borrowed": psf.get("psf_borrowed"),
+                "empirical_significance": empirical.get("significance"),
+                "fit_reliable": empirical.get("fit_reliable"),
+                "sigma_obs_over_mc": empirical.get("sigma_obs_over_mc"),
+                "r68_obs_over_mc": empirical.get("r68_obs_over_mc"),
+                "profile_residual_rms": empirical.get("profile_residual_rms"),
+                "true_e50_tev": energy.get("true_e50_tev"),
+                "frac_below_pass5_min": energy.get("frac_below_pass5_min"),
+                "frac_below_1tev": energy.get("frac_below_1tev"),
+                "frac_above_10tev": energy.get("frac_above_10tev"),
+            }
+        )
+
+    fieldnames = [
+        "cell_id",
+        "nhit_bin",
+        "predE_bin",
+        "N_on",
+        "B_on",
+        "excess",
+        "error_conservative",
+        "logpar_model",
+        "logpar_pull",
+        "stagef_model_ratio",
+        "official_expected_aperture_response",
+        "ratio_aperture_response",
+        "fit_minus_official_pass5_aperture_counts",
+        "fit_vs_official_pass5_aperture_pull",
+        "required_delta_b_over_b_aperture_response",
+        "offsource_mean_sigma",
+        "offsource_min_sigma",
+        "offsource_max_sigma",
+        "offsource_mean_excess",
+        "events",
+        "aperture_kept_fraction",
+        "truth_range_events",
+        "effective_events",
+        "core_fit_effective_events",
+        "theta_missing_crab_probability_mass",
+        "sigma_deg",
+        "r_opt_deg",
+        "stageb_containment_r_opt",
+        "r68_deg",
+        "r90_deg",
+        "containment_warning",
+        "psf_borrowed",
+        "empirical_significance",
+        "fit_reliable",
+        "sigma_obs_over_mc",
+        "r68_obs_over_mc",
+        "profile_residual_rms",
+        "true_e50_tev",
+        "frac_below_pass5_min",
+        "frac_below_1tev",
+        "frac_above_10tev",
+    ]
+    write_csv(CELL_ROOT_CAUSE_CROSSMATCH_CSV, rows, fieldnames)
+    plot_cell_root_cause_crossmatch(rows)
+    return rows
+
+
+def plot_cell_root_cause_crossmatch(rows: list[dict[str, Any]]) -> Path:
+    try:
+        plt = v3.setup_matplotlib()
+        import numpy as np
+    except ModuleNotFoundError:
+        if v3.exists(CELL_ROOT_CAUSE_PNG):
+            return CELL_ROOT_CAUSE_PNG
+        raise
+
+    if not rows:
+        return CELL_ROOT_CAUSE_PNG
+
+    ordered = sorted(rows, key=lambda row: int(row["cell_id"]))
+    x = np.arange(len(ordered))
+    labels = [str(row["cell_id"]) for row in ordered]
+    logpar_pull = np.asarray([v3.finite_float(row.get("logpar_pull")) or 0.0 for row in ordered], dtype=float)
+    ratio = np.asarray([v3.finite_float(row.get("ratio_aperture_response")) or np.nan for row in ordered], dtype=float)
+    db_over_b = np.asarray(
+        [100.0 * (v3.finite_float(row.get("required_delta_b_over_b_aperture_response")) or 0.0) for row in ordered],
+        dtype=float,
+    )
+    sigma_obs_mc = np.asarray([v3.finite_float(row.get("sigma_obs_over_mc")) or np.nan for row in ordered], dtype=float)
+    off_sigma = np.asarray([v3.finite_float(row.get("offsource_mean_sigma")) or np.nan for row in ordered], dtype=float)
+
+    colors = ["#dc2626" if value > 0 else "#2563eb" for value in logpar_pull]
+    fig, axes = plt.subplots(4, 1, figsize=(13.5, 9.2), dpi=160, sharex=True)
+
+    axes[0].bar(x, logpar_pull, color=colors, alpha=0.82)
+    axes[0].axhline(0.0, color="#111827", lw=0.8)
+    for y in [-3, -2, 2, 3]:
+        axes[0].axhline(y, color="#9ca3af", lw=0.7, ls="--", alpha=0.7)
+    axes[0].set_ylabel("Stage F pull")
+    axes[0].set_title("v4 drop4 cell-level root-cause crossmatch")
+
+    axes[1].plot(x, ratio, "o-", color="#7c3aed", lw=1.3, ms=4.4)
+    axes[1].axhline(1.0, color="#111827", lw=0.8)
+    axes[1].axhline(1.5, color="#9ca3af", lw=0.7, ls="--", alpha=0.7)
+    axes[1].set_ylabel("obs / official")
+    axes[1].set_ylim(bottom=min(0.0, float(np.nanmin(ratio)) if np.isfinite(ratio).any() else 0.0))
+
+    axes[2].bar(x, db_over_b, color="#f97316", alpha=0.75)
+    axes[2].axhline(0.0, color="#111827", lw=0.8)
+    axes[2].set_ylabel("dB/B (%)")
+
+    axes[3].plot(x, sigma_obs_mc, "s", color="#059669", ms=4.2, label="empirical sigma / MC sigma")
+    axes[3].plot(x, off_sigma, "x", color="#6b7280", ms=4.2, label="mean off-source sigma")
+    axes[3].axhline(1.0, color="#059669", lw=0.8, ls="--", alpha=0.7)
+    axes[3].axhline(0.0, color="#6b7280", lw=0.8, ls="--", alpha=0.7)
+    axes[3].set_ylabel("PSF / offsrc")
+    axes[3].legend(fontsize=7.5, loc="best")
+
+    for ax in axes:
+        ax.grid(True, axis="y", alpha=0.25, lw=0.5)
+    axes[-1].set_xticks(x)
+    axes[-1].set_xticklabels(labels, rotation=90, fontsize=8)
+    axes[-1].set_xlabel("cell id")
+
+    fig.tight_layout()
+    CELL_ROOT_CAUSE_PNG.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(CELL_ROOT_CAUSE_PNG)
+    plt.close(fig)
+    return CELL_ROOT_CAUSE_PNG
 
 
 def v4_summary_cards(e_meta: dict[str, Any], f_meta: dict[str, Any], g_meta: dict[str, Any], d_meta: dict[str, Any]) -> str:
@@ -1202,6 +1461,146 @@ def root_cause_diagnostics_section() -> str:
     )
 
 
+def cell_root_cause_crossmatch_section(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return "<p>Cell-level crossmatch was not generated.</p>"
+
+    def f(row: dict[str, Any], key: str) -> float | None:
+        return v3.finite_float(row.get(key))
+
+    by_logpar = sorted(rows, key=lambda row: abs(f(row, "logpar_pull") or 0.0), reverse=True)
+    by_official = sorted(rows, key=lambda row: f(row, "ratio_aperture_response") or -1.0e99, reverse=True)
+    low_mid = [row for row in rows if row.get("nhit_bin") in {"[125,200)", "[200,300)", "[300,500)"}]
+    high = [row for row in rows if row.get("nhit_bin") in {"[800,1100)", "[1100,2000)", "[2000,3000)"}]
+
+    low_mid_excess = sum(f(row, "excess") or 0.0 for row in low_mid)
+    low_mid_official = sum(f(row, "official_expected_aperture_response") or 0.0 for row in low_mid)
+    high_excess = sum(f(row, "excess") or 0.0 for row in high)
+    high_official = sum(f(row, "official_expected_aperture_response") or 0.0 for row in high)
+    positive_offsrc = [row for row in rows if (f(row, "offsource_mean_sigma") or 0.0) > 0.0]
+    reliable_empirical = [row for row in rows if truthy(row.get("fit_reliable"))]
+    empirical_narrow = [row for row in reliable_empirical if (f(row, "sigma_obs_over_mc") or 1.0e9) < 0.9]
+
+    top_stagef_table = v3.table(
+        [
+            "cell",
+            "Nhit",
+            "predE",
+            "excess",
+            "LogPar model",
+            "pull",
+            "obs/official",
+            "dB/B",
+            "emp sigma/MC",
+            "E50 TeV",
+            "offsrc sigma",
+        ],
+        [
+            [
+                v3.esc(row.get("cell_id")),
+                v3.esc(row.get("nhit_bin")),
+                v3.esc(row.get("predE_bin")),
+                v3.fmt(row.get("excess"), 5),
+                v3.fmt(row.get("logpar_model"), 5),
+                v3.fmt(row.get("logpar_pull"), 4),
+                v3.fmt(row.get("ratio_aperture_response"), 4),
+                v3.fmt(100.0 * (f(row, "required_delta_b_over_b_aperture_response") or 0.0), 4) + "%",
+                v3.fmt(row.get("sigma_obs_over_mc"), 4),
+                v3.fmt(row.get("true_e50_tev"), 4),
+                v3.fmt(row.get("offsource_mean_sigma"), 4),
+            ]
+            for row in by_logpar[:12]
+        ],
+        cls="compact",
+    )
+
+    top_official_table = v3.table(
+        [
+            "cell",
+            "Nhit",
+            "predE",
+            "excess",
+            "official exp",
+            "obs/official",
+            "official pull",
+            "dB/B",
+            "Stage F pull",
+            "below 1 TeV",
+        ],
+        [
+            [
+                v3.esc(row.get("cell_id")),
+                v3.esc(row.get("nhit_bin")),
+                v3.esc(row.get("predE_bin")),
+                v3.fmt(row.get("excess"), 5),
+                v3.fmt(row.get("official_expected_aperture_response"), 5),
+                v3.fmt(row.get("ratio_aperture_response"), 4),
+                v3.fmt(row.get("fit_vs_official_pass5_aperture_pull"), 4),
+                v3.fmt(100.0 * (f(row, "required_delta_b_over_b_aperture_response") or 0.0), 4) + "%",
+                v3.fmt(row.get("logpar_pull"), 4),
+                v3.fmt(100.0 * (f(row, "frac_below_1tev") or 0.0), 4) + "%",
+            ]
+            for row in by_official[:12]
+        ],
+        cls="compact",
+    )
+
+    selector_rows_all = v3.read_csv_rows(RESPONSE_AUDIT_DIR / "official_pass5_containment_ablation_by_selector_nhit.csv")
+    selector_rows = [
+        row
+        for row in selector_rows_all
+        if row.get("containment_mode") == "aperture_response_containment_1"
+        and row.get("selector") in {"all84", "active30", "drop4"}
+        and row.get("nhit_bin") in {"all", "[125,200)", "[200,300)", "[300,500)", "[500,800)"}
+    ]
+    selector_rows.sort(key=lambda row: (row.get("nhit_bin") != "all", v3.interval_key(row.get("nhit_bin")), row.get("selector")))
+    selector_table = v3.table(
+        ["selector", "Nhit", "cells", "excess", "official exp", "obs/official"],
+        [
+            [
+                v3.esc(row.get("selector")),
+                v3.esc(row.get("nhit_bin")),
+                v3.esc(row.get("cells")),
+                v3.fmt(row.get("excess"), 5),
+                v3.fmt(row.get("official_expected_counts"), 5),
+                v3.fmt(row.get("observed_over_expected"), 4),
+            ]
+            for row in selector_rows
+        ],
+        cls="compact",
+    )
+
+    low_mid_ratio = low_mid_excess / low_mid_official if low_mid_official > 0 else None
+    high_ratio = high_excess / high_official if high_official > 0 else None
+    return (
+        "<p>This table joins the current Stage F residuals, official-pass5 forward-fold residuals, background-shift requirement, off-source pseudo-Crab residuals, Stage A MC occupancy, Stage B PSF, observed empirical PSF, and true-energy support for each current drop4 fit cell.</p>"
+        '<div class="note">'
+        f"Current localization: low/mid Nhit drop4 cells [125,500) have obs/official <code>{v3.fmt(low_mid_ratio, 4)}x</code>, while the high-Nhit diagnostic group has <code>{v3.fmt(high_ratio, 4)}x</code>. "
+        f"Only <code>{len(positive_offsrc)}/{len(rows)}</code> fit cells have positive mean off-source residual, so the existing off-source controls do not support a uniform positive background under-subtraction. "
+        f"Among reliable empirical-PSF cells, <code>{len(empirical_narrow)}/{len(reliable_empirical)}</code> have observed sigma/MC &lt; 0.9, so the observed Crab core is often narrower than the MC PSF rather than broader."
+        "</div>"
+        '<div class="grid2">'
+        + v3.figure(
+            CELL_ROOT_CAUSE_PNG,
+            "V4 drop4 cell-level root-cause crossmatch",
+            "Top panel is Stage F LogPar pull; second is observed/official pass5 under the aperture-conditioned response; third is the B_on shift needed to match official pass5; bottom overlays empirical PSF width ratio and off-source residual sign.",
+        )
+        + v3.figure(
+            RESPONSE_AUDIT_DIR / "official_pass5_containment_ablation_by_nhit.png",
+            "Selector and response-contract comparison",
+            "Use this beside the cell crossmatch: selector choice changes the low-Nhit ratio, but all84 is still above official in [125,500).",
+        )
+        + "</div>"
+        + "<h3>Selector localization: aperture response x 1</h3>"
+        + selector_table
+        + "<h3>Largest Stage F residual cells</h3>"
+        + top_stagef_table
+        + "<h3>Largest official-pass5 aperture-response residual cells</h3>"
+        + top_official_table
+        + f"<p>Machine-readable joined table: <code>{v3.esc(v3.rel(CELL_ROOT_CAUSE_CROSSMATCH_CSV))}</code>.</p>"
+    )
+
+
 def response_audit_section() -> str:
     summary_rows = v3.read_csv_rows(RESPONSE_AUDIT_DIR / "official_pass5_containment_ablation_by_selector_nhit.csv")
     fit_rows = v3.read_csv_rows(RESPONSE_AUDIT_DIR / "stage_f_nominal_vs_containment1_summary.csv")
@@ -1585,6 +1984,7 @@ def build_report() -> None:
         stage_f_metadata=PRIMARY_STAGE_F_META,
         output_dir=EMPIRICAL_PSF_DIR,
     )
+    cell_crossmatch_rows = build_cell_root_cause_crossmatch()
     plot_v4_final_sed(g_meta, old_g_meta)
     plot_response_contract_external_overlay(g_meta, f_meta)
     if r68_g_meta:
@@ -1679,6 +2079,7 @@ def build_report() -> None:
         + v3.section("V4 Result Summary", intro)
         + v3.section("Primary Official Pass5 Forward-Fold Test", forward_fold_section())
         + v3.section("Root-Cause Diagnostics", root_cause_diagnostics_section())
+        + v3.section("Cell-Level Localization", cell_root_cause_crossmatch_section(cell_crossmatch_rows))
         + v3.section("Response / Containment Audit", response_audit_section())
         + v3.section("Legacy Cell-Selection Bias Control", active30_vs_drop4_section(active_f_meta, legacy_f_meta))
         + v3.section("Observed PSF Diagnostics", empirical_psf_section())

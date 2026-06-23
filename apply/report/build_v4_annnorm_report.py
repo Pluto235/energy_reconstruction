@@ -18,6 +18,14 @@ ACTIVE30_FORWARD_DIR = REPORT_DIR / "assets" / "v4-annnorm-normalization-diagnos
 DROP4_FORWARD_DIR = REPORT_DIR / "assets" / "v4-drop4-normalization-diagnostics"
 FORWARD_DIR = DROP4_FORWARD_DIR
 DROP4_SELECTOR_CSV = REPO_ROOT / "apply/config/cell_selector_v4_drop4_psfborrow.csv"
+PRIMARY_STAGE_A_META = (
+    REPO_ROOT / "apply/output/stage_a_v4_aperture_conditioned/response_2d_v4_aperture_conditioned_metadata.json"
+)
+PRIMARY_STAGE_E_DIR = (
+    REPO_ROOT
+    / "apply/output/stage_e_v4_containment1_annnorm/runs/v4_stage_e_annnorm_containment1_from_psfborrow"
+)
+PRIMARY_STAGE_E_META = PRIMARY_STAGE_E_DIR / "signal_v4_containment1_annnorm_metadata.json"
 DROP4_STAGE_F_DIR = (
     REPO_ROOT
     / "apply/output/stage_f_v4_drop4_annnorm/runs/v4_stage_f_annnorm_drop_cells_4_17_39_43"
@@ -37,6 +45,19 @@ CONTAINMENT1_STAGE_G_DIR = (
 APERTURE_CONDITIONED_STAGE_G_DIR = (
     REPO_ROOT / "apply/output/stage_g_v4_aperture_conditioned/runs/v4_stage_g_aperture_conditioned_drop4"
 )
+APERTURE_CONDITIONED_STAGE_F_DIR = (
+    REPO_ROOT / "apply/output/stage_f_v4_aperture_conditioned/runs/v4_stage_f_aperture_conditioned_drop4"
+)
+APERTURE_CONDITIONED_STAGE_F_META = (
+    APERTURE_CONDITIONED_STAGE_F_DIR / "fit_v4_aperture_conditioned_drop4_metadata.json"
+)
+APERTURE_CONDITIONED_STAGE_G_META = (
+    APERTURE_CONDITIONED_STAGE_G_DIR / "sed_points_v4_aperture_conditioned_drop4_metadata.json"
+)
+PRIMARY_STAGE_F_DIR = APERTURE_CONDITIONED_STAGE_F_DIR
+PRIMARY_STAGE_G_DIR = APERTURE_CONDITIONED_STAGE_G_DIR
+PRIMARY_STAGE_F_META = APERTURE_CONDITIONED_STAGE_F_META
+PRIMARY_STAGE_G_META = APERTURE_CONDITIONED_STAGE_G_META
 R68_STAGE_B_DIR = REPO_ROOT / "apply/output/stage_b_v4_aperture_variants/runs/v4_r68_from_psfborrow"
 R68_STAGE_D_DIR = REPO_ROOT / "apply/output/stage_d_v4_r68_aperture/runs/v4_r68_aperture_drop4_stage_d"
 R68_STAGE_E_DIR = REPO_ROOT / "apply/output/stage_e_v4_r68_aperture/runs/v4_r68_aperture_drop4_stage_e"
@@ -88,6 +109,47 @@ def v4_summary_cards(e_meta: dict[str, Any], f_meta: dict[str, Any], g_meta: dic
     )
 
 
+def v4_stage_table(
+    a_meta: dict[str, Any],
+    b_meta: dict[str, Any],
+    c_meta: dict[str, Any],
+    d_meta: dict[str, Any],
+    e_meta: dict[str, Any],
+    f_meta: dict[str, Any],
+    g_meta: dict[str, Any],
+) -> str:
+    rows = [
+        [
+            "A",
+            "aperture-conditioned 2D response",
+            v3.esc(a_meta.get("response_type")),
+            v3.esc(PRIMARY_STAGE_A_META.relative_to(REPO_ROOT)),
+        ],
+        ["B", "direct own-cell PSF for r_opt", v3.esc(b_meta.get("run_id")), v3.esc(v3.STAGE_B_META.relative_to(REPO_ROOT))],
+        ["C", "observation event reduction", v3.esc(c_meta.get("run_id")), v3.esc(v3.STAGE_C_META.relative_to(REPO_ROOT))],
+        ["D", "annulus-normalized 2D background", v3.esc(d_meta.get("run_id")), v3.esc(v3.STAGE_D_META.relative_to(REPO_ROOT))],
+        [
+            "E",
+            "on-region excess; containment forced to one for response contract",
+            v3.esc(e_meta.get("run_id")),
+            v3.esc(PRIMARY_STAGE_E_META.relative_to(REPO_ROOT)),
+        ],
+        [
+            "F",
+            "global forward-folding fit",
+            v3.esc(f_meta.get("run_id")),
+            v3.esc(PRIMARY_STAGE_F_META.relative_to(REPO_ROOT)),
+        ],
+        [
+            "G",
+            "diagnostic SED points",
+            v3.esc(g_meta.get("run_id")),
+            v3.esc(PRIMARY_STAGE_G_META.relative_to(REPO_ROOT)),
+        ],
+    ]
+    return v3.table(["Stage", "current role", "run / type", "metadata"], rows, cls="compact")
+
+
 def plot_v4_final_sed(current_meta: dict[str, Any], old_meta: dict[str, Any]) -> Path:
     try:
         plt = v3.setup_matplotlib()
@@ -117,8 +179,8 @@ def plot_v4_final_sed(current_meta: dict[str, Any], old_meta: dict[str, Any]) ->
         )
 
     for grouping, marker, color, label in [
-        ("nhit", "o", "#2563eb", "v4 drop4 annnorm Nhit points"),
-        ("predE", "D", "#059669", "v4 drop4 annnorm predE points"),
+        ("nhit", "o", "#2563eb", "v4 aperture-response Nhit points"),
+        ("predE", "D", "#059669", "v4 aperture-response predE points"),
     ]:
         energy, flux, err = v3.point_arrays(current_meta, grouping)
         if energy:
@@ -163,7 +225,7 @@ def plot_v4_final_sed(current_meta: dict[str, Any], old_meta: dict[str, Any]) ->
     ax.set_yscale("log")
     ax.set_xlabel("Energy (TeV)")
     ax.set_ylabel(r"$E^2\,dN/dE$ (TeV cm$^{-2}$ s$^{-1}$)")
-    ax.set_title("Crab SED v4 drop4: annnorm result versus official/tutorial references")
+    ax.set_title("Crab SED v4: aperture-conditioned response result")
     ax.grid(True, which="both", alpha=0.24, lw=0.45)
     ax.legend(fontsize=7.2, ncol=1)
     fig.tight_layout()
@@ -609,112 +671,158 @@ def active30_vs_drop4_section(active_f_meta: dict[str, Any], drop4_f_meta: dict[
 
 
 def forward_fold_section() -> str:
-    summary_rows = v3.read_csv_rows(FORWARD_DIR / "v3_official_forward_fold_summary.csv")
-    nhit_rows = v3.read_csv_rows(FORWARD_DIR / "v3_official_forward_fold_nhit_summary.csv")
-    cell_rows = v3.read_csv_rows(FORWARD_DIR / "v3_official_forward_fold_cell_counts.csv")
+    summary_rows_all = v3.read_csv_rows(RESPONSE_AUDIT_DIR / "official_pass5_containment_ablation_by_selector_nhit.csv")
+    cell_rows_all = v3.read_csv_rows(RESPONSE_AUDIT_DIR / "official_pass5_containment_ablation_by_cell.csv")
+    primary_mode = "aperture_response_containment_1"
+    legacy_mode = "nominal_containment"
+    summary_rows = [
+        row
+        for row in summary_rows_all
+        if row.get("selector") == "drop4" and row.get("containment_mode") in {primary_mode, legacy_mode}
+    ]
+    primary_summary = next((row for row in summary_rows if row.get("containment_mode") == primary_mode and row.get("nhit_bin") == "all"), {})
+    legacy_summary = next((row for row in summary_rows if row.get("containment_mode") == legacy_mode and row.get("nhit_bin") == "all"), {})
+    primary_nhit = [
+        row
+        for row in summary_rows
+        if row.get("containment_mode") == primary_mode and row.get("nhit_bin") != "all"
+    ]
+    primary_nhit.sort(key=lambda row: v3.interval_key(row.get("nhit_bin")))
 
-    official_summary = next((row for row in summary_rows if row.get("spectrum") == "official_pass5"), {})
-    official_nhit = [row for row in nhit_rows if row.get("spectrum") == "official_pass5"]
-    official_nhit.sort(key=lambda row: v3.interval_key(row.get("nhit_bin")))
-
-    low_bins = [row for row in official_nhit if row.get("nhit_bin") in {"[125,200)", "[200,300)", "[300,500)", "[500,800)"}]
+    low_bins = [row for row in primary_nhit if row.get("nhit_bin") in {"[125,200)", "[200,300)", "[300,500)", "[500,800)"}]
     low_ratio_text = ", ".join(
-        f"<code>{v3.esc(row.get('nhit_bin'))}</code>: {v3.fmt(row.get('total_observed_over_expected'), 4)}x"
+        f"<code>{v3.esc(row.get('nhit_bin'))}</code>: {v3.fmt(row.get('observed_over_expected'), 4)}x"
         for row in low_bins
     )
 
     total_table = v3.table(
         [
-            "spectrum",
+            "contract",
             "cells",
-            "annnorm excess",
-            "folded expected",
+            "excess",
+            "official expected",
             "observed/expected",
-            "median cell ratio",
-            "cells > 1",
-            "cells > 1.5",
+            "expected / all-dir c=1",
         ],
         [
             [
-                v3.esc(row.get("spectrum")),
+                "aperture response x 1" if row.get("containment_mode") == primary_mode else "legacy all-dir response x containment",
                 v3.esc(row.get("cells")),
-                v3.fmt(row.get("total_excess"), 6),
-                v3.fmt(row.get("total_expected_counts"), 6),
-                v3.fmt(row.get("total_observed_over_expected"), 4),
-                v3.fmt(row.get("median_observed_over_expected"), 4),
-                v3.esc(row.get("cells_observed_over_expected_gt_1")),
-                v3.esc(row.get("cells_observed_over_expected_gt_1p5")),
+                v3.fmt(row.get("excess"), 6),
+                v3.fmt(row.get("official_expected_counts"), 6),
+                v3.fmt(row.get("observed_over_expected"), 4),
+                v3.fmt(row.get("expected_over_all_direction_c1"), 4),
             ]
-            for row in summary_rows
+            for row in [primary_summary, legacy_summary]
+            if row
         ],
         cls="compact",
     )
 
     nhit_table = v3.table(
-        ["Nhit bin", "cells", "annnorm excess", "folded expected", "observed/expected", "median cell ratio", "cells > 1", "cells > 1.5"],
+        ["Nhit bin", "cells", "excess", "official expected", "observed/expected", "N_on/B_on"],
         [
             [
                 v3.esc(row.get("nhit_bin")),
                 v3.esc(row.get("cells")),
-                v3.fmt(row.get("total_excess"), 6),
-                v3.fmt(row.get("total_expected_counts"), 6),
-                v3.fmt(row.get("total_observed_over_expected"), 4),
-                v3.fmt(row.get("median_observed_over_expected"), 4),
-                v3.esc(row.get("cells_observed_over_expected_gt_1")),
-                v3.esc(row.get("cells_observed_over_expected_gt_1p5")),
+                v3.fmt(row.get("excess"), 6),
+                v3.fmt(row.get("official_expected_counts"), 6),
+                v3.fmt(row.get("observed_over_expected"), 4),
+                v3.fmt(row.get("N_on_over_B_on"), 4),
             ]
-            for row in official_nhit
+            for row in primary_nhit
         ],
         cls="compact",
+    )
+
+    primary_cell_rows = [
+        row
+        for row in cell_rows_all
+        if row.get("drop4") == "1" and row.get("nhit_bin") in {"[125,200)", "[200,300)", "[300,500)", "[500,800)"}
+    ]
+    primary_cell_rows.sort(
+        key=lambda row: v3.finite_float(row.get("ratio_aperture_response")) or -1.0e99,
+        reverse=True,
     )
 
     cell_table = v3.table(
         ["cell", "Nhit", "predE", "excess", "official expected", "obs/exp", "excess - exp", "pull", "containment"],
         [
-            [
-                v3.esc(row.get("cell_id")),
-                v3.esc(row.get("nhit_bin")),
-                v3.esc(row.get("predE_bin")),
-                v3.fmt(row.get("excess"), 6),
-                v3.fmt(row.get("expected_counts"), 6),
-                v3.fmt(row.get("observed_over_expected"), 4),
-                v3.fmt(row.get("excess_minus_expected"), 5),
-                v3.fmt(row.get("pull_conservative"), 4),
-                v3.fmt(row.get("containment_r_opt"), 4),
-            ]
-            for row in ratio_cell_rows(cell_rows)
+            (
+                lambda expected, excess, err: [
+                    v3.esc(row.get("cell_id")),
+                    v3.esc(row.get("nhit_bin")),
+                    v3.esc(row.get("predE_bin")),
+                    v3.fmt(excess, 6),
+                    v3.fmt(expected, 6),
+                    v3.fmt((excess / expected) if expected and expected > 0 else None, 4),
+                    v3.fmt((excess - expected) if expected is not None and excess is not None else None, 5),
+                    v3.fmt(((excess - expected) / err) if expected is not None and excess is not None and err and err > 0 else None, 4),
+                    "1.0",
+                ]
+            )(
+                v3.finite_float(row.get("official_expected_aperture_response")),
+                v3.finite_float(row.get("excess")),
+                math.sqrt(
+                    max(
+                        0.0,
+                        (v3.finite_float(row.get("N_on")) or 0.0)
+                        + (v3.finite_float(row.get("B_on")) or 0.0),
+                    )
+                ),
+            )
+            for row in primary_cell_rows[:14]
         ],
         cls="compact",
     )
 
-    total_ratio = v3.fmt(official_summary.get("total_observed_over_expected"), 4)
-    total_excess = v3.fmt(official_summary.get("total_excess"), 6)
-    total_expected = v3.fmt(official_summary.get("total_expected_counts"), 6)
+    legacy_cell_table = v3.table(
+        ["cell", "Nhit", "predE", "legacy obs/exp", "aperture obs/exp", "legacy expected", "aperture expected"],
+        [
+            [
+                v3.esc(row.get("cell_id")),
+                v3.esc(row.get("nhit_bin")),
+                v3.esc(row.get("predE_bin")),
+                v3.fmt(row.get("ratio_nominal"), 4),
+                v3.fmt(row.get("ratio_aperture_response"), 4),
+                v3.fmt(row.get("official_expected_nominal"), 6),
+                v3.fmt(row.get("official_expected_aperture_response"), 6),
+            ]
+            for row in primary_cell_rows[:12]
+        ],
+        cls="compact",
+    )
+
+    total_ratio = v3.fmt(primary_summary.get("observed_over_expected"), 4)
+    legacy_ratio = v3.fmt(legacy_summary.get("observed_over_expected"), 4)
+    total_excess = v3.fmt(primary_summary.get("excess"), 6)
+    total_expected = v3.fmt(primary_summary.get("official_expected_counts"), 6)
     return (
-        "<p>This v4 test folds the official pass5 WCDA spectrum through our Stage A response, the drop4 26-cell list, "
-        "cell containment, and theta exposure, then compares the predicted source counts with the latest annulus-normalized Stage E/F excess.</p>"
+        "<p>This primary v4 test folds the official pass5 WCDA spectrum through the aperture-conditioned Stage A response, "
+        "the drop4 26-cell list, and theta exposure with downstream <code>containment_r_opt=1</code>.</p>"
         '<div class="note">'
-        f"Official pass5 predicts {total_expected} counts for the drop4 26-cell selector, while the latest annnorm excess is {total_excess}; "
-        f"the total observed/expected ratio is {total_ratio}x. Low-Nhit bins remain high after this forward fold: {low_ratio_text}. "
-        "So the low-energy discrepancy is not removed by the latest background map alone; the next suspect should be response normalization, "
-        "cell-selection normalization, or energy-migration/containment consistency. The highest-Nhit ratios are less decisive because the absolute excess is small."
+        f"With the new primary contract, official pass5 predicts {total_expected} counts for the drop4 26-cell selector, "
+        f"while the latest annnorm excess is {total_excess}; observed/expected is {total_ratio}x. "
+        f"The old all-direction x containment contract gave {legacy_ratio}x. Low-Nhit aperture-response ratios are: {low_ratio_text}."
         "</div>"
         "<h3>Total fold summary</h3>"
         + total_table
-        + "<h3>Official pass5 fold by Nhit</h3>"
+        + "<h3>Official pass5 fold by Nhit: aperture response x 1</h3>"
         + nhit_table
-        + "<h3>Largest low-Nhit cell residuals versus official pass5</h3>"
+        + "<h3>Largest low-Nhit cell residuals versus official pass5: aperture response x 1</h3>"
         + cell_table
+        + "<h3>Legacy contract comparison for the same cells</h3>"
+        + legacy_cell_table
         + '<div class="grid2">'
         + v3.figure(
-            FORWARD_DIR / "v3_official_forward_fold_counts_vs_excess.png",
-            "Drop4 official/tutorial forward-fold counts versus annnorm excess",
-            "Each drop4 fit cell compares latest annnorm excess with the expected source counts from official pass5 and tutorial spectra through our response. Points above equality are cells where observed excess exceeds folded official expectation.",
+            RESPONSE_AUDIT_DIR / "official_pass5_containment_ablation_by_nhit.png",
+            "Official pass5 forward-fold ratios by response contract",
+            "Green markers correspond to the new primary aperture-conditioned response with containment fixed to one.",
         )
         + v3.figure(
-            FORWARD_DIR / "v3_official_forward_fold_ratio_by_cell.png",
-            "Observed/expected ratio by drop4 fit cell",
-            "Cell-level ratio of latest annnorm excess to folded official/tutorial expected counts. Persistent low-Nhit ratios above 1 point to response/cell normalization rather than only a residual background-map problem.",
+            RESPONSE_AUDIT_DIR / "v4_sed_nominal_vs_containment1.png",
+            "SED response/aperture contract comparison",
+            "Blue is the legacy all-direction response x containment branch; green is the new primary aperture-conditioned response x 1 branch.",
         )
         + "</div>"
     )
@@ -1226,14 +1334,15 @@ def css() -> str:
 
 
 def build_report() -> None:
-    a_meta = v3.load_json(v3.STAGE_A_META)
+    a_meta = v3.load_json(PRIMARY_STAGE_A_META)
     b_meta = v3.load_json(v3.STAGE_B_META)
     c_meta = v3.load_json(v3.STAGE_C_META)
     d_meta = v3.load_json(v3.STAGE_D_META)
-    e_meta = v3.load_json(v3.STAGE_E_META)
+    e_meta = v3.load_json(PRIMARY_STAGE_E_META)
     active_f_meta = v3.load_json(v3.STAGE_F_META)
-    f_meta = v3.load_json(DROP4_STAGE_F_META)
-    g_meta = v3.load_json(DROP4_STAGE_G_META)
+    legacy_f_meta = v3.load_json(DROP4_STAGE_F_META)
+    f_meta = v3.load_json(PRIMARY_STAGE_F_META)
+    g_meta = v3.load_json(PRIMARY_STAGE_G_META)
     old_g_meta = v3.load_json(v3.OLD_STAGE_G_META)
     r68_b_meta = v3.load_json(R68_STAGE_B_META) if R68_STAGE_B_META.exists() else {}
     r68_e_meta = v3.load_json(R68_STAGE_E_META) if R68_STAGE_E_META.exists() else {}
@@ -1242,7 +1351,7 @@ def build_report() -> None:
     fit_rows = selector_rows_from(DROP4_SELECTOR_CSV)
 
     empirical_psf.build_diagnostics(
-        stage_f_metadata=DROP4_STAGE_F_META,
+        stage_f_metadata=PRIMARY_STAGE_F_META,
         output_dir=EMPIRICAL_PSF_DIR,
     )
     plot_v4_final_sed(g_meta, old_g_meta)
@@ -1251,8 +1360,9 @@ def build_report() -> None:
 
     intro = (
         '<div class="note">'
-        "This v4 report does not replace the v3 HTML. It starts from the latest v3 annulus-normalized background result, "
-        "then applies a cell-selection-bias control: cells 4, 17, 39, and 43 are removed from the original active30 fit set and Stage F/G are rerun."
+        "This v4 report now uses the aperture-conditioned response as the primary result: Stage A counts only MC events with "
+        "<code>mc_dangle <= r_opt</code>, and Stage F/G use a Stage E signal clone with <code>containment_r_opt=1</code>. "
+        "The same annulus-normalized Stage D/E excess is used; the changed contract is the response used to convert flux into expected counts."
         "</div>"
         + v4_summary_cards(e_meta, f_meta, g_meta, d_meta)
     )
@@ -1305,54 +1415,54 @@ def build_report() -> None:
     )
 
     stage_f_body = (
-        "<p>The preferred spectrum is selected by the Stage F metadata. For the latest bkg branch, LogPar remains preferred over PL under conservative sqrt(N_on+B_on) errors.</p>"
+        "<p>The preferred spectrum is selected by the Stage F metadata. This is the primary v4 fit using the aperture-conditioned Stage A response and downstream <code>containment_r_opt=1</code>.</p>"
         + v3.stage_f_table(f_meta)
         + '<div class="grid2">'
-        + v3.figure(DROP4_STAGE_F_DIR / "model_counts_vs_excess.png", "Stage F drop4 model counts versus excess", "Drop4 annnorm fit-cell excess compared with the preferred spectral model expectation.")
-        + v3.figure(DROP4_STAGE_F_DIR / "pull_grid_logpar.png", "Stage F drop4 LogPar pull grid", "Per-cell residual pull under the current preferred LogPar fit.")
-        + v3.figure(DROP4_STAGE_F_DIR / "theta_exposure.png", "Stage F drop4 theta exposure", "Zenith-angle exposure diagnostic used by the forward-folding response.")
-        + v3.figure(DROP4_STAGE_F_DIR / "pull_grid_pl.png", "Stage F drop4 PL pull grid", "Power-law residual grid kept as a model-comparison diagnostic.")
+        + v3.figure(PRIMARY_STAGE_F_DIR / "model_counts_vs_excess.png", "Stage F aperture-response model counts versus excess", "Fit-cell excess compared with the preferred spectral model expectation under the new response contract.")
+        + v3.figure(PRIMARY_STAGE_F_DIR / "pull_grid_logpar.png", "Stage F aperture-response LogPar pull grid", "Per-cell residual pull under the current preferred LogPar fit.")
+        + v3.figure(PRIMARY_STAGE_F_DIR / "theta_exposure.png", "Stage F aperture-response theta exposure", "Zenith-angle exposure diagnostic used by the forward-folding response.")
+        + v3.figure(PRIMARY_STAGE_F_DIR / "pull_grid_pl.png", "Stage F aperture-response PL pull grid", "Power-law residual grid kept as a model-comparison diagnostic.")
         + "</div>"
     )
 
     stage_g_body = (
         "<p>Stage G fixes the Stage F preferred spectral shape and refits only one normalization per diagnostic energy grouping. "
-        "The final figure overlays official/tutorial WCDA references and the old v3 psfborrow points for visual comparison.</p>"
+        "These are the primary v4 SED points from the aperture-conditioned response branch.</p>"
         + v3.stage_g_table(g_meta)
         + '<div class="grid2">'
-        + v3.figure(DROP4_STAGE_G_DIR / "sed_points_stage_f_fullarray_pool1.png", "Drop4 Stage G SED points", "Native Stage G diagnostic plot from v4_stage_g_annnorm_drop_cells_4_17_39_43.")
-        + v3.figure(DROP4_STAGE_G_DIR / "sed_points_ratio.png", "Drop4 Stage G ratio plot", "Diagnostic ratios to the frozen Stage F model / reference curves.")
-        + v3.figure(DROP4_STAGE_G_DIR / "sed_point_cell_counts.png", "Drop4 Stage G cell counts per point", "Which fit cells enter each diagnostic SED point.")
-        + v3.figure(V4_FINAL_SED_PNG, "V4 final SED comparison with old v3 reference", "Blue/green markers are the latest annnorm v4 points. Grey open markers are the previous v3 psfborrow points. Black/brown markers are official pass5/tutorial WCDA references.")
+        + v3.figure(PRIMARY_STAGE_G_DIR / "sed_points_stage_f_fullarray_pool1.png", "Primary v4 aperture-response Stage G SED points", "Native Stage G diagnostic plot from v4_stage_g_aperture_conditioned_drop4.")
+        + v3.figure(PRIMARY_STAGE_G_DIR / "sed_points_ratio.png", "Primary v4 aperture-response Stage G ratio plot", "Diagnostic ratios to the frozen Stage F model / reference curves.")
+        + v3.figure(PRIMARY_STAGE_G_DIR / "sed_point_cell_counts.png", "Primary v4 aperture-response Stage G cell counts per point", "Which fit cells enter each diagnostic SED point.")
+        + v3.figure(V4_FINAL_SED_PNG, "V4 final SED comparison with old v3 reference", "Blue/green markers are the primary aperture-response v4 points. Grey open markers are the previous v3 psfborrow points. Black/brown markers are official pass5/tutorial WCDA references.")
         + "</div>"
     )
 
     body = (
         "<!doctype html><html><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-        "<title>Crab SED v4 drop4 annnorm forward-fold report</title>"
+        "<title>Crab SED v4 aperture-conditioned response report</title>"
         f"<style>{css()}</style></head><body>"
-        "<header><h1>Crab SED v4 Drop4 Annnorm Forward-Fold Report</h1>"
-        "<p>Primary question: does removing cells 4, 17, 39, and 43 reduce the low-Nhit excess relative to official pass5 forward-fold expectations?</p></header><main>"
+        "<header><h1>Crab SED v4 Aperture-Conditioned Response Report</h1>"
+        "<p>Primary result: drop4 cells with aperture-conditioned Stage A response and downstream containment fixed to one.</p></header><main>"
         + v3.section("V4 Result Summary", intro)
-        + v3.section("Cell-Selection Bias Control: Active30 Versus Drop4", active30_vs_drop4_section(active_f_meta, f_meta))
-        + v3.section("Official Pass5 Forward-Fold Test", forward_fold_section())
+        + v3.section("Primary Official Pass5 Forward-Fold Test", forward_fold_section())
         + v3.section("Root-Cause Diagnostics", root_cause_diagnostics_section())
         + v3.section("Response / Containment Audit", response_audit_section())
+        + v3.section("Legacy Cell-Selection Bias Control", active30_vs_drop4_section(active_f_meta, legacy_f_meta))
         + v3.section("Observed PSF Diagnostics", empirical_psf_section())
         + v3.section(
             "R68 Empirical Aperture Control",
             r68_aperture_section(
                 nominal_e_meta=e_meta,
-                nominal_f_meta=f_meta,
-                nominal_g_meta=g_meta,
+                nominal_f_meta=legacy_f_meta,
+                nominal_g_meta=v3.load_json(DROP4_STAGE_G_META),
                 r68_b_meta=r68_b_meta,
                 r68_e_meta=r68_e_meta,
                 r68_f_meta=r68_f_meta,
                 r68_g_meta=r68_g_meta,
             ),
         )
-        + v3.section("Current A-G Inputs", v3.stage_table(a_meta, b_meta, c_meta, d_meta, e_meta, f_meta, g_meta))
+        + v3.section("Current A-G Inputs", v4_stage_table(a_meta, b_meta, c_meta, d_meta, e_meta, f_meta, g_meta))
         + v3.section("Fit Cell Definition", cells_body)
         + v3.section("Stage B / PSF Diagnostics", psf_diagnostics_section(fit_rows))
         + v3.section("Stage D: Latest 2D Background", stage_d_body)

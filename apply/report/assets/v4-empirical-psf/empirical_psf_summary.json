@@ -1,9 +1,9 @@
 {
   "description": "Observed-data empirical/effective PSF diagnostics for current v4 drop4 fit cells.",
   "inputs": {
-    "stage_f_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v4_drop4_annnorm/runs/v4_stage_f_annnorm_drop_cells_4_17_39_43/fit_v4_drop4_annnorm_metadata.json",
-    "signal_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v3_candidate_annnorm/runs/v3_stage_e_annnorm_from_psfborrow/signal_v3_candidate_annnorm.npz",
-    "signal_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v3_candidate_annnorm/runs/v3_stage_e_annnorm_from_psfborrow/signal_v3_candidate_annnorm_metadata.json",
+    "stage_f_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v4_aperture_conditioned/runs/v4_stage_f_aperture_conditioned_drop4/fit_v4_aperture_conditioned_drop4_metadata.json",
+    "signal_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v4_containment1_annnorm/runs/v4_stage_e_annnorm_containment1_from_psfborrow/signal_v4_containment1_annnorm.npz",
+    "signal_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v4_containment1_annnorm/runs/v4_stage_e_annnorm_containment1_from_psfborrow/signal_v4_containment1_annnorm_metadata.json",
     "background_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v3_candidate_annnorm/runs/v3_stage_d_annnorm_from_psfborrow/background_v3_candidate_annnorm.npz",
     "background_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v3_candidate_annnorm/runs/v3_stage_d_annnorm_from_psfborrow/background_v3_candidate_annnorm_metadata.json",
     "psf_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v3_candidate_psfborrow/runs/v3_psfborrow_from_nominal/psf_v3_candidate.npz",

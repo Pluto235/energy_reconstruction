@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-06-24 13:23 · [10aaea2] Add v4_supercell repair report with super-cell fit, response-morph profile, and binning diagnostics.
+
 - **energy** · 2026-06-23 21:06 · [f96d8b6] Add v4 residual-source ablation diagnostics for response migration, background scale, and super-cell checks.
 
 - **energy** · 2026-06-23 13:39 · [e2dce69] Add v4 cell-level root-cause localization crossmatch to the report.

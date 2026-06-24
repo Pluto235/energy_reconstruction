@@ -38,6 +38,7 @@ DROP4_STAGE_G_DIR = (
 DROP4_STAGE_F_META = DROP4_STAGE_F_DIR / "fit_v4_drop4_annnorm_metadata.json"
 DROP4_STAGE_G_META = DROP4_STAGE_G_DIR / "sed_points_v4_drop4_annnorm_metadata.json"
 ROOT_CAUSE_DIR = REPORT_DIR / "assets" / "v4-root-cause-diagnostics"
+RESIDUAL_ABLATION_DIR = REPORT_DIR / "assets" / "v4-residual-ablation"
 V4_PSF_RADIAL_PROFILE_GRID_PNG = V4_ASSET_DIR / "v4_stage_b_candidate_radial_psf_profiles_fit_highlight.png"
 RESPONSE_AUDIT_DIR = REPORT_DIR / "assets" / "v4-response-audit"
 V4_RESPONSE_CONTRACT_OVERLAY_PNG = RESPONSE_AUDIT_DIR / "v4_response_contract_stage_g_external_overlay.png"
@@ -1461,6 +1462,218 @@ def root_cause_diagnostics_section() -> str:
     )
 
 
+def residual_ablation_section() -> str:
+    summary_path = RESIDUAL_ABLATION_DIR / "v4_residual_ablation_summary.json"
+    if not summary_path.exists():
+        return (
+            "<p>Residual ablation diagnostics have not been generated yet.</p>"
+            f"<p>Expected summary: <code>{v3.esc(v3.rel(summary_path))}</code>.</p>"
+        )
+
+    summary = v3.load_json(summary_path)
+    baseline = summary.get("baseline", {}) if isinstance(summary.get("baseline"), dict) else {}
+    best_response = (
+        summary.get("best_response_migration", {})
+        if isinstance(summary.get("best_response_migration"), dict)
+        else {}
+    )
+    best_background = (
+        summary.get("best_background_scale", {})
+        if isinstance(summary.get("best_background_scale"), dict)
+        else {}
+    )
+    best_super = (
+        summary.get("best_supercell_relief", {})
+        if isinstance(summary.get("best_supercell_relief"), dict)
+        else {}
+    )
+
+    response_rows = v3.read_csv_rows(RESIDUAL_ABLATION_DIR / "response_migration_ablation_summary.csv")
+    background_rows = v3.read_csv_rows(RESIDUAL_ABLATION_DIR / "background_scale_ablation_summary.csv")
+    super_rows = v3.read_csv_rows(RESIDUAL_ABLATION_DIR / "supercell_residual_summary.csv")
+    required_rows = v3.read_csv_rows(RESIDUAL_ABLATION_DIR / "required_background_shift_to_logpar_by_cell.csv")
+
+    response_keep = {"baseline", "left_0.05", "left_0.10", "left_0.20", "right_0.05", "symmetric_0.10", "symmetric_0.20"}
+    response_table_rows = [
+        [
+            v3.esc(row.get("label")),
+            v3.esc(row.get("parameter")),
+            v3.fmt(row.get("value"), 3),
+            f"{v3.fmt(row.get('chi2'), 4)} / {v3.fmt(row.get('ndof'), 3)}",
+            v3.fmt(row.get("chi2_over_ndof"), 4),
+            v3.fmt(row.get("delta_chi2_vs_baseline"), 5),
+            v3.fmt(row.get("target_chi2"), 5),
+            v3.fmt(row.get("pull_cell_15"), 4),
+            v3.fmt(row.get("pull_cell_29"), 4),
+            v3.fmt(row.get("pull_cell_65"), 4),
+        ]
+        for row in response_rows
+        if row.get("label") in response_keep
+    ]
+    response_table_rows.sort(key=lambda row: float(row[4]) if str(row[4]) != "n/a" else 1.0e9)
+
+    background_keep = {
+        "baseline",
+        "all_bkg_plus_0.02",
+        "all_bkg_plus_0.05",
+        "bad_low_mid_bkg_plus_0.10",
+        "bad_low_mid_bkg_plus_0.15",
+        "bad_positive_bkg_plus_0.10",
+        "bad_positive_bkg_plus_0.15",
+        "row300_core_bkg_plus_0.10",
+    }
+    background_table_rows = [
+        [
+            v3.esc(row.get("label")),
+            v3.esc(str(row.get("family", "")).replace("background_", "")),
+            v3.esc(row.get("parameter")),
+            v3.fmt(100.0 * (v3.finite_float(row.get("value")) or 0.0), 4) + "%",
+            f"{v3.fmt(row.get('chi2'), 4)} / {v3.fmt(row.get('ndof'), 3)}",
+            v3.fmt(row.get("chi2_over_ndof"), 4),
+            v3.fmt(row.get("delta_chi2_vs_baseline"), 5),
+            v3.fmt(row.get("pull_cell_15"), 4),
+            v3.fmt(row.get("pull_cell_29"), 4),
+            v3.fmt(row.get("pull_cell_65"), 4),
+        ]
+        for row in background_rows
+        if row.get("label") in background_keep
+    ]
+    background_table_rows.sort(key=lambda row: float(row[5]) if str(row[5]) != "n/a" else 1.0e9)
+
+    super_table_rows = [
+        [
+            v3.esc(row.get("group")),
+            v3.esc(row.get("cell_ids")),
+            v3.fmt(row.get("group_pull"), 4),
+            v3.fmt(row.get("individual_chi2_sum"), 5),
+            v3.fmt(row.get("group_chi2"), 5),
+            v3.fmt(row.get("chi2_relief"), 5),
+            v3.fmt(row.get("obs_over_logpar"), 4),
+            v3.fmt(row.get("obs_over_official"), 4),
+            v3.fmt(100.0 * (v3.finite_float(row.get("required_delta_b_over_b_to_logpar")) or 0.0), 4) + "%",
+        ]
+        for row in super_rows[:8]
+    ]
+
+    required_table_rows = [
+        [
+            v3.esc(row.get("cell_id")),
+            v3.esc(row.get("nhit_bin")),
+            v3.esc(row.get("predE_bin")),
+            v3.fmt(row.get("logpar_pull"), 4),
+            v3.fmt(row.get("excess"), 5),
+            v3.fmt(row.get("logpar_model"), 5),
+            v3.fmt(100.0 * (v3.finite_float(row.get("required_delta_b_over_b_to_logpar")) or 0.0), 4) + "%",
+            v3.fmt(100.0 * (v3.finite_float(row.get("required_delta_b_over_b_to_official")) or 0.0), 4) + "%",
+            v3.fmt(row.get("annulus_residual_rms"), 4),
+            v3.fmt(row.get("offsource_mean_sigma"), 4),
+        ]
+        for row in required_rows[:10]
+    ]
+
+    baseline_chi = f"{v3.fmt(baseline.get('chi2'), 4)} / {v3.fmt(baseline.get('ndof'), 3)}"
+    best_response_label = best_response.get("label")
+    best_background_label = best_background.get("label")
+    best_super_group = best_super.get("group")
+
+    overview_rows = [
+        [
+            "baseline",
+            "current aperture-conditioned Stage F",
+            baseline_chi,
+            v3.fmt(baseline.get("chi2_over_ndof"), 4),
+            "reference",
+        ],
+        [
+            "response / migration",
+            v3.esc(best_response_label),
+            f"{v3.fmt(best_response.get('chi2'), 4)} / {v3.fmt(best_response.get('ndof'), 3)}",
+            v3.fmt(best_response.get("chi2_over_ndof"), 4),
+            v3.fmt(best_response.get("delta_chi2_vs_baseline"), 5),
+        ],
+        [
+            "targeted B_on scale",
+            v3.esc(best_background_label),
+            f"{v3.fmt(best_background.get('chi2'), 4)} / {v3.fmt(best_background.get('ndof'), 3)}",
+            v3.fmt(best_background.get("chi2_over_ndof"), 4),
+            v3.fmt(best_background.get("delta_chi2_vs_baseline"), 5),
+        ],
+        [
+            "coarse super-cell",
+            v3.esc(best_super_group),
+            "not a refit",
+            "n/a",
+            "chi2 relief " + v3.fmt(best_super.get("chi2_relief"), 5),
+        ],
+    ]
+
+    return (
+        "<p>This section runs controlled ablations using the current v4 aperture-conditioned Stage A response, the current annnorm Stage E excess, and the current drop4 fit cells. "
+        "The baseline reproduces the promoted Stage F LogPar result, so the comparisons below are tied to the actual v4 residuals rather than to an older response cache.</p>"
+        '<div class="note">'
+        f"Baseline LogPar chi2/ndof is <code>{baseline_chi}</code>. The strongest generic response test is <code>{v3.esc(best_response_label)}</code>, "
+        f"which lowers chi2 by <code>{v3.fmt(best_response.get('delta_chi2_vs_baseline'), 5)}</code> and reduces the max absolute pull from "
+        f"<code>{v3.fmt(baseline.get('max_abs_pull'), 4)}</code> to <code>{v3.fmt(best_response.get('max_abs_pull'), 4)}</code>. "
+        f"A targeted background scaling can lower chi2 similarly (<code>{v3.esc(best_background_label)}</code>), but it is not a clean physical explanation unless the required per-cell B_on shifts are supported by annulus/profile/off-source evidence. "
+        f"The largest super-cell relief is <code>{v3.esc(best_super_group)}</code>, meaning adjacent predE cells carry a much smaller residual when treated as one coarse bin."
+        "</div>"
+        '<div class="note">'
+        "Working conclusion: the dominant residual is localized in the fine-cell distribution inside a few Nhit rows. "
+        "It is not well described as a globally bad 2D binning choice, a simple statistics-only fluctuation, or a uniform annnorm background underestimate. "
+        "The most supported interpretation is response / energy-migration shape mismatch after the active-cell and aperture conditioning: the row-level totals are much more stable than the individual predE-cell allocation. "
+        "A targeted B_on increase can mimic the improvement numerically, but the off-source controls and annulus diagnostics do not currently support treating that as the primary physical cause."
+        "</div>"
+        + v3.table(["test family", "best variant", "chi2/ndof", "chi2/ndof value", "improvement"], overview_rows, cls="compact")
+        + '<div class="grid2">'
+        + v3.figure(
+            RESIDUAL_ABLATION_DIR / "response_migration_chi2.png",
+            "Response / energy-migration ablation",
+            "Adjacent predE response mixing inside the same Nhit row. Left mixing means the modeled response borrows some lower-predE response shape; the strong chi2 drop points to response/migration shape sensitivity.",
+        )
+        + v3.figure(
+            RESIDUAL_ABLATION_DIR / "response_migration_target_pulls.png",
+            "Target-cell pulls under response mixing",
+            "Cells 15, 29, 55, 65, and 69 are tracked explicitly. The residuals move coherently under left-neighbor response mixing, which is hard to explain by pure counting statistics.",
+        )
+        + v3.figure(
+            RESIDUAL_ABLATION_DIR / "background_scale_chi2.png",
+            "Background-scale sensitivity ablation",
+            "Artificial B_on scale increases can reduce chi2 when targeted to the worst positive cells, but this is a diagnostic knob rather than evidence that the fitted 2D background is wrong by that amount.",
+        )
+        + v3.figure(
+            RESIDUAL_ABLATION_DIR / "supercell_chi2_relief.png",
+            "Super-cell chi2 relief",
+            "Adjacent predE cells are summed after the baseline fit. Large relief means the row-level total is less discrepant than the fine-cell distribution.",
+        )
+        + "</div>"
+        + "<h3>Response / migration variants</h3>"
+        + v3.table(
+            ["variant", "direction", "fraction", "chi2/ndof", "chi2/ndof", "delta chi2", "target chi2", "pull 15", "pull 29", "pull 65"],
+            response_table_rows,
+            cls="compact",
+        )
+        + "<h3>Targeted background-scale variants</h3>"
+        + v3.table(
+            ["variant", "target", "cells/Nhit", "B scale", "chi2/ndof", "chi2/ndof", "delta chi2", "pull 15", "pull 29", "pull 65"],
+            background_table_rows,
+            cls="compact",
+        )
+        + "<h3>Coarse-bin / super-cell check</h3>"
+        + v3.table(
+            ["group", "cells", "group pull", "individual chi2", "group chi2", "relief", "obs/model", "obs/official", "dB/B to model"],
+            super_table_rows,
+            cls="compact",
+        )
+        + "<h3>Per-cell B_on shift required by the current LogPar residual</h3>"
+        + v3.table(
+            ["cell", "Nhit", "predE", "pull", "excess", "model", "dB/B to model", "dB/B to official", "ann RMS", "offsrc sigma"],
+            required_table_rows,
+            cls="compact",
+        )
+        + f"<p>Machine-readable outputs: <code>{v3.esc(v3.rel(RESIDUAL_ABLATION_DIR))}</code>.</p>"
+    )
+
+
 def cell_root_cause_crossmatch_section(rows: list[dict[str, Any]]) -> str:
     if not rows:
         return "<p>Cell-level crossmatch was not generated.</p>"
@@ -2079,6 +2292,7 @@ def build_report() -> None:
         + v3.section("V4 Result Summary", intro)
         + v3.section("Primary Official Pass5 Forward-Fold Test", forward_fold_section())
         + v3.section("Root-Cause Diagnostics", root_cause_diagnostics_section())
+        + v3.section("Residual Source Ablation", residual_ablation_section())
         + v3.section("Cell-Level Localization", cell_root_cause_crossmatch_section(cell_crossmatch_rows))
         + v3.section("Response / Containment Audit", response_audit_section())
         + v3.section("Legacy Cell-Selection Bias Control", active30_vs_drop4_section(active_f_meta, legacy_f_meta))

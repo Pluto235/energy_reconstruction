@@ -1,0 +1,165 @@
+{
+  "inputs": {
+    "response_npz": "apply/output/stage_a_v4_aperture_conditioned/response_2d_v4_aperture_conditioned.npz",
+    "signal_npz": "apply/output/stage_e_v4_containment1_annnorm/runs/v4_stage_e_annnorm_containment1_from_psfborrow/signal_v4_containment1_annnorm.npz",
+    "original_stage_f_npz": "apply/output/stage_f_v4_aperture_conditioned/runs/v4_stage_f_aperture_conditioned_drop4/fit_v4_aperture_conditioned_drop4.npz",
+    "original_stage_f_metadata": "apply/output/stage_f_v4_aperture_conditioned/runs/v4_stage_f_aperture_conditioned_drop4/fit_v4_aperture_conditioned_drop4_metadata.json"
+  },
+  "baseline_original_v4": {
+    "model": "logpar",
+    "valid": true,
+    "parameters": {
+      "phi0": 2.3678384316162437e-12,
+      "alpha": 2.76152182132255,
+      "beta": 0.1453590035940586
+    },
+    "errors": {
+      "phi0": 6.424567771214723e-14,
+      "alpha": 0.0376595114765752,
+      "beta": 0.028068066052903816
+    },
+    "fit_parameters": {
+      "log10_phi0": -11.625647934825558,
+      "alpha": 2.76152182132255,
+      "beta": 0.1453590035940586
+    },
+    "fit_parameter_errors": {
+      "log10_phi0": 0.011783550323353431,
+      "alpha": 0.0376595114765752,
+      "beta": 0.028068066052903816
+    },
+    "chi2": 117.29485852619563,
+    "ndof": 23,
+    "chi2_over_ndof": 5.099776457660679,
+    "p_value": 1.2724427246655204e-14,
+    "max_abs_pull": 5.537946645622887
+  },
+  "supercell_fit": {
+    "grouping": "Nhit-row super-cells; adjacent predE cells summed before Stage F",
+    "n_supercells": 7,
+    "pl": {
+      "model": "pl",
+      "valid": true,
+      "parameters": {
+        "phi0": 2.1724734107413097e-12,
+        "gamma": 2.6736760481066333
+      },
+      "errors": {
+        "phi0": 5.002329177052672e-14,
+        "gamma": 0.02116136268805513
+      },
+      "fit_parameters": {
+        "log10_phi0": -11.663045530248223,
+        "gamma": 2.6736760481066333
+      },
+      "fit_parameter_errors": {
+        "log10_phi0": 0.010000048550726781,
+        "gamma": 0.02116136268805513
+      },
+      "chi2": 17.318308266346893,
+      "ndof": 5,
+      "chi2_over_ndof": 3.4636616532693787,
+      "p_value": 0.003934052570268282,
+      "max_abs_pull": 2.9174628275266974
+    },
+    "logpar": {
+      "model": "logpar",
+      "valid": true,
+      "parameters": {
+        "phi0": 2.3147024356528076e-12,
+        "alpha": 2.740098042968273,
+        "beta": 0.07630091501127274
+      },
+      "errors": {
+        "phi0": 6.981287618443169e-14,
+        "alpha": 0.03485594317423124,
+        "beta": 0.02644166337076666
+      },
+      "fit_parameters": {
+        "log10_phi0": -11.635504831367495,
+        "alpha": 2.740098042968273,
+        "beta": 0.07630091501127274
+      },
+      "fit_parameter_errors": {
+        "log10_phi0": 0.013098593765527689,
+        "alpha": 0.03485594317423124,
+        "beta": 0.02644166337076666
+      },
+      "chi2": 6.791807095593717,
+      "ndof": 4,
+      "chi2_over_ndof": 1.6979517738984293,
+      "p_value": 0.1473078812197948,
+      "max_abs_pull": 1.4944821525987302
+    },
+    "preferred": {
+      "model": "logpar",
+      "valid": true,
+      "parameters": {
+        "phi0": 2.3147024356528076e-12,
+        "alpha": 2.740098042968273,
+        "beta": 0.07630091501127274
+      },
+      "errors": {
+        "phi0": 6.981287618443169e-14,
+        "alpha": 0.03485594317423124,
+        "beta": 0.02644166337076666
+      },
+      "fit_parameters": {
+        "log10_phi0": -11.635504831367495,
+        "alpha": 2.740098042968273,
+        "beta": 0.07630091501127274
+      },
+      "fit_parameter_errors": {
+        "log10_phi0": 0.013098593765527689,
+        "alpha": 0.03485594317423124,
+        "beta": 0.02644166337076666
+      },
+      "chi2": 6.791807095593717,
+      "ndof": 4,
+      "chi2_over_ndof": 1.6979517738984293,
+      "p_value": 0.1473078812197948,
+      "max_abs_pull": 1.4944821525987302
+    }
+  },
+  "response_morph": {
+    "prior_sigma": 0.1,
+    "best_free": {
+      "mode": "left",
+      "fraction": 0.14,
+      "prior_sigma": 0.1,
+      "chi2": 68.80251536671821,
+      "ndof": 23,
+      "chi2_over_ndof": 2.991413711596444,
+      "penalty": 1.9600000000000004,
+      "profile_chi2": 70.7625153667182,
+      "profile_chi2_over_ndof": 3.0766311029007913,
+      "phi0": 2.3063504541564457e-12,
+      "alpha": 2.802747194515049,
+      "beta": 0.12504672806990638,
+      "max_abs_pull": 3.1991600555104913
+    },
+    "best_with_prior": {
+      "mode": "left",
+      "fraction": 0.13,
+      "prior_sigma": 0.1,
+      "chi2": 68.80964677909962,
+      "ndof": 23,
+      "chi2_over_ndof": 2.9917237730043316,
+      "penalty": 1.6900000000000002,
+      "profile_chi2": 70.49964677909962,
+      "profile_chi2_over_ndof": 3.0652020338738963,
+      "phi0": 2.312366572090433e-12,
+      "alpha": 2.8003582232875672,
+      "beta": 0.12606089686391245,
+      "max_abs_pull": 3.2503456808039237
+    }
+  },
+  "binning": {
+    "n_cells": 26,
+    "too_fine_cells": 0,
+    "high_overlap_pairs": 17,
+    "too_fine_rule": "predE_width_dex < response-weighted true-energy sigma68_dex",
+    "high_overlap_rule": "adjacent true-energy overlap >= 0.50"
+  },
+  "recommendation": "Use v4_supercell as the current robust diagnostic SED branch; keep original fine cells for residual localization; rebuild v5 binning and response-migration nuisance before treating fine predE cells as final fit bins."
+}

@@ -6,7 +6,7 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
-- **energy** · 2026-06-25 17:45 · [uncommitted] Add v5 MC-migration binning comparison report with 12-bin and 7-bin SED overlays.
+- **energy** · 2026-06-25 17:45 · [c17ca12] Add v5 MC-migration binning comparison report with 12-bin and 7-bin SED overlays.
 
 - **energy** · 2026-06-24 14:03 · [b65df22] Add response-informed v4 rebinning diagnostics for candidate predE grouping.
 

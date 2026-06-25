@@ -1,0 +1,380 @@
+{
+  "inputs": {
+    "response_npz": "apply/output/stage_a_v4_aperture_conditioned/response_2d_v4_aperture_conditioned.npz",
+    "signal_npz": "apply/output/stage_e_v4_containment1_annnorm/runs/v4_stage_e_annnorm_containment1_from_psfborrow/signal_v4_containment1_annnorm.npz",
+    "pass5_csv": "apply/report/assets/official-pass5/wcda_crab_sed_pass5_20260616_104941.csv",
+    "v4_rebin_groups_csv": "apply/report/assets/v4-rebin-diagnostics/candidate_rebin_groups.csv"
+  },
+  "contract": {
+    "background": "current annnorm Stage E signal",
+    "response": "v4 aperture-conditioned Stage A response",
+    "containment": 1.0,
+    "stage_scope": "final SED binning layer only; no Stage A-E recomputation"
+  },
+  "groups": {
+    "v5_migration_12bin": [
+      [
+        "v5_01",
+        "1+2+3",
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      [
+        "v5_02",
+        "4",
+        [
+          4
+        ]
+      ],
+      [
+        "v5_03",
+        "14+15+16",
+        [
+          14,
+          15,
+          16
+        ]
+      ],
+      [
+        "v5_04",
+        "17",
+        [
+          17
+        ]
+      ],
+      [
+        "v5_05",
+        "26+27+28+29",
+        [
+          26,
+          27,
+          28,
+          29
+        ]
+      ],
+      [
+        "v5_06",
+        "30",
+        [
+          30
+        ]
+      ],
+      [
+        "v5_07",
+        "39+40+41+42",
+        [
+          39,
+          40,
+          41,
+          42
+        ]
+      ],
+      [
+        "v5_08",
+        "43",
+        [
+          43
+        ]
+      ],
+      [
+        "v5_09",
+        "52+53+54+55",
+        [
+          52,
+          53,
+          54,
+          55
+        ]
+      ],
+      [
+        "v5_10",
+        "65+66+67",
+        [
+          65,
+          66,
+          67
+        ]
+      ],
+      [
+        "v5_11",
+        "68+69",
+        [
+          68,
+          69
+        ]
+      ],
+      [
+        "v5_12",
+        "81+82+83",
+        [
+          81,
+          82,
+          83
+        ]
+      ]
+    ],
+    "conservative_7bin": [
+      [
+        "c7_01",
+        "1+2+3",
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      [
+        "c7_02",
+        "14+15+16",
+        [
+          14,
+          15,
+          16
+        ]
+      ],
+      [
+        "c7_03",
+        "26+27+28+29+30",
+        [
+          26,
+          27,
+          28,
+          29,
+          30
+        ]
+      ],
+      [
+        "c7_04",
+        "40+41+42",
+        [
+          40,
+          41,
+          42
+        ]
+      ],
+      [
+        "c7_05",
+        "52+53+54+55",
+        [
+          52,
+          53,
+          54,
+          55
+        ]
+      ],
+      [
+        "c7_06",
+        "65+66+67+68+69",
+        [
+          65,
+          66,
+          67,
+          68,
+          69
+        ]
+      ],
+      [
+        "c7_07",
+        "81+82+83",
+        [
+          81,
+          82,
+          83
+        ]
+      ]
+    ],
+    "restored_cells": [
+      4,
+      17,
+      39,
+      43
+    ]
+  },
+  "fits": {
+    "fine30": {
+      "pl": {
+        "model": "pl",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.11891261392081e-12,
+          "gamma": 2.6317347932062343
+        },
+        "errors": {
+          "phi0": 4.53969365646779e-14,
+          "gamma": 0.01843045209700156
+        },
+        "chi2": 162.44295809185795,
+        "ndof": 28,
+        "chi2_over_ndof": 5.801534217566355,
+        "p_value": 6.791715467778285e-21,
+        "max_abs_pull": 6.302797882778749
+      },
+      "logpar": {
+        "model": "logpar",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.3401872505674406e-12,
+          "alpha": 2.748776082562112,
+          "beta": 0.13457943970972064
+        },
+        "errors": {
+          "phi0": 6.164211811191507e-14,
+          "alpha": 0.03580911399838049,
+          "beta": 0.02649641066476849
+        },
+        "chi2": 121.57502333633602,
+        "ndof": 27,
+        "chi2_over_ndof": 4.502778642086519,
+        "p_value": 5.789401318373406e-14,
+        "max_abs_pull": 5.658166687220592
+      },
+      "preferred": {
+        "model": "logpar",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.3401872505674406e-12,
+          "alpha": 2.748776082562112,
+          "beta": 0.13457943970972064
+        },
+        "errors": {
+          "phi0": 6.164211811191507e-14,
+          "alpha": 0.03580911399838049,
+          "beta": 0.02649641066476849
+        },
+        "chi2": 121.57502333633602,
+        "ndof": 27,
+        "chi2_over_ndof": 4.502778642086519,
+        "p_value": 5.789401318373406e-14,
+        "max_abs_pull": 5.658166687220592
+      }
+    },
+    "v5_migration_12bin": {
+      "pl": {
+        "model": "pl",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.1454226848198798e-12,
+          "gamma": 2.6808864251733295
+        },
+        "errors": {
+          "phi0": 4.8556779032545955e-14,
+          "gamma": 0.021315708543599987
+        },
+        "chi2": 23.98566909678655,
+        "ndof": 10,
+        "chi2_over_ndof": 2.398566909678655,
+        "p_value": 0.00763852018383144,
+        "max_abs_pull": 2.9359240791475685
+      },
+      "logpar": {
+        "model": "logpar",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.256229024631881e-12,
+          "alpha": 2.7408725998418784,
+          "beta": 0.06670998681204843
+        },
+        "errors": {
+          "phi0": 6.499844612455434e-14,
+          "alpha": 0.03456010700203915,
+          "beta": 0.0257619933573785
+        },
+        "chi2": 15.707498049032484,
+        "ndof": 9,
+        "chi2_over_ndof": 1.7452775610036093,
+        "p_value": 0.07324679783921945,
+        "max_abs_pull": 2.0309974536825908
+      },
+      "preferred": {
+        "model": "logpar",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.256229024631881e-12,
+          "alpha": 2.7408725998418784,
+          "beta": 0.06670998681204843
+        },
+        "errors": {
+          "phi0": 6.499844612455434e-14,
+          "alpha": 0.03456010700203915,
+          "beta": 0.0257619933573785
+        },
+        "chi2": 15.707498049032484,
+        "ndof": 9,
+        "chi2_over_ndof": 1.7452775610036093,
+        "p_value": 0.07324679783921945,
+        "max_abs_pull": 2.0309974536825908
+      }
+    },
+    "conservative_7bin": {
+      "pl": {
+        "model": "pl",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.1724734107393726e-12,
+          "gamma": 2.673676048106625
+        },
+        "errors": {
+          "phi0": 5.002331360547146e-14,
+          "gamma": 0.021161401821437664
+        },
+        "chi2": 17.318308266346925,
+        "ndof": 5,
+        "chi2_over_ndof": 3.463661653269385,
+        "p_value": 0.003934052570268231,
+        "max_abs_pull": 2.9174628275106977
+      },
+      "logpar": {
+        "model": "logpar",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.3147024356456404e-12,
+          "alpha": 2.74009804297516,
+          "beta": 0.07630091501437963
+        },
+        "errors": {
+          "phi0": 6.98123210816789e-14,
+          "alpha": 0.03485569523927068,
+          "beta": 0.0264413252750062
+        },
+        "chi2": 6.7918070955942484,
+        "ndof": 4,
+        "chi2_over_ndof": 1.6979517738985621,
+        "p_value": 0.1473078812197646,
+        "max_abs_pull": 1.4944821525214693
+      },
+      "preferred": {
+        "model": "logpar",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.3147024356456404e-12,
+          "alpha": 2.74009804297516,
+          "beta": 0.07630091501437963
+        },
+        "errors": {
+          "phi0": 6.98123210816789e-14,
+          "alpha": 0.03485569523927068,
+          "beta": 0.0264413252750062
+        },
+        "chi2": 6.7918070955942484,
+        "ndof": 4,
+        "chi2_over_ndof": 1.6979517738985621,
+        "p_value": 0.1473078812197646,
+        "max_abs_pull": 1.4944821525214693
+      }
+    }
+  },
+  "validation": {
+    "n_v5_rows": 12,
+    "n_conservative_rows": 7,
+    "restored_cells_present": [
+      4,
+      17,
+      39,
+      43
+    ],
+    "html_report": "apply/report/crab_sed_v5_migration_binned_comparison_report.html"
+  }
+}

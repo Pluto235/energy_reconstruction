@@ -2205,7 +2205,8 @@ def build_report() -> None:
 
     intro = (
         '<div class="note">'
-        "This v4 report now uses the aperture-conditioned response as the primary result: Stage A counts only MC events with "
+        "This report defines <code>v4_aperture_conditioned_drop4</code> as the current stage baseline, not the final migration-binned v5 result. "
+        "The baseline uses the aperture-conditioned response as the primary result: Stage A counts only MC events with "
         "<code>mc_dangle <= r_opt</code>, and Stage F/G use a Stage E signal clone with <code>containment_r_opt=1</code>. "
         "The same annulus-normalized Stage D/E excess is used; the changed contract is the response used to convert flux into expected counts."
         "</div>"
@@ -2213,8 +2214,8 @@ def build_report() -> None:
     )
 
     cells_body = (
-        "<p>The tested cell set starts from the active30 v3_baseline_psfborrow selector but excludes cells <code>4, 17, 39, 43</code>. "
-        "Cells 52 and 65 remain included through neighbor PSF borrowing; cell 39 is excluded in this control.</p>"
+        "<p>The baseline cell set starts from the active30 v3_baseline_psfborrow selector and excludes cells <code>4, 17, 39, 43</code>. "
+        "The resulting drop4 selector has 26 cells and is used consistently by the primary Stage F/G aperture-conditioned branch.</p>"
         f"<p><strong>Included cell ids:</strong> {v3.esc(', '.join(str(row.get('cell_id')) for row in fit_rows))}</p>"
         "<details open><summary>Fit-cell selector table</summary>"
         + fit_cell_table_from(fit_rows)
@@ -2272,51 +2273,136 @@ def build_report() -> None:
 
     stage_g_body = (
         "<p>Stage G fixes the Stage F preferred spectral shape and refits only one normalization per diagnostic energy grouping. "
-        "These are the primary v4 SED points from the aperture-conditioned response branch.</p>"
+        "These are the primary v4 SED points from the aperture-conditioned response branch. They are native diagnostic points from "
+        "<code>v4_stage_g_aperture_conditioned_drop4</code>, not v5 migration-binned points.</p>"
         + v3.stage_g_table(g_meta)
         + '<div class="grid2">'
         + v3.figure(PRIMARY_STAGE_G_DIR / "sed_points_stage_f_fullarray_pool1.png", "Primary v4 aperture-response Stage G SED points", "Native Stage G diagnostic plot from v4_stage_g_aperture_conditioned_drop4.")
         + v3.figure(PRIMARY_STAGE_G_DIR / "sed_points_ratio.png", "Primary v4 aperture-response Stage G ratio plot", "Diagnostic ratios to the frozen Stage F model / reference curves.")
         + v3.figure(PRIMARY_STAGE_G_DIR / "sed_point_cell_counts.png", "Primary v4 aperture-response Stage G cell counts per point", "Which fit cells enter each diagnostic SED point.")
-        + v3.figure(V4_FINAL_SED_PNG, "V4 final SED comparison with old v3 reference", "Blue/green markers are the primary aperture-response v4 points. Grey open markers are the previous v3 psfborrow points. Black/brown markers are official pass5/tutorial WCDA references.")
         + "</div>"
+    )
+
+    baseline_config_body = (
+        "<p>The baseline contract is intentionally explicit: the on-source aperture is already part of Stage A response construction, "
+        "so downstream Stage F/G use <code>containment_r_opt=1</code>.</p>"
+        + v3.table(
+            ["component", "baseline setting"],
+            [
+                ["baseline id", "<code>v4_aperture_conditioned_drop4</code>"],
+                ["response", "<code>stage_a_v4_aperture_conditioned/response_2d_v4_aperture_conditioned.npz</code>"],
+                ["response numerator", "MC events satisfying <code>mc_dangle <= r_opt</code>"],
+                ["downstream containment", "<code>containment_r_opt = 1</code> in Stage E/F/G"],
+                ["background", "annulus-normalized quadratic 2D surface"],
+                ["cell selector", "<code>cell_selector_v4_drop4_psfborrow.csv</code>; active30 minus <code>4,17,39,43</code>"],
+                ["Stage F run", "<code>v4_stage_f_aperture_conditioned_drop4</code>"],
+                ["Stage G run", "<code>v4_stage_g_aperture_conditioned_drop4</code>"],
+            ],
+            cls="compact",
+        )
+        + "<h3>Stage provenance</h3>"
+        + v4_stage_table(a_meta, b_meta, c_meta, d_meta, e_meta, f_meta, g_meta)
+    )
+
+    fit_cell_psf_body = (
+        cells_body
+        + "<h3>Stage B / PSF diagnostics</h3>"
+        + psf_diagnostics_section(fit_rows)
+    )
+
+    background_excess_body = (
+        stage_d_body
+        + "<h3>RA/Dec profile diagnostics</h3>"
+        + v3.profile_diagnostics_section()
+        + "<h3>Stage E current excess</h3>"
+        + stage_e_body
+    )
+
+    official_comparison_body = (
+        "<p>This section compares the v4 baseline against official/tutorial references. The first figure is the science-facing SED overlay; "
+        "the forward-fold tables then show the same comparison in expected-count space through the v4 response and cell selector.</p>"
+        + '<div class="grid2">'
+        + v3.figure(
+            V4_FINAL_SED_PNG,
+            "V4 baseline SED comparison with official references",
+            "Blue/green markers are the primary aperture-response v4 Stage G points. Grey open markers are the previous v3 psfborrow points. Black/brown markers are official pass5/tutorial WCDA references.",
+        )
+        + v3.figure(
+            V4_RESPONSE_CONTRACT_OVERLAY_PNG,
+            "Native Stage G response-contract overlay",
+            "V4 primary Stage G points and Stage F fit, official pass5 and tutorial v0.99 point-fit curves, plus H.E.S.S. and MAGIC external measurements.",
+        )
+        + "</div>"
+        + forward_fold_section()
+    )
+
+    baseline_limitations_body = (
+        '<div class="note">'
+        "V4 is a defensible stage baseline after fixing the response/aperture contract, but it is not the final answer for SED binning. "
+        "The remaining issue is concentrated in fine predE-cell residuals and energy-migration sensitivity."
+        "</div>"
+        + v3.table(
+            ["limitation", "current evidence", "practical implication"],
+            [
+                [
+                    "low-energy residual",
+                    "Official pass5 forward-fold remains high in low/mid Nhit groups under the aperture-conditioned response.",
+                    "Low-energy flux should be treated as baseline-but-not-final until migration-binned v5 is adopted.",
+                ],
+                [
+                    "large fine-cell chi2",
+                    "Stage F LogPar chi2/ndof is still high for 26 fine cells.",
+                    "The fit is useful for baseline tracking, but fine predE cells should not be over-interpreted as independent final SED bins.",
+                ],
+                [
+                    "response / energy migration",
+                    "Coarse row-level or migration-informed grouping relieves residuals more than ad hoc cell removal.",
+                    "Use v5 migration-binned comparison as the next physics-facing SED product.",
+                ],
+                [
+                    "limited exposure",
+                    "Current observation span is much shorter than official multi-year analyses.",
+                    "High-energy points remain statistics-limited and should be revisited with more data.",
+                ],
+            ],
+            cls="compact",
+        )
+    )
+
+    appendix_a_body = root_cause_diagnostics_section() + cell_root_cause_crossmatch_section(cell_crossmatch_rows)
+    appendix_c_body = (
+        response_audit_section()
+        + active30_vs_drop4_section(active_f_meta, legacy_f_meta)
+        + empirical_psf_section()
+        + r68_aperture_section(
+            nominal_e_meta=e_meta,
+            nominal_f_meta=legacy_f_meta,
+            nominal_g_meta=v3.load_json(DROP4_STAGE_G_META),
+            r68_b_meta=r68_b_meta,
+            r68_e_meta=r68_e_meta,
+            r68_f_meta=r68_f_meta,
+            r68_g_meta=r68_g_meta,
+        )
     )
 
     body = (
         "<!doctype html><html><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-        "<title>Crab SED v4 aperture-conditioned response report</title>"
+        "<title>Crab SED v4 baseline report</title>"
         f"<style>{css()}</style></head><body>"
-        "<header><h1>Crab SED v4 Aperture-Conditioned Response Report</h1>"
-        "<p>Primary result: drop4 cells with aperture-conditioned Stage A response and downstream containment fixed to one.</p></header><main>"
-        + v3.section("V4 Result Summary", intro)
-        + v3.section("Primary Official Pass5 Forward-Fold Test", forward_fold_section())
-        + v3.section("Root-Cause Diagnostics", root_cause_diagnostics_section())
-        + v3.section("Residual Source Ablation", residual_ablation_section())
-        + v3.section("Cell-Level Localization", cell_root_cause_crossmatch_section(cell_crossmatch_rows))
-        + v3.section("Response / Containment Audit", response_audit_section())
-        + v3.section("Legacy Cell-Selection Bias Control", active30_vs_drop4_section(active_f_meta, legacy_f_meta))
-        + v3.section("Observed PSF Diagnostics", empirical_psf_section())
-        + v3.section(
-            "R68 Empirical Aperture Control",
-            r68_aperture_section(
-                nominal_e_meta=e_meta,
-                nominal_f_meta=legacy_f_meta,
-                nominal_g_meta=v3.load_json(DROP4_STAGE_G_META),
-                r68_b_meta=r68_b_meta,
-                r68_e_meta=r68_e_meta,
-                r68_f_meta=r68_f_meta,
-                r68_g_meta=r68_g_meta,
-            ),
-        )
-        + v3.section("Current A-G Inputs", v4_stage_table(a_meta, b_meta, c_meta, d_meta, e_meta, f_meta, g_meta))
-        + v3.section("Fit Cell Definition", cells_body)
-        + v3.section("Stage B / PSF Diagnostics", psf_diagnostics_section(fit_rows))
-        + v3.section("Stage D: Latest 2D Background", stage_d_body)
-        + v3.section("Profile Diagnostics: Latest Background", v3.profile_diagnostics_section())
-        + v3.section("Stage E: Current Excess", stage_e_body)
+        "<header><h1>Crab SED v4 Baseline Report: Aperture-Conditioned Response + Annulus-Normalized Background</h1>"
+        "<p>Baseline result: drop4 26 cells with aperture-conditioned Stage A response, annulus-normalized 2D background, and downstream containment fixed to one.</p></header><main>"
+        + v3.section("Executive Summary", intro)
+        + v3.section("Baseline Configuration", baseline_config_body)
+        + v3.section("Fit Cell Definition And PSF", fit_cell_psf_body)
+        + v3.section("Stage D/E Background And Excess", background_excess_body)
         + v3.section("Stage F: Current Forward-Folding Fit", stage_f_body)
         + v3.section("Stage G: Current SED Points", stage_g_body)
+        + v3.section("Official Reference Comparison", official_comparison_body)
+        + v3.section("Baseline Limitations", baseline_limitations_body)
+        + v3.section("Appendix A: Root-Cause And Localization Diagnostics", appendix_a_body)
+        + v3.section("Appendix B: Residual Ablation Tests", residual_ablation_section())
+        + v3.section("Appendix C: Legacy And Aperture Controls", appendix_c_body)
         + "</main></body></html>"
     )
     REPORT_PATH.write_text(body, encoding="utf-8")

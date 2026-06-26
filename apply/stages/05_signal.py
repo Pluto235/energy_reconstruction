@@ -119,6 +119,16 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--quality-min-total-sigma", type=float, default=50.0)
     parser.add_argument("--quality-max-total-sigma", type=float, default=200.0)
+    parser.add_argument(
+        "--containment-override",
+        choices=["none", "fixed1"],
+        default="none",
+        help=(
+            "Override containment_r_opt written to Stage E outputs. Use fixed1 only with "
+            "aperture-conditioned Stage A responses, where the response numerator already "
+            "contains the r_opt cut."
+        ),
+    )
     parser.add_argument("--npz-name", type=str, default="signal_v1.npz")
     parser.add_argument("--metadata-name", type=str, default="signal_v1_metadata.json")
     parser.add_argument("--summary-csv-name", type=str, default="signal_v1_summary.csv")
@@ -1439,6 +1449,14 @@ def make_metadata(
             "warnings": contract.warnings,
             "metadata_summary": contract.metadata_summary,
         },
+        "containment": {
+            "override": str(args.containment_override),
+            "source": (
+                "fixed1_cli_for_aperture_conditioned_response"
+                if str(args.containment_override) == "fixed1"
+                else "stage_d_background_npz_containment_r_opt"
+            ),
+        },
         "roi": {
             "stage_e_fiducial_applied": contract.roi_fiducial_deg is not None,
             "fiducial_radius_deg": contract.roi_fiducial_deg,
@@ -1510,6 +1528,8 @@ def main() -> None:
     selection_csv = Path(args.cell_selection_csv).resolve()
     cells = load_cells(selection_csv)
     contract = load_background_contract(background_npz, background_metadata, cells)
+    if str(args.containment_override) == "fixed1":
+        contract.arrays["containment_r_opt"] = np.ones(len(cells), dtype=np.float64)
 
     output_root = Path(args.output_dir).resolve()
     output_root.mkdir(parents=True, exist_ok=True)

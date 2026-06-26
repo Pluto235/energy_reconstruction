@@ -753,6 +753,15 @@ def process_cell(
 ) -> Tuple[Dict[str, object], np.ndarray]:
     cell_dir = binned_cell_dir(binned_root, cell)
     files = discover_cell_files(cell_dir, max_files_per_cell, allow_missing_cell_dirs=allow_missing_cell_dirs)
+    if not files and allow_low_stat_psf_fallback:
+        return fallback_psf_row(
+            cell,
+            cell_dir=cell_dir,
+            input_files=0,
+            events=0,
+            reason="no_input_files_for_cell",
+            profile_edges_deg=profile_edges_deg,
+        )
     events = read_cell_events(
         files,
         tree_name=tree_name,

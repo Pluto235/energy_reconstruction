@@ -98,11 +98,11 @@ changed to preserve an entry mapping and Stage C is changed to join by
 ## Storage Risk And Mitigation Plan
 
 Storage is a first-order risk for the half-year run. A lightweight check on
-2026-06-26 showed:
+2026-06-26 16:45 showed:
 
 | Host | Path | Size / usage |
 |---|---|---:|
-| ETO | `/mnt/mydisk` | 3.6T total, 3.1T used, 368G free, 90% used |
+| ETO | `/mnt/mydisk` | 3.6T total, 2.8T used, 677G free, 81% used |
 | ETO | `/mnt/mydisk/WCDA_observation` | 264G for the current two-month filtered ROOT sample |
 | ETO | `/mnt/mydisk/WCDA_observation_eval` | 54G for the current two-month eval sample |
 | ETO | `/home/server/projects/energy_reconstruction/apply/output` | 13G current Stage outputs |
@@ -111,8 +111,16 @@ Storage is a first-order risk for the half-year run. A lightweight check on
 
 Naively keeping a full six months of all intermediates on ETO is not safe:
 the current filtered observation ROOT sample alone scales from 264G for two
-months to roughly 790G for six months. That exceeds the current 368G free space
-before accounting for eval ROOT, recovered-time friend trees, and Stage outputs.
+months to roughly 790G for six months. That is larger than the current 677G
+free space before accounting for eval ROOT, recovered-time friend trees, and
+Stage outputs.
+
+Keeping the final half-year eval dataset is feasible: the current two-month
+`/mnt/mydisk/WCDA_observation_eval` sample is 54G, so a six-month eval dataset
+is expected to be about 160G plus recovered-time friend trees and metadata.
+The production plan is therefore to acquire and infer in batches, then
+accumulate the final eval ROOT files into one complete half-year tree under
+`/mnt/mydisk/WCDA_observation_eval`.
 
 Use this storage policy:
 
@@ -133,7 +141,8 @@ IHEP / scratch keep:
   logs, manifests, and recovery summaries
 ```
 
-Recommended execution mode is month-by-month:
+Recommended execution mode is month-by-month, with final eval files accumulated
+in place:
 
 1. Produce one month of branch-reduced observation ROOT on IHEP.
 2. Transfer that month to `ETO:/mnt/mydisk/WCDA_observation/<MMDD>/`.
@@ -141,9 +150,11 @@ Recommended execution mode is month-by-month:
 4. Verify `apply_summary_<month>.json` has no failed files.
 5. Transfer eval ROOT for that month back to IHEP for time recovery if needed.
 6. Recover `.time.root` for that month and transfer only friend trees back to ETO.
-7. Verify eval/time file counts and entry counts on ETO.
-8. Delete or archive the month from `ETO:/mnt/mydisk/WCDA_observation/<MMDD>/`.
-9. Move to the next month.
+7. Keep the month permanently under `/mnt/mydisk/WCDA_observation_eval/<MMDD>/`
+   and `/mnt/mydisk/WCDA_observation_eval/recovered_time/<MMDD>/`.
+8. Verify eval/time file counts and entry counts on ETO.
+9. Delete or archive the month from `ETO:/mnt/mydisk/WCDA_observation/<MMDD>/`.
+10. Move to the next month.
 
 Do not delete any ETO raw filtered input month until all of these are true:
 
@@ -242,6 +253,11 @@ Transfer only one month at a time to avoid exceeding ETO disk capacity. The
 commands below show the full March-June set for clarity; in production, run one
 month, finish inference and recovery, then delete or archive that month's raw
 filtered ETO scratch input before transferring the next month.
+
+The final integrated half-year eval dataset is built incrementally: each
+successful batch remains in `/mnt/mydisk/WCDA_observation_eval/<MMDD>/`, and the
+matching recovered-time files remain in
+`/mnt/mydisk/WCDA_observation_eval/recovered_time/<MMDD>/`.
 
 ```bash
 rsync -av \
@@ -629,6 +645,9 @@ Before large jobs:
 - Confirm the storage mode. Recommended answer: month-by-month scratch transfer,
   with `/mnt/mydisk/WCDA_observation/<MMDD>` removed after eval/time/Stage C
   verification for that month.
+- Confirm final eval retention. Recommended answer: keep all successful batches
+  under `/mnt/mydisk/WCDA_observation_eval` and integrate them by directory
+  layout into one complete 2022-01-01 through 2022-06-30 eval tree.
 - Confirm IHEP Condor policy values if the defaults in `submit_recovery_condor.sh`
   fail: `SCHEDD_NAME`, `MAX_MATERIALIZE`, `ACCOUNTING_GROUP`,
   `HEPJOB_REALGROUP`, `HEPJOB_WALLTIME`.
@@ -677,3 +696,7 @@ After Stage C:
 4. Confirm raw-input retention. Recommended answer: keep branch-reduced raw
    filtered ROOT on IHEP or scratch storage, but treat the ETO copy as
    month-level scratch and remove it after verified inference and time recovery.
+5. Confirm final eval dataset location. Recommended answer:
+   `/mnt/mydisk/WCDA_observation_eval` for eval ROOT and
+   `/mnt/mydisk/WCDA_observation_eval/recovered_time` for friend ROOT, filled
+   batch-by-batch until the half-year tree is complete.

@@ -2277,7 +2277,11 @@ def build_report() -> None:
         "<code>v4_stage_g_aperture_conditioned_drop4</code>, not v5 migration-binned points.</p>"
         + v3.stage_g_table(g_meta)
         + '<div class="grid2">'
-        + v3.figure(PRIMARY_STAGE_G_DIR / "sed_points_stage_f_fullarray_pool1.png", "Primary v4 aperture-response Stage G SED points", "Native Stage G diagnostic plot from v4_stage_g_aperture_conditioned_drop4.")
+        + v3.figure(
+            V4_RESPONSE_CONTRACT_OVERLAY_PNG,
+            "Native Stage G response-contract overlay",
+            "Overlay version of the native Stage G diagnostic: v4 primary Stage G points and Stage F fit, official pass5 and tutorial v0.99 point-fit curves, plus H.E.S.S. and MAGIC external measurements.",
+        )
         + v3.figure(PRIMARY_STAGE_G_DIR / "sed_points_ratio.png", "Primary v4 aperture-response Stage G ratio plot", "Diagnostic ratios to the frozen Stage F model / reference curves.")
         + v3.figure(PRIMARY_STAGE_G_DIR / "sed_point_cell_counts.png", "Primary v4 aperture-response Stage G cell counts per point", "Which fit cells enter each diagnostic SED point.")
         + "</div>"

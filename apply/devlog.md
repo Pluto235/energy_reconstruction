@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-06-26 15:23 · [44c6e7f] Add half-year Crab observation workflow spanning IHEP filtering, time recovery, ETO inference, and Stage C/G products.
+
 - **energy** · 2026-06-26 14:24 · [4c21ea9] Replace v4 Stage G primary SED figure with response-contract overlay.
 
 - **energy** · 2026-06-26 11:40 · [9c6f07b] Reorganize v4 Crab SED report into baseline-first structure with diagnostics appendices.

@@ -6,7 +6,7 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
-- **energy** · 2026-06-26 16:45 · [uncommitted] Clarify batch-wise eval retention strategy for the half-year Crab workflow.
+- **energy** · 2026-06-26 16:45 · [d3075c7] Clarify batch-wise eval retention strategy for the half-year Crab workflow.
 
 - **energy** · 2026-06-26 15:46 · [a4396b6] Add storage-risk mitigation plan for the half-year Crab observation workflow.
 

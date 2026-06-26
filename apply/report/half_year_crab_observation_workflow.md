@@ -95,6 +95,90 @@ Recovering time before ETO inference is only safe if the inference code is
 changed to preserve an entry mapping and Stage C is changed to join by
 `(irun, ies, iseq, ievent)` instead of entry number.
 
+## Storage Risk And Mitigation Plan
+
+Storage is a first-order risk for the half-year run. A lightweight check on
+2026-06-26 showed:
+
+| Host | Path | Size / usage |
+|---|---|---:|
+| ETO | `/mnt/mydisk` | 3.6T total, 3.1T used, 368G free, 90% used |
+| ETO | `/mnt/mydisk/WCDA_observation` | 264G for the current two-month filtered ROOT sample |
+| ETO | `/mnt/mydisk/WCDA_observation_eval` | 54G for the current two-month eval sample |
+| ETO | `/home/server/projects/energy_reconstruction/apply/output` | 13G current Stage outputs |
+| IHEP | `/home/lhaaso` | 202G total, 61G used, 142G free |
+| IHEP | `/scratchfs/lhaaso` | 572T total, 470T used, 73T free |
+
+Naively keeping a full six months of all intermediates on ETO is not safe:
+the current filtered observation ROOT sample alone scales from 264G for two
+months to roughly 790G for six months. That exceeds the current 368G free space
+before accounting for eval ROOT, recovered-time friend trees, and Stage outputs.
+
+Use this storage policy:
+
+```text
+Long-term ETO keep:
+  /mnt/mydisk/WCDA_observation_eval/<MMDD>/*.root
+  /mnt/mydisk/WCDA_observation_eval/recovered_time/<MMDD>/*.time.root
+  apply/output/stage_c_half_year_*/...
+  final Stage D-G products selected for reports
+
+ETO scratch only:
+  /mnt/mydisk/WCDA_observation/<MMDD>/*.root for the month currently being inferred
+  smoke-test output under /tmp
+  failed-job partial files
+
+IHEP / scratch keep:
+  branch-reduced filtered inputs before transfer
+  logs, manifests, and recovery summaries
+```
+
+Recommended execution mode is month-by-month:
+
+1. Produce one month of branch-reduced observation ROOT on IHEP.
+2. Transfer that month to `ETO:/mnt/mydisk/WCDA_observation/<MMDD>/`.
+3. Run ETO inference for that month with `DAY_PREFIX=<month>`.
+4. Verify `apply_summary_<month>.json` has no failed files.
+5. Transfer eval ROOT for that month back to IHEP for time recovery if needed.
+6. Recover `.time.root` for that month and transfer only friend trees back to ETO.
+7. Verify eval/time file counts and entry counts on ETO.
+8. Delete or archive the month from `ETO:/mnt/mydisk/WCDA_observation/<MMDD>/`.
+9. Move to the next month.
+
+Do not delete any ETO raw filtered input month until all of these are true:
+
+```text
+eval ROOT exists for the same MMDD/hour files
+apply_summary_<month>.json reports zero failed files
+recovered_time friend ROOT exists for the same MMDD/hour files
+Stage C smoke or full run can read that month without entry mismatch
+the IHEP source copy or another archive copy is still available
+```
+
+Preflight commands on ETO:
+
+```bash
+df -h /mnt/mydisk /home/server
+du -sh /mnt/mydisk/WCDA_observation \
+       /mnt/mydisk/WCDA_observation_eval \
+       /home/server/projects/energy_reconstruction/apply/output
+find /mnt/mydisk/WCDA_observation -mindepth 2 -maxdepth 2 \
+  -type f -name 'Esg*.root' | wc -l
+```
+
+Month-level cleanup after verified inference and time recovery:
+
+```bash
+# Example: remove March scratch inputs only after the checklist above passes.
+rm -rf /mnt/mydisk/WCDA_observation/03??
+```
+
+If ETO free space drops below 250G before a month starts, stop and clear space
+before transferring more ROOT files. Prefer deleting verified scratch inputs
+over deleting eval ROOT or recovered-time friend trees. Do not use `rsync
+--delete` against `/mnt/mydisk/WCDA_observation_eval` unless the source side is
+known to contain the full intended eval tree.
+
 ## IHEP Step 1: Build Branch-Reduced Observation Inputs
 
 Use the existing IHEP filtering workspace:
@@ -154,8 +238,10 @@ has the same number of output ROOT files as manifest input files.
 
 ## IHEP Step 2: Transfer Observation Inputs To ETO
 
-Transfer only the new March-June day directories to avoid overwriting the
-existing ETO January-February sample:
+Transfer only one month at a time to avoid exceeding ETO disk capacity. The
+commands below show the full March-June set for clarity; in production, run one
+month, finish inference and recovery, then delete or archive that month's raw
+filtered ETO scratch input before transferring the next month.
 
 ```bash
 rsync -av \
@@ -540,6 +626,9 @@ Before large jobs:
   write to versioned roots such as `/mnt/mydisk/WCDA_observation_20220101_20220630`.
 - Confirm available ETO disk space for raw filtered ROOT, eval ROOT, friend
   ROOT, and Stage C/G outputs.
+- Confirm the storage mode. Recommended answer: month-by-month scratch transfer,
+  with `/mnt/mydisk/WCDA_observation/<MMDD>` removed after eval/time/Stage C
+  verification for that month.
 - Confirm IHEP Condor policy values if the defaults in `submit_recovery_condor.sh`
   fail: `SCHEDD_NAME`, `MAX_MATERIALIZE`, `ACCOUNTING_GROUP`,
   `HEPJOB_REALGROUP`, `HEPJOB_WALLTIME`.
@@ -585,3 +674,6 @@ After Stage C:
    diagnostics, or the full Stage D-G SED chain. Recommended answer: produce
    Stage C first, then run the existing v4 aperture-conditioned Stage F/G branch
    with the half-year Stage C run.
+4. Confirm raw-input retention. Recommended answer: keep branch-reduced raw
+   filtered ROOT on IHEP or scratch storage, but treat the ETO copy as
+   month-level scratch and remove it after verified inference and time recovery.

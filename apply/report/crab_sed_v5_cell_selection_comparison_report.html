@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crab SED v5 Cell Selection Comparison</title>
+  <style>
+    :root { color-scheme: light; --ink:#111827; --muted:#6b7280; --line:#d1d5db; --bg:#ffffff; --soft:#f3f4f6; }
+    body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:var(--ink); background:var(--bg); }
+    main { max-width: 1180px; margin: 0 auto; padding: 32px 24px 56px; }
+    h1 { font-size: 30px; line-height:1.15; margin: 0 0 10px; letter-spacing:0; }
+    h2 { font-size: 22px; margin: 34px 0 12px; border-top:1px solid var(--line); padding-top:24px; letter-spacing:0; }
+    h3 { font-size: 16px; margin: 24px 0 10px; letter-spacing:0; }
+    p { line-height:1.58; color:#374151; }
+    code { background:var(--soft); padding:1px 4px; border-radius:4px; }
+    table { width:100%; border-collapse: collapse; margin: 12px 0 22px; font-size: 13px; }
+    th, td { border:1px solid var(--line); padding:7px 8px; vertical-align: top; text-align:left; }
+    th { background:#f9fafb; font-weight:650; }
+    td:nth-child(n+2), th:nth-child(n+2) { text-align:right; }
+    td:first-child, th:first-child { text-align:left; }
+    img { width:100%; display:block; border:1px solid var(--line); background:#fff; }
+    figure { margin: 18px 0 26px; }
+    figcaption { font-size: 13px; color:#4b5563; margin-top:7px; line-height:1.45; }
+    .lede { font-size: 15px; max-width: 900px; }
+    .grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 16px 0 20px; }
+    .metric { border:1px solid var(--line); padding:12px; background:#f9fafb; }
+    .metric .label { color:var(--muted); font-size:12px; }
+    .metric .value { font-size:22px; font-weight:720; margin-top:2px; }
+    .warn { color:#991b1b; }
+    @media (max-width: 820px) { .grid { grid-template-columns:1fr; } table { font-size:12px; } main { padding:24px 14px 42px; } }
+    </style>
+</head>
+<body>
+<main>
+  <h1>Crab SED v5 Cell Selection Comparison</h1>
+  <p class="lede">This report holds the v4 physics contract fixed: aperture-conditioned Stage A response, Stage E annulus-normalized containment=1 signal, and identical Stage F/G fitting logic. Only the fit-cell selector changes. <code>baseline26</code> is the nominal reference; <code>strict20</code> and <code>loose36</code> are selector-sensitivity brackets.</p>
+
+  <div class="grid">
+    <div class="metric"><div class="label">nominal selector</div><div class="value">baseline26</div></div>
+    <div class="metric"><div class="label">Stage F/G runs</div><div class="value">3/3</div></div>
+    <div class="metric"><div class="label">official fold</div><div class="value">pass5</div></div>
+  </div>
+
+  <h2>Selector Definitions</h2>
+  <table><thead><tr><th>selector</th><th>role</th><th>cells</th><th>included cell ids</th></tr></thead><tbody><tr><td>strict20</td><td>conservative quality bracket</td><td>20</td><td><code>1,2,3,14,15,16,26,27,28,29,30,40,41,42,53,54,66,67,68,69</code></td></tr>
+<tr><td>baseline26</td><td>nominal reference, current v4 baseline</td><td>26</td><td><code>1,2,3,14,15,16,26,27,28,29,30,40,41,42,52,53,54,55,65,66,67,68,69,81,82,83</code></td></tr>
+<tr><td>loose36</td><td>stress test / systematic bracket</td><td>36</td><td><code>1,2,3,4,14,15,16,17,23,26,27,28,29,30,31,35,39,40,41,42,43,47,52,53,54,55,56,59,65,66,67,68,69,81,82,83</code></td></tr></tbody></table>
+  <figure><img src="assets/v5-cell-selection/v5_cell_selection_grid.png" alt="Selector cell grid"><figcaption><strong>Selector cell grid</strong> Included cells are colored and annotated by cell id. The grid uses the same 84-row cell contract as the current v4 baseline selector.</figcaption></figure>
+
+  <h2>Main Comparison</h2>
+  <table><thead><tr><th>selector</th><th>cells</th><th>LogPar phi0</th><th>alpha</th><th>beta</th><th>chi2/ndof</th><th>max abs pull</th><th>total obs/pass5</th><th>[125,200) obs/pass5</th></tr></thead><tbody><tr><td>strict20</td><td>20</td><td>2.44841e-12</td><td>2.7261</td><td>0.14051</td><td>4.717</td><td>5.479</td><td>1.184</td><td>1.24</td></tr>
+<tr><td>baseline26 (nominal)</td><td>26</td><td>2.36784e-12</td><td>2.7615</td><td>0.14536</td><td>5.1</td><td>5.538</td><td>1.181</td><td>1.24</td></tr>
+<tr><td>loose36</td><td>36</td><td>2.34145e-12</td><td>2.7518</td><td>0.13694</td><td>4.209</td><td>5.649</td><td>1.158</td><td>1.2</td></tr></tbody></table>
+
+  <h2>Stage F Fits</h2>
+  <table><thead><tr><th>selector</th><th>cells</th><th>LogPar phi0</th><th>alpha</th><th>beta</th><th>chi2 / ndof</th><th>chi2/ndof</th><th>max abs pull</th><th>PL phi0</th><th>PL gamma</th></tr></thead><tbody><tr><td>strict20</td><td>20</td><td>2.44841e-12</td><td>2.7261</td><td>0.14051</td><td>80.19 / 17</td><td>4.717</td><td>5.479</td><td>2.20891e-12</td><td>2.5997</td></tr>
+<tr><td>baseline26</td><td>26</td><td>2.36784e-12</td><td>2.7615</td><td>0.14536</td><td>117.3 / 23</td><td>5.1</td><td>5.538</td><td>2.12073e-12</td><td>2.632</td></tr>
+<tr><td>loose36</td><td>36</td><td>2.34145e-12</td><td>2.7518</td><td>0.13694</td><td>138.9 / 33</td><td>4.209</td><td>5.649</td><td>2.11018e-12</td><td>2.6366</td></tr></tbody></table>
+  <figure><img src="assets/v5-cell-selection/v5_cell_selection_pull_grid.png" alt="Stage F residual / pull grid"><figcaption><strong>Stage F residual / pull grid</strong> Cell-level LogPar conservative pulls for each selector. Loose36 is a stress-test bracket, not a promoted baseline candidate.</figcaption></figure>
+
+  <h2>Official Pass5 Forward Fold</h2>
+  <p>The official pass5 spectrum is folded through the aperture-conditioned v4 Stage A response and Stage E containment=1 exposure, then summed over each selector. The total, Nhit, and cell-level tables are written to <code>assets/v5-cell-selection/official_pass5_forward_fold_summary.csv</code>, <code>assets/v5-cell-selection/official_pass5_forward_fold_nhit_summary.csv</code>, and <code>assets/v5-cell-selection/official_pass5_forward_fold_cell_counts.csv</code>.</p>
+  <table><thead><tr><th>Nhit</th><th>strict20 obs/pass5</th><th>strict20 excess</th><th>strict20 pass5</th><th>baseline26 obs/pass5</th><th>baseline26 excess</th><th>baseline26 pass5</th><th>loose36 obs/pass5</th><th>loose36 excess</th><th>loose36 pass5</th></tr></thead><tbody><tr><td>[125,200)</td><td>1.24</td><td>5431.3</td><td>4379.2</td><td>1.24</td><td>5431.3</td><td>4379.2</td><td>1.2</td><td>5443</td><td>4534.2</td></tr>
+<tr><td>[200,300)</td><td>1.242</td><td>4073.9</td><td>3280.4</td><td>1.242</td><td>4073.9</td><td>3280.4</td><td>1.24</td><td>4187.7</td><td>3377.7</td></tr>
+<tr><td>[300,500)</td><td>1.147</td><td>3585.2</td><td>3124.8</td><td>1.147</td><td>3585.2</td><td>3124.8</td><td>1.125</td><td>3549.1</td><td>3154.8</td></tr></tbody></table>
+  <figure><img src="assets/v5-cell-selection/v5_cell_selection_official_forward_fold_nhit.png" alt="Official pass5 forward-fold ratios by Nhit"><figcaption><strong>Official pass5 forward-fold ratios by Nhit</strong> Low-Nhit stability is read directly from the obs/pass5 ratios for [125,200), [200,300), and [300,500).</figcaption></figure>
+
+  <h2>Stage G SED Overlay</h2>
+  <figure><img src="assets/v5-cell-selection/v5_cell_selection_sed_overlay.png" alt="SED overlay"><figcaption><strong>SED overlay</strong> Three selector Stage G SED points and LogPar curves are shown with official pass5 and external Crab references exported by Stage G.</figcaption></figure>
+
+  <h2>Systematic Shifts</h2>
+  <table><thead><tr><th>selector</th><th>flux normalization shift</th><th>alpha shift</th><th>beta shift</th><th>total obs/pass5 shift</th><th>low-Nhit obs/pass5 shifts</th></tr></thead><tbody><tr><td>strict20</td><td>0.034027</td><td>-0.035444</td><td>-0.0048483</td><td>0.0022758</td><td>[125,200): 0<br>[200,300): 0<br>[300,500): 0</td></tr>
+<tr><td>loose36</td><td>-0.011143</td><td>-0.0096765</td><td>-0.0084236</td><td>-0.019206</td><td>[125,200): -0.03211<br>[200,300): -0.00166<br>[300,500): -0.01948</td></tr></tbody></table>
+
+  <h2>Stage G Metadata Check</h2>
+  <table><thead><tr><th>selector</th><th>Stage F run id in Stage G</th><th>Stage F metadata path matches</th><th>required cells</th></tr></thead><tbody><tr><td>strict20</td><td>v5_cellsel_strict20</td><td>yes</td><td>20</td></tr>
+<tr><td>baseline26</td><td>v5_cellsel_baseline26</td><td>yes</td><td>26</td></tr>
+<tr><td>loose36</td><td>v5_cellsel_loose36</td><td>yes</td><td>36</td></tr></tbody></table>
+
+  <h2>Artifacts</h2>
+  <p>Stage F outputs live under <code>apply/output/stage_f_v5_cell_selection/runs/v5_cellsel_*</code>. Stage G outputs live under <code>apply/output/stage_g_v5_cell_selection/runs/v5_cellsel_*</code>. This report summary JSON is <code>assets/v5-cell-selection/v5_cell_selection_comparison_summary.json</code>.</p>
+</main>
+</body>
+</html>

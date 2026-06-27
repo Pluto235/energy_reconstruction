@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stage F 前向折叠拟合报告</title>
+<style>
+:root { --bg:#101418; --fg:#eef3f5; --muted:#a8b2b8; --panel:#171d22; --panel2:#1d242a; --border:#2e3942; --accent:#5fb3b3; --good:#52b788; --warn:#e9b44c; --code:#0b0f12; }
+@media (prefers-color-scheme: light) { :root { --bg:#f7f8f9; --fg:#1b2329; --muted:#56636b; --panel:#fff; --panel2:#f1f4f6; --border:#d7dee3; --code:#eef2f4; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans CJK SC","Microsoft YaHei",sans-serif; line-height:1.62; }
+main { max-width:1180px; margin:0 auto; padding:42px 20px 64px; }
+header { border-bottom:1px solid var(--border); margin-bottom:32px; padding-bottom:24px; }
+.eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.08em; font-size:12px; font-weight:700; }
+h1 { margin:8px 0 10px; font-size:clamp(30px,5vw,44px); line-height:1.15; }
+h2 { margin:38px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--border); font-size:24px; }
+h3 { margin:24px 0 8px; color:var(--accent); font-size:18px; }
+p { margin:10px 0; }
+code { padding:2px 5px; border-radius:4px; background:var(--code); font-size:13px; }
+.lead { max-width:940px; color:var(--muted); font-size:17px; }
+.grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:18px 0; }
+.metric { min-height:104px; padding:16px; border:1px solid var(--border); border-radius:8px; background:var(--panel); }
+.label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.07em; }
+.value { margin-top:8px; font-size:24px; font-weight:700; overflow-wrap:anywhere; }
+.note { margin-top:7px; color:var(--muted); font-size:13px; }
+.callout { margin:18px 0; padding:16px 18px; border:1px solid var(--border); border-left:4px solid var(--accent); border-radius:8px; background:var(--panel); }
+.callout.good { border-left-color:var(--good); }
+.callout.warn { border-left-color:var(--warn); }
+.table-wrap { width:100%; overflow-x:auto; margin:18px 0; border:1px solid var(--border); border-radius:8px; background:var(--panel); }
+table { width:100%; min-width:1040px; border-collapse:collapse; font-size:14px; }
+th,td { padding:10px 12px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+th { background:var(--panel); font-weight:700; white-space:nowrap; }
+tbody tr:nth-child(odd) td { background:var(--panel2); }
+.num { text-align:right; font-variant-numeric:tabular-nums; }
+.figure-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-top:18px; }
+figure { margin:0; padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--panel); }
+figure img { display:block; width:100%; height:auto; border-radius:4px; background:#fff; }
+figcaption { margin-top:9px; color:var(--muted); font-size:13px; }
+footer { margin-top:54px; padding-top:18px; border-top:1px solid var(--border); color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
+@media (max-width:900px) { .grid,.figure-grid { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">LHAASO-WCDA · Crab SED diagnostic</div>
+    <h1>Stage F 前向折叠拟合报告</h1>
+    <p class="lead">本页记录当前 Stage F 的目的、输入、方法和结果：把假设的 Crab 能谱通过 Stage A 二维响应折叠到观测 cell，与 Stage E 的逐 cell excess 做拟合对比。当前报告使用 selector <code>v5_cellsel_baseline26</code>，作为进入 Stage G 的 diagnostic baseline。</p>
+  </header>
+  <section>
+    <h2>结论摘要</h2>
+    <p>保守误差口径下，当前首选模型是 <code>logpar</code>。Reference-count preflight 状态为 <code>passed</code>，该 run 的状态是：<strong>可作为 Stage G diagnostic baseline</strong>。</p>
+    <div class="grid">
+      <div class="metric"><div class="label">Run</div><div class="value">v5_cellsel_baseline26</div><div class="note">Stage F fit</div></div>
+      <div class="metric"><div class="label">使用 cells</div><div class="value">26</div><div class="note">subset: <code>v5_cellsel_baseline26</code></div></div>
+      <div class="metric"><div class="label">可见曝光</div><div class="value">15.612 d</div><div class="note">Crab theta inside response grid</div></div>
+      <div class="metric"><div class="label">PL chi2/ndof</div><div class="value">161.08/24</div><div class="note">conservative error</div></div>
+    </div>
+    <div class="callout good">
+      <strong>Reference-count preflight：</strong>
+      使用 WCDA-1 Crab 参考谱时，Stage A/E 预计信号数为 <code>15759.3</code>，Stage E excess 为 <code>15102.9</code>，observed/expected = <code>0.958347</code>。
+    </div>
+  </section>
+  <section>
+    <h2>为什么做 Stage F</h2>
+    <p>Stage A 给出 MC 响应 <code>A_eff(E_true, theta)</code>，Stage E 给出观测侧每个 cell 的 <code>N_on</code>、背景期望 <code>B_on</code> 和 excess。Stage F 的作用是把二者接起来：不从 <code>E_pred</code> 反推真实能量，而是把一个物理能谱假设从真实能量空间前向折叠到观测 cell 空间，再和 Stage E excess 比较。</p>
+    <p>这一步有两个检查目标：第一，确认 Stage A 的绝对响应归一化和 Stage E 的信号量级在同一数量级；第二，为 Stage G 的 SED 点提供一个冻结谱形的全局拟合基准。</p>
+  </section>
+  <section>
+    <h2>Stage F 做了什么</h2>
+    <p>本 run 读取 Stage A 的二维响应和 Stage E 的逐 cell 信号表，按 Crab 在观测窗口内的天顶角曝光分布计算每个 cell 的预期信号数。拟合统计量是保守误差口径下的 chi-square：</p>
+    <p><code>chi2 = sum_b ((excess_b - N_exp,b) / sigma_b)^2</code></p>
+    <p>谱模型包括幂律 PL 和 LogPar。LogPar 只有在相对 PL 的 chi2 改善达到阈值时才作为首选；本 run 的改善量为 <code>43.7893</code>，因此保留 PL。</p>
+    <ul>
+      <li>Stage A response: <code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v4_aperture_conditioned/response_2d_v4_aperture_conditioned.npz</code></li>
+      <li>Stage E signal: <code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v4_containment1_annnorm/runs/v4_stage_e_annnorm_containment1_from_psfborrow/signal_v4_containment1_annnorm.npz</code></li>
+      <li>Cell subset: <code>/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v5_cellsel_baseline26.csv</code></li>
+    </ul>
+  </section>
+  <section>
+    <h2>Cell subset 说明</h2>
+    <p>Stage F 不在拟合中按 residual 自动删 cell；include/exclude 完全来自传入的 selector CSV。selector 中的排除原因会记录在 metadata，用于区分 frozen baseline、transition probe 和 diagnostics。</p>
+    <ul>
+      <li>Included cells: <code>1, 2, 3, 14, 15, 16, 26, 27, 28, 29, 30, 40, 41, 42, 52, 53, 54, 55, 65, 66, 67, 68, 69, 81, 82, 83</code></li>
+      <li>Excluded cells: <code>4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 18, 19, 20, 21, 22, 23, 24, 25, 31, 32, 33, 34, 35, 36, 37, 38, 39, 43, 44, 45, 46, 47, 48, 49, 50, 51, 56, 57, 58, 59, 60, 61, 62, 63, 64, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 84</code></li>
+    </ul>
+  </section>
+  <section>
+    <h2>拟合参数</h2>
+    <ul>
+      <li>PL: <code>phi0=2.120728e-12</code>, <code>gamma=2.63196</code>, p-value <code>2.8114e-22</code>，chi2/ndof = <code>161.08/24</code>。</li>
+      <li>LogPar: <code>phi0=2.367838e-12</code>, <code>alpha=2.76152</code>, <code>beta=0.145359</code>, p-value <code>1.2724e-14</code>，chi2/ndof = <code>117.29/23</code>。</li>
+    </ul>
+  </section>
+  <section>
+    <h2>逐 cell 残差</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>cell</th><th>Nhit bin</th><th>log10 E_pred bin</th><th class="num">excess</th><th class="num">err</th><th class="num">PL model</th><th class="num">PL pull</th><th class="num">LogPar model</th><th class="num">LogPar pull</th></tr></thead>
+        <tbody><tr><td>1</td><td>[125,200)</td><td>[2,2.5)</td><td class="num">1117.33</td><td class="num">203.59</td><td class="num">1975.12</td><td class="num">-4.2133</td><td class="num">1339.77</td><td class="num">-1.0926</td></tr><tr><td>2</td><td>[125,200)</td><td>[2.5,3)</td><td class="num">3656.98</td><td class="num">277.36</td><td class="num">3487.02</td><td class="num">0.61276</td><td class="num">3132.77</td><td class="num">1.89</td></tr><tr><td>3</td><td>[125,200)</td><td>[3,3.25)</td><td class="num">657.009</td><td class="num">135.16</td><td class="num">414.906</td><td class="num">1.7913</td><td class="num">443.505</td><td class="num">1.5797</td></tr><tr><td>14</td><td>[200,300)</td><td>[2.5,3)</td><td class="num">2347.26</td><td class="num">136.65</td><td class="num">2681.23</td><td class="num">-2.444</td><td class="num">2542.06</td><td class="num">-1.4256</td></tr><tr><td>15</td><td>[200,300)</td><td>[3,3.25)</td><td class="num">1312.25</td><td class="num">87.188</td><td class="num">763.528</td><td class="num">6.2935</td><td class="num">829.403</td><td class="num">5.5379</td></tr><tr><td>16</td><td>[200,300)</td><td>[3.25,3.5)</td><td class="num">414.393</td><td class="num">73.632</td><td class="num">231.065</td><td class="num">2.4898</td><td class="num">257.565</td><td class="num">2.1299</td></tr><tr><td>26</td><td>[300,500)</td><td>[2.5,3)</td><td class="num">825.824</td><td class="num">53.312</td><td class="num">947.722</td><td class="num">-2.2865</td><td class="num">952.478</td><td class="num">-2.3757</td></tr><tr><td>27</td><td>[300,500)</td><td>[3,3.25)</td><td class="num">1521.58</td><td class="num">67.915</td><td class="num">1295.97</td><td class="num">3.3219</td><td class="num">1430.88</td><td class="num">1.3355</td></tr><tr><td>28</td><td>[300,500)</td><td>[3.25,3.5)</td><td class="num">800.497</td><td class="num">51.103</td><td class="num">639.558</td><td class="num">3.1493</td><td class="num">720.872</td><td class="num">1.5581</td></tr><tr><td>29</td><td>[300,500)</td><td>[3.5,3.75)</td><td class="num">332.046</td><td class="num">42.941</td><td class="num">187.947</td><td class="num">3.3557</td><td class="num">202.801</td><td class="num">3.0098</td></tr><tr><td>30</td><td>[300,500)</td><td>[3.75,4.0)</td><td class="num">105.277</td><td class="num">40.948</td><td class="num">66.5127</td><td class="num">0.94669</td><td class="num">62.4369</td><td class="num">1.0462</td></tr><tr><td>40</td><td>[500,800)</td><td>[3.25,3.5)</td><td class="num">758.121</td><td class="num">39.394</td><td class="num">722.86</td><td class="num">0.8951</td><td class="num">813.77</td><td class="num">-1.4126</td></tr><tr><td>41</td><td>[500,800)</td><td>[3.5,3.75)</td><td class="num">363.449</td><td class="num">27.469</td><td class="num">361.486</td><td class="num">0.071465</td><td class="num">387.79</td><td class="num">-0.88614</td></tr><tr><td>42</td><td>[500,800)</td><td>[3.75,4.0)</td><td class="num">79.487</td><td class="num">19.913</td><td class="num">95.9013</td><td class="num">-0.82432</td><td class="num">91.7217</td><td class="num">-0.61442</td></tr><tr><td>52</td><td>[800,1100)</td><td>[3.25,3.5)</td><td class="num">142.156</td><td class="num">14.347</td><td class="num">144.444</td><td class="num">-0.15949</td><td class="num">157.658</td><td class="num">-1.0805</td></tr><tr><td>53</td><td>[800,1100)</td><td>[3.5,3.75)</td><td class="num">207.452</td><td class="num">18.776</td><td class="num">219.917</td><td class="num">-0.66388</td><td class="num">224.423</td><td class="num">-0.90386</td></tr><tr><td>54</td><td>[800,1100)</td><td>[3.75,4.0)</td><td class="num">96.9712</td><td class="num">14.388</td><td class="num">104.044</td><td class="num">-0.49159</td><td class="num">94.5415</td><td class="num">0.16886</td></tr><tr><td>55</td><td>[800,1100)</td><td>[4.0,4.25)</td><td class="num">66.9362</td><td class="num">11.961</td><td class="num">25.5352</td><td class="num">3.4614</td><td class="num">19.4399</td><td class="num">3.971</td></tr><tr><td>65</td><td>[1100,2000)</td><td>[3.5,3.75)</td><td class="num">44.9234</td><td class="num">7.9421</td><td class="num">81.4462</td><td class="num">-4.5987</td><td class="num">76.0888</td><td class="num">-3.9241</td></tr><tr><td>66</td><td>[1100,2000)</td><td>[3.75,4.0)</td><td class="num">110.293</td><td class="num">12.317</td><td class="num">122.258</td><td class="num">-0.9714</td><td class="num">99.3664</td><td class="num">0.88713</td></tr><tr><td>67</td><td>[1100,2000)</td><td>[4.0,4.25)</td><td class="num">75.1626</td><td class="num">10.528</td><td class="num">82.5391</td><td class="num">-0.70066</td><td class="num">55.0319</td><td class="num">1.9121</td></tr><tr><td>68</td><td>[1100,2000)</td><td>[4.25,4.5)</td><td class="num">23.9887</td><td class="num">8.0007</td><td class="num">34.1608</td><td class="num">-1.2714</td><td class="num">17.7817</td><td class="num">0.77581</td></tr><tr><td>69</td><td>[1100,2000)</td><td>[4.5,4.75)</td><td class="num">27.0713</td><td class="num">8.0578</td><td class="num">8.30104</td><td class="num">2.3294</td><td class="num">3.19775</td><td class="num">2.9628</td></tr><tr><td>81</td><td>[2000,3000)</td><td>[4.5,4.75)</td><td class="num">4.11099</td><td class="num">2.8087</td><td class="num">10.2123</td><td class="num">-2.1723</td><td class="num">2.73844</td><td class="num">0.48867</td></tr><tr><td>82</td><td>[2000,3000)</td><td>[4.75,5.0)</td><td class="num">4.20742</td><td class="num">4.2181</td><td class="num">5.65142</td><td class="num">-0.34233</td><td class="num">1.05539</td><td class="num">0.74726</td></tr><tr><td>83</td><td>[2000,3000)</td><td>[5,6)</td><td class="num">8.1355</td><td class="num">5.8193</td><td class="num">2.33437</td><td class="num">0.99687</td><td class="num">0.265957</td><td class="num">1.3523</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+  <section>
+    <h2>结果图</h2>
+    <div class="figure-grid">
+      <figure><img src="../output/stage_f_v5_cell_selection/runs/v5_cellsel_baseline26/theta_exposure.png" alt="Crab 天顶角曝光分布"><figcaption>Crab 天顶角曝光分布</figcaption></figure>
+      <figure><img src="../output/stage_f_v5_cell_selection/runs/v5_cellsel_baseline26/model_counts_vs_excess.png" alt="Stage E excess 与前向折叠模型计数"><figcaption>Stage E excess 与前向折叠模型计数</figcaption></figure>
+      <figure><img src="../output/stage_f_v5_cell_selection/runs/v5_cellsel_baseline26/pull_grid_pl.png" alt="PL pull 网格"><figcaption>PL pull 网格</figcaption></figure>
+      <figure><img src="../output/stage_f_v5_cell_selection/runs/v5_cellsel_baseline26/pull_grid_logpar.png" alt="LogPar pull 网格"><figcaption>LogPar pull 网格</figcaption></figure>
+    </div>
+  </section>
+  <footer>
+    Generated from <code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v5_cell_selection/runs/v5_cellsel_baseline26/fit_v5_cellsel_baseline26_metadata.json</code>.
+  </footer>
+</main>
+</body>
+</html>

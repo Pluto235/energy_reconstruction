@@ -1,0 +1,460 @@
+{
+  "selectors": {
+    "strict20": {
+      "role": "conservative quality bracket",
+      "selector_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v5_cellsel_strict20.csv",
+      "included_cell_ids": [
+        1,
+        2,
+        3,
+        14,
+        15,
+        16,
+        26,
+        27,
+        28,
+        29,
+        30,
+        40,
+        41,
+        42,
+        53,
+        54,
+        66,
+        67,
+        68,
+        69
+      ],
+      "n_included": 20
+    },
+    "baseline26": {
+      "role": "nominal reference, current v4 baseline",
+      "selector_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v5_cellsel_baseline26.csv",
+      "included_cell_ids": [
+        1,
+        2,
+        3,
+        14,
+        15,
+        16,
+        26,
+        27,
+        28,
+        29,
+        30,
+        40,
+        41,
+        42,
+        52,
+        53,
+        54,
+        55,
+        65,
+        66,
+        67,
+        68,
+        69,
+        81,
+        82,
+        83
+      ],
+      "n_included": 26
+    },
+    "loose36": {
+      "role": "stress test / systematic bracket",
+      "selector_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v5_cellsel_loose36.csv",
+      "included_cell_ids": [
+        1,
+        2,
+        3,
+        4,
+        14,
+        15,
+        16,
+        17,
+        23,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        35,
+        39,
+        40,
+        41,
+        42,
+        43,
+        47,
+        52,
+        53,
+        54,
+        55,
+        56,
+        59,
+        65,
+        66,
+        67,
+        68,
+        69,
+        81,
+        82,
+        83
+      ],
+      "n_included": 36
+    }
+  },
+  "runs": {
+    "strict20": {
+      "run_id": "v5_cellsel_strict20",
+      "status": "complete",
+      "fit_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v5_cell_selection/runs/v5_cellsel_strict20/fit_v5_cellsel_strict20_metadata.json",
+      "stage_g_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v5_cell_selection/runs/v5_cellsel_strict20/sed_points_v5_cellsel_strict20_metadata.json",
+      "logpar": {
+        "model_name": "logpar",
+        "error_mode": "conservative",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.4484079621927603e-12,
+          "alpha": 2.726078044665663,
+          "beta": 0.14051068615413012
+        },
+        "errors": {
+          "phi0": 6.910368094846823e-14,
+          "alpha": 0.03687965267650162,
+          "beta": 0.027128594988596037
+        },
+        "fit_parameters": {
+          "log10_phi0": -11.611116216850208,
+          "alpha": 2.726078044665663,
+          "beta": 0.14051068615413012
+        },
+        "fit_parameter_errors": {
+          "log10_phi0": 0.012257494575472982,
+          "alpha": 0.03687965267650162,
+          "beta": 0.027128594988596037
+        },
+        "fit_parameter_names": [
+          "log10_phi0",
+          "alpha",
+          "beta"
+        ],
+        "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+        "covariance": [
+          [
+            0.00015024620850941206,
+            -1.5838033877773474e-05,
+            0.0001580027697369342
+          ],
+          [
+            -1.5838033877773474e-05,
+            0.001360193399110536,
+            0.0007218840892547155
+          ],
+          [
+            0.0001580027697369342,
+            0.0007218840892547155,
+            0.0007360060309279732
+          ]
+        ],
+        "chi2": 80.19492954775237,
+        "ndof": 17,
+        "chi2_over_ndof": 4.7173487969266095,
+        "p_value": 3.5412650896022044e-10,
+        "minuit_status": {
+          "valid": true,
+          "accurate": true,
+          "fmin_is_valid": true,
+          "has_covariance": true,
+          "has_accurate_covar": true,
+          "edm": 2.1283001515538424e-08
+        }
+      },
+      "pl": {
+        "model_name": "pl",
+        "error_mode": "conservative",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.208909090905949e-12,
+          "gamma": 2.599727955495064
+        },
+        "errors": {
+          "phi0": 5.0768315535991764e-14,
+          "gamma": 0.019649211421290724
+        },
+        "fit_parameters": {
+          "log10_phi0": -11.655822157433377,
+          "gamma": 2.599727955495064
+        },
+        "fit_parameter_errors": {
+          "log10_phi0": 0.009981578410617864,
+          "gamma": 0.019649211421290724
+        },
+        "fit_parameter_names": [
+          "log10_phi0",
+          "gamma"
+        ],
+        "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+        "covariance": [
+          [
+            9.96319230424554e-05,
+            -0.00010205439121305357
+          ],
+          [
+            -0.00010205439121305357,
+            0.00038609846925163535
+          ]
+        ],
+        "chi2": 118.45632770375714,
+        "ndof": 18,
+        "chi2_over_ndof": 6.580907094653174,
+        "p_value": 8.203403397619896e-17,
+        "minuit_status": {
+          "valid": true,
+          "accurate": true,
+          "fmin_is_valid": true,
+          "has_covariance": true,
+          "has_accurate_covar": true,
+          "edm": 8.068456801453934e-06
+        }
+      },
+      "max_abs_pull": 5.4787525165145405
+    },
+    "baseline26": {
+      "run_id": "v5_cellsel_baseline26",
+      "status": "complete",
+      "fit_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v5_cell_selection/runs/v5_cellsel_baseline26/fit_v5_cellsel_baseline26_metadata.json",
+      "stage_g_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v5_cell_selection/runs/v5_cellsel_baseline26/sed_points_v5_cellsel_baseline26_metadata.json",
+      "logpar": {
+        "model_name": "logpar",
+        "error_mode": "conservative",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.3678384316162437e-12,
+          "alpha": 2.76152182132255,
+          "beta": 0.1453590035940586
+        },
+        "errors": {
+          "phi0": 6.424567771214723e-14,
+          "alpha": 0.0376595114765752,
+          "beta": 0.028068066052903816
+        },
+        "fit_parameters": {
+          "log10_phi0": -11.625647934825558,
+          "alpha": 2.76152182132255,
+          "beta": 0.1453590035940586
+        },
+        "fit_parameter_errors": {
+          "log10_phi0": 0.011783550323353431,
+          "alpha": 0.0376595114765752,
+          "beta": 0.028068066052903816
+        },
+        "fit_parameter_names": [
+          "log10_phi0",
+          "alpha",
+          "beta"
+        ],
+        "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+        "covariance": [
+          [
+            0.00013885208830830781,
+            2.1509176842586307e-05,
+            0.00016524157374745105
+          ],
+          [
+            2.1509176842586307e-05,
+            0.0014183303593390886,
+            0.0008029375671226761
+          ],
+          [
+            0.00016524157374745105,
+            0.0008029375671226761,
+            0.0007878683333143589
+          ]
+        ],
+        "chi2": 117.29485852619563,
+        "ndof": 23,
+        "chi2_over_ndof": 5.099776457660679,
+        "p_value": 1.2724427246655204e-14,
+        "minuit_status": {
+          "valid": true,
+          "accurate": true,
+          "fmin_is_valid": true,
+          "has_covariance": true,
+          "has_accurate_covar": true,
+          "edm": 1.3586437110412916e-06
+        }
+      },
+      "pl": {
+        "model_name": "pl",
+        "error_mode": "conservative",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.120728385454799e-12,
+          "gamma": 2.6319569798673275
+        },
+        "errors": {
+          "phi0": 4.626845181541038e-14,
+          "gamma": 0.01843421809946255
+        },
+        "fit_parameters": {
+          "log10_phi0": -11.67351495064979,
+          "gamma": 2.6319569798673275
+        },
+        "fit_parameter_errors": {
+          "log10_phi0": 0.009475109329160958,
+          "gamma": 0.01843421809946255
+        },
+        "fit_parameter_names": [
+          "log10_phi0",
+          "gamma"
+        ],
+        "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+        "covariance": [
+          [
+            8.977770935796204e-05,
+            -8.330964384968102e-05
+          ],
+          [
+            -8.330964384968102e-05,
+            0.0003398257577746018
+          ]
+        ],
+        "chi2": 161.08418359174414,
+        "ndof": 24,
+        "chi2_over_ndof": 6.711840982989339,
+        "p_value": 2.8114464639946285e-22,
+        "minuit_status": {
+          "valid": true,
+          "accurate": true,
+          "fmin_is_valid": true,
+          "has_covariance": true,
+          "has_accurate_covar": true,
+          "edm": 2.720589870954381e-05
+        }
+      },
+      "max_abs_pull": 5.537946645622887
+    },
+    "loose36": {
+      "run_id": "v5_cellsel_loose36",
+      "status": "complete",
+      "fit_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v5_cell_selection/runs/v5_cellsel_loose36/fit_v5_cellsel_loose36_metadata.json",
+      "stage_g_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v5_cell_selection/runs/v5_cellsel_loose36/sed_points_v5_cellsel_loose36_metadata.json",
+      "logpar": {
+        "model_name": "logpar",
+        "error_mode": "conservative",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.3414526704320395e-12,
+          "alpha": 2.751845289005516,
+          "beta": 0.13693538439372135
+        },
+        "errors": {
+          "phi0": 6.161043082092905e-14,
+          "alpha": 0.03556855321715657,
+          "beta": 0.02625233073356608
+        },
+        "fit_parameters": {
+          "log10_phi0": -11.630514616518647,
+          "alpha": 2.751845289005516,
+          "beta": 0.13693538439372135
+        },
+        "fit_parameter_errors": {
+          "log10_phi0": 0.011427551139982839,
+          "alpha": 0.03556855321715657,
+          "beta": 0.02625233073356608
+        },
+        "fit_parameter_names": [
+          "log10_phi0",
+          "alpha",
+          "beta"
+        ],
+        "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+        "covariance": [
+          [
+            0.00013058895166390873,
+            -4.712272860764891e-06,
+            0.000143047937717454
+          ],
+          [
+            -4.712272860764891e-06,
+            0.0012651949251161348,
+            0.0006806382710173298
+          ],
+          [
+            0.000143047937717454,
+            0.0006806382710173298,
+            0.0006892246403559653
+          ]
+        ],
+        "chi2": 138.90960712553706,
+        "ndof": 33,
+        "chi2_over_ndof": 4.2093820341071835,
+        "p_value": 5.954535688622004e-15,
+        "minuit_status": {
+          "valid": true,
+          "accurate": true,
+          "fmin_is_valid": true,
+          "has_covariance": true,
+          "has_accurate_covar": true,
+          "edm": 1.4715493114441693e-06
+        }
+      },
+      "pl": {
+        "model_name": "pl",
+        "error_mode": "conservative",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.1101793467402523e-12,
+          "gamma": 2.636558299543217
+        },
+        "errors": {
+          "phi0": 4.520778311705495e-14,
+          "gamma": 0.01821349211577261
+        },
+        "fit_parameters": {
+          "log10_phi0": -11.675680631911032,
+          "gamma": 2.636558299543217
+        },
+        "fit_parameter_errors": {
+          "log10_phi0": 0.009304181076904783,
+          "gamma": 0.01821349211577261
+        },
+        "fit_parameter_names": [
+          "log10_phi0",
+          "gamma"
+        ],
+        "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+        "covariance": [
+          [
+            8.656779718749343e-05,
+            -8.26188609007939e-05
+          ],
+          [
+            -8.26188609007939e-05,
+            0.00033173639967432256
+          ]
+        ],
+        "chi2": 183.95602844451642,
+        "ndof": 34,
+        "chi2_over_ndof": 5.410471424838718,
+        "p_value": 1.7163712021817233e-22,
+        "minuit_status": {
+          "valid": true,
+          "accurate": true,
+          "fmin_is_valid": true,
+          "has_covariance": true,
+          "has_accurate_covar": true,
+          "edm": 7.227129000775807e-09
+        }
+      },
+      "max_abs_pull": 5.648691015951927
+    }
+  },
+  "official_forward_fold": {
+    "summary_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-cell-selection/official_pass5_forward_fold_summary.csv",
+    "nhit_summary_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-cell-selection/official_pass5_forward_fold_nhit_summary.csv",
+    "cell_counts_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-cell-selection/official_pass5_forward_fold_cell_counts.csv",
+    "method": "official pass5 dN/dE log-log piecewise interpolation folded through v4 aperture-conditioned Stage A and Stage E containment=1 signal exposure"
+  }
+}

@@ -29,7 +29,7 @@ export PYTHONPATH=/home/server/projects/energy_reconstruction:$PYTHONPATH
 
 INPUT_ROOT=${INPUT_ROOT:-/mnt/mydisk/WCDA_observation}
 OUTPUT_ROOT=${OUTPUT_ROOT:-/mnt/mydisk/WCDA_observation_eval}
-RUN_DIR=${RUN_DIR:-/home/server/projects/energy_reconstruction/runs/theta_recoxy_position_embed_midenergy_8666}
+RUN_DIR=${RUN_DIR:-/home/server/projects/energy_reconstruction/runs/theta_recoxy_position_embed_midenergy_no_core_cut_64670}
 DAY_PREFIX=${DAY_PREFIX:-}
 SUMMARY_PATH=${SUMMARY_PATH:-${OUTPUT_ROOT}/apply_summary.json}
 

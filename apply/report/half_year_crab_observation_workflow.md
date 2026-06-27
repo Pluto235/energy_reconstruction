@@ -298,10 +298,10 @@ For the recommended window, the day directories should span `0101` to `0630`.
 
 ## ETO Step 3: Run ML Energy Inference
 
-Use the existing trained model:
+Use the new no-core-cut trained model:
 
 ```text
-/home/server/projects/energy_reconstruction/runs/theta_recoxy_position_embed_midenergy_8666
+/home/server/projects/energy_reconstruction/runs/theta_recoxy_position_embed_midenergy_no_core_cut_64670
 ```
 
 Smoke test one new file before the full batch:
@@ -315,7 +315,7 @@ OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
 /home/server/anaconda3/envs/py310/bin/python apply/apply_observation_energy.py \
   --input-root /mnt/mydisk/WCDA_observation/0301/Esg20220301_00.root \
   --output-root /tmp/wcda_observation_eval_0301_smoke \
-  --run-dir /home/server/projects/energy_reconstruction/runs/theta_recoxy_position_embed_midenergy_8666 \
+  --run-dir /home/server/projects/energy_reconstruction/runs/theta_recoxy_position_embed_midenergy_no_core_cut_64670 \
   --max-events-per-file 128 \
   --step-size "5 MB" \
   --device cpu \

@@ -6,7 +6,7 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
-- **energy** · 2026-06-26 22:33 · [0fc5b51] Add v5 PredE binning ablation workflow, selectors, Slurm chain, and comparison report.
+- **energy** · 2026-06-27 10:47 · [a7ac3ab] Add Stage F covariance SED bands and LogPar correlation matrix to the v4 baseline report.
 
 - **energy** · 2026-06-26 16:45 · [d3075c7] Clarify batch-wise eval retention strategy for the half-year Crab workflow.
 

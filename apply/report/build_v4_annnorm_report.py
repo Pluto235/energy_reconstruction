@@ -42,6 +42,7 @@ RESIDUAL_ABLATION_DIR = REPORT_DIR / "assets" / "v4-residual-ablation"
 V4_PSF_RADIAL_PROFILE_GRID_PNG = V4_ASSET_DIR / "v4_stage_b_candidate_radial_psf_profiles_fit_highlight.png"
 RESPONSE_AUDIT_DIR = REPORT_DIR / "assets" / "v4-response-audit"
 V4_RESPONSE_CONTRACT_OVERLAY_PNG = RESPONSE_AUDIT_DIR / "v4_response_contract_stage_g_external_overlay.png"
+V4_STAGE_F_CORRELATION_PNG = RESPONSE_AUDIT_DIR / "v4_stage_f_logpar_correlation_matrix.png"
 CONTAINMENT1_STAGE_G_DIR = (
     REPO_ROOT / "apply/output/stage_g_v4_containment1_drop4_annnorm/runs/v4_stage_g_annnorm_containment1_drop4"
 )
@@ -411,9 +412,10 @@ def v4_stage_table(
     return v3.table(["Stage", "current role", "run / type", "metadata"], rows, cls="compact")
 
 
-def plot_v4_final_sed(current_meta: dict[str, Any], old_meta: dict[str, Any]) -> Path:
+def plot_v4_final_sed(current_meta: dict[str, Any], old_meta: dict[str, Any], f_meta: dict[str, Any] | None = None) -> Path:
     try:
         plt = v3.setup_matplotlib()
+        import numpy as np
     except ModuleNotFoundError:
         if v3.exists(V4_FINAL_SED_PNG):
             return V4_FINAL_SED_PNG
@@ -482,6 +484,44 @@ def plot_v4_final_sed(current_meta: dict[str, Any], old_meta: dict[str, Any]) ->
                 zorder=3,
             )
 
+    if f_meta:
+        all_energies: list[float] = []
+        for values in [e_pass5, e_v099]:
+            all_energies.extend(values)
+        for grouping in ["nhit", "predE"]:
+            energy, _, _ = v3.point_arrays(current_meta, grouping)
+            all_energies.extend(energy)
+        emin = max(0.1, min(all_energies or [0.3]) / 1.35)
+        emax = min(250.0, max(all_energies or [120.0]) * 1.35)
+        x = np.geomspace(emin, emax, 320)
+        scaled_band = stage_f_logpar_band(x, f_meta, scale_by_chi2=True)
+        stat_band = stage_f_logpar_band(x, f_meta, scale_by_chi2=False)
+        if scaled_band is not None:
+            central, low, high = scaled_band
+            ax.fill_between(
+                x,
+                low,
+                high,
+                color="#9ca3af",
+                alpha=0.16,
+                lw=0.0,
+                label=r"Stage F covariance band ($\chi^2$/ndof scaled)",
+                zorder=1,
+            )
+        if stat_band is not None:
+            central, low, high = stat_band
+            ax.fill_between(
+                x,
+                low,
+                high,
+                color="#4b5563",
+                alpha=0.18,
+                lw=0.0,
+                label="Stage F covariance band (stat-only)",
+                zorder=2,
+            )
+            ax.plot(x, central, color="#2563eb", lw=2.0, label="v4 primary Stage F LogPar", zorder=4)
+
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlabel("Energy (TeV)")
@@ -515,6 +555,183 @@ def e2_curve_for_spectrum(energy_tev: Any, spectrum: dict[str, Any]) -> Any:
     else:
         raise ValueError(f"Unsupported spectrum model for plotting: {model}")
     return energy * energy * dnde
+
+
+def preferred_stage_f_fit(f_meta: dict[str, Any]) -> dict[str, Any]:
+    preferred = f_meta.get("preferred_fit", {}) if isinstance(f_meta.get("preferred_fit"), dict) else {}
+    key = f"{preferred.get('model')}_{preferred.get('error_mode')}"
+    fit = f_meta.get("fits", {}).get(key, {}) if isinstance(f_meta.get("fits"), dict) else {}
+    return fit if isinstance(fit, dict) else {}
+
+
+def stage_f_logpar_covariance_payload(f_meta: dict[str, Any]) -> dict[str, Any] | None:
+    fit = preferred_stage_f_fit(f_meta)
+    if str(fit.get("model_name", "")).lower() != "logpar":
+        return None
+    params = fit.get("parameters", {}) if isinstance(fit.get("parameters"), dict) else {}
+    covariance = fit.get("covariance")
+    names = fit.get("fit_parameter_names")
+    if not params or not covariance or not names:
+        return None
+    if list(names) != ["log10_phi0", "alpha", "beta"]:
+        return None
+    return {
+        "fit": fit,
+        "params": params,
+        "names": list(names),
+        "covariance": covariance,
+        "chi2": fit.get("chi2"),
+        "ndof": fit.get("ndof"),
+        "chi2_over_ndof": fit.get("chi2_over_ndof"),
+        "parameterization": fit.get("covariance_parameterization"),
+        "status": fit.get("minuit_status", {}),
+    }
+
+
+def stage_f_logpar_band(
+    energy_tev: Any,
+    f_meta: dict[str, Any],
+    *,
+    scale_by_chi2: bool = False,
+) -> tuple[Any, Any, Any] | None:
+    payload = stage_f_logpar_covariance_payload(f_meta)
+    if payload is None:
+        return None
+
+    import numpy as np
+
+    energy = np.asarray(energy_tev, dtype=float)
+    params = payload["params"]
+    spectrum = {
+        "model": "logpar",
+        "phi0": params["phi0"],
+        "alpha": params["alpha"],
+        "beta": params["beta"],
+        "pivot_tev": 3.0,
+    }
+    central = e2_curve_for_spectrum(energy, spectrum)
+    covariance = np.asarray(payload["covariance"], dtype=float)
+    if covariance.shape != (3, 3):
+        return None
+    scale = 1.0
+    if scale_by_chi2:
+        chi2_over_ndof = to_float(payload.get("chi2_over_ndof"))
+        if chi2_over_ndof is None:
+            chi2 = to_float(payload.get("chi2"))
+            ndof = to_float(payload.get("ndof"))
+            chi2_over_ndof = (chi2 / ndof) if chi2 is not None and ndof and ndof > 0 else None
+        if chi2_over_ndof is not None and chi2_over_ndof > 1.0:
+            scale = float(chi2_over_ndof)
+
+    x = np.log(energy / 3.0)
+    gradients = np.vstack([np.full_like(x, np.log(10.0)), -x, -(x * x)]).T
+    var_ln_flux = np.einsum("ij,jk,ik->i", gradients, covariance * scale, gradients)
+    sigma_ln_flux = np.sqrt(np.maximum(var_ln_flux, 0.0))
+    return central, central * np.exp(-sigma_ln_flux), central * np.exp(sigma_ln_flux)
+
+
+def stage_f_logpar_correlation_matrix(f_meta: dict[str, Any]) -> tuple[list[str], Any] | None:
+    payload = stage_f_logpar_covariance_payload(f_meta)
+    if payload is None:
+        return None
+
+    import numpy as np
+
+    covariance = np.asarray(payload["covariance"], dtype=float)
+    diag = np.sqrt(np.diag(covariance))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        corr = covariance / np.outer(diag, diag)
+    return payload["names"], corr
+
+
+def plot_stage_f_logpar_correlation_matrix(f_meta: dict[str, Any]) -> Path | None:
+    try:
+        plt = v3.setup_matplotlib()
+        import numpy as np
+    except ModuleNotFoundError:
+        return V4_STAGE_F_CORRELATION_PNG if v3.exists(V4_STAGE_F_CORRELATION_PNG) else None
+
+    result = stage_f_logpar_correlation_matrix(f_meta)
+    if result is None:
+        return None
+    names, corr = result
+    corr = np.asarray(corr, dtype=float)
+
+    fig, ax = plt.subplots(figsize=(4.8, 4.2), dpi=170)
+    image = ax.imshow(corr, vmin=-1.0, vmax=1.0, cmap="coolwarm")
+    ax.set_xticks(range(len(names)))
+    ax.set_yticks(range(len(names)))
+    ax.set_xticklabels(names, rotation=35, ha="right")
+    ax.set_yticklabels(names)
+    ax.set_title("Stage F LogPar fit-parameter correlation")
+    for i in range(corr.shape[0]):
+        for j in range(corr.shape[1]):
+            value = corr[i, j]
+            color = "white" if abs(value) > 0.62 else "#111827"
+            ax.text(j, i, f"{value:.2f}", ha="center", va="center", fontsize=9.0, color=color)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.tick_params(length=0)
+    cbar = fig.colorbar(image, ax=ax, shrink=0.82)
+    cbar.set_label("correlation coefficient")
+    fig.tight_layout()
+    RESPONSE_AUDIT_DIR.mkdir(parents=True, exist_ok=True)
+    fig.savefig(V4_STAGE_F_CORRELATION_PNG)
+    plt.close(fig)
+    return V4_STAGE_F_CORRELATION_PNG
+
+
+def stage_f_covariance_table(f_meta: dict[str, Any]) -> str:
+    payload = stage_f_logpar_covariance_payload(f_meta)
+    if payload is None:
+        return "<p>No LogPar covariance payload is available for the preferred Stage F fit.</p>"
+
+    fit = payload["fit"]
+    params = fit.get("parameters", {}) if isinstance(fit.get("parameters"), dict) else {}
+    fit_params = fit.get("fit_parameters", {}) if isinstance(fit.get("fit_parameters"), dict) else {}
+    fit_errors = fit.get("fit_parameter_errors", {}) if isinstance(fit.get("fit_parameter_errors"), dict) else {}
+    errors = fit.get("errors", {}) if isinstance(fit.get("errors"), dict) else {}
+    status = payload.get("status", {}) if isinstance(payload.get("status"), dict) else {}
+    rows = [
+        [
+            "log10_phi0",
+            v3.fmt(fit_params.get("log10_phi0"), 6),
+            v3.fmt(fit_errors.get("log10_phi0"), 5),
+            "fit-space normalization",
+        ],
+        [
+            "phi0",
+            v3.fmt(params.get("phi0"), 5),
+            v3.fmt(errors.get("phi0"), 5),
+            r"physical normalization at E0=3 TeV",
+        ],
+        [
+            "alpha",
+            v3.fmt(params.get("alpha"), 5),
+            v3.fmt(fit_errors.get("alpha", errors.get("alpha")), 5),
+            "LogPar slope",
+        ],
+        [
+            "beta",
+            v3.fmt(params.get("beta"), 5),
+            v3.fmt(fit_errors.get("beta", errors.get("beta")), 5),
+            "LogPar curvature",
+        ],
+    ]
+    status_line = (
+        f"Minuit covariance status: valid=<code>{v3.esc(status.get('valid'))}</code>, "
+        f"accurate=<code>{v3.esc(status.get('accurate'))}</code>, "
+        f"has_accurate_covar=<code>{v3.esc(status.get('has_accurate_covar'))}</code>; "
+        f"chi2/ndof=<code>{v3.fmt(payload.get('chi2'), 5)} / {v3.fmt(payload.get('ndof'), 4)}</code>."
+    )
+    return (
+        "<p>The grey SED band is propagated from the preferred Stage F Minuit covariance in "
+        "<code>(log10_phi0, alpha, beta)</code> space. For each energy, the report propagates "
+        "<code>sigma_lnY^2 = g^T C g</code>, where <code>Y=E^2 dN/dE</code> and "
+        "<code>g=(ln10, -ln(E/E0), -ln(E/E0)^2)</code>.</p>"
+        f'<div class="note">{status_line} The darker band is the raw covariance band; the wider pale band scales the covariance by chi2/ndof as a conservative visual diagnostic because the fine-cell fit has excess scatter.</div>'
+        + v3.table(["parameter", "value", "1 sigma error", "meaning"], rows, cls="compact")
+    )
 
 
 def fit_logpar_to_e2_points(label: str, energy: list[float], e2_flux: list[float], *, pivot_tev: float = 3.0) -> dict[str, Any] | None:
@@ -659,6 +876,33 @@ def plot_response_contract_external_overlay(g_meta: dict[str, Any], f_meta: dict
     emin = max(0.1, min(all_energies or [0.3]) / 1.35)
     emax = min(250.0, max(all_energies or [120.0]) * 1.35)
     x = np.geomspace(emin, emax, 320)
+
+    scaled_band = stage_f_logpar_band(x, f_meta, scale_by_chi2=True)
+    stat_band = stage_f_logpar_band(x, f_meta, scale_by_chi2=False)
+    if scaled_band is not None:
+        _, low, high = scaled_band
+        ax.fill_between(
+            x,
+            low,
+            high,
+            color="#9ca3af",
+            alpha=0.15,
+            lw=0.0,
+            label=r"v4 Stage F covariance band ($\chi^2$/ndof scaled)",
+            zorder=1,
+        )
+    if stat_band is not None:
+        _, low, high = stat_band
+        ax.fill_between(
+            x,
+            low,
+            high,
+            color="#4b5563",
+            alpha=0.18,
+            lw=0.0,
+            label="v4 Stage F covariance band (stat-only)",
+            zorder=2,
+        )
 
     if pass5_fit:
         ax.plot(x, e2_curve_for_spectrum(x, pass5_fit), color="#111827", lw=1.7, ls="-", label="official pass5 point-fit LogPar")
@@ -2198,8 +2442,9 @@ def build_report() -> None:
         output_dir=EMPIRICAL_PSF_DIR,
     )
     cell_crossmatch_rows = build_cell_root_cause_crossmatch()
-    plot_v4_final_sed(g_meta, old_g_meta)
+    plot_v4_final_sed(g_meta, old_g_meta, f_meta)
     plot_response_contract_external_overlay(g_meta, f_meta)
+    plot_stage_f_logpar_correlation_matrix(f_meta)
     if r68_g_meta:
         plot_r68_sed_comparison(g_meta, r68_g_meta)
 
@@ -2263,7 +2508,14 @@ def build_report() -> None:
     stage_f_body = (
         "<p>The preferred spectrum is selected by the Stage F metadata. This is the primary v4 fit using the aperture-conditioned Stage A response and downstream <code>containment_r_opt=1</code>.</p>"
         + v3.stage_f_table(f_meta)
+        + "<h3>Fit covariance and SED band</h3>"
+        + stage_f_covariance_table(f_meta)
         + '<div class="grid2">'
+        + v3.figure(
+            V4_STAGE_F_CORRELATION_PNG,
+            "Stage F LogPar fit-parameter correlation matrix",
+            "Correlation matrix from the Minuit covariance in fit space: log10_phi0, alpha, beta. This is the source of the grey SED uncertainty band in the SED overlay plots.",
+        )
         + v3.figure(PRIMARY_STAGE_F_DIR / "model_counts_vs_excess.png", "Stage F aperture-response model counts versus excess", "Fit-cell excess compared with the preferred spectral model expectation under the new response contract.")
         + v3.figure(PRIMARY_STAGE_F_DIR / "pull_grid_logpar.png", "Stage F aperture-response LogPar pull grid", "Per-cell residual pull under the current preferred LogPar fit.")
         + v3.figure(PRIMARY_STAGE_F_DIR / "theta_exposure.png", "Stage F aperture-response theta exposure", "Zenith-angle exposure diagnostic used by the forward-folding response.")

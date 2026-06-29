@@ -6,6 +6,20 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-06-29 14:20 · [12b6235] Keep v5 cell-selection pull-grid colorbar outside plot panels.
+
+- **energy** · 2026-06-29 13:52 · [uncommitted] Restore Rayleigh fit overlays in v5 PredE PSF radial profile grids.
+
+- **energy** · 2026-06-29 12:19 · [uncommitted] Increase SED overlay color contrast between baseline_v4 and official pass5 curves.
+
+- **energy** · 2026-06-29 11:15 · [uncommitted] Add fit-cell shaded Stage B PSF radial profile grids to the v5 PredE binning report.
+
+- **energy** · 2026-06-29 11:02 · [uncommitted] Add official pass5 point-fit LogPar curve to the v5 PredE binning SED overlay.
+
+- **energy** · 2026-06-27 17:06 · [uncommitted] Add v5 PSF comparison pipeline outputs, Stage F/G three-branch diagnostics, and final HTML report.
+
+- **energy** · 2026-06-27 14:00 · [uncommitted] Isolate `_64670` half-year eval output, add resumable observation inference, and sync complete IHEP filtered days.
+
 - **energy** · 2026-06-27 11:24 · [1c8ad60] Switch half-year Crab observation workflow to the no-core-cut 64670 inference model.
 
 - **energy** · 2026-06-27 11:13 · [3143ab8] Add v5 cell-selection selectors, Stage F/G comparison workflow, and final SED report.

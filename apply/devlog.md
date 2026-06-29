@@ -6,7 +6,7 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
-- **energy** · 2026-06-29 15:40 · [uncommitted] Promote v5 migration 12-bin flux points into a final SED report.
+- **energy** · 2026-06-29 15:40 · [b8d0f98] Promote v5 migration 12-bin flux points into a final SED report.
 
 - **energy** · 2026-06-29 14:20 · [12b6235] Keep v5 cell-selection pull-grid colorbar outside plot panels.
 

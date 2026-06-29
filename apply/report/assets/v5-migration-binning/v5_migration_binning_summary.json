@@ -375,6 +375,10 @@
       39,
       43
     ],
-    "html_report": "apply/report/crab_sed_v5_migration_binned_comparison_report.html"
+    "html_report": "apply/report/crab_sed_v5_final_migration_sed_report.html",
+    "legacy_html_report": "apply/report/crab_sed_v5_migration_binned_comparison_report.html",
+    "flux_points_csv": "apply/report/assets/v5-migration-binning/v5_final_migration_flux_points.csv",
+    "generation_mode": "existing_assets",
+    "generation_note": "numpy unavailable locally; regenerated report from existing CSV/JSON assets"
   }
 }

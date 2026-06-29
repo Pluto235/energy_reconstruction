@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Crab SED v5 Final Migration-Binned Flux Points</title>
+  <style>
+    body { margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#111827; background:#f8fafc; }
+    main { max-width:1180px; margin:0 auto; padding:28px 24px 48px; }
+    h1 { font-size:30px; margin:0 0 8px; }
+    h2 { font-size:20px; margin:28px 0 10px; }
+    h3 { font-size:16px; margin:20px 0 8px; }
+    p { line-height:1.55; }
+    code { background:#eef2ff; padding:1px 4px; border-radius:4px; }
+    .section { background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:20px; margin:18px 0; box-shadow:0 1px 2px rgba(15,23,42,.05); }
+    .cards { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px; margin:18px 0; }
+    .card { border:1px solid #e5e7eb; border-radius:8px; padding:12px; background:#ffffff; }
+    .card.primary { border-color:#059669; background:#ecfdf5; }
+    .card .k { font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; }
+    .card .v { font-size:22px; font-weight:700; margin-top:4px; }
+    .card p { margin:4px 0 0; color:#4b5563; font-size:13px; }
+    .note { background:#f0fdf4; border-left:4px solid #059669; padding:10px 12px; border-radius:6px; margin:12px 0; }
+    .warn { background:#fff7ed; border-left:4px solid #ea580c; padding:10px 12px; border-radius:6px; margin:12px 0; }
+    table.compact { border-collapse:collapse; width:100%; font-size:12px; margin:10px 0 16px; }
+    table.compact th, table.compact td { border-bottom:1px solid #e5e7eb; padding:6px 7px; vertical-align:top; text-align:left; }
+    table.compact th { background:#f9fafb; font-weight:700; }
+    .figure { margin:14px 0 22px; }
+    .figure img { max-width:100%; border:1px solid #e5e7eb; border-radius:8px; background:#fff; }
+    .figure figcaption { font-size:13px; color:#4b5563; line-height:1.45; margin-top:6px; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+    @media (max-width:900px) { .cards,.grid2 { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body><main>
+  <h1>Crab SED v5 Final Migration-Binned Flux Points</h1>
+  <p>The final v5 SED is reported as twelve migration-informed energy flux points. The fit uses the current annulus-normalized signal and aperture-conditioned response, then changes only the final SED grouping layer; no Stage A-E products are recomputed here.</p>
+  
+    <div class="cards">
+      <div class="card primary"><div class="k">final result</div><div class="v">12 flux points</div><p>migration-informed v5 SED</p></div>
+      <div class="card"><div class="k">LogPar chi2/ndof</div><div class="v">1.745</div><p>15.71/9; max pull 2.031</p></div>
+      <div class="card"><div class="k">LogPar shape</div><div class="v">beta 0.06671</div><p>phi0 2.2562e-12; alpha 2.741</p></div>
+      <div class="card"><div class="k">fixed contract</div><div class="v">containment=1</div><p>aperture-conditioned Stage A + annnorm Stage E</p></div>
+    </div>
+    
+  <section class="section">
+    <h2>1. Final SED</h2>
+    <div class="note">The headline result is the <strong>v5 migration 12-bin</strong> flux-point set. The horizontal bars show each point's response-weighted true-energy 16-84% interval; the x-position is E50.</div>
+    <figure class="figure"><img src="assets/v5-migration-binning/v5_final_migration_sed.svg" alt="Crab SED: v5 final migration-binned flux points"><figcaption><strong>Crab SED: v5 final migration-binned flux points</strong><br>Green points are the final twelve v5 flux points. The green curve is the independent LogPar fit to those points. Black points are official pass5 WCDA.</figcaption></figure>
+  </section>
+  <section class="section">
+    <h2>2. Flux Points</h2>
+    <p>Flux values are derived from each group's fitted normalization ratio at E50. The cell composition columns are retained for auditability, but the SED is interpreted on the energy axis.</p>
+    <table class="compact"><thead><tr><th>point</th><th>E16 TeV</th><th>E50 TeV</th><th>E84 TeV</th><th>E2 dN/dE</th><th>E2 err</th><th>dN/dE</th><th>dN/dE err</th><th>pull</th><th>pass5 ratio</th><th>cells</th><th>predE span</th><th>Nhit span</th></tr></thead><tbody><tr><td>1</td><td>0.2313</td><td>0.448</td><td>0.8235</td><td>5.97041e-11</td><td>4.06349e-12</td><td>2.97534e-10</td><td>2.02503e-11</td><td>-1.37</td><td>1.361</td><td>1;2;3</td><td>[2,2.5)..[3,3.25)</td><td>[125,200)</td></tr><tr><td>2</td><td>1.074</td><td>1.795</td><td>2.809</td><td>2.12124e-12</td><td>2.23036e-11</td><td>6.58471e-13</td><td>6.92342e-12</td><td>-1.214</td><td>0.0749</td><td>4</td><td>[3.25,3.5)</td><td>[125,200)</td></tr><tr><td>3</td><td>0.4079</td><td>0.7178</td><td>1.248</td><td>5.29419e-11</td><td>2.31362e-12</td><td>1.02749e-10</td><td>4.49023e-12</td><td>0.7905</td><td>1.262</td><td>14;15;16</td><td>[2.5,3)..[3.25,3.5)</td><td>[200,300)</td></tr><tr><td>4</td><td>1.898</td><td>3.127</td><td>4.844</td><td>2.13008e-11</td><td>1.39592e-11</td><td>2.17888e-12</td><td>1.42790e-12</td><td>0.1153</td><td>1.086</td><td>17</td><td>[3.5,3.75)</td><td>[200,300)</td></tr><tr><td>5</td><td>0.6661</td><td>1.146</td><td>1.959</td><td>4.04766e-11</td><td>1.26937e-12</td><td>3.08103e-11</td><td>9.66229e-13</td><td>1.211</td><td>1.125</td><td>26;27;28;29</td><td>[2.5,3)..[3.5,3.75)</td><td>[300,500)</td></tr><tr><td>6</td><td>3.066</td><td>5.21</td><td>8.076</td><td>2.20196e-11</td><td>8.56455e-12</td><td>8.11186e-13</td><td>3.15512e-13</td><td>1.028</td><td>1.679</td><td>30</td><td>[3.75,4.0)</td><td>[300,500)</td></tr><tr><td>7</td><td>1.367</td><td>2.169</td><td>3.489</td><td>2.42945e-11</td><td>9.37747e-13</td><td>5.16174e-12</td><td>1.99238e-13</td><td>-1.432</td><td>0.9619</td><td>39;40;41;42</td><td>[3,3.25)..[3.75,4.0)</td><td>[500,800)</td></tr><tr><td>8</td><td>5.162</td><td>8.701</td><td>13.68</td><td>1.18986e-11</td><td>7.07967e-12</td><td>1.57180e-13</td><td>9.35222e-14</td><td>0.4724</td><td>1.397</td><td>43</td><td>[4.0,4.25)</td><td>[500,800)</td></tr><tr><td>9</td><td>2.659</td><td>3.964</td><td>6.175</td><td>1.72420e-11</td><td>1.01203e-12</td><td>1.09756e-12</td><td>6.44218e-14</td><td>0.7977</td><td>1.05</td><td>52;53;54;55</td><td>[3.25,3.5)..[4.0,4.25)</td><td>[800,1100)</td></tr><tr><td>10</td><td>5.071</td><td>7.646</td><td>11.93</td><td>8.91007e-12</td><td>6.97902e-13</td><td>1.52392e-13</td><td>1.19364e-14</td><td>-0.9553</td><td>0.9315</td><td>65;66;67</td><td>[3.5,3.75)..[4.0,4.25)</td><td>[1100,2000)</td></tr><tr><td>11</td><td>12.99</td><td>18.5</td><td>26.56</td><td>7.71426e-12</td><td>1.71557e-12</td><td>2.25307e-14</td><td>5.01059e-15</td><td>2.031</td><td>1.58</td><td>68;69</td><td>[4.25,4.5)..[4.5,4.75)</td><td>[1100,2000)</td></tr><tr><td>12</td><td>31.5</td><td>46.83</td><td>73.67</td><td>3.36704e-12</td><td>1.57908e-12</td><td>1.53557e-15</td><td>7.20155e-16</td><td>1.118</td><td>0.6894</td><td>81;82;83</td><td>[4.5,4.75)..[5,6)</td><td>[2000,3000)</td></tr></tbody></table>
+  </section>
+  <section class="section">
+    <h2>3. Fit Summary</h2>
+    <table class="compact"><thead><tr><th>fit</th><th>chi2</th><th>ndof</th><th>chi2/ndof</th><th>max |pull|</th><th>phi0</th><th>alpha</th><th>beta</th></tr></thead><tbody><tr><td>final v5 migration 12-bin</td><td>15.707</td><td>9</td><td>1.745</td><td>2.031</td><td>2.25623e-12</td><td>2.7409</td><td>0.06671</td></tr><tr><td>7-bin conservative diagnostic</td><td>6.7918</td><td>4</td><td>1.698</td><td>1.494</td><td>2.31470e-12</td><td>2.7401</td><td>0.076301</td></tr><tr><td>fine 30-cell diagnostic</td><td>121.58</td><td>27</td><td>4.503</td><td>5.658</td><td>2.34019e-12</td><td>2.7488</td><td>0.13458</td></tr></tbody></table>
+  </section>
+  <section class="section">
+    <h2>4. Binning Audit</h2>
+    <h3>Final v5 migration 12-bin</h3>
+    <table class="compact"><thead><tr><th>group</th><th>cells</th><th>restored</th><th>Nhit span</th><th>predE span</th><th>E50 TeV</th><th>E16-E84 TeV</th><th>sigma68</th><th>excess</th><th>model</th><th>pull</th><th>ratio/pass5</th></tr></thead><tbody><tr><td>1+2+3</td><td>1;2;3</td><td></td><td>[125,200)</td><td>[2,2.5)..[3,3.25)</td><td>0.448</td><td>0.2313-0.8235</td><td>0.2758</td><td>5431.3</td><td>5937.9</td><td>-1.37</td><td>1.361</td></tr><tr><td>4</td><td>4</td><td>4</td><td>[125,200)</td><td>[3.25,3.5)</td><td>1.795</td><td>1.074-2.809</td><td>0.2088</td><td>11.703</td><td>161.06</td><td>-1.214</td><td>0.0749</td></tr><tr><td>14+15+16</td><td>14;15;16</td><td></td><td>[200,300)</td><td>[2.5,3)..[3.25,3.5)</td><td>0.7178</td><td>0.4079-1.248</td><td>0.2429</td><td>4073.9</td><td>3933.2</td><td>0.7905</td><td>1.262</td></tr><tr><td>17</td><td>17</td><td>17</td><td>[200,300)</td><td>[3.5,3.75)</td><td>3.127</td><td>1.898-4.844</td><td>0.2035</td><td>105.46</td><td>97.491</td><td>0.1153</td><td>1.086</td></tr><tr><td>26+27+28+29</td><td>26;27;28;29</td><td></td><td>[300,500)</td><td>[2.5,3)..[3.5,3.75)</td><td>1.146</td><td>0.6661-1.959</td><td>0.2343</td><td>3479.9</td><td>3347.8</td><td>1.211</td><td>1.125</td></tr><tr><td>30</td><td>30</td><td></td><td>[300,500)</td><td>[3.75,4.0)</td><td>5.21</td><td>3.066-8.076</td><td>0.2103</td><td>105.28</td><td>63.2</td><td>1.028</td><td>1.679</td></tr><tr><td>39+40+41+42</td><td>39;40;41;42</td><td>39</td><td>[500,800)</td><td>[3,3.25)..[3.75,4.0)</td><td>2.169</td><td>1.367-3.489</td><td>0.2035</td><td>1484.5</td><td>1566.6</td><td>-1.432</td><td>0.9619</td></tr><tr><td>43</td><td>43</td><td>43</td><td>[500,800)</td><td>[4.0,4.25)</td><td>8.701</td><td>5.162-13.68</td><td>0.2117</td><td>30.062</td><td>21.612</td><td>0.4724</td><td>1.397</td></tr><tr><td>52+53+54+55</td><td>52;53;54;55</td><td></td><td>[800,1100)</td><td>[3.25,3.5)..[4.0,4.25)</td><td>3.964</td><td>2.659-6.175</td><td>0.183</td><td>513.52</td><td>489.47</td><td>0.7977</td><td>1.05</td></tr><tr><td>65+66+67</td><td>65;66;67</td><td></td><td>[1100,2000)</td><td>[3.5,3.75)..[4.0,4.25)</td><td>7.646</td><td>5.071-11.93</td><td>0.1858</td><td>230.38</td><td>247.62</td><td>-0.9553</td><td>0.9315</td></tr><tr><td>68+69</td><td>68;69</td><td></td><td>[1100,2000)</td><td>[4.25,4.5)..[4.5,4.75)</td><td>18.5</td><td>12.99-26.56</td><td>0.1553</td><td>51.06</td><td>27.998</td><td>2.031</td><td>1.58</td></tr><tr><td>81+82+83</td><td>81;82;83</td><td></td><td>[2000,3000)</td><td>[4.5,4.75)..[5,6)</td><td>46.83</td><td>31.5-73.67</td><td>0.1845</td><td>16.454</td><td>7.83</td><td>1.118</td><td>0.6894</td></tr></tbody></table>
+    <h3>7-bin conservative diagnostic</h3>
+    <table class="compact"><thead><tr><th>group</th><th>cells</th><th>restored</th><th>Nhit span</th><th>predE span</th><th>E50 TeV</th><th>E16-E84 TeV</th><th>sigma68</th><th>excess</th><th>model</th><th>pull</th><th>ratio/pass5</th></tr></thead><tbody><tr><td>1+2+3</td><td>1;2;3</td><td></td><td>[125,200)</td><td>[2,2.5)..[3,3.25)</td><td>0.4544</td><td>0.235-0.8316</td><td>0.2745</td><td>5431.3</td><td>5874.6</td><td>-1.199</td><td>1.352</td></tr><tr><td>14+15+16</td><td>14;15;16</td><td></td><td>[200,300)</td><td>[2.5,3)..[3.25,3.5)</td><td>0.7236</td><td>0.412-1.256</td><td>0.2421</td><td>4073.9</td><td>3952.8</td><td>0.6803</td><td>1.258</td></tr><tr><td>26+27+28+29+30</td><td>26;27;28;29;30</td><td></td><td>[300,500)</td><td>[2.5,3)..[3.75,4.0)</td><td>1.166</td><td>0.676-2.037</td><td>0.2395</td><td>3585.2</td><td>3463.5</td><td>1.044</td><td>1.135</td></tr><tr><td>40+41+42</td><td>40;41;42</td><td></td><td>[500,800)</td><td>[3.25,3.5)..[3.75,4.0)</td><td>2.433</td><td>1.618-3.781</td><td>0.1843</td><td>1201.1</td><td>1278.8</td><td>-1.494</td><td>0.9662</td></tr><tr><td>52+53+54+55</td><td>52;53;54;55</td><td></td><td>[800,1100)</td><td>[3.25,3.5)..[4.0,4.25)</td><td>3.958</td><td>2.657-6.158</td><td>0.1826</td><td>513.52</td><td>500.64</td><td>0.4272</td><td>1.053</td></tr><tr><td>65+66+67+68+69</td><td>65;66;67;68;69</td><td></td><td>[1100,2000)</td><td>[3.5,3.75)..[4.5,4.75)</td><td>8.087</td><td>5.197-13.72</td><td>0.2107</td><td>281.44</td><td>278.85</td><td>0.1214</td><td>1.027</td></tr><tr><td>81+82+83</td><td>81;82;83</td><td></td><td>[2000,3000)</td><td>[4.5,4.75)..[5,6)</td><td>46.33</td><td>31.26-72.64</td><td>0.1831</td><td>16.454</td><td>7.424</td><td>1.17</td><td>0.704</td></tr></tbody></table>
+    <h3>fine 30-cell residual reference</h3>
+    <div class="warn">This table is diagnostic only. The fine 30 cells are not the final v5 SED binning because their true-energy kernels overlap strongly and produce unstable pulls.</div>
+    <p class="warn">Fine 30-cell row-level diagnostics were not regenerated in this local pass; see the fit summary row and existing migration group diagnostics for the failure-mode comparison.</p>
+  </section>
+  <section class="section">
+    <h2>5. Diagnostics</h2>
+    <p>The conservative 7-bin fit and fine 30-cell fit are retained as diagnostics. They are not the headline flux-point set.</p>
+    <figure class="figure"><img src="assets/v5-migration-binning/v5_sed_pass5_comparison.png" alt="Diagnostic comparison: final 12-bin and conservative 7-bin"><figcaption><strong>Diagnostic comparison: final 12-bin and conservative 7-bin</strong><br>The blue 7-bin conservative points are a robustness check. The final SED result remains the green 12-bin set.</figcaption></figure>
+    <div class="grid2">
+      <figure class="figure"><img src="assets/v5-migration-binning/v5_fit_pull_comparison.png" alt="Pull comparison"><figcaption><strong>Pull comparison</strong><br>Stage F pulls for the v5 12-bin main result and 7-bin conservative cross-check.</figcaption></figure>
+      <figure class="figure"><img src="assets/v5-migration-binning/v5_true_energy_overlap_or_kernels.png" alt="True-energy kernels"><figcaption><strong>True-energy kernels</strong><br>Normalized true-energy kernels used to motivate the final bin merging.</figcaption></figure>
+    </div>
+    <h3>Adjacent final-bin true-energy overlaps</h3>
+    <table class="compact"><thead><tr><th>analysis</th><th>left</th><th>right</th><th>overlap</th></tr></thead><tbody><tr><td>conservative_7bin</td><td>1+2+3</td><td>14+15+16</td><td>0.69</td></tr><tr><td>conservative_7bin</td><td>14+15+16</td><td>26+27+28+29+30</td><td>0.6593</td></tr><tr><td>conservative_7bin</td><td>40+41+42</td><td>52+53+54+55</td><td>0.5508</td></tr><tr><td>conservative_7bin</td><td>26+27+28+29+30</td><td>40+41+42</td><td>0.4313</td></tr><tr><td>conservative_7bin</td><td>52+53+54+55</td><td>65+66+67+68+69</td><td>0.4084</td></tr><tr><td>conservative_7bin</td><td>65+66+67+68+69</td><td>81+82+83</td><td>0.0629</td></tr><tr><td>v5_migration_12bin</td><td>52+53+54+55</td><td>65+66+67</td><td>0.4315</td></tr><tr><td>v5_migration_12bin</td><td>43</td><td>52+53+54+55</td><td>0.3995</td></tr><tr><td>v5_migration_12bin</td><td>4</td><td>14+15+16</td><td>0.3813</td></tr><tr><td>v5_migration_12bin</td><td>30</td><td>39+40+41+42</td><td>0.3719</td></tr><tr><td>v5_migration_12bin</td><td>17</td><td>26+27+28+29</td><td>0.3297</td></tr><tr><td>v5_migration_12bin</td><td>65+66+67</td><td>68+69</td><td>0.2608</td></tr><tr><td>v5_migration_12bin</td><td>1+2+3</td><td>4</td><td>0.2146</td></tr><tr><td>v5_migration_12bin</td><td>68+69</td><td>81+82+83</td><td>0.2058</td></tr><tr><td>v5_migration_12bin</td><td>14+15+16</td><td>17</td><td>0.1727</td></tr><tr><td>v5_migration_12bin</td><td>39+40+41+42</td><td>43</td><td>0.1689</td></tr><tr><td>v5_migration_12bin</td><td>26+27+28+29</td><td>30</td><td>0.1668</td></tr></tbody></table>
+  </section>
+  <section class="section">
+    <h2>6. Outputs</h2>
+    <p>Machine-readable outputs are in <code>apply/report/assets/v5-migration-binning</code>: <code>v5_final_migration_flux_points.csv</code>, <code>v5_migration_binning_summary.json</code>, <code>v5_migration_binning_groups.csv</code>, and report figures. The legacy comparison URL now points to this report.</p>
+  </section>
+</main></body></html>

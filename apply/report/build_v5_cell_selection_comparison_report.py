@@ -606,7 +606,7 @@ def plot_sed_overlay(runs: Dict[str, Dict[str, object]], path: Path) -> None:
 
 def plot_pull_grid(runs: Dict[str, Dict[str, object]], path: Path) -> None:
     plt = setup_matplotlib()
-    fig, axes = plt.subplots(1, 3, figsize=(15.5, 4.8), dpi=160, sharex=True, sharey=True)
+    fig, axes = plt.subplots(1, 3, figsize=(16.8, 4.8), dpi=160, sharex=True, sharey=True)
     all_nhit = sorted(
         {
             str(value)
@@ -649,9 +649,10 @@ def plot_pull_grid(runs: Dict[str, Dict[str, object]], path: Path) -> None:
     for ax in axes:
         ax.set_xlabel("predicted-energy bin")
     if sc is not None:
-        fig.colorbar(sc, ax=axes.ravel().tolist(), shrink=0.86, label="(excess - model) / conservative err")
+        cax = fig.add_axes([0.915, 0.25, 0.014, 0.54])
+        fig.colorbar(sc, cax=cax, label="(excess - model) / conservative err")
     fig.suptitle("Stage F residual / pull grid")
-    fig.tight_layout()
+    fig.subplots_adjust(left=0.055, right=0.89, bottom=0.27, top=0.82, wspace=0.08)
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path)
     plt.close(fig)

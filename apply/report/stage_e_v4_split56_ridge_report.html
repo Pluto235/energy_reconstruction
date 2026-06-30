@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stage E 信号提取报告</title>
+<style>
+:root {
+  --bg: #101418;
+  --fg: #eef3f5;
+  --muted: #a8b2b8;
+  --panel: #171d22;
+  --panel-2: #1d242a;
+  --border: #2e3942;
+  --accent: #5fb3b3;
+  --good: #52b788;
+  --warn: #e9b44c;
+  --bad: #ef476f;
+  --code: #0b0f12;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f7f8f9;
+    --fg: #1b2329;
+    --muted: #56636b;
+    --panel: #ffffff;
+    --panel-2: #f1f4f6;
+    --border: #d7dee3;
+    --code: #eef2f4;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; line-height: 1.66; }
+main { max-width: 1180px; margin: 0 auto; padding: 42px 20px 64px; }
+header { border-bottom: 1px solid var(--border); margin-bottom: 34px; padding-bottom: 24px; }
+.eyebrow { color: var(--accent); text-transform: uppercase; letter-spacing: .08em; font-size: 12px; font-weight: 700; }
+h1 { margin: 8px 0 10px; font-size: clamp(30px, 5vw, 44px); line-height: 1.15; }
+h2 { margin: 42px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); font-size: 24px; }
+h3 { margin: 24px 0 8px; color: var(--accent); font-size: 18px; }
+p { margin: 10px 0; }
+ul, ol { margin: 12px 0; padding-left: 24px; }
+li { margin: 6px 0; }
+code { padding: 2px 5px; border-radius: 4px; background: var(--code); color: var(--fg); font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace; font-size: 13px; }
+.lead { max-width: 960px; color: var(--muted); font-size: 17px; }
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 18px 0; }
+.metric { min-height: 106px; padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+.metric .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .07em; }
+.metric .value { margin-top: 8px; color: var(--fg); font-size: 25px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+.metric .note { margin-top: 7px; color: var(--muted); font-size: 13px; }
+.callout { margin: 18px 0; padding: 16px 18px; border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 8px; background: var(--panel); }
+.callout.good { border-left-color: var(--good); }
+.callout.warn { border-left-color: var(--warn); }
+.callout.bad { border-left-color: var(--bad); }
+.flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+.step { padding: 13px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+.step .k { color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.step .t { margin-top: 6px; font-weight: 700; }
+.step .d { margin-top: 4px; color: var(--muted); font-size: 13px; }
+.table-wrap { width: 100%; overflow-x: auto; margin: 18px 0; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+table { width: 100%; min-width: 1040px; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+th { background: var(--panel); font-weight: 700; white-space: nowrap; }
+tbody tr:nth-child(odd) td { background: var(--panel-2); }
+tbody tr:last-child td { border-bottom: 0; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.figure-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 18px; }
+figure { margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+figure.wide { grid-column: 1 / -1; }
+figure img { display: block; width: 100%; height: auto; border-radius: 4px; background: #fff; }
+figcaption { margin-top: 9px; color: var(--muted); font-size: 13px; }
+footer { margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+@media (max-width: 900px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .flow, .figure-grid { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { main { padding: 32px 16px 56px; } .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">LHAASO-WCDA · Crab SED</div>
+    <h1>Stage E 信号提取报告</h1>
+    <p class="lead">本页把 Stage E 的输出翻译成可读的分析说明：它不是在拟合能谱，而是在每个 <code>(Nhit, log10 E_pred)</code> cell 里统计 Crab 源区计数，并扣除 Stage D 给出的背景期望，得到后续 Stage F forward folding 拟合要使用的信号表。</p>
+  </header>
+
+  <section>
+    <h2>一句话结论</h2>
+    <p>Stage E 已经在 <code>91</code> 个传入 cell 上完成 Crab on-region 计数。总源区计数 <code>N_on = 134,375</code>，Stage D 背景期望 <code>B_on = 118,138</code>，因此总 excess 为 <code>16,236.7</code>，known-background 形式的总诊断显著性为 <code>46.2148 sigma</code>。质量门状态为 <code>passed</code>。</p>
+    <div class="grid">
+      <div class="metric"><div class="label">Run</div><div class="value">v4_split56_ridge_stage_e_containment1</div><div class="note">Stage E signal extraction</div></div>
+      <div class="metric"><div class="label">扫描事件</div><div class="value">28,358,345</div><div class="note">Stage C obs_events</div></div>
+      <div class="metric"><div class="label">背景形式</div><div class="value">direct_expectation</div><div class="note">crab_roi_local</div></div>
+      <div class="metric"><div class="label">质量门</div><div class="value">passed</div><div class="note">total formal sigma 46.2148 within [-300, 300]</div></div>
+    </div>
+    <div class="grid">
+      <div class="metric"><div class="label">Total N_on</div><div class="value">134,375</div><div class="note">Crab 源区实际计数</div></div>
+      <div class="metric"><div class="label">Total B_on</div><div class="value">118,138</div><div class="note">Stage D 背景期望</div></div>
+      <div class="metric"><div class="label">Total Excess</div><div class="value">16,236.7</div><div class="note">N_on - B_on</div></div>
+      <div class="metric"><div class="label">Formal Sigma</div><div class="value">46.2148</div><div class="note">Poisson known-background 诊断</div></div>
+    </div>
+    <div class="callout good">
+      <strong>质量门状态：<code>passed</code>。</strong>
+      当前配置要求总 formal sigma 位于
+      <code>[-300, 300]</code> 之间。本次结果为 <code>46.2148</code>，通过质量门，可以作为 Stage F 的输入候选。
+      
+    </div>
+  </section>
+
+  <section>
+    <h2>为什么要做 Stage E</h2>
+    <p>前面几个阶段各自只解决了问题的一部分：Stage A 给出 MC 响应矩阵，Stage B 给出每个 cell 的 PSF 和积分半径，Stage C 把观测 ROOT 规约成带 <code>RA/Dec/MJD/cell_id</code> 的 parquet，Stage D 估计每个 cell 在 Crab 孔径内应有多少背景。到这里还没有得到“Crab 在每个 cell 贡献了多少信号”。</p>
+    <p>Stage E 就是这个桥梁：它把观测到的源区计数 <code>N_on</code> 和背景期望 <code>B_on</code> 合成 <code>excess</code>。Stage F 不直接拿所有事件拟合，而是拿 Stage E 产出的逐 cell excess 表，和 Stage A 响应折叠出来的模型预期数做比较。</p>
+  </section>
+
+  <section>
+    <h2>Stage E 在做什么</h2>
+    <div class="flow">
+      <div class="step"><div class="k">Input</div><div class="t">读观测事件</div><div class="d">从 Stage C parquet 读取 <code>ra_mean_deg</code>、<code>dec_mean_deg</code>、<code>cell_id</code>。</div></div>
+      <div class="step"><div class="k">Aperture</div><div class="t">定义源区半径</div><div class="d">每个 cell 用 Stage B/D 传下来的 <code>r_opt_deg</code>，即约 <code>1.58 sigma</code> 的最优积分半径。</div></div>
+      <div class="step"><div class="k">Count</div><div class="t">统计 N_on</div><div class="d">计算事件到 Crab 的角距离，若小于该 cell 的 <code>r_opt</code>，计入 <code>N_on,b</code>。</div></div>
+      <div class="step"><div class="k">Subtract</div><div class="t">扣背景</div><div class="d">读取 Stage D 的 <code>B_on,b</code>，计算 <code>excess_b = N_on,b - B_on,b</code>。</div></div>
+      <div class="step"><div class="k">Diagnose</div><div class="t">输出诊断</div><div class="d">给出误差、显著性、表格和二维热图，供 Stage F 和人工检查使用。</div></div>
+    </div>
+    <p>本次 Stage D 使用的是 Crab 局部 ROI 背景模型，所以 Stage E 也只在同一套 fiducial ROI 内工作：<code>rho &lt; 6 deg</code>。这保证 <code>N_on</code> 的统计口径和 <code>B_on</code> 的背景口径一致。</p>
+  </section>
+
+  <section>
+    <h2>具体怎么做的</h2>
+    <h3>1. 事件选择和几何</h3>
+    <ul>
+      <li>源位置固定为 Crab：<code>RA = 83.63 deg</code>，<code>Dec = 22.01 deg</code>。</li>
+      <li>先按 Stage D 的局部 ROI 约束保留 <code>rho &lt; 6 deg</code> 的事件；本次保留 <code>7,374,765</code> 行，剔除 <code>20,983,580</code> 行。</li>
+      <li>随后用球面角距离公式计算事件与 Crab 的夹角 <code>sep</code>，每个 cell 判断 <code>sep &lt;= r_opt_deg[cell]</code>。</li>
+    </ul>
+    <h3>2. 背景和统计量</h3>
+    <p>Stage D 输出的是 <code>direct_expectation</code>，也就是直接背景期望 <code>B_on</code>。它不是传统 off 区计数，因此本报告不把 <code>B_on</code> 强行拆成 <code>alpha × N_off</code>，表格里的 Li-Ma 显示为 <code>n/a</code>。</p>
+    <ul>
+      <li><code>excess_b = N_on,b - B_on,b</code></li>
+      <li>conservative 误差口径：<code>sqrt(N_on,b + B_on,b)</code></li>
+      <li>本次 formal sigma：<code>Poisson known-background aggregate diagnostic</code></li>
+      <li>known-background 诊断公式：<code>sign(N_on-B_on) * sqrt(2 * (N_on ln(N_on/B_on) - (N_on-B_on)))</code></li>
+    </ul>
+    <div class="callout warn">
+      <strong>为什么没有 Li-Ma？</strong>
+      Li-Ma 需要明确的 on/off 计数和曝光比 <code>alpha</code>。本次 Stage D 给的是直接背景期望，不是 off 区事件数，所以 Li-Ma 在数学上不适用。这里的显著性是一个诊断量，用来检查信号是否合理；最终能谱结果仍要看 Stage F 之后的拟合和系统误差检查。
+    </div>
+  </section>
+
+  <section>
+    <h2>结果怎么读</h2>
+    <p>下表每一行是一个输入 cell。<code>Nhit bin</code> 表示 shower size 分箱，<code>log10 E_pred bin</code> 是 ML 预测能量分箱。低 Nhit、低预测能量 cell 统计量最大；高 Nhit、高预测能量 cell 背景很低，但如果仍有明显 positive excess，就对高能端谱形很有价值。</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>cell</th><th>Nhit bin</th><th>log10 E_pred bin</th><th class="num">r_opt deg</th><th class="num">N_on</th><th class="num">B_on</th><th class="num">excess</th><th class="num">stat err</th><th class="num">known-B sigma</th><th class="num">Li-Ma</th></tr></thead>
+        <tbody><tr><td>1</td><td>[125,200)</td><td>[2,2.5)</td><td class="num">0.7816</td><td class="num">21,284</td><td class="num">20,166.7</td><td class="num">1,117.33</td><td class="num">145.89</td><td class="num">7.797</td><td class="num">n/a</td></tr><tr><td>2</td><td>[125,200)</td><td>[2.5,3)</td><td class="num">0.7211</td><td class="num">40,293</td><td class="num">36,636</td><td class="num">3,656.98</td><td class="num">200.73</td><td class="num">18.801</td><td class="num">n/a</td></tr><tr><td>3</td><td>[125,200)</td><td>[3,3.25)</td><td class="num">0.7878</td><td class="num">9,462</td><td class="num">8,804.99</td><td class="num">657.009</td><td class="num">97.273</td><td class="num">6.9173</td><td class="num">n/a</td></tr><tr><td>4</td><td>[125,200)</td><td>[3.25,3.5)</td><td class="num">1.063</td><td class="num">7,577</td><td class="num">7,565.3</td><td class="num">11.7034</td><td class="num">87.046</td><td class="num">0.13452</td><td class="num">n/a</td></tr><tr><td>5</td><td>[125,200)</td><td>[3.5,3.75)</td><td class="num">1.34</td><td class="num">5,697</td><td class="num">5,873.26</td><td class="num">-176.258</td><td class="num">75.478</td><td class="num">-2.3115</td><td class="num">n/a</td></tr><tr><td>6</td><td>[125,200)</td><td>[3.75,4.0)</td><td class="num">1.555</td><td class="num">3,290</td><td class="num">3,403.17</td><td class="num">-113.173</td><td class="num">57.359</td><td class="num">-1.9509</td><td class="num">n/a</td></tr><tr><td>7</td><td>[125,200)</td><td>[4.0,4.25)</td><td class="num">1.779</td><td class="num">1,697</td><td class="num">1,521.12</td><td class="num">175.877</td><td class="num">41.195</td><td class="num">4.4265</td><td class="num">n/a</td></tr><tr><td>8</td><td>[125,200)</td><td>[4.25,4.5)</td><td class="num">1.975</td><td class="num">653</td><td class="num">656.837</td><td class="num">-3.83725</td><td class="num">25.554</td><td class="num">-0.14987</td><td class="num">n/a</td></tr><tr><td>9</td><td>[125,200)</td><td>[4.5,4.75)</td><td class="num">2.043</td><td class="num">239</td><td class="num">211.777</td><td class="num">27.2235</td><td class="num">15.46</td><td class="num">1.8326</td><td class="num">n/a</td></tr><tr><td>10</td><td>[125,200)</td><td>[4.75,5.0)</td><td class="num">2.217</td><td class="num">88</td><td class="num">102.096</td><td class="num">-14.0963</td><td class="num">9.3808</td><td class="num">-1.4292</td><td class="num">n/a</td></tr><tr><td>11</td><td>[125,200)</td><td>[5,5.5)</td><td class="num">2.261</td><td class="num">51</td><td class="num">62.7014</td><td class="num">-11.7014</td><td class="num">7.1414</td><td class="num">-1.5277</td><td class="num">n/a</td></tr><tr><td>12</td><td>[125,200)</td><td>[5.5,6)</td><td class="num">2.243</td><td class="num">7</td><td class="num">6.18353</td><td class="num">0.81647</td><td class="num">2.6458</td><td class="num">0.32148</td><td class="num">n/a</td></tr><tr><td>13</td><td>[125,200)</td><td>&gt;=6</td><td class="num">1.58</td><td class="num">0</td><td class="num">0.560254</td><td class="num">-0.560254</td><td class="num">0</td><td class="num">-1.0585</td><td class="num">n/a</td></tr><tr><td>14</td><td>[200,300)</td><td>[2,2.5)</td><td class="num">0.6386</td><td class="num">792</td><td class="num">714.36</td><td class="num">77.6403</td><td class="num">28.142</td><td class="num">2.8545</td><td class="num">n/a</td></tr><tr><td>15</td><td>[200,300)</td><td>[2.5,3)</td><td class="num">0.5542</td><td class="num">10,510</td><td class="num">8,162.74</td><td class="num">2,347.26</td><td class="num">102.52</td><td class="num">24.864</td><td class="num">n/a</td></tr><tr><td>16</td><td>[200,300)</td><td>[3,3.25)</td><td class="num">0.5469</td><td class="num">4,457</td><td class="num">3,144.75</td><td class="num">1,312.25</td><td class="num">66.761</td><td class="num">22.004</td><td class="num">n/a</td></tr><tr><td>17</td><td>[200,300)</td><td>[3.25,3.5)</td><td class="num">0.7287</td><td class="num">2,918</td><td class="num">2,503.61</td><td class="num">414.393</td><td class="num">54.019</td><td class="num">8.0679</td><td class="num">n/a</td></tr><tr><td>18</td><td>[200,300)</td><td>[3.5,3.75)</td><td class="num">1.033</td><td class="num">2,441</td><td class="num">2,335.54</td><td class="num">105.461</td><td class="num">49.406</td><td class="num">2.1661</td><td class="num">n/a</td></tr><tr><td>19</td><td>[200,300)</td><td>[3.75,4.0)</td><td class="num">1.301</td><td class="num">1,846</td><td class="num">1,875.04</td><td class="num">-29.0444</td><td class="num">42.965</td><td class="num">-0.67249</td><td class="num">n/a</td></tr><tr><td>20</td><td>[200,300)</td><td>[4.0,4.25)</td><td class="num">1.526</td><td class="num">1,065</td><td class="num">990.579</td><td class="num">74.4208</td><td class="num">32.634</td><td class="num">2.3358</td><td class="num">n/a</td></tr><tr><td>21</td><td>[200,300)</td><td>[4.25,4.5)</td><td class="num">1.747</td><td class="num">460</td><td class="num">419.94</td><td class="num">40.0597</td><td class="num">21.448</td><td class="num">1.9249</td><td class="num">n/a</td></tr><tr><td>22</td><td>[200,300)</td><td>[4.5,4.75)</td><td class="num">1.904</td><td class="num">168</td><td class="num">128.824</td><td class="num">39.1759</td><td class="num">12.961</td><td class="num">3.2957</td><td class="num">n/a</td></tr><tr><td>23</td><td>[200,300)</td><td>[4.75,5.0)</td><td class="num">2.112</td><td class="num">61</td><td class="num">58.2419</td><td class="num">2.75808</td><td class="num">7.8102</td><td class="num">0.3586</td><td class="num">n/a</td></tr><tr><td>24</td><td>[200,300)</td><td>[5,5.5)</td><td class="num">2.26</td><td class="num">31</td><td class="num">39.9481</td><td class="num">-8.94811</td><td class="num">5.5678</td><td class="num">-1.4742</td><td class="num">n/a</td></tr><tr><td>25</td><td>[200,300)</td><td>[5.5,6)</td><td class="num">1.58</td><td class="num">2</td><td class="num">1.68166</td><td class="num">0.31834</td><td class="num">1.4142</td><td class="num">0.23829</td><td class="num">n/a</td></tr><tr><td>26</td><td>[200,300)</td><td>&gt;=6</td><td class="num">1.58</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>27</td><td>[300,500)</td><td>[2,2.5)</td><td class="num">1.58</td><td class="num">17</td><td class="num">24.0044</td><td class="num">-7.00445</td><td class="num">4.1231</td><td class="num">-1.5093</td><td class="num">n/a</td></tr><tr><td>28</td><td>[300,500)</td><td>[2.5,3)</td><td class="num">0.4214</td><td class="num">1,834</td><td class="num">1,008.18</td><td class="num">825.824</td><td class="num">42.825</td><td class="num">23.305</td><td class="num">n/a</td></tr><tr><td>29</td><td>[300,500)</td><td>[3,3.25)</td><td class="num">0.3961</td><td class="num">3,067</td><td class="num">1,545.42</td><td class="num">1,521.58</td><td class="num">55.381</td><td class="num">34.075</td><td class="num">n/a</td></tr><tr><td>30</td><td>[300,500)</td><td>[3.25,3.5)</td><td class="num">0.4156</td><td class="num">1,706</td><td class="num">905.503</td><td class="num">800.497</td><td class="num">41.304</td><td class="num">23.669</td><td class="num">n/a</td></tr><tr><td>31</td><td>[300,500)</td><td>[3.5,3.75)</td><td class="num">0.6477</td><td class="num">1,088</td><td class="num">755.954</td><td class="num">332.046</td><td class="num">32.985</td><td class="num">11.324</td><td class="num">n/a</td></tr><tr><td>32</td><td>[300,500)</td><td>[3.75,4.0)</td><td class="num">0.9901</td><td class="num">891</td><td class="num">785.723</td><td class="num">105.277</td><td class="num">29.85</td><td class="num">3.6763</td><td class="num">n/a</td></tr><tr><td>33</td><td>[300,500)</td><td>[4.0,4.25)</td><td class="num">1.254</td><td class="num">538</td><td class="num">543.804</td><td class="num">-5.80356</td><td class="num">23.195</td><td class="num">-0.24932</td><td class="num">n/a</td></tr><tr><td>34</td><td>[300,500)</td><td>[4.25,4.5)</td><td class="num">1.446</td><td class="num">319</td><td class="num">295.715</td><td class="num">23.2846</td><td class="num">17.861</td><td class="num">1.3368</td><td class="num">n/a</td></tr><tr><td>35</td><td>[300,500)</td><td>[4.5,4.75)</td><td class="num">1.647</td><td class="num">144</td><td class="num">106.076</td><td class="num">37.9242</td><td class="num">12</td><td class="num">3.4902</td><td class="num">n/a</td></tr><tr><td>36</td><td>[300,500)</td><td>[4.75,5.0)</td><td class="num">1.828</td><td class="num">58</td><td class="num">54.387</td><td class="num">3.61298</td><td class="num">7.6158</td><td class="num">0.48463</td><td class="num">n/a</td></tr><tr><td>37</td><td>[300,500)</td><td>[5,5.5)</td><td class="num">2.06</td><td class="num">23</td><td class="num">15.6191</td><td class="num">7.38085</td><td class="num">4.7958</td><td class="num">1.7436</td><td class="num">n/a</td></tr><tr><td>38</td><td>[300,500)</td><td>[5.5,6)</td><td class="num">2.26</td><td class="num">1</td><td class="num">0.551436</td><td class="num">0.448564</td><td class="num">1</td><td class="num">0.5416</td><td class="num">n/a</td></tr><tr><td>39</td><td>[300,500)</td><td>&gt;=6</td><td class="num">1.58</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>40</td><td>[500,800)</td><td>[2,2.5)</td><td class="num">1.58</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>41</td><td>[500,800)</td><td>[2.5,3)</td><td class="num">1.58</td><td class="num">96</td><td class="num">85.2967</td><td class="num">10.7033</td><td class="num">9.798</td><td class="num">1.1359</td><td class="num">n/a</td></tr><tr><td>42</td><td>[500,800)</td><td>[3,3.25)</td><td class="num">1.58</td><td class="num">4,177</td><td class="num">3,553.79</td><td class="num">623.212</td><td class="num">64.63</td><td class="num">10.169</td><td class="num">n/a</td></tr><tr><td>43</td><td>[500,800)</td><td>[3.25,3.5)</td><td class="num">0.3108</td><td class="num">1,155</td><td class="num">396.879</td><td class="num">758.121</td><td class="num">33.985</td><td class="num">30.844</td><td class="num">n/a</td></tr><tr><td>44</td><td>[500,800)</td><td>[3.5,3.75)</td><td class="num">0.3253</td><td class="num">559</td><td class="num">195.551</td><td class="num">363.449</td><td class="num">23.643</td><td class="num">21.151</td><td class="num">n/a</td></tr><tr><td>45</td><td>[500,800)</td><td>[3.75,4.0)</td><td class="num">0.5331</td><td class="num">238</td><td class="num">158.513</td><td class="num">79.487</td><td class="num">15.427</td><td class="num">5.8727</td><td class="num">n/a</td></tr><tr><td>46</td><td>[500,800)</td><td>[4.0,4.25)</td><td class="num">0.9741</td><td class="num">175</td><td class="num">144.938</td><td class="num">30.0619</td><td class="num">13.229</td><td class="num">2.4174</td><td class="num">n/a</td></tr><tr><td>47</td><td>[500,800)</td><td>[4.25,4.5)</td><td class="num">1.183</td><td class="num">74</td><td class="num">70.5113</td><td class="num">3.48869</td><td class="num">8.6023</td><td class="num">0.41211</td><td class="num">n/a</td></tr><tr><td>48</td><td>[500,800)</td><td>[4.5,4.75)</td><td class="num">1.399</td><td class="num">43</td><td class="num">26.1281</td><td class="num">16.8719</td><td class="num">6.5574</td><td class="num">3.0167</td><td class="num">n/a</td></tr><tr><td>49</td><td>[500,800)</td><td>[4.75,5.0)</td><td class="num">1.549</td><td class="num">18</td><td class="num">8.07716</td><td class="num">9.92284</td><td class="num">4.2426</td><td class="num">3.0004</td><td class="num">n/a</td></tr><tr><td>50</td><td>[500,800)</td><td>[5,5.5)</td><td class="num">1.801</td><td class="num">9</td><td class="num">7.31734</td><td class="num">1.68266</td><td class="num">3</td><td class="num">0.60023</td><td class="num">n/a</td></tr><tr><td>51</td><td>[500,800)</td><td>[5.5,6)</td><td class="num">2.151</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>52</td><td>[500,800)</td><td>&gt;=6</td><td class="num">1.58</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>53</td><td>[800,1100)</td><td>[2,2.5)</td><td class="num">1.58</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>54</td><td>[800,1100)</td><td>[2.5,3)</td><td class="num">1.58</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>55</td><td>[800,1100)</td><td>[3,3.25)</td><td class="num">1.58</td><td class="num">68</td><td class="num">35.4311</td><td class="num">32.5689</td><td class="num">8.2462</td><td class="num">4.85</td><td class="num">n/a</td></tr><tr><td>56</td><td>[800,1100)</td><td>[3.25,3.5)</td><td class="num">1.58</td><td class="num">1,316</td><td class="num">1,109.02</td><td class="num">206.981</td><td class="num">36.277</td><td class="num">6.0356</td><td class="num">n/a</td></tr><tr><td>57</td><td>[800,1100)</td><td>[3.5,3.75)</td><td class="num">0.2622</td><td class="num">280</td><td class="num">72.5481</td><td class="num">207.452</td><td class="num">16.733</td><td class="num">18.477</td><td class="num">n/a</td></tr><tr><td>58</td><td>[800,1100)</td><td>[3.75,4.0)</td><td class="num">0.2969</td><td class="num">152</td><td class="num">55.0288</td><td class="num">96.9712</td><td class="num">12.329</td><td class="num">10.72</td><td class="num">n/a</td></tr><tr><td>59</td><td>[800,1100)</td><td>[4.0,4.25)</td><td class="num">0.5141</td><td class="num">105</td><td class="num">38.0638</td><td class="num">66.9362</td><td class="num">10.247</td><td class="num">8.9002</td><td class="num">n/a</td></tr><tr><td>60</td><td>[800,1100)</td><td>[4.25,4.5)</td><td class="num">0.9862</td><td class="num">41</td><td class="num">25.1994</td><td class="num">15.8006</td><td class="num">6.4031</td><td class="num">2.8831</td><td class="num">n/a</td></tr><tr><td>61</td><td>[800,1100)</td><td>[4.5,4.75)</td><td class="num">1.234</td><td class="num">8</td><td class="num">1.99412</td><td class="num">6.00588</td><td class="num">2.8284</td><td class="num">3.1963</td><td class="num">n/a</td></tr><tr><td>62</td><td>[800,1100)</td><td>[4.75,5.0)</td><td class="num">1.471</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>63</td><td>[800,1100)</td><td>[5,5.5)</td><td class="num">1.7</td><td class="num">2</td><td class="num">0</td><td class="num">2</td><td class="num">1.4142</td><td class="num">n/a</td><td class="num">n/a</td></tr><tr><td>64</td><td>[800,1100)</td><td>[5.5,6)</td><td class="num">1.986</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>65</td><td>[800,1100)</td><td>&gt;=6</td><td class="num">1.58</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>66</td><td>[1100,2000)</td><td>[2,2.5)</td><td class="num">1.58</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>67</td><td>[1100,2000)</td><td>[2.5,3)</td><td class="num">1.58</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>68</td><td>[1100,2000)</td><td>[3,3.25)</td><td class="num">1.58</td><td class="num">0</td><td class="num">0.560254</td><td class="num">-0.560254</td><td class="num">0</td><td class="num">-1.0585</td><td class="num">n/a</td></tr><tr><td>69</td><td>[1100,2000)</td><td>[3.25,3.5)</td><td class="num">1.58</td><td class="num">33</td><td class="num">36.5706</td><td class="num">-3.57063</td><td class="num">5.7446</td><td class="num">-0.60047</td><td class="num">n/a</td></tr><tr><td>70</td><td>[1100,2000)</td><td>[3.5,3.75)</td><td class="num">1.58</td><td class="num">514</td><td class="num">406.893</td><td class="num">107.107</td><td class="num">22.672</td><td class="num">5.0992</td><td class="num">n/a</td></tr><tr><td>71</td><td>[1100,2000)</td><td>[3.75,4.0)</td><td class="num">0.2172</td><td class="num">131</td><td class="num">20.7068</td><td class="num">110.293</td><td class="num">11.446</td><td class="num">16.209</td><td class="num">n/a</td></tr><tr><td>72</td><td>[1100,2000)</td><td>[4.0,4.25)</td><td class="num">0.2324</td><td class="num">93</td><td class="num">17.8374</td><td class="num">75.1626</td><td class="num">9.6437</td><td class="num">12.523</td><td class="num">n/a</td></tr><tr><td>73</td><td>[1100,2000)</td><td>[4.25,4.5)</td><td class="num">0.2924</td><td class="num">44</td><td class="num">20.0113</td><td class="num">23.9887</td><td class="num">6.6332</td><td class="num">4.6214</td><td class="num">n/a</td></tr><tr><td>74</td><td>[1100,2000)</td><td>[4.5,4.75)</td><td class="num">0.5587</td><td class="num">46</td><td class="num">18.9287</td><td class="num">27.0713</td><td class="num">6.7823</td><td class="num">5.2488</td><td class="num">n/a</td></tr><tr><td>75</td><td>[1100,2000)</td><td>[4.75,5.0)</td><td class="num">1.58</td><td class="num">70</td><td class="num">65.6518</td><td class="num">4.34818</td><td class="num">8.3666</td><td class="num">0.53088</td><td class="num">n/a</td></tr><tr><td>76</td><td>[1100,2000)</td><td>[5,5.5)</td><td class="num">1.58</td><td class="num">28</td><td class="num">27.7896</td><td class="num">0.210405</td><td class="num">5.2915</td><td class="num">0.039863</td><td class="num">n/a</td></tr><tr><td>77</td><td>[1100,2000)</td><td>[5.5,6)</td><td class="num">1.58</td><td class="num">2</td><td class="num">0</td><td class="num">2</td><td class="num">1.4142</td><td class="num">n/a</td><td class="num">n/a</td></tr><tr><td>78</td><td>[1100,2000)</td><td>&gt;=6</td><td class="num">1.58</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>79</td><td>[2000,3000)</td><td>[2,2.5)</td><td class="num">1.58</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>80</td><td>[2000,3000)</td><td>[2.5,3)</td><td class="num">1.58</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>81</td><td>[2000,3000)</td><td>[3,3.25)</td><td class="num">1.58</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>82</td><td>[2000,3000)</td><td>[3.25,3.5)</td><td class="num">1.58</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>83</td><td>[2000,3000)</td><td>[3.5,3.75)</td><td class="num">1.58</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">n/a</td></tr><tr><td>84</td><td>[2000,3000)</td><td>[3.75,4.0)</td><td class="num">1.58</td><td class="num">1</td><td class="num">1.21756</td><td class="num">-0.217558</td><td class="num">1</td><td class="num">-0.20352</td><td class="num">n/a</td></tr><tr><td>85</td><td>[2000,3000)</td><td>[4.0,4.25)</td><td class="num">1.58</td><td class="num">8</td><td class="num">11.4595</td><td class="num">-3.45951</td><td class="num">2.8284</td><td class="num">-1.0812</td><td class="num">n/a</td></tr><tr><td>86</td><td>[2000,3000)</td><td>[4.25,4.5)</td><td class="num">1.58</td><td class="num">31</td><td class="num">41.2441</td><td class="num">-10.2441</td><td class="num">5.5678</td><td class="num">-1.6691</td><td class="num">n/a</td></tr><tr><td>87</td><td>[2000,3000)</td><td>[4.5,4.75)</td><td class="num">0.2024</td><td class="num">6</td><td class="num">1.88901</td><td class="num">4.11099</td><td class="num">2.4495</td><td class="num">2.3762</td><td class="num">n/a</td></tr><tr><td>88</td><td>[2000,3000)</td><td>[4.75,5.0)</td><td class="num">0.256</td><td class="num">11</td><td class="num">6.79258</td><td class="num">4.20742</td><td class="num">3.3166</td><td class="num">1.4801</td><td class="num">n/a</td></tr><tr><td>89</td><td>[2000,3000)</td><td>[5,5.5)</td><td class="num">0.3025</td><td class="num">19</td><td class="num">11.7735</td><td class="num">7.22647</td><td class="num">4.3589</td><td class="num">1.9322</td><td class="num">n/a</td></tr><tr><td>90</td><td>[2000,3000)</td><td>[5.5,6)</td><td class="num">1.58</td><td class="num">47</td><td class="num">37.7074</td><td class="num">9.29263</td><td class="num">6.8557</td><td class="num">1.4568</td><td class="num">n/a</td></tr><tr><td>91</td><td>[2000,3000)</td><td>&gt;=6</td><td class="num">1.58</td><td class="num">0</td><td class="num">0.0834937</td><td class="num">-0.0834937</td><td class="num">0</td><td class="num">-0.40864</td><td class="num">n/a</td></tr></tbody>
+      </table>
+    </div>
+    <p>例如 cell 1 和 cell 2 贡献了最多的绝对 excess；而 cell 16、17 这类高 Nhit cell 虽然计数少，但背景更低，known-B 诊断显著性仍然很强。整体上，正 excess 沿着高 Nhit 对应高 <code>log10 E_pred</code> 的物理带出现，这是我们希望看到的结构。</p>
+  </section>
+
+	  <section>
+	    <h2>诊断图怎么看</h2>
+	    <div class="figure-grid">
+	      <figure><img src="../output/stage_e_v4_split56_ridge/runs/v4_split56_ridge_stage_e_containment1/formal_sigma_grid.png" alt="逐 cell 的正式诊断显著性"><figcaption><strong>逐 cell 的正式诊断显著性。</strong>本次 direct expectation 背景下，formal sigma 等同于 known-background Poisson 诊断。</figcaption></figure><figure><img src="../output/stage_e_v4_split56_ridge/runs/v4_split56_ridge_stage_e_containment1/known_b_sigma_grid.png" alt="known-background 显著性诊断"><figcaption><strong>known-background 显著性诊断。</strong>逐 cell 比较 N_on 与 B_on；正值说明 Crab 源区计数超过背景期望。</figcaption></figure><figure><img src="../output/stage_e_v4_split56_ridge/runs/v4_split56_ridge_stage_e_containment1/excess_grid.png" alt="逐 cell excess"><figcaption><strong>逐 cell excess。</strong>excess = N_on - B_on，是 Stage F 拟合直接使用的信号表。</figcaption></figure><figure><img src="../output/stage_e_v4_split56_ridge/runs/v4_split56_ridge_stage_e_containment1/on_background_grid.png" alt="N_on 与 B_on 对照"><figcaption><strong>N_on 与 B_on 对照。</strong>左图是 Crab on-region 实际计数，右图是 Stage D 给出的同一孔径背景期望。</figcaption></figure><figure><img src="../output/stage_e_v4_split56_ridge/runs/v4_split56_ridge_stage_e_containment1/on_over_background_grid.png" alt="N_on / B_on 比值"><figcaption><strong>N_on / B_on 比值。</strong>比值大于 1 表示源区计数超过背景。</figcaption></figure>
+	    </div>
+	  </section>
+
+	  <section>
+	    <h2>和 Stage D 正式去背景天图的关系</h2>
+	    <p>下面几张图来自 Stage D 正式 ROI-local 背景输出，不再使用此前平滑 skymap 的 sideband 近似。它们直接读取 <code>background_v4_split56_ridge.npz</code> 中的 <code>counts_map</code> 和 <code>background_map</code>：去背景天图是逐像素 <code>counts_map - background_map</code>，residual 天图是同一背景期望下的 Poisson 诊断量。</p>
+	    <div class="callout good">
+	      <strong>这组图和 Stage E 的背景口径一致。</strong>
+	      Stage E 表格中的 <code>B_on</code> 是把同一个 Stage D <code>background_map</code> 积分到每个 cell 的 Crab on-region 后得到的；这里的天图只是把同一个过程摊回 ROI 像素上，方便人眼检查源形态。
+	    </div>
+	    <div class="figure-grid">
+	      <figure class="wide"><img src="../output/stage_d_v4_split56_ridge/runs/v4_split56_ridge_stage_d_annnorm/roi_excess_grid.png" alt="Stage D 正式去背景天图"><figcaption><strong>Stage D 正式去背景天图。</strong>逐像素 excess_map = counts_map - background_map；background_map 来自 Stage D annulus_quadratic direct expectation。</figcaption></figure><figure class="wide"><img src="../output/stage_d_v4_split56_ridge/runs/v4_split56_ridge_stage_d_annnorm/roi_known_b_sigma_grid.png" alt="Stage D 正式 residual 天图"><figcaption><strong>Stage D 正式 residual 天图。</strong>逐像素 known-background Poisson residual，使用同一个 Stage D background_map；它不是此前平滑 skymap 的 sideband 近似显著性。</figcaption></figure><figure class="wide"><img src="../output/stage_d_v4_split56_ridge/runs/v4_split56_ridge_stage_d_annnorm/roi_counts_grid.png" alt="Stage D counts 天图"><figcaption><strong>Stage D counts 天图。</strong>Stage D 正式 ROI 网格里的原始 counts_map，没有 Gaussian smoothing。</figcaption></figure><figure class="wide"><img src="../output/stage_d_v4_split56_ridge/runs/v4_split56_ridge_stage_d_annnorm/roi_background_grid.png" alt="Stage D background 天图"><figcaption><strong>Stage D background 天图。</strong>Stage D 正式 ROI-local annulus_quadratic background_map，与去背景天图使用同一背景口径。</figcaption></figure>
+	    </div>
+	  </section>
+
+	  <section>
+    <h2>输出文件和下一步</h2>
+    <ul>
+      <li><code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v4_split56_ridge/runs/v4_split56_ridge_stage_e_containment1/signal_v4_split56_ridge.npz</code>：Stage F 直接读取的数组，包含 <code>N_on</code>、<code>B_on</code>、<code>excess</code>、误差和显著性。</li>
+      <li><code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v4_split56_ridge/runs/v4_split56_ridge_stage_e_containment1/signal_v4_split56_ridge_summary.csv</code>：逐 cell 表格，适合人工检查和快速画图。</li>
+      <li><code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v4_split56_ridge/runs/v4_split56_ridge_stage_e_containment1/signal_v4_split56_ridge_metadata.json</code>：输入路径、Stage D 合约、ROI 口径、统计公式和质量门信息。</li>
+      <li><code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v4_split56_ridge/runs/v4_split56_ridge_stage_e_containment1/*.png</code>：二维 cell 诊断图。</li>
+    </ul>
+    <div class="callout good">
+      <strong>下一步是 Stage F。</strong>
+      Stage F 会把假设的 Crab 真实能谱通过 Stage A 的二维响应矩阵折叠到这些 cell 上，得到模型预期信号数，再和这里的 <code>excess_b</code> 比较，拟合幂律或 log-parabola 谱参数。
+    </div>
+    <div class="callout warn">
+      <strong>当前结果仍是分析链路验证，不是最终发表图。</strong>
+      需要继续检查背景系统误差、ROI 口径、cell selector 稳定性、1D vs 2D 自洽性，以及 Stage F 拟合残差。
+    </div>
+  </section>
+
+  <footer>
+    生成来源：<code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v4_split56_ridge/runs/v4_split56_ridge_stage_e_containment1/signal_v4_split56_ridge_metadata.json</code> 和 <code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v4_split56_ridge/runs/v4_split56_ridge_stage_e_containment1/signal_v4_split56_ridge_summary.csv</code>。
+  </footer>
+</main>
+</body>
+</html>

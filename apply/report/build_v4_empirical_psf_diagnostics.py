@@ -36,7 +36,7 @@ PSF_RISK_CELLS = {39, 52, 65}
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build observed-data empirical PSF diagnostics for the v4 drop4 fit cells."
+        description="Build observed-data empirical PSF diagnostics for the current v4 fit cells."
     )
     parser.add_argument("--stage-f-metadata", type=str, default=str(DEFAULT_STAGE_F_META))
     parser.add_argument("--psf-npz", type=str, default=None)
@@ -719,13 +719,20 @@ def plot_observed_vs_mc(profiles: dict[str, Any], output_path: Path) -> None:
 
 def plot_ratio_grid(rows: list[dict[str, Any]], key: str, output_path: Path, title: str) -> None:
     Image, ImageDraw, _ = load_pil()
-    grid = np.full((7, 12), np.nan, dtype=np.float64)
-    reliable_grid = np.zeros((7, 12), dtype=bool)
+    cell_ids = [int(row["cell_id"]) for row in rows]
+    if not cell_ids:
+        return
+    # Older v4 ledgers used 12 predE columns. The split56 baseline adds one
+    # predE column, so derive the grid from the current cell numbering.
+    ncols = 13 if max(cell_ids) > 84 else 12
+    nrows = int(math.ceil(max(cell_ids) / ncols))
+    grid = np.full((nrows, ncols), np.nan, dtype=np.float64)
+    reliable_grid = np.zeros((nrows, ncols), dtype=bool)
     for row in rows:
         cell_id = int(row["cell_id"])
         idx = cell_id - 1
-        r = idx // 12
-        c = idx % 12
+        r = idx // ncols
+        c = idx % ncols
         value = finite(row.get(key))
         if value is not None:
             grid[r, c] = value
@@ -733,8 +740,8 @@ def plot_ratio_grid(rows: list[dict[str, Any]], key: str, output_path: Path, tit
 
     cell_w, cell_h = 82, 62
     left, top = 70, 70
-    width = left + 12 * cell_w + 155
-    height = top + 7 * cell_h + 92
+    width = left + ncols * cell_w + 155
+    height = top + nrows * cell_h + 92
     image = Image.new("RGBA", (width, height), "white")
     draw = ImageDraw.Draw(image)
     draw_text(draw, (32, 18), title, size=17, bold=True)
@@ -753,9 +760,9 @@ def plot_ratio_grid(rows: list[dict[str, Any]], key: str, output_path: Path, tit
         rgb = (start * (1.0 - t) + end * t).astype(int)
         return int(rgb[0]), int(rgb[1]), int(rgb[2]), 255
 
-    for r in range(7):
-        for c in range(12):
-            cell_id = r * 12 + c + 1
+    for r in range(nrows):
+        for c in range(ncols):
+            cell_id = r * ncols + c + 1
             x0 = left + c * cell_w
             y0 = top + r * cell_h
             x1 = x0 + cell_w
@@ -771,19 +778,20 @@ def plot_ratio_grid(rows: list[dict[str, Any]], key: str, output_path: Path, tit
                 draw.rectangle((x0, y0, x1, y1), fill="#f3f4f6", outline="white", width=2)
                 draw_text(draw, (x0 + 9, y0 + 22), str(cell_id), fill="#9ca3af", size=9)
 
-    for c in range(12):
+    for c in range(ncols):
         draw_text(draw, (left + c * cell_w + 28, top - 22), str(c + 1), fill="#4b5563", size=10)
-    for r in range(7):
+    for r in range(nrows):
         draw_text(draw, (left - 32, top + r * cell_h + 22), str(r + 1), fill="#4b5563", size=10)
-    draw_text(draw, (left + 12 * cell_w + 20, top), "observed / MC", size=11, bold=True)
+    legend_x = left + ncols * cell_w
+    draw_text(draw, (legend_x + 20, top), "observed / MC", size=11, bold=True)
     for i, value in enumerate(np.linspace(1.5, 0.5, 101)):
         y0 = top + 28 + i * 3
-        draw.rectangle((left + 12 * cell_w + 28, y0, left + 12 * cell_w + 56, y0 + 3), fill=color_for(float(value)))
-    draw_text(draw, (left + 12 * cell_w + 62, top + 24), "1.5", size=9, fill="#4b5563")
-    draw_text(draw, (left + 12 * cell_w + 62, top + 174), "1.0", size=9, fill="#4b5563")
-    draw_text(draw, (left + 12 * cell_w + 62, top + 324), "0.5", size=9, fill="#4b5563")
-    draw_text(draw, (left + 290, height - 42), "predE cell column", fill="#4b5563", size=11)
-    draw_text(draw, (22, top + 190), "Nhit row", fill="#4b5563", size=11)
+        draw.rectangle((legend_x + 28, y0, legend_x + 56, y0 + 3), fill=color_for(float(value)))
+    draw_text(draw, (legend_x + 62, top + 24), "1.5", size=9, fill="#4b5563")
+    draw_text(draw, (legend_x + 62, top + 174), "1.0", size=9, fill="#4b5563")
+    draw_text(draw, (legend_x + 62, top + 324), "0.5", size=9, fill="#4b5563")
+    draw_text(draw, (left + max(0, ncols * cell_w // 2 - 200), height - 42), "predE cell column", fill="#4b5563", size=11)
+    draw_text(draw, (22, top + max(0, nrows * cell_h // 2 - 28)), "Nhit row", fill="#4b5563", size=11)
     save_canvas(output_path, image)
 
 
@@ -935,7 +943,7 @@ def build_diagnostics(
     r68_ratios = [finite(row.get("r68_obs_over_mc")) for row in reliable_rows]
     r68_ratios = [v for v in r68_ratios if v is not None]
     payload = {
-        "description": "Observed-data empirical/effective PSF diagnostics for current v4 drop4 fit cells.",
+        "description": "Observed-data empirical/effective PSF diagnostics for current v4 fit cells.",
         "inputs": {
             "stage_f_metadata": str(inputs["stage_f_meta_path"]),
             "signal_npz": str(inputs["signal_npz"]),

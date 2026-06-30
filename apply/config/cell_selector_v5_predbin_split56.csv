@@ -1,0 +1,92 @@
+cell_id,include,subset_version,subset_reason,nhit_bin,predE_bin,mc_count,central99_flag,physical_ridge_flag,ridge_peak_fraction,fit_predE_range_flag,tail_bin_flag,psf_quality_flag,cell_role,exclusion_source
+1,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[125,200)","[2,2.5)",186591,1,1,0.4463536458756943,1,0,1,baseline_fit,
+2,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[125,200)","[2.5,3)",418034,1,1,1.0,1,0,1,baseline_fit,
+3,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[125,200)","[3,3.25)",88759,1,1,0.21232483482204798,1,0,1,baseline_fit,
+4,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[125,200)","[3.25,3.5)",42094,1,1,0.10069515876699024,1,0,1,baseline_fit,
+5,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[125,200)","[3.5,3.75)",23611,1,0,0.05648105178047719,1,0,1,excluded,MC_prefit_selector
+6,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[125,200)","[3.75,4.0)",16474,1,0,0.039408277795586005,1,0,1,excluded,MC_prefit_selector
+7,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[125,200)","[4.0,4.25)",11008,1,0,0.02633278632838477,1,0,1,excluded,MC_prefit_selector
+8,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[125,200)","[4.25,4.5)",7175,1,0,0.017163675681882335,1,0,1,excluded,MC_prefit_selector
+9,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[125,200)","[4.5,4.75)",5325,1,0,0.012738198328365636,1,0,1,excluded,MC_prefit_selector
+10,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[125,200)","[4.75,5.0)",4880,1,0,0.011673691613600807,1,0,1,excluded,MC_prefit_selector
+11,0,v5_predbin_split56_selector,"[5,6) split high-energy probe excluded except highest Nhit ridge","[125,200)","[5,5.5)",10845,1,0,0.02594286589129114,1,0,1,high_energy_probe,high_energy_probe
+12,0,v5_predbin_split56_selector,"[5,6) split high-energy probe excluded except highest Nhit ridge","[125,200)","[5.5,6)",8244,1,0,0.01972088394723874,1,0,1,high_energy_probe,high_energy_probe
+13,0,v5_predbin_split56_selector,diagnostic tail bin excluded from main fit,"[125,200)",>=6,157,0,0,0.0,0,1,1,diagnostic_tail,fit_predE_range
+14,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[200,300)","[2,2.5)",17965,1,0,0.07025097174319389,1,0,1,excluded,MC_prefit_selector
+15,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[200,300)","[2.5,3)",255726,1,1,1.0,1,0,1,baseline_fit,
+16,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[200,300)","[3,3.25)",122642,1,1,0.479583616839899,1,0,1,baseline_fit,
+17,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[200,300)","[3.25,3.5)",55093,1,1,0.21543761682425722,1,0,1,baseline_fit,
+18,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[200,300)","[3.5,3.75)",26172,1,1,0.10234391497149292,1,0,1,baseline_fit,
+19,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[200,300)","[3.75,4.0)",16631,1,0,0.0650344509357672,1,0,1,excluded,MC_prefit_selector
+20,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[200,300)","[4.0,4.25)",13247,1,0,0.051801537583194515,1,0,1,excluded,MC_prefit_selector
+21,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[200,300)","[4.25,4.5)",10121,1,0,0.039577516560693866,1,0,1,excluded,MC_prefit_selector
+22,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[200,300)","[4.5,4.75)",7811,1,0,0.030544410814700107,1,0,1,excluded,MC_prefit_selector
+23,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[200,300)","[4.75,5.0)",6480,1,0,0.025339621313437036,1,0,1,excluded,MC_prefit_selector
+24,0,v5_predbin_split56_selector,"[5,6) split high-energy probe excluded except highest Nhit ridge","[200,300)","[5,5.5)",13668,1,0,0.05344783088149035,1,0,1,high_energy_probe,high_energy_probe
+25,0,v5_predbin_split56_selector,"[5,6) split high-energy probe excluded except highest Nhit ridge","[200,300)","[5.5,6)",10586,1,0,0.04139586901605625,1,0,1,high_energy_probe,high_energy_probe
+26,0,v5_predbin_split56_selector,diagnostic tail bin excluded from main fit,"[200,300)",>=6,203,0,0,0.0,0,1,1,diagnostic_tail,fit_predE_range
+27,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[300,500)","[2,2.5)",227,0,0,0.0014982904967460035,1,0,1,excluded,MC_prefit_selector
+28,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[300,500)","[2.5,3)",80182,1,1,0.5292331656832072,1,0,1,baseline_fit,
+29,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[300,500)","[3,3.25)",151506,1,1,1.0,1,0,1,baseline_fit,
+30,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[300,500)","[3.25,3.5)",112141,1,1,0.7401753065885179,1,0,1,baseline_fit,
+31,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[300,500)","[3.5,3.75)",46983,1,1,0.31010653043443825,1,0,1,baseline_fit,
+32,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[300,500)","[3.75,4.0)",20906,1,1,0.13798793447124205,1,0,1,baseline_fit,
+33,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[300,500)","[4.0,4.25)",13417,1,0,0.0885575488759521,1,0,1,excluded,MC_prefit_selector
+34,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[300,500)","[4.25,4.5)",11186,1,0,0.07383205945639117,1,0,1,excluded,MC_prefit_selector
+35,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[300,500)","[4.5,4.75)",10057,1,0,0.06638020936464563,1,0,1,excluded,MC_prefit_selector
+36,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[300,500)","[4.75,5.0)",8426,1,0,0.05561495914353227,1,0,1,excluded,MC_prefit_selector
+37,0,v5_predbin_split56_selector,"[5,6) split high-energy probe excluded except highest Nhit ridge","[300,500)","[5,5.5)",17631,1,0,0.11637162884638232,1,0,1,high_energy_probe,high_energy_probe
+38,0,v5_predbin_split56_selector,"[5,6) split high-energy probe excluded except highest Nhit ridge","[300,500)","[5.5,6)",17145,1,0,0.11316383509563978,1,0,1,high_energy_probe,high_energy_probe
+39,0,v5_predbin_split56_selector,diagnostic tail bin excluded from main fit,"[300,500)",>=6,433,0,0,0.0,0,1,1,diagnostic_tail,fit_predE_range
+40,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[500,800)","[2,2.5)",0,0,0,0.0,1,0,1,excluded,MC_prefit_selector
+41,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[500,800)","[2.5,3)",913,0,0,0.010199635807089474,1,0,1,excluded,MC_prefit_selector
+42,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[500,800)","[3,3.25)",27769,1,1,0.3102230960866019,1,0,1,baseline_fit,
+43,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[500,800)","[3.25,3.5)",89513,1,1,1.0,1,0,1,baseline_fit,
+44,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[500,800)","[3.5,3.75)",68604,1,1,0.7664138169874767,1,0,1,baseline_fit,
+45,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[500,800)","[3.75,4.0)",26703,1,1,0.2983142113436037,1,0,1,baseline_fit,
+46,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[500,800)","[4.0,4.25)",10601,1,1,0.11842972529129847,1,0,1,baseline_fit,
+47,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[500,800)","[4.25,4.5)",5257,1,0,0.058728899712890865,1,0,1,excluded,MC_prefit_selector
+48,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[500,800)","[4.5,4.75)",5154,1,0,0.057578228860612424,1,0,1,excluded,MC_prefit_selector
+49,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[500,800)","[4.75,5.0)",5397,1,0,0.06029291834705573,1,0,1,excluded,MC_prefit_selector
+50,0,v5_predbin_split56_selector,"[5,6) split high-energy probe excluded except highest Nhit ridge","[500,800)","[5,5.5)",13235,1,0,0.14785561873694325,1,0,1,high_energy_probe,high_energy_probe
+51,0,v5_predbin_split56_selector,"[5,6) split high-energy probe excluded except highest Nhit ridge","[500,800)","[5.5,6)",14477,1,0,0.16173069833432016,1,0,1,high_energy_probe,high_energy_probe
+52,0,v5_predbin_split56_selector,diagnostic tail bin excluded from main fit,"[500,800)",>=6,426,0,0,0.0,0,1,1,diagnostic_tail,fit_predE_range
+53,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[800,1100)","[2,2.5)",0,0,0,0.0,1,0,1,excluded,MC_prefit_selector
+54,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[800,1100)","[2.5,3)",5,0,0,0.00015249946625186812,1,0,1,excluded,MC_prefit_selector
+55,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[800,1100)","[3,3.25)",1093,1,0,0.03333638332265837,1,0,1,excluded,MC_prefit_selector
+56,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[800,1100)","[3.25,3.5)",15783,1,1,0.48137981517064693,1,0,1,baseline_fit,
+57,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[800,1100)","[3.5,3.75)",32787,1,1,1.0,1,0,1,baseline_fit,
+58,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[800,1100)","[3.75,4.0)",22615,1,1,0.6897550858571995,1,0,1,baseline_fit,
+59,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[800,1100)","[4.0,4.25)",9020,1,1,0.2751090371183701,1,0,1,baseline_fit,
+60,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[800,1100)","[4.25,4.5)",2841,1,0,0.08665019672431147,1,0,1,excluded,MC_prefit_selector
+61,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[800,1100)","[4.5,4.75)",1287,1,0,0.039253362613230855,1,0,1,excluded,MC_prefit_selector
+62,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[800,1100)","[4.75,5.0)",1482,1,0,0.04520084179705371,1,0,1,excluded,MC_prefit_selector
+63,0,v5_predbin_split56_selector,"[5,6) split high-energy probe excluded except highest Nhit ridge","[800,1100)","[5,5.5)",4644,1,0,0.1416415042547351,1,0,1,high_energy_probe,high_energy_probe
+64,0,v5_predbin_split56_selector,"[5,6) split high-energy probe excluded except highest Nhit ridge","[800,1100)","[5.5,6)",3591,1,0,0.10952511666209168,1,0,1,high_energy_probe,high_energy_probe
+65,0,v5_predbin_split56_selector,diagnostic tail bin excluded from main fit,"[800,1100)",>=6,71,0,0,0.0,0,1,1,diagnostic_tail,fit_predE_range
+66,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[1100,2000)","[2,2.5)",0,0,0,0.0,1,0,1,excluded,MC_prefit_selector
+67,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[1100,2000)","[2.5,3)",0,0,0,0.0,1,0,1,excluded,MC_prefit_selector
+68,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[1100,2000)","[3,3.25)",16,0,0,0.0006667222268522376,1,0,1,excluded,MC_prefit_selector
+69,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[1100,2000)","[3.25,3.5)",1565,1,0,0.0652137678139845,1,0,1,excluded,MC_prefit_selector
+70,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[1100,2000)","[3.5,3.75)",10960,1,1,0.4567047253937828,1,0,1,baseline_fit,
+71,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[1100,2000)","[3.75,4.0)",23726,1,1,0.988665722143512,1,0,1,baseline_fit,
+72,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[1100,2000)","[4.0,4.25)",23998,1,1,1.0,1,0,1,baseline_fit,
+73,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[1100,2000)","[4.25,4.5)",13380,1,1,0.5575464622051838,1,0,1,baseline_fit,
+74,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[1100,2000)","[4.5,4.75)",5650,1,1,0.23543628635719643,1,0,1,baseline_fit,
+75,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[1100,2000)","[4.75,5.0)",1641,1,0,0.06838069839153263,1,0,1,excluded,MC_prefit_selector
+76,0,v5_predbin_split56_selector,"[5,6) split high-energy probe excluded except highest Nhit ridge","[1100,2000)","[5,5.5)",687,1,0,0.028627385615467956,1,0,1,high_energy_probe,high_energy_probe
+77,0,v5_predbin_split56_selector,"[5,6) split high-energy probe excluded except highest Nhit ridge","[1100,2000)","[5.5,6)",223,0,0,0.009292441036753063,1,0,1,high_energy_probe,high_energy_probe
+78,0,v5_predbin_split56_selector,diagnostic tail bin excluded from main fit,"[1100,2000)",>=6,4,0,0,0.0,0,1,1,diagnostic_tail,fit_predE_range
+79,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[2000,3000)","[2,2.5)",0,0,0,0.0,1,0,1,excluded,MC_prefit_selector
+80,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[2000,3000)","[2.5,3)",0,0,0,0.0,1,0,1,excluded,MC_prefit_selector
+81,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[2000,3000)","[3,3.25)",0,0,0,0.0,1,0,1,excluded,MC_prefit_selector
+82,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[2000,3000)","[3.25,3.5)",0,0,0,0.0,1,0,1,excluded,MC_prefit_selector
+83,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[2000,3000)","[3.5,3.75)",4,0,0,0.0006216972334473111,1,0,1,excluded,MC_prefit_selector
+84,0,v5_predbin_split56_selector,excluded by central99/MC-ridge/statistics prefit selector,"[2000,3000)","[3.75,4.0)",156,1,0,0.024246192104445136,1,0,1,excluded,MC_prefit_selector
+85,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[2000,3000)","[4.0,4.25)",1175,1,1,0.18262356232514765,1,0,1,baseline_fit,
+86,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[2000,3000)","[4.25,4.5)",3127,1,1,0.4860118122474355,1,0,1,baseline_fit,
+87,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[2000,3000)","[4.5,4.75)",5515,1,1,0.8571650606154803,1,0,1,baseline_fit,
+88,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[2000,3000)","[4.75,5.0)",5332,1,1,0.8287224121852658,1,0,1,baseline_fit,
+89,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[2000,3000)","[5,5.5)",6434,1,1,1.0,1,0,1,baseline_fit,
+90,1,v5_predbin_split56_selector,"central99 MC-occupancy-ridge prefit cell inside [2,6)","[2000,3000)","[5.5,6)",799,1,1,0.1241840223811004,1,0,1,baseline_fit,
+91,0,v5_predbin_split56_selector,diagnostic tail bin excluded from main fit,"[2000,3000)",>=6,0,0,0,0.0,0,1,1,diagnostic_tail,fit_predE_range

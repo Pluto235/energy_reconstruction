@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-06-30 22:23 · [uncommitted] Rebuild v4 split56 ridge-only baseline and compress the v4 report around the current Stage A-G results.
+
 - **energy** · 2026-06-30 21:54 · [cccb7c6] Add observed-data v5 PSF aperture branch with MC-ratio guard and four-branch comparison report.
 
 - **energy** · 2026-06-30 20:51 · [uncommitted] Add v5.4 de-circularized upgrade: K rebuilt from MEASURED data/MC predE moments (0 free params, shift+broaden, self-consistent with v5.3 fitted Delta) and per-cell significance-gated de-Poissoned background systematic (replaces row-pool); off-source null tests pass (leave-one-out held-out pull RMS 1.07; systematic absorbs the -26σ off-source background failure to -1.8σ); cell chi2/ndof 5.10→1.06 with 7-bin SED invariant (rows conserved to 2e-16).

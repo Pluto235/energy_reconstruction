@@ -19,6 +19,10 @@ ACTIVE30_FORWARD_DIR = REPORT_DIR / "assets" / "v4-annnorm-normalization-diagnos
 DROP4_FORWARD_DIR = REPORT_DIR / "assets" / "v4-drop4-normalization-diagnostics"
 FORWARD_DIR = DROP4_FORWARD_DIR
 DROP4_SELECTOR_CSV = REPO_ROOT / "apply/config/cell_selector_v4_drop4_psfborrow.csv"
+SPLIT56_SELECTOR_CSV = REPO_ROOT / "apply/config/cell_selector_v5_predbin_split56.csv"
+PRIMARY_STAGE_A_NPZ = (
+    REPO_ROOT / "apply/output/stage_a_v4_aperture_conditioned/response_2d_v4_aperture_conditioned.npz"
+)
 PRIMARY_STAGE_A_META = (
     REPO_ROOT / "apply/output/stage_a_v4_aperture_conditioned/response_2d_v4_aperture_conditioned_metadata.json"
 )
@@ -58,10 +62,57 @@ APERTURE_CONDITIONED_STAGE_F_META = (
 APERTURE_CONDITIONED_STAGE_G_META = (
     APERTURE_CONDITIONED_STAGE_G_DIR / "sed_points_v4_aperture_conditioned_drop4_metadata.json"
 )
-PRIMARY_STAGE_F_DIR = APERTURE_CONDITIONED_STAGE_F_DIR
-PRIMARY_STAGE_G_DIR = APERTURE_CONDITIONED_STAGE_G_DIR
-PRIMARY_STAGE_F_META = APERTURE_CONDITIONED_STAGE_F_META
-PRIMARY_STAGE_G_META = APERTURE_CONDITIONED_STAGE_G_META
+SPLIT56_STAGE_A_NPZ = REPO_ROOT / "apply/output/stage_a_v4_split56_ridge/response_2d_v4_split56_ridge.npz"
+SPLIT56_STAGE_A_META = REPO_ROOT / "apply/output/stage_a_v4_split56_ridge/response_2d_v4_split56_ridge_metadata.json"
+SPLIT56_STAGE_B_DIR = REPO_ROOT / "apply/output/stage_b_v4_split56_ridge/runs/v4_split56_ridge_stage_b_rayleigh"
+SPLIT56_STAGE_C_DIR = REPO_ROOT / "apply/output/stage_c_v4_split56_ridge/runs/v4_split56_ridge_stage_c"
+SPLIT56_STAGE_D_DIR = REPO_ROOT / "apply/output/stage_d_v4_split56_ridge/runs/v4_split56_ridge_stage_d_annnorm"
+SPLIT56_STAGE_E_DIR = REPO_ROOT / "apply/output/stage_e_v4_split56_ridge/runs/v4_split56_ridge_stage_e_containment1"
+SPLIT56_STAGE_F_DIR = REPO_ROOT / "apply/output/stage_f_v4_split56_ridge/runs/v4_split56_ridge_stage_f"
+SPLIT56_STAGE_G_DIR = REPO_ROOT / "apply/output/stage_g_v4_split56_ridge/runs/v4_split56_ridge_stage_g"
+SPLIT56_STAGE_B_META = SPLIT56_STAGE_B_DIR / "psf_v4_split56_ridge_metadata.json"
+SPLIT56_STAGE_C_META = SPLIT56_STAGE_C_DIR / "obs_events_metadata.json"
+SPLIT56_STAGE_D_META = SPLIT56_STAGE_D_DIR / "background_v4_split56_ridge_metadata.json"
+SPLIT56_STAGE_E_META = SPLIT56_STAGE_E_DIR / "signal_v4_split56_ridge_metadata.json"
+SPLIT56_STAGE_F_META = SPLIT56_STAGE_F_DIR / "fit_v4_split56_ridge_metadata.json"
+SPLIT56_STAGE_G_META = SPLIT56_STAGE_G_DIR / "sed_points_v4_split56_ridge_metadata.json"
+
+if SPLIT56_STAGE_F_META.exists() and SPLIT56_STAGE_G_META.exists():
+    PRIMARY_BASELINE_ID = "v4_split56_ridge"
+    PRIMARY_SELECTOR_CSV = SPLIT56_SELECTOR_CSV
+    PRIMARY_STAGE_A_NPZ = SPLIT56_STAGE_A_NPZ
+    PRIMARY_STAGE_A_META = SPLIT56_STAGE_A_META
+    PRIMARY_STAGE_B_DIR = SPLIT56_STAGE_B_DIR
+    PRIMARY_STAGE_C_DIR = SPLIT56_STAGE_C_DIR
+    PRIMARY_STAGE_D_DIR = SPLIT56_STAGE_D_DIR
+    PRIMARY_STAGE_E_DIR = SPLIT56_STAGE_E_DIR
+    PRIMARY_STAGE_F_DIR = SPLIT56_STAGE_F_DIR
+    PRIMARY_STAGE_G_DIR = SPLIT56_STAGE_G_DIR
+    PRIMARY_STAGE_B_META = SPLIT56_STAGE_B_META
+    PRIMARY_STAGE_C_META = SPLIT56_STAGE_C_META
+    PRIMARY_STAGE_D_META = SPLIT56_STAGE_D_META
+    PRIMARY_STAGE_E_META = SPLIT56_STAGE_E_META
+    PRIMARY_STAGE_F_META = SPLIT56_STAGE_F_META
+    PRIMARY_STAGE_G_META = SPLIT56_STAGE_G_META
+    PRIMARY_FIT_SUMMARY = PRIMARY_STAGE_F_DIR / "fit_v4_split56_ridge_summary.csv"
+    PRIMARY_STAGE_F_NPZ_NAME = "fit_v4_split56_ridge.npz"
+    PRIMARY_STAGE_G_NPZ_NAME = "sed_points_v4_split56_ridge.npz"
+else:
+    PRIMARY_BASELINE_ID = "v4_aperture_conditioned_drop4"
+    PRIMARY_SELECTOR_CSV = DROP4_SELECTOR_CSV
+    PRIMARY_STAGE_B_DIR = v3.STAGE_B_PSF_DIR
+    PRIMARY_STAGE_C_DIR = v3.STAGE_C_META.parent
+    PRIMARY_STAGE_D_DIR = v3.STAGE_D_DIR
+    PRIMARY_STAGE_F_DIR = APERTURE_CONDITIONED_STAGE_F_DIR
+    PRIMARY_STAGE_G_DIR = APERTURE_CONDITIONED_STAGE_G_DIR
+    PRIMARY_STAGE_B_META = v3.STAGE_B_META
+    PRIMARY_STAGE_C_META = v3.STAGE_C_META
+    PRIMARY_STAGE_D_META = v3.STAGE_D_META
+    PRIMARY_STAGE_F_META = APERTURE_CONDITIONED_STAGE_F_META
+    PRIMARY_STAGE_G_META = APERTURE_CONDITIONED_STAGE_G_META
+    PRIMARY_FIT_SUMMARY = PRIMARY_STAGE_F_DIR / "fit_v4_aperture_conditioned_drop4_summary.csv"
+    PRIMARY_STAGE_F_NPZ_NAME = "fit_v4_aperture_conditioned_drop4.npz"
+    PRIMARY_STAGE_G_NPZ_NAME = "sed_points_v4_aperture_conditioned_drop4.npz"
 R68_STAGE_B_DIR = REPO_ROOT / "apply/output/stage_b_v4_aperture_variants/runs/v4_r68_from_psfborrow"
 R68_STAGE_D_DIR = REPO_ROOT / "apply/output/stage_d_v4_r68_aperture/runs/v4_r68_aperture_drop4_stage_d"
 R68_STAGE_E_DIR = REPO_ROOT / "apply/output/stage_e_v4_r68_aperture/runs/v4_r68_aperture_drop4_stage_e"
@@ -128,8 +179,8 @@ def write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> 
 
 
 def build_cell_root_cause_crossmatch() -> list[dict[str, Any]]:
-    """Merge current drop4 cell diagnostics into one lightweight table."""
-    fit_rows = v3.read_csv_rows(PRIMARY_STAGE_F_DIR / "fit_v4_aperture_conditioned_drop4_summary.csv")
+    """Merge legacy drop4 cell diagnostics into one lightweight table."""
+    fit_rows = v3.read_csv_rows(APERTURE_CONDITIONED_STAGE_F_DIR / "fit_v4_aperture_conditioned_drop4_summary.csv")
     fold_rows = [
         row
         for row in v3.read_csv_rows(RESPONSE_AUDIT_DIR / "official_pass5_containment_ablation_by_cell.csv")
@@ -321,7 +372,7 @@ def plot_cell_root_cause_crossmatch(rows: list[dict[str, Any]]) -> Path:
     for y in [-3, -2, 2, 3]:
         axes[0].axhline(y, color="#9ca3af", lw=0.7, ls="--", alpha=0.7)
     axes[0].set_ylabel("Stage F pull")
-    axes[0].set_title("v4 drop4 cell-level root-cause crossmatch")
+    axes[0].set_title("legacy v4 drop4 cell-level root-cause crossmatch")
 
     axes[1].plot(x, ratio, "o-", color="#7c3aed", lw=1.3, ms=4.4)
     axes[1].axhline(1.0, color="#111827", lw=0.8)
@@ -387,9 +438,9 @@ def v4_stage_table(
             v3.esc(a_meta.get("response_type")),
             v3.esc(PRIMARY_STAGE_A_META.relative_to(REPO_ROOT)),
         ],
-        ["B", "direct own-cell PSF for r_opt", v3.esc(b_meta.get("run_id")), v3.esc(v3.STAGE_B_META.relative_to(REPO_ROOT))],
-        ["C", "observation event reduction", v3.esc(c_meta.get("run_id")), v3.esc(v3.STAGE_C_META.relative_to(REPO_ROOT))],
-        ["D", "annulus-normalized 2D background", v3.esc(d_meta.get("run_id")), v3.esc(v3.STAGE_D_META.relative_to(REPO_ROOT))],
+        ["B", "MC PSF for r_opt", v3.esc(b_meta.get("run_id")), v3.esc(PRIMARY_STAGE_B_META.relative_to(REPO_ROOT))],
+        ["C", "observation event reduction", v3.esc(c_meta.get("run_id")), v3.esc(PRIMARY_STAGE_C_META.relative_to(REPO_ROOT))],
+        ["D", "annulus-normalized 2D background", v3.esc(d_meta.get("run_id")), v3.esc(PRIMARY_STAGE_D_META.relative_to(REPO_ROOT))],
         [
             "E",
             "on-region excess; containment forced to one for response contract",
@@ -1179,7 +1230,7 @@ def fit_cell_table_from(rows: list[dict[str, str]]) -> str:
 
 
 def plot_v4_candidate_psf_profiles(fit_rows: list[dict[str, str]]) -> Path | None:
-    source_png = v3.STAGE_B_NOMINAL_DIR / "psf_radial_profiles_grid.png"
+    source_png = PRIMARY_STAGE_B_DIR / "psf_radial_profiles_grid.png"
     if not v3.exists(source_png):
         return None
     try:
@@ -1232,13 +1283,16 @@ def plot_v4_candidate_psf_profiles(fit_rows: list[dict[str, str]]) -> Path | Non
 
     x_groups = contiguous_groups([x for x in range(width) if dark_count_x(x) > 1000])
     y_groups = contiguous_groups([y for y in range(height) if dark_count_y(y) > 2600])
-    if len(x_groups) < 24 or len(y_groups) < 14:
+    selector_all = v3.read_csv_rows(PRIMARY_SELECTOR_CSV)
+    ncols = len({row.get("predE_bin") for row in selector_all}) or 12
+    nrows = len({row.get("nhit_bin") for row in selector_all}) or 7
+    if len(x_groups) < 2 * ncols or len(y_groups) < 2 * nrows:
         return None
 
-    x_lines = [int(round((lo + hi) / 2.0)) for lo, hi in x_groups[:24]]
-    y_lines = [int(round((lo + hi) / 2.0)) for lo, hi in y_groups[:14]]
-    x_bounds = [(x_lines[i], x_lines[i + 1]) for i in range(0, 24, 2)]
-    y_bounds = [(y_lines[i], y_lines[i + 1]) for i in range(0, 14, 2)]
+    x_lines = [int(round((lo + hi) / 2.0)) for lo, hi in x_groups[: 2 * ncols]]
+    y_lines = [int(round((lo + hi) / 2.0)) for lo, hi in y_groups[: 2 * nrows]]
+    x_bounds = [(x_lines[i], x_lines[i + 1]) for i in range(0, 2 * ncols, 2)]
+    y_bounds = [(y_lines[i], y_lines[i + 1]) for i in range(0, 2 * nrows, 2)]
 
     overlay = Image.new("RGBA", base.size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(overlay)
@@ -1255,7 +1309,6 @@ def plot_v4_candidate_psf_profiles(fit_rows: list[dict[str, str]]) -> Path | Non
         font = ImageFont.load_default()
         small_font = ImageFont.load_default()
 
-    ncols = 12
     for cell_id in sorted(fit_ids):
         idx = cell_id - 1
         row = idx // ncols
@@ -1287,7 +1340,7 @@ def psf_diagnostics_section(fit_rows: list[dict[str, str]]) -> str:
     highlighted_grid = plot_v4_candidate_psf_profiles(fit_rows) or V4_PSF_RADIAL_PROFILE_GRID_PNG
     fit_ids = ", ".join(str(row.get("cell_id")) for row in fit_rows)
     return (
-        "<p>These Stage B diagnostics are MC-side PSF provenance for the current v4 drop4 fit. "
+        f"<p>These Stage B diagnostics are MC-side PSF provenance for the current <code>{v3.esc(PRIMARY_BASELINE_ID)}</code> fit. "
         "The radial profile grid below keeps the nominal full candidate grid, but panels with a pale green background are the cells that actually enter the current v4 Stage F/G fit.</p>"
         '<div class="note">'
         "In each panel, blue is the Crab-theta-reweighted MC radial histogram, orange is the Rayleigh-core model fitted inside the Stage B core range, and the dashed line is r_opt. "
@@ -1297,25 +1350,25 @@ def psf_diagnostics_section(fit_rows: list[dict[str, str]]) -> str:
         + v3.figure(
             highlighted_grid,
             "Stage B candidate-grid radial PSF profiles (v4 fit cells highlighted)",
-            "Pale green panels are the current v4 drop4 fit cells. Non-highlighted panels remain visible as candidate-grid PSF context.",
+            "Pale green panels are the current v4 fit cells. Non-highlighted panels remain visible as candidate-grid PSF context.",
         )
         + v3.figure(
-            v3.STAGE_B_NOMINAL_DIR / "psf_sigma_deg_grid.png",
+            PRIMARY_STAGE_B_DIR / "psf_sigma_deg_grid.png",
             "Stage B PSF sigma grid",
             "Candidate-grid Rayleigh-core PSF width sigma in degrees. Smaller sigma means a narrower reconstructed Crab response for that cell.",
         )
         + v3.figure(
-            v3.STAGE_B_NOMINAL_DIR / "psf_r_opt_deg_grid.png",
+            PRIMARY_STAGE_B_DIR / "psf_r_opt_deg_grid.png",
             "Stage B PSF r_opt grid",
             "Candidate-grid aperture radius used for the on-region integration. In v3/v4 this is tied to the fitted PSF width, approximately r_opt = 1.58 * sigma.",
         )
         + v3.figure(
-            v3.STAGE_B_NOMINAL_DIR / "psf_containment_grid.png",
+            PRIMARY_STAGE_B_DIR / "psf_containment_grid.png",
             "Stage B PSF containment at r_opt grid",
             "Fraction of the cell PSF contained inside r_opt. Low containment or warnings indicate broad tails or fragile low-stat PSF behavior.",
         )
         + v3.figure(
-            v3.STAGE_B_NOMINAL_DIR / "psf_effective_events_grid.png",
+            PRIMARY_STAGE_B_DIR / "psf_effective_events_grid.png",
             "Stage B PSF effective-events grid",
             "Effective MC statistics after Crab-declination theta reweighting, Neff = (sum w)^2 / sum(w^2). Low Neff means the PSF is dominated by a small number of weighted MC events.",
         )
@@ -2333,7 +2386,7 @@ def empirical_psf_section() -> str:
         "<p>This diagnostic fits an empirical/effective PSF directly from observed Crab excess maps. "
         "It keeps the latest annulus-normalized Stage D background fixed, so it is a PSF/containment check rather than a new background fit or a replacement for the MC response.</p>"
         '<div class="note">'
-        f"Current v4 drop4 fit cells: <code>{v3.esc(str(summary.get('cells', 'n/a')))}</code>; "
+        f"Current v4 split56-ridge fit cells: <code>{v3.esc(str(summary.get('cells', 'n/a')))}</code>; "
         f"single-cell empirical PSF fits passing the preset statistics gate: <code>{v3.esc(str(summary.get('reliable_cells', 'n/a')))}</code>. "
         f"Reliable-cell median sigma_obs/MC is <code>{v3.fmt(summary.get('median_sigma_obs_over_mc_reliable'), 4)}</code>; "
         f"median r68_obs/MC is <code>{v3.fmt(summary.get('median_r68_obs_over_mc_reliable'), 4)}</code>. "
@@ -2422,45 +2475,36 @@ def css() -> str:
 
 def build_report() -> None:
     a_meta = v3.load_json(PRIMARY_STAGE_A_META)
-    b_meta = v3.load_json(v3.STAGE_B_META)
-    c_meta = v3.load_json(v3.STAGE_C_META)
-    d_meta = v3.load_json(v3.STAGE_D_META)
+    b_meta = v3.load_json(PRIMARY_STAGE_B_META)
+    c_meta = v3.load_json(PRIMARY_STAGE_C_META)
+    d_meta = v3.load_json(PRIMARY_STAGE_D_META)
     e_meta = v3.load_json(PRIMARY_STAGE_E_META)
-    active_f_meta = v3.load_json(v3.STAGE_F_META)
-    legacy_f_meta = v3.load_json(DROP4_STAGE_F_META)
     f_meta = v3.load_json(PRIMARY_STAGE_F_META)
     g_meta = v3.load_json(PRIMARY_STAGE_G_META)
     old_g_meta = v3.load_json(v3.OLD_STAGE_G_META)
-    r68_b_meta = v3.load_json(R68_STAGE_B_META) if R68_STAGE_B_META.exists() else {}
-    r68_e_meta = v3.load_json(R68_STAGE_E_META) if R68_STAGE_E_META.exists() else {}
-    r68_f_meta = v3.load_json(R68_STAGE_F_META) if R68_STAGE_F_META.exists() else {}
-    r68_g_meta = v3.load_json(R68_STAGE_G_META) if R68_STAGE_G_META.exists() else {}
-    fit_rows = selector_rows_from(DROP4_SELECTOR_CSV)
+    fit_rows = selector_rows_from(PRIMARY_SELECTOR_CSV)
 
     empirical_psf.build_diagnostics(
         stage_f_metadata=PRIMARY_STAGE_F_META,
         output_dir=EMPIRICAL_PSF_DIR,
     )
-    cell_crossmatch_rows = build_cell_root_cause_crossmatch()
     plot_v4_final_sed(g_meta, old_g_meta, f_meta)
     plot_response_contract_external_overlay(g_meta, f_meta)
     plot_stage_f_logpar_correlation_matrix(f_meta)
-    if r68_g_meta:
-        plot_r68_sed_comparison(g_meta, r68_g_meta)
 
     intro = (
         '<div class="note">'
-        "This report defines <code>v4_aperture_conditioned_drop4</code> as the current stage baseline, not the final migration-binned v5 result. "
+        f"This report defines <code>{v3.esc(PRIMARY_BASELINE_ID)}</code> as the current stage baseline, not the final migration-binned v5 result. "
         "The baseline uses the aperture-conditioned response as the primary result: Stage A counts only MC events with "
         "<code>mc_dangle <= r_opt</code>, and Stage F/G use a Stage E signal clone with <code>containment_r_opt=1</code>. "
-        "The same annulus-normalized Stage D/E excess is used; the changed contract is the response used to convert flux into expected counts."
+        "The current baseline also splits the former high-energy predE [5,6) interval into [5,5.5) and [5.5,6), and returns to a prefit MC ridge selector without manual drop4 removal."
         "</div>"
         + v4_summary_cards(e_meta, f_meta, g_meta, d_meta)
     )
 
     cells_body = (
-        "<p>The baseline cell set starts from the active30 v3_baseline_psfborrow selector and excludes cells <code>4, 17, 39, 43</code>. "
-        "The resulting drop4 selector has 26 cells and is used consistently by the primary Stage F/G aperture-conditioned branch.</p>"
+        "<p>The baseline cell set is generated from MC occupancy only: central99 reconstructed-energy support, minimum MC statistics, a fixed ridge-peak-fraction threshold, and the predeclared high-energy split. "
+        "No Crab excess, Stage F pull, or manual user-picked cell is used to add or remove fit cells.</p>"
         f"<p><strong>Included cell ids:</strong> {v3.esc(', '.join(str(row.get('cell_id')) for row in fit_rows))}</p>"
         "<details open><summary>Fit-cell selector table</summary>"
         + fit_cell_table_from(fit_rows)
@@ -2470,12 +2514,12 @@ def build_report() -> None:
     stage_d_body = (
         v3.current_background_section(d_meta)
         + '<div class="grid2">'
-        + v3.figure(v3.STAGE_D_DIR / "roi_counts_grid.png", "Stage D counts map grid", "Observed counts in the 6 deg Crab ROI for the candidate grid.")
-        + v3.figure(v3.STAGE_D_DIR / "annulus_training_mask_grid.png", "Annulus training mask grid", "Grey/colored ring pixels show where the 2D surface is trained; the central Crab/source mask is excluded from training.")
-        + v3.figure(v3.STAGE_D_DIR / "roi_background_grid.png", "Fitted 2D background surface grid", "The final annulus-normalized 2D background map B_final(x,y) for each cell.")
-        + v3.figure(v3.STAGE_D_DIR / "annulus_residual_grid.png", "Annulus residual grid", "Training-ring residuals after the surface fit.")
-        + v3.figure(v3.STAGE_D_DIR / "core_background_grid.png", "Core extrapolated background grid", "The fitted background extrapolated into the Crab core/on region used for B_on.")
-        + v3.figure(v3.STAGE_D_DIR / "roi_excess_grid.png", "Stage D counts minus fitted 2D background", "Counts map after subtracting the annulus-normalized fitted 2D background.")
+        + v3.figure(PRIMARY_STAGE_D_DIR / "roi_counts_grid.png", "Stage D counts map grid", "Observed counts in the 6 deg Crab ROI for the candidate grid.")
+        + v3.figure(PRIMARY_STAGE_D_DIR / "annulus_training_mask_grid.png", "Annulus training mask grid", "Grey/colored ring pixels show where the 2D surface is trained; the central Crab/source mask is excluded from training.")
+        + v3.figure(PRIMARY_STAGE_D_DIR / "roi_background_grid.png", "Fitted 2D background surface grid", "The final annulus-normalized 2D background map B_final(x,y) for each cell.")
+        + v3.figure(PRIMARY_STAGE_D_DIR / "annulus_residual_grid.png", "Annulus residual grid", "Training-ring residuals after the surface fit.")
+        + v3.figure(PRIMARY_STAGE_D_DIR / "core_background_grid.png", "Core extrapolated background grid", "The fitted background extrapolated into the Crab core/on region used for B_on.")
+        + v3.figure(PRIMARY_STAGE_D_DIR / "roi_excess_grid.png", "Stage D counts minus fitted 2D background", "Counts map after subtracting the annulus-normalized fitted 2D background.")
         + v3.figure(v3.ASSET_DIR / "v3_annnorm_surface_scale_grid.png", "Annulus surface scale grid", "Per-cell multiplicative scale forcing the annulus-integrated fitted surface to match annulus observed counts.")
         + v3.figure(v3.ASSET_DIR / "v3_annnorm_dec_profile_comparison.png", "Before/after Dec profile comparison", "Unnormalized Dec-offset profiles summed over the active fit cells.")
         + "</div>"
@@ -2498,10 +2542,10 @@ def build_report() -> None:
             cls="compact",
         )
         + '<div class="grid2">'
-        + v3.figure(v3.STAGE_E_DIR / "on_background_grid.png", "Stage E on/background grid", "Per-cell N_on and B_on entering the latest v3 fit.")
-        + v3.figure(v3.STAGE_E_DIR / "excess_grid.png", "Stage E excess grid", "Per-cell N_on - B_on using the latest annulus-normalized background.")
-        + v3.figure(v3.STAGE_E_DIR / "known_b_sigma_grid.png", "Stage E known-background sigma grid", "Per-cell known-background Poisson diagnostic significance.")
-        + v3.figure(v3.STAGE_E_DIR / "on_over_background_grid.png", "Stage E N_on / B_on grid", "Ratio view to expose local under/over-background behavior.")
+        + v3.figure(PRIMARY_STAGE_E_DIR / "on_background_grid.png", "Stage E on/background grid", "Per-cell N_on and B_on entering the current v4 baseline fit.")
+        + v3.figure(PRIMARY_STAGE_E_DIR / "excess_grid.png", "Stage E excess grid", "Per-cell N_on - B_on using the annulus-normalized background.")
+        + v3.figure(PRIMARY_STAGE_E_DIR / "known_b_sigma_grid.png", "Stage E known-background sigma grid", "Per-cell known-background Poisson diagnostic significance.")
+        + v3.figure(PRIMARY_STAGE_E_DIR / "on_over_background_grid.png", "Stage E N_on / B_on grid", "Ratio view to expose local under/over-background behavior.")
         + "</div>"
     )
 
@@ -2526,7 +2570,7 @@ def build_report() -> None:
     stage_g_body = (
         "<p>Stage G fixes the Stage F preferred spectral shape and refits only one normalization per diagnostic energy grouping. "
         "These are the primary v4 SED points from the aperture-conditioned response branch. They are native diagnostic points from "
-        "<code>v4_stage_g_aperture_conditioned_drop4</code>, not v5 migration-binned points.</p>"
+        f"<code>{v3.esc(g_meta.get('run_id'))}</code>, not v5 migration-binned points.</p>"
         + v3.stage_g_table(g_meta)
         + '<div class="grid2">'
         + v3.figure(
@@ -2545,14 +2589,15 @@ def build_report() -> None:
         + v3.table(
             ["component", "baseline setting"],
             [
-                ["baseline id", "<code>v4_aperture_conditioned_drop4</code>"],
-                ["response", "<code>stage_a_v4_aperture_conditioned/response_2d_v4_aperture_conditioned.npz</code>"],
+                ["baseline id", f"<code>{v3.esc(PRIMARY_BASELINE_ID)}</code>"],
+                ["response", f"<code>{v3.esc(v3.rel(PRIMARY_STAGE_A_NPZ))}</code>"],
                 ["response numerator", "MC events satisfying <code>mc_dangle <= r_opt</code>"],
                 ["downstream containment", "<code>containment_r_opt = 1</code> in Stage E/F/G"],
                 ["background", "annulus-normalized quadratic 2D surface"],
-                ["cell selector", "<code>cell_selector_v4_drop4_psfborrow.csv</code>; active30 minus <code>4,17,39,43</code>"],
-                ["Stage F run", "<code>v4_stage_f_aperture_conditioned_drop4</code>"],
-                ["Stage G run", "<code>v4_stage_g_aperture_conditioned_drop4</code>"],
+                ["predE grid", "original fine predE grid with final <code>[5,6)</code> split into <code>[5,5.5)</code> and <code>[5.5,6)</code>"],
+                ["cell selector", f"<code>{v3.esc(PRIMARY_SELECTOR_CSV.name)}</code>; MC-ridge only, no manual drop4 filter"],
+                ["Stage F run", f"<code>{v3.esc(f_meta.get('run_id'))}</code>"],
+                ["Stage G run", f"<code>{v3.esc(g_meta.get('run_id'))}</code>"],
             ],
             cls="compact",
         )
@@ -2568,15 +2613,13 @@ def build_report() -> None:
 
     background_excess_body = (
         stage_d_body
-        + "<h3>RA/Dec profile diagnostics</h3>"
-        + v3.profile_diagnostics_section()
         + "<h3>Stage E current excess</h3>"
         + stage_e_body
     )
 
     official_comparison_body = (
         "<p>This section compares the v4 baseline against official/tutorial references. The first figure is the science-facing SED overlay; "
-        "the forward-fold tables then show the same comparison in expected-count space through the v4 response and cell selector.</p>"
+        "historical drop4/active30 controls are intentionally left out of the baseline body so this report stays focused on the current configuration.</p>"
         + '<div class="grid2">'
         + v3.figure(
             V4_FINAL_SED_PNG,
@@ -2589,7 +2632,6 @@ def build_report() -> None:
             "V4 primary Stage G points and Stage F fit, official pass5 and tutorial v0.99 point-fit curves, plus H.E.S.S. and MAGIC external measurements.",
         )
         + "</div>"
-        + forward_fold_section()
     )
 
     baseline_limitations_body = (
@@ -2603,17 +2645,17 @@ def build_report() -> None:
                 [
                     "low-energy residual",
                     "Official pass5 forward-fold remains high in low/mid Nhit groups under the aperture-conditioned response.",
-                    "Low-energy flux should be treated as baseline-but-not-final until migration-binned v5 is adopted.",
+                    "Low-energy flux should be treated as baseline-but-not-final until migration-binned final SED bins are adopted.",
                 ],
                 [
                     "large fine-cell chi2",
-                    "Stage F LogPar chi2/ndof is still high for 26 fine cells.",
+                    "Stage F LogPar chi2/ndof is still high for fine cells.",
                     "The fit is useful for baseline tracking, but fine predE cells should not be over-interpreted as independent final SED bins.",
                 ],
                 [
                     "response / energy migration",
                     "Coarse row-level or migration-informed grouping relieves residuals more than ad hoc cell removal.",
-                    "Use v5 migration-binned comparison as the next physics-facing SED product.",
+                    "Use migration-informed final SED binning as the next physics-facing SED product.",
                 ],
                 [
                     "limited exposure",
@@ -2625,21 +2667,7 @@ def build_report() -> None:
         )
     )
 
-    appendix_a_body = root_cause_diagnostics_section() + cell_root_cause_crossmatch_section(cell_crossmatch_rows)
-    appendix_c_body = (
-        response_audit_section()
-        + active30_vs_drop4_section(active_f_meta, legacy_f_meta)
-        + empirical_psf_section()
-        + r68_aperture_section(
-            nominal_e_meta=e_meta,
-            nominal_f_meta=legacy_f_meta,
-            nominal_g_meta=v3.load_json(DROP4_STAGE_G_META),
-            r68_b_meta=r68_b_meta,
-            r68_e_meta=r68_e_meta,
-            r68_f_meta=r68_f_meta,
-            r68_g_meta=r68_g_meta,
-        )
-    )
+    appendix_a_body = empirical_psf_section()
 
     body = (
         "<!doctype html><html><head><meta charset='utf-8'>"
@@ -2647,7 +2675,7 @@ def build_report() -> None:
         "<title>Crab SED v4 baseline report</title>"
         f"<style>{css()}</style></head><body>"
         "<header><h1>Crab SED v4 Baseline Report: Aperture-Conditioned Response + Annulus-Normalized Background</h1>"
-        "<p>Baseline result: drop4 26 cells with aperture-conditioned Stage A response, annulus-normalized 2D background, and downstream containment fixed to one.</p></header><main>"
+        f"<p>Baseline result: <code>{v3.esc(PRIMARY_BASELINE_ID)}</code> with aperture-conditioned Stage A response, annulus-normalized 2D background, and downstream containment fixed to one.</p></header><main>"
         + v3.section("Executive Summary", intro)
         + v3.section("Baseline Configuration", baseline_config_body)
         + v3.section("Fit Cell Definition And PSF", fit_cell_psf_body)
@@ -2656,9 +2684,7 @@ def build_report() -> None:
         + v3.section("Stage G: Current SED Points", stage_g_body)
         + v3.section("Official Reference Comparison", official_comparison_body)
         + v3.section("Baseline Limitations", baseline_limitations_body)
-        + v3.section("Appendix A: Root-Cause And Localization Diagnostics", appendix_a_body)
-        + v3.section("Appendix B: Residual Ablation Tests", residual_ablation_section())
-        + v3.section("Appendix C: Legacy And Aperture Controls", appendix_c_body)
+        + v3.section("Appendix: Empirical PSF Cross-Check", appendix_a_body)
         + "</main></body></html>"
     )
     REPORT_PATH.write_text(body, encoding="utf-8")

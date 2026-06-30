@@ -46,7 +46,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Prepare v5 PredE-binning ablation ledgers, selectors, and optional MC binned caches."
     )
-    parser.add_argument("--strategy", choices=["gap025", "gap1", "all"], default="all")
+    parser.add_argument("--strategy", choices=["gap025", "gap1", "split56", "all"], default="all")
     parser.add_argument("--source-binned-root", type=str, default=DEFAULT_SOURCE_BINNED_ROOT)
     parser.add_argument("--source-bin-counts-csv", type=str, default=DEFAULT_SOURCE_BIN_COUNTS)
     parser.add_argument(
@@ -60,6 +60,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--tree-name", type=str, default=DEFAULT_TREE_NAME)
     parser.add_argument("--write-configs", action="store_true", default=False)
     parser.add_argument("--prepare-cache", action="store_true", default=False)
+    parser.add_argument(
+        "--use-existing-target-cache-counts",
+        action="store_true",
+        default=False,
+        help="Read exact counts from {target_root}/summary/bin_counts.csv instead of estimating from the source count table.",
+    )
     parser.add_argument("--overwrite-filtered-cache", action="store_true", default=False)
     parser.add_argument("--overwrite-merged-cache", action="store_true", default=False)
     parser.add_argument("--workers", type=int, default=4)
@@ -143,6 +149,22 @@ def interval_label(low: float, high: float) -> str:
 
 
 def pred_bins_for_strategy(strategy: str) -> List[str]:
+    if strategy == "split56":
+        return [
+            "[2,2.5)",
+            "[2.5,3)",
+            "[3,3.25)",
+            "[3.25,3.5)",
+            "[3.5,3.75)",
+            "[3.75,4.0)",
+            "[4.0,4.25)",
+            "[4.25,4.5)",
+            "[4.5,4.75)",
+            "[4.75,5.0)",
+            "[5,5.5)",
+            "[5.5,6)",
+            ">=6",
+        ]
     if strategy == "gap025":
         values = [2.0 + 0.25 * idx for idx in range(17)]
         return ["<2"] + [interval_label(values[idx], values[idx + 1]) for idx in range(16)] + [">=6"]
@@ -152,7 +174,7 @@ def pred_bins_for_strategy(strategy: str) -> List[str]:
 
 
 def strategy_names(value: str) -> List[str]:
-    return ["gap025", "gap1"] if value == "all" else [value]
+    return ["gap025", "gap1", "split56"] if value == "all" else [value]
 
 
 def read_csv(path: Path) -> List[Dict[str, str]]:
@@ -259,6 +281,15 @@ def source_count_lookup(source_counts_csv: Path) -> Dict[Tuple[str, str], int]:
     return lookup
 
 
+def target_count_lookup(target_counts_csv: Path) -> Dict[Tuple[str, str], int]:
+    if not target_counts_csv.exists():
+        raise FileNotFoundError(f"Missing target cache count table: {target_counts_csv}")
+    lookup: Dict[Tuple[str, str], int] = {}
+    for row in read_csv(target_counts_csv):
+        lookup[(row["nhit_bin"], row["predE_bin"])] = int(row.get("count") or 0)
+    return lookup
+
+
 def estimated_count(target_nhit: str, target_pred: str, source_counts: Dict[Tuple[str, str], int]) -> int:
     if target_count_needs_exact_filter(target_nhit, target_pred):
         return 0
@@ -348,6 +379,7 @@ def compute_central_flags(rows: Sequence[Dict[str, object]], central_fraction: f
 def compute_ridge_flags(
     rows: Sequence[Dict[str, object]],
     *,
+    strategy: str,
     central_flags: Dict[int, bool],
     min_mc_count: int,
     min_peak_fraction: float,
@@ -366,10 +398,15 @@ def compute_ridge_flags(
             pred = str(row["predE_bin"])
             count = int(count_value)
             peak_fraction = float(count_value / peak) if peak > 0.0 else 0.0
+            effective_min_count = int(min_mc_count)
+            if strategy == "split56" and nhit == TARGET_HIGH_NHIT and pred == "[5.5,6)":
+                # This predefined exception keeps the requested split high-energy
+                # tail visible without relaxing the ridge rule for the rest of the grid.
+                effective_min_count = min(effective_min_count, 500)
             high_energy_allowed = (not is_high_energy_main_bin(pred)) or nhit == TARGET_HIGH_NHIT
             on_ridge = (
                 bool(central_flags.get(cell_id, False))
-                and count >= int(min_mc_count)
+                and count >= effective_min_count
                 and pred_in_fit_range(pred)
                 and high_energy_allowed
                 and peak_fraction >= float(min_peak_fraction)
@@ -397,7 +434,10 @@ def selector_rows(
         count = int(row.get("mc_count") or 0)
         central = bool(central_flags.get(cell_id, False))
         on_ridge, peak_fraction = ridge_flags.get(cell_id, (False, 0.0))
-        count_ok = count >= int(min_mc_count)
+        effective_min_count = int(min_mc_count)
+        if strategy == "split56" and nhit == TARGET_HIGH_NHIT and pred == "[5.5,6)":
+            effective_min_count = min(effective_min_count, 500)
+        count_ok = count >= effective_min_count
         in_fit_range = pred_in_fit_range(pred)
         high_energy_allowed = (not is_high_energy_main_bin(pred)) or nhit == TARGET_HIGH_NHIT
         include = central and count_ok and on_ridge and in_fit_range and high_energy_allowed
@@ -410,7 +450,7 @@ def selector_rows(
             role = "diagnostic_tail"
             exclusion = "fit_predE_range"
         elif is_high_energy_main_bin(pred) and nhit != TARGET_HIGH_NHIT:
-            reason = "[5,6) high-energy probe excluded except highest Nhit ridge"
+            reason = "[5,6) split high-energy probe excluded except highest Nhit ridge"
             role = "high_energy_probe"
             exclusion = "high_energy_probe"
         else:
@@ -460,7 +500,7 @@ def apply_selector_roles(
             row["role_reason"] = "diagnostic tail bin outside [2,6); not used in main fit"
         elif is_high_energy_main_bin(pred):
             row["cell_role"] = "high_energy_probe"
-            row["role_reason"] = "[5,6) retained as high-energy diagnostic/probe outside highest Nhit ridge"
+            row["role_reason"] = "[5,6) split retained as high-energy diagnostic/probe outside highest Nhit ridge"
         elif not central_flags.get(cell_id, False):
             row["cell_role"] = "diagnostic_response_tail"
             row["role_reason"] = "outside MC central-99 reconstructed-energy population"
@@ -821,7 +861,12 @@ def prepare_cache(
 def validate_rows(strategy: str, rows: Sequence[Dict[str, object]], selector: Sequence[Dict[str, object]]) -> Dict[str, object]:
     pred_bins = pred_bins_for_strategy(strategy)
     main_bins = [label for label in pred_bins if pred_in_fit_range(label)]
-    expected_main = 16 if strategy == "gap025" else 4
+    if strategy == "gap025":
+        expected_main = 16
+    elif strategy == "split56":
+        expected_main = 12
+    else:
+        expected_main = 4
     if len(main_bins) != expected_main:
         raise ValueError(f"{strategy} expected {expected_main} main predE bins, got {len(main_bins)}")
 
@@ -953,6 +998,8 @@ def process_strategy(args: argparse.Namespace, strategy: str) -> Dict[str, objec
 
     rows = build_candidate_rows(strategy=strategy, source_counts_csv=source_counts_csv)
     cache_manifest: Optional[Dict[str, object]] = None
+    if bool(args.prepare_cache) and bool(args.use_existing_target_cache_counts):
+        raise ValueError("--prepare-cache and --use-existing-target-cache-counts are mutually exclusive")
     if args.prepare_cache:
         cache_manifest = prepare_cache(
             source_root=source_root,
@@ -973,10 +1020,22 @@ def process_strategy(args: argparse.Namespace, strategy: str) -> Dict[str, objec
             for row in rows
         ]
         write_csv(target_root / "summary" / "bin_counts.csv", bin_count_rows, ["nhit_bin", "predE_bin", "count"])
+    elif args.use_existing_target_cache_counts:
+        count_csv = target_root / "summary" / "bin_counts.csv"
+        exact_counts = target_count_lookup(count_csv)
+        rows = build_candidate_rows(strategy=strategy, source_counts_csv=source_counts_csv, exact_counts=exact_counts)
+        cache_manifest = {
+            "source_root": str(source_root),
+            "target_root": str(target_root),
+            "status": "using_existing_target_cache_counts",
+            "bin_counts_csv": str(count_csv),
+            "exact_counts": {f"{k[0]}__{k[1]}": int(v) for k, v in exact_counts.items()},
+        }
 
     central_flags = compute_central_flags(rows, central_fraction=0.99)
     ridge_flags = compute_ridge_flags(
         rows,
+        strategy=strategy,
         central_flags=central_flags,
         min_mc_count=int(args.min_baseline_mc_count),
         min_peak_fraction=float(args.ridge_min_peak_fraction),
@@ -1047,7 +1106,7 @@ def process_strategy(args: argparse.Namespace, strategy: str) -> Dict[str, objec
             "min_mc_count": int(args.min_baseline_mc_count),
             "ridge_peak_fraction_min": float(args.ridge_min_peak_fraction),
             "fit_predE_range": "[2,6)",
-            "high_energy_5_6_policy": "fit candidate only on highest Nhit ridge; otherwise diagnostic/probe",
+            "high_energy_5_6_policy": "[5,5.5) and [5.5,6) fit candidates only on highest Nhit ridge; otherwise diagnostic/probe",
             "posthoc_psf_drop": "disabled; PSF risk is reported, not used to remove fit cells",
         },
         "validation": validation,

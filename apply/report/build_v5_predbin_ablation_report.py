@@ -318,7 +318,7 @@ def pass5_interp_flux_at(energy_tev: float) -> Optional[float]:
     return 10.0 ** pairs[-1][1]
 
 
-def plot_sed_overlay(strategies: Dict[str, Dict[str, object]], output_path: Path) -> None:
+def plot_sed_overlay(strategies: Dict[str, Dict[str, object]], output_path: Path, grouping: str = "nhit") -> None:
     plt = setup_matplotlib()
     fig, ax = plt.subplots(figsize=(8.4, 5.8), dpi=150)
     colors = {"baseline_v4": "#2563eb", "gap025": "#0f766e", "gap1": "#b45309"}
@@ -327,7 +327,7 @@ def plot_sed_overlay(strategies: Dict[str, Dict[str, object]], output_path: Path
         curve = logpar_flux(energy, payload.get("logpar", {}))
         if curve is not None:
             ax.plot(energy, curve, color=colors.get(name, "black"), linewidth=1.8, label=f"{name} LogPar")
-        rows = [row for row in payload.get("stage_g_rows", []) if row.get("grouping") == "nhit"]
+        rows = [row for row in payload.get("stage_g_rows", []) if row.get("grouping") == grouping]
         x: List[float] = []
         y: List[float] = []
         yerr: List[float] = []
@@ -335,7 +335,7 @@ def plot_sed_overlay(strategies: Dict[str, Dict[str, object]], output_path: Path
             ex = finite_float(row.get("effective_energy_tev"))
             ey = finite_float(row.get("E2_dnde"))
             ee = finite_float(row.get("E2_dnde_err"))
-            if ex is not None and ey is not None:
+            if ex is not None and ey is not None and ey > 0.0:
                 x.append(ex)
                 y.append(ey)
                 yerr.append(0.0 if ee is None else ee)
@@ -349,7 +349,7 @@ def plot_sed_overlay(strategies: Dict[str, Dict[str, object]], output_path: Path
                 capsize=2,
                 color=colors.get(name, "black"),
                 alpha=0.9,
-                label=f"{name} Nhit points",
+                label=f"{name} {grouping} points",
             )
     official = official_pass5_points()
     if official:
@@ -380,7 +380,7 @@ def plot_sed_overlay(strategies: Dict[str, Dict[str, object]], output_path: Path
     ax.set_yscale("log")
     ax.set_xlabel("Energy (TeV)")
     ax.set_ylabel(r"$E^2 dN/dE$ (TeV cm$^{-2}$ s$^{-1}$)")
-    ax.set_title("Crab SED v5 PredE Binning Ablation")
+    ax.set_title(f"Crab SED v5 PredE Binning Ablation ({grouping} flux points)")
     ax.grid(True, which="both", alpha=0.22, linewidth=0.5)
     ax.legend(fontsize=8, ncol=2)
     fig.tight_layout()
@@ -619,22 +619,22 @@ def fmt_sigma(value: object, digits: int = 2) -> str:
     return f"{number:.{digits}g}σ"
 
 
-def flux_point_table_from_rows(rows: Sequence[Dict[str, object]], source: str) -> str:
+def flux_point_table_from_rows(rows: Sequence[Dict[str, object]], source: str, bin_header: str = "Nhit bin") -> str:
     if not rows:
         return "<p>Stage G Nhit points pending.</p>"
     body: List[str] = []
     for row in rows:
         point_label = str(row.get("point") or row.get("group_label") or row.get("cell_ids") or "").replace(";", "+")
-        nhit_label = str(row.get("nhit_bin") or row.get("nhit_span") or row.get("group_label") or "")
+        bin_label = str(row.get("nhit_bin") or row.get("predE_bin") or row.get("nhit_span") or row.get("group_label") or "")
         energy = finite_float(row.get("E_med_TeV") or row.get("E_p50_TeV") or row.get("true_energy_p50_tev") or row.get("effective_energy_tev"))
         flux = finite_float(row.get("E2_dnde"))
         flux_err = finite_float(row.get("E2_dnde_err"))
         rel_err = finite_float(row.get("relative_error"))
         if rel_err is None:
-            rel_err = None if flux is None or flux <= 0.0 or flux_err is None else flux_err / flux
+            rel_err = None if flux is None or flux == 0.0 or flux_err is None else abs(flux_err / flux)
         significance = finite_float(row.get("significance"))
         if significance is None:
-            significance = None if rel_err is None or rel_err <= 0.0 else 1.0 / rel_err
+            significance = None if flux is None or flux_err is None or flux_err <= 0.0 else flux / flux_err
         pass5_ratio = finite_float(row.get("pass5_ratio") or row.get("ratio_to_pass5"))
         if pass5_ratio is None:
             pass5_flux = pass5_interp_flux_at(energy) if energy is not None else None
@@ -642,7 +642,7 @@ def flux_point_table_from_rows(rows: Sequence[Dict[str, object]], source: str) -
         body.append(
             "<tr>"
             f"<td>{html_escape(point_label)}</td>"
-            f"<td>{html_escape(nhit_label)}</td>"
+            f"<td>{html_escape(bin_label)}</td>"
             f"<td class=\"num\">{fmt_float(energy, 3)}</td>"
             f"<td class=\"num\">{fmt_sigma(significance, 3)}</td>"
             f"<td class=\"num\">{fmt_percent(rel_err, 1)}</td>"
@@ -651,7 +651,7 @@ def flux_point_table_from_rows(rows: Sequence[Dict[str, object]], source: str) -
         )
     return (
         '<div class="table-wrap compact"><table>'
-        "<thead><tr><th>点</th><th>Nhit bin</th><th class=\"num\">E_med [TeV]</th><th class=\"num\">significance</th><th class=\"num\">相对误差</th><th class=\"num\">pass5 ratio</th></tr></thead>"
+        f"<thead><tr><th>点</th><th>{html_escape(bin_header)}</th><th class=\"num\">E_med [TeV]</th><th class=\"num\">significance</th><th class=\"num\">相对误差</th><th class=\"num\">pass5 ratio</th></tr></thead>"
         f"<tbody>{''.join(body)}</tbody>"
         "</table></div>"
         f'<p class="caption-note">source: {html_escape(source)}</p>'
@@ -725,6 +725,38 @@ def nhit_flux_point_sections(strategies: Dict[str, Dict[str, object]]) -> str:
     return "".join(sections)
 
 
+def predE_flux_point_table(payload: Dict[str, object]) -> str:
+    rows = [
+        row
+        for row in payload.get("stage_g_rows", [])
+        if isinstance(row, dict) and row.get("grouping") == "predE"
+    ]
+    rows = sorted(rows, key=lambda row: interval_key(str(row.get("group_label") or "")))
+    normalized = [
+        {
+            **row,
+            "point": str(row.get("cell_ids") or "").replace(";", "+"),
+            "predE_bin": row.get("group_label"),
+        }
+        for row in rows
+    ]
+    return flux_point_table_from_rows(normalized, "Stage G summary.csv / grouping=predE", bin_header="PredE bin")
+
+
+def predE_flux_point_sections(strategies: Dict[str, Dict[str, object]]) -> str:
+    sections: List[str] = []
+    for name, payload in strategies.items():
+        sections.append(
+            f"""
+<section>
+<h3>{html_escape(name)}</h3>
+{predE_flux_point_table(payload)}
+</section>
+"""
+        )
+    return "".join(sections)
+
+
 def write_report(strategies: Dict[str, Dict[str, object]], figures: Dict[str, Path]) -> None:
     REPORT_HTML.parent.mkdir(parents=True, exist_ok=True)
     generated = time_now_string()
@@ -752,7 +784,9 @@ def write_report(strategies: Dict[str, Dict[str, object]], figures: Dict[str, Pa
 """
         )
     sed_fig = figures.get("sed_overlay")
-    sed_html = f'<figure><img src="{html_escape(relative_path(sed_fig))}" alt="SED overlay"></figure>' if sed_fig and sed_fig.exists() else "<p>SED overlay pending.</p>"
+    sed_html = f'<figure><img src="{html_escape(relative_path(sed_fig))}" alt="Nhit-grouped SED overlay"></figure>' if sed_fig and sed_fig.exists() else "<p>Nhit-grouped SED overlay pending.</p>"
+    predE_sed_fig = figures.get("predE_sed_overlay")
+    predE_sed_html = f'<figure><img src="{html_escape(relative_path(predE_sed_fig))}" alt="PredE-grouped SED overlay"></figure>' if predE_sed_fig and predE_sed_fig.exists() else "<p>PredE-grouped SED overlay pending.</p>"
     html_text = f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -796,14 +830,24 @@ code {{ background:#edf1f3; border-radius:4px; padding:1px 4px; }}
 
 <section>
 <h2>SED Overlay</h2>
+<h3>Nhit-grouped flux points</h3>
 {sed_html}
+<h3>PredE-grouped flux points</h3>
+{predE_sed_html}
 <div class="note">The official pass5 curve is an unweighted log-space LogPar fit to the plotted official pass5 SED points.</div>
+<div class="note">PredE-grouped flux points with non-positive fitted flux are retained in the diagnostics table below but omitted from the log-scale SED overlay.</div>
 </section>
 
 <section>
 <h2>Final Nhit Flux Point Diagnostics</h2>
 <div class="note">baseline_v4 uses the <code>conservative_7bin</code> final flux points from the migration report; gap025 and gap1 use their final Stage G <code>grouping=nhit</code> points. <code>相对误差</code> is <code>E2_dnde_err / E2_dnde</code>; <code>significance</code> is <code>excess/error</code> for baseline_v4 and equivalent flux/error for the Stage G rows. <code>pass5 ratio</code> uses log-log interpolation of the official pass5 SED points at the listed median/effective energy.</div>
 {nhit_flux_point_sections(strategies)}
+</section>
+
+<section>
+<h2>Final PredE Flux Point Diagnostics</h2>
+<div class="note">These tables use each strategy's final Stage G <code>grouping=predE</code> flux points. <code>相对误差</code> is <code>E2_dnde_err / |E2_dnde|</code>; <code>significance</code> is the signed <code>E2_dnde / E2_dnde_err</code>. <code>pass5 ratio</code> uses log-log interpolation of the official pass5 SED points at the listed effective energy.</div>
+{predE_flux_point_sections(strategies)}
 </section>
 
 <section>
@@ -844,8 +888,11 @@ def main() -> None:
     strategies = {name: load_strategy(name, config) for name, config in STRATEGIES.items()}
     figures: Dict[str, Path] = {}
     sed_overlay = ASSET_DIR / "v5_predbin_ablation_sed_overlay.png"
-    plot_sed_overlay(strategies, sed_overlay)
+    plot_sed_overlay(strategies, sed_overlay, grouping="nhit")
     figures["sed_overlay"] = sed_overlay
+    predE_sed_overlay = ASSET_DIR / "v5_predbin_ablation_predE_sed_overlay.png"
+    plot_sed_overlay(strategies, predE_sed_overlay, grouping="predE")
+    figures["predE_sed_overlay"] = predE_sed_overlay
     for name, payload in strategies.items():
         out = ASSET_DIR / f"{name}_psf_risk_heatmap.png"
         plot_psf_heatmap(payload, out)

@@ -28,7 +28,7 @@ code { background:#edf1f3; border-radius:4px; padding:1px 4px; }
 <body><main>
 <h1>Crab SED v5 PredE 分箱消融报告</h1>
 <p class="lead">对比 baseline_v4、gap025 与 gap1 三套 <code>log10(E_pred/GeV)</code> 分箱。gap025/gap1 使用独立 prefit MC selector，主 fit 排除 <code>&lt;2</code> 和 <code>&gt;=6</code> 尾箱；PSF 风险仅标注，不后验删除。</p>
-<p class="lead">Generated: 2026-06-30 15:35:24</p>
+<p class="lead">Generated: 2026-06-30 16:01:11</p>
 
 <section>
 <h2>汇总</h2>
@@ -41,8 +41,12 @@ code { background:#edf1f3; border-radius:4px; padding:1px 4px; }
 
 <section>
 <h2>SED Overlay</h2>
-<figure><img src="assets/v5-predbin-ablation/v5_predbin_ablation_sed_overlay.png" alt="SED overlay"></figure>
+<h3>Nhit-grouped flux points</h3>
+<figure><img src="assets/v5-predbin-ablation/v5_predbin_ablation_sed_overlay.png" alt="Nhit-grouped SED overlay"></figure>
+<h3>PredE-grouped flux points</h3>
+<figure><img src="assets/v5-predbin-ablation/v5_predbin_ablation_predE_sed_overlay.png" alt="PredE-grouped SED overlay"></figure>
 <div class="note">The official pass5 curve is an unweighted log-space LogPar fit to the plotted official pass5 SED points.</div>
+<div class="note">PredE-grouped flux points with non-positive fitted flux are retained in the diagnostics table below but omitted from the log-scale SED overlay.</div>
 </section>
 
 <section>
@@ -62,6 +66,27 @@ code { background:#edf1f3; border-radius:4px; padding:1px 4px; }
 <section>
 <h3>gap1</h3>
 <div class="table-wrap compact"><table><thead><tr><th>点</th><th>Nhit bin</th><th class="num">E_med [TeV]</th><th class="num">significance</th><th class="num">相对误差</th><th class="num">pass5 ratio</th></tr></thead><tbody><tr><td>2+3</td><td>[125,200)</td><td class="num">0.521</td><td class="num">19.7σ</td><td class="num">5.1%</td><td class="num">1.65</td></tr><tr><td>8+9+10</td><td>[200,300)</td><td class="num">0.801</td><td class="num">21.2σ</td><td class="num">4.7%</td><td class="num">1.05</td></tr><tr><td>14+15+16</td><td>[300,500)</td><td class="num">1.3</td><td class="num">34.1σ</td><td class="num">2.9%</td><td class="num">1.12</td></tr><tr><td>21+22</td><td>[500,800)</td><td class="num">2.44</td><td class="num">26.5σ</td><td class="num">3.8%</td><td class="num">0.947</td></tr><tr><td>27+28</td><td>[800,1100)</td><td class="num">4.41</td><td class="num">16.4σ</td><td class="num">6.1%</td><td class="num">0.947</td></tr><tr><td>33+34</td><td>[1100,2000)</td><td class="num">8.99</td><td class="num">13.3σ</td><td class="num">7.5%</td><td class="num">0.914</td></tr><tr><td>40+41</td><td>[2000,3000)</td><td class="num">34.7</td><td class="num">3.88σ</td><td class="num">25.8%</td><td class="num">0.628</td></tr></tbody></table></div><p class="caption-note">source: Stage G summary.csv / grouping=nhit</p>
+</section>
+
+</section>
+
+<section>
+<h2>Final PredE Flux Point Diagnostics</h2>
+<div class="note">These tables use each strategy's final Stage G <code>grouping=predE</code> flux points. <code>相对误差</code> is <code>E2_dnde_err / |E2_dnde|</code>; <code>significance</code> is the signed <code>E2_dnde / E2_dnde_err</code>. <code>pass5 ratio</code> uses log-log interpolation of the official pass5 SED points at the listed effective energy.</div>
+
+<section>
+<h3>baseline_v4</h3>
+<div class="table-wrap compact"><table><thead><tr><th>点</th><th>PredE bin</th><th class="num">E_med [TeV]</th><th class="num">significance</th><th class="num">相对误差</th><th class="num">pass5 ratio</th></tr></thead><tbody><tr><td>1</td><td>[2,2.5)</td><td class="num">0.332</td><td class="num">5.49σ</td><td class="num">18.2%</td><td class="num">1.07</td></tr><tr><td>2+14+26</td><td>[2.5,3)</td><td class="num">0.684</td><td class="num">26.5σ</td><td class="num">3.8%</td><td class="num">1.06</td></tr><tr><td>3+15+27</td><td>[3,3.25)</td><td class="num">1.28</td><td class="num">27σ</td><td class="num">3.7%</td><td class="num">1.24</td></tr><tr><td>16+28+40+52</td><td>[3.25,3.5)</td><td class="num">2.23</td><td class="num">27.1σ</td><td class="num">3.7%</td><td class="num">1.05</td></tr><tr><td>29+41+53+65</td><td>[3.5,3.75)</td><td class="num">3.85</td><td class="num">19.2σ</td><td class="num">5.2%</td><td class="num">0.935</td></tr><tr><td>30+42+54+66</td><td>[3.75,4.0)</td><td class="num">6.69</td><td class="num">12.1σ</td><td class="num">8.3%</td><td class="num">1.04</td></tr><tr><td>55+67</td><td>[4.0,4.25)</td><td class="num">12</td><td class="num">8.48σ</td><td class="num">11.8%</td><td class="num">1.37</td></tr><tr><td>68</td><td>[4.25,4.5)</td><td class="num">19</td><td class="num">3σ</td><td class="num">33.4%</td><td class="num">0.879</td></tr><tr><td>69+81</td><td>[4.5,4.75)</td><td class="num">34.1</td><td class="num">2.62σ</td><td class="num">38.1%</td><td class="num">0.723</td></tr><tr><td>82</td><td>[4.75,5.0)</td><td class="num">62.4</td><td class="num">0.997σ</td><td class="num">100.3%</td><td class="num">0.452</td></tr><tr><td>83</td><td>[5,6)</td><td class="num">92.3</td><td class="num">1.4σ</td><td class="num">71.5%</td><td class="num">1.78</td></tr></tbody></table></div><p class="caption-note">source: Stage G summary.csv / grouping=predE</p>
+</section>
+
+<section>
+<h3>gap025</h3>
+<div class="table-wrap compact"><table><thead><tr><th>点</th><th>PredE bin</th><th class="num">E_med [TeV]</th><th class="num">significance</th><th class="num">相对误差</th><th class="num">pass5 ratio</th></tr></thead><tbody><tr><td>2</td><td>[2,2.25)</td><td class="num">0.211</td><td class="num">-0.128σ</td><td class="num">779.8%</td><td class="num">-0.099</td></tr><tr><td>3+21</td><td>[2.25,2.5)</td><td class="num">0.344</td><td class="num">6.15σ</td><td class="num">16.3%</td><td class="num">1.03</td></tr><tr><td>4+22</td><td>[2.5,2.75)</td><td class="num">0.534</td><td class="num">14.8σ</td><td class="num">6.8%</td><td class="num">1.18</td></tr><tr><td>5+23+41</td><td>[2.75,3)</td><td class="num">0.824</td><td class="num">25.5σ</td><td class="num">3.9%</td><td class="num">1.19</td></tr><tr><td>6+24+42+60</td><td>[3,3.25)</td><td class="num">1.32</td><td class="num">28.1σ</td><td class="num">3.6%</td><td class="num">1.26</td></tr><tr><td>7+25+43+61+79</td><td>[3.25,3.5)</td><td class="num">2.23</td><td class="num">25.6σ</td><td class="num">3.9%</td><td class="num">1.06</td></tr><tr><td>26+44+62+80+98</td><td>[3.5,3.75)</td><td class="num">3.86</td><td class="num">18.9σ</td><td class="num">5.3%</td><td class="num">1.01</td></tr><tr><td>27+45+63+81+99</td><td>[3.75,4)</td><td class="num">6.61</td><td class="num">12σ</td><td class="num">8.3%</td><td class="num">1.03</td></tr><tr><td>64+82+100+118</td><td>[4,4.25)</td><td class="num">11.7</td><td class="num">8.49σ</td><td class="num">11.8%</td><td class="num">1.34</td></tr><tr><td>101+119</td><td>[4.25,4.5)</td><td class="num">20.3</td><td class="num">2.97σ</td><td class="num">33.7%</td><td class="num">0.78</td></tr><tr><td>102+120</td><td>[4.5,4.75)</td><td class="num">34.1</td><td class="num">2.62σ</td><td class="num">38.1%</td><td class="num">0.723</td></tr><tr><td>121</td><td>[4.75,5)</td><td class="num">62.4</td><td class="num">0.997σ</td><td class="num">100.3%</td><td class="num">0.452</td></tr><tr><td>122</td><td>[5,5.25)</td><td class="num">88.5</td><td class="num">1.42σ</td><td class="num">70.3%</td><td class="num">1.69</td></tr><tr><td>123</td><td>[5.25,5.5)</td><td class="num">134</td><td class="num">-0.725σ</td><td class="num">137.9%</td><td class="num">-8.68</td></tr></tbody></table></div><p class="caption-note">source: Stage G summary.csv / grouping=predE</p>
+</section>
+
+<section>
+<h3>gap1</h3>
+<div class="table-wrap compact"><table><thead><tr><th>点</th><th>PredE bin</th><th class="num">E_med [TeV]</th><th class="num">significance</th><th class="num">相对误差</th><th class="num">pass5 ratio</th></tr></thead><tbody><tr><td>2+8+14</td><td>[2,3)</td><td class="num">0.564</td><td class="num">30.5σ</td><td class="num">3.3%</td><td class="num">1.22</td></tr><tr><td>3+9+15+21+27+33</td><td>[3,4)</td><td class="num">1.8</td><td class="num">46σ</td><td class="num">2.2%</td><td class="num">1.05</td></tr><tr><td>10+16+22+28+34+40</td><td>[4,5)</td><td class="num">14.2</td><td class="num">10.1σ</td><td class="num">9.9%</td><td class="num">1.36</td></tr><tr><td>41</td><td>[5,6)</td><td class="num">101</td><td class="num">1.4σ</td><td class="num">71.5%</td><td class="num">1.54</td></tr></tbody></table></div><p class="caption-note">source: Stage G summary.csv / grouping=predE</p>
 </section>
 
 </section>

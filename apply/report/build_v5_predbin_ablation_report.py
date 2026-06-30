@@ -20,6 +20,7 @@ if str(REPO_ROOT) not in sys.path:
 REPORT_HTML = REPO_ROOT / "apply/report/crab_sed_v5_predbin_ablation_report.html"
 ASSET_DIR = REPO_ROOT / "apply/report/assets/v5-predbin-ablation"
 OFFICIAL_PASS5_CSV = REPO_ROOT / "apply/report/assets/official-pass5/wcda_crab_sed_pass5_20260616_104941.csv"
+MIGRATION_GROUPS_CSV = REPO_ROOT / "apply/report/assets/v5-migration-binning/v5_migration_binning_groups.csv"
 
 
 STRATEGIES = {
@@ -131,6 +132,13 @@ def load_fit_npz(path: Path) -> Dict[str, np.ndarray]:
         return {name: np.asarray(data[name]) for name in data.files}
 
 
+def stage_b_npz_from_summary(path: Path) -> Path:
+    name = path.name
+    if name.endswith("_summary.csv"):
+        return path.with_name(f"{name[:-len('_summary.csv')]}.npz")
+    return path.with_suffix(".npz")
+
+
 def fit_params_from_meta(meta: Dict[str, object], model: str) -> Dict[str, object]:
     fits = meta.get("fits")
     if not isinstance(fits, dict):
@@ -223,6 +231,27 @@ def official_pass5_points() -> List[Dict[str, float]]:
     return out
 
 
+def fit_logpar_to_e2_points(points: Sequence[Dict[str, float]], pivot_tev: float = 3.0) -> Optional[Dict[str, object]]:
+    energy = np.asarray([point["energy"] for point in points], dtype=np.float64)
+    e2_flux = np.asarray([point["flux"] for point in points], dtype=np.float64)
+    valid = np.isfinite(energy) & np.isfinite(e2_flux) & (energy > 0.0) & (e2_flux > 0.0)
+    if np.count_nonzero(valid) < 3:
+        return None
+    x = np.log(energy[valid] / float(pivot_tev))
+    y = np.log(e2_flux[valid] / (energy[valid] * energy[valid]))
+    c2, c1, c0 = np.polyfit(x, y, 2)
+    return {
+        "parameters": {
+            "phi0": float(np.exp(c0)),
+            "alpha": float(-c1),
+            "beta": float(-c2),
+        },
+        "pivot_tev": float(pivot_tev),
+        "n_points": int(np.count_nonzero(valid)),
+        "fit_note": "unweighted log-space fit to official pass5 SED points",
+    }
+
+
 def low_nhit_pass5_ratio(stage_g_rows: Sequence[Dict[str, str]]) -> Optional[float]:
     nhit_rows = [row for row in stage_g_rows if row.get("grouping") == "nhit"]
     if not nhit_rows:
@@ -243,6 +272,10 @@ def low_nhit_pass5_ratio(stage_g_rows: Sequence[Dict[str, str]]) -> Optional[flo
     return float(flux / nearest["flux"])
 
 
+def pass5_point_fit() -> Optional[Dict[str, object]]:
+    return fit_logpar_to_e2_points(official_pass5_points())
+
+
 def logpar_flux(energy_tev: np.ndarray, params: Dict[str, object], pivot_tev: float = 3.0) -> Optional[np.ndarray]:
     values = params.get("parameters") if isinstance(params.get("parameters"), dict) else {}
     phi0 = finite_float(values.get("phi0"))
@@ -255,10 +288,40 @@ def logpar_flux(energy_tev: np.ndarray, params: Dict[str, object], pivot_tev: fl
     return energy_tev * energy_tev * dnde
 
 
+def pass5_fit_flux_at(energy_tev: float, pass5_fit: Optional[Dict[str, object]]) -> Optional[float]:
+    if pass5_fit is None:
+        return None
+    curve = logpar_flux(np.asarray([energy_tev], dtype=np.float64), pass5_fit, pivot_tev=float(pass5_fit.get("pivot_tev", 3.0)))
+    if curve is None or not np.isfinite(curve[0]) or curve[0] <= 0.0:
+        return None
+    return float(curve[0])
+
+
+def pass5_interp_flux_at(energy_tev: float) -> Optional[float]:
+    official = official_pass5_points()
+    pairs = sorted(
+        (math.log10(point["energy"]), math.log10(point["flux"]))
+        for point in official
+        if point["energy"] > 0.0 and point["flux"] > 0.0
+    )
+    if not pairs or energy_tev <= 0.0:
+        return None
+    lx = math.log10(energy_tev)
+    if lx <= pairs[0][0]:
+        return 10.0 ** pairs[0][1]
+    if lx >= pairs[-1][0]:
+        return 10.0 ** pairs[-1][1]
+    for (x0, y0), (x1, y1) in zip(pairs[:-1], pairs[1:]):
+        if x0 <= lx <= x1:
+            frac = (lx - x0) / (x1 - x0)
+            return 10.0 ** (y0 + frac * (y1 - y0))
+    return 10.0 ** pairs[-1][1]
+
+
 def plot_sed_overlay(strategies: Dict[str, Dict[str, object]], output_path: Path) -> None:
     plt = setup_matplotlib()
     fig, ax = plt.subplots(figsize=(8.4, 5.8), dpi=150)
-    colors = {"baseline_v4": "#334155", "gap025": "#0f766e", "gap1": "#b45309"}
+    colors = {"baseline_v4": "#2563eb", "gap025": "#0f766e", "gap1": "#b45309"}
     energy = np.logspace(math.log10(0.2), math.log10(120.0), 240)
     for name, payload in strategies.items():
         curve = logpar_flux(energy, payload.get("logpar", {}))
@@ -301,6 +364,18 @@ def plot_sed_overlay(strategies: Dict[str, Dict[str, object]], output_path: Path
             alpha=0.65,
             label="official pass5",
         )
+        pass5_fit = fit_logpar_to_e2_points(official)
+        if pass5_fit:
+            pass5_curve = logpar_flux(energy, pass5_fit, pivot_tev=float(pass5_fit.get("pivot_tev", 3.0)))
+            if pass5_curve is not None:
+                ax.plot(
+                    energy,
+                    pass5_curve,
+                    color="#c026d3",
+                    linewidth=2.2,
+                    linestyle="--",
+                    label="official pass5 point-fit LogPar",
+                )
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlabel("Energy (TeV)")
@@ -351,6 +426,114 @@ def plot_psf_heatmap(payload: Dict[str, object], output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path)
     plt.close(fig)
+
+
+def rayleigh_pdf_deg(r_deg: np.ndarray, sigma_rad: float) -> np.ndarray:
+    r_rad = np.radians(r_deg)
+    pdf_per_rad = (r_rad / (sigma_rad * sigma_rad)) * np.exp(-0.5 * (r_rad / sigma_rad) ** 2)
+    return pdf_per_rad * (math.pi / 180.0)
+
+
+def plot_psf_profile_grid(payload: Dict[str, object], output_path: Path) -> bool:
+    config = payload.get("config", {})
+    if not isinstance(config, dict):
+        return False
+    summary_path = Path(str(config.get("stage_b_summary", "")))
+    npz_path = stage_b_npz_from_summary(summary_path)
+    if not summary_path.exists() or not npz_path.exists():
+        return False
+
+    with np.load(npz_path, allow_pickle=False) as data:
+        cell_ids = np.asarray(data["cell_id"], dtype=np.int64)
+        nhit_bins = [str(value) for value in data["nhit_bin"]]
+        pred_bins = [str(value) for value in data["predE_bin"]]
+        profile_edges_deg = np.asarray(data["profile_edges_deg"], dtype=np.float64)
+        profile_density = np.asarray(data["profile_density"], dtype=np.float64)
+
+    rows = read_csv_rows(summary_path)
+    row_by_cell_id = {int(row["cell_id"]): row for row in rows if row.get("cell_id")}
+    fit_cell_ids = {
+        int(row["cell_id"])
+        for row in payload.get("included_cells", [])
+        if isinstance(row, dict) and row.get("cell_id") and truthy(row.get("include"))
+    }
+    ordered_nhit = sorted(set(nhit_bins), key=interval_key)
+    ordered_pred = sorted(set(pred_bins), key=interval_key)
+    index_by_key = {(nhit, pred): idx for idx, (nhit, pred) in enumerate(zip(nhit_bins, pred_bins))}
+    centers = 0.5 * (profile_edges_deg[:-1] + profile_edges_deg[1:])
+    plt = setup_matplotlib()
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+
+    fig, axes = plt.subplots(
+        len(ordered_nhit),
+        len(ordered_pred),
+        figsize=(2.0 * len(ordered_pred), 1.55 * len(ordered_nhit)),
+        dpi=150,
+        sharex=True,
+        sharey=False,
+        squeeze=False,
+    )
+    for i, nhit in enumerate(ordered_nhit):
+        for j, pred in enumerate(ordered_pred):
+            ax = axes[i, j]
+            idx = index_by_key.get((nhit, pred))
+            if idx is None:
+                ax.set_axis_off()
+                continue
+            cell_id = int(cell_ids[idx])
+            row = row_by_cell_id.get(cell_id, {})
+            is_fit_cell = cell_id in fit_cell_ids
+            if is_fit_cell:
+                ax.set_facecolor("#ecfdf5")
+                for spine in ax.spines.values():
+                    spine.set_color("#059669")
+                    spine.set_linewidth(1.25)
+                ax.text(
+                    0.97,
+                    0.94,
+                    "fit",
+                    transform=ax.transAxes,
+                    ha="right",
+                    va="top",
+                    fontsize=5.8,
+                    color="#047857",
+                    fontweight="bold",
+                )
+            density = profile_density[idx]
+            ax.step(centers, density, where="mid", color="#1f4e79", linewidth=0.9)
+            has_profile = bool(np.isfinite(density).any() and np.nansum(density) > 0.0)
+            events = finite_float(row.get("events"))
+            sigma_rad = finite_float(row.get("sigma_rad"))
+            sigma_deg = finite_float(row.get("sigma_deg"))
+            if sigma_rad is None and sigma_deg is not None:
+                sigma_rad = math.radians(sigma_deg)
+            if has_profile and events is not None and events > 0.0 and sigma_rad is not None and sigma_rad > 0.0:
+                ax.plot(centers, rayleigh_pdf_deg(centers, sigma_rad), color="#c9501a", linewidth=0.8, alpha=0.9)
+            r_opt = finite_float(row.get("r_opt_deg"))
+            if has_profile and events is not None and events > 0.0 and r_opt is not None:
+                ax.axvline(r_opt, color="#444444", linewidth=0.7, linestyle="--")
+            ax.set_title(f"cell {cell_id}: {pred}", fontsize=6.7)
+            ax.tick_params(labelsize=6, length=2)
+            ax.grid(alpha=0.22, linewidth=0.35)
+            if j == 0:
+                ax.set_ylabel(nhit, fontsize=6.7)
+            if i == len(ordered_nhit) - 1:
+                ax.set_xlabel("r (deg)", fontsize=6.7)
+
+    handles = [
+        Line2D([0], [0], color="#1f4e79", linewidth=0.9, label="MC histogram"),
+        Line2D([0], [0], color="#c9501a", linewidth=0.9, label="Rayleigh fit"),
+        Line2D([0], [0], color="#444444", linewidth=0.8, linestyle="--", label="r_opt"),
+        Patch(facecolor="#ecfdf5", edgecolor="#059669", label="included in fit"),
+    ]
+    fig.legend(handles=handles, loc="upper center", ncol=4, fontsize=8, frameon=False, bbox_to_anchor=(0.5, 0.988))
+    fig.suptitle(f"{payload['name']} Stage B weighted radial PSF profiles", fontsize=11, y=0.999)
+    fig.tight_layout(rect=[0.0, 0.0, 1.0, 0.963])
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path)
+    plt.close(fig)
+    return True
 
 
 def parse_interval(label: str) -> Tuple[Optional[float], Optional[float]]:
@@ -422,6 +605,126 @@ def psf_table(payload: Dict[str, object], limit: int = 24) -> str:
     return "".join(rows) if rows else "<tr><td colspan=\"7\">No PSF risk rows found or Stage B pending.</td></tr>"
 
 
+def fmt_percent(value: object, digits: int = 1) -> str:
+    number = finite_float(value)
+    if number is None:
+        return "pending"
+    return f"{100.0 * number:.{digits}f}%"
+
+
+def fmt_sigma(value: object, digits: int = 2) -> str:
+    number = finite_float(value)
+    if number is None:
+        return "pending"
+    return f"{number:.{digits}g}σ"
+
+
+def flux_point_table_from_rows(rows: Sequence[Dict[str, object]], source: str) -> str:
+    if not rows:
+        return "<p>Stage G Nhit points pending.</p>"
+    body: List[str] = []
+    for row in rows:
+        point_label = str(row.get("point") or row.get("group_label") or row.get("cell_ids") or "").replace(";", "+")
+        nhit_label = str(row.get("nhit_bin") or row.get("nhit_span") or row.get("group_label") or "")
+        energy = finite_float(row.get("E_med_TeV") or row.get("E_p50_TeV") or row.get("true_energy_p50_tev") or row.get("effective_energy_tev"))
+        flux = finite_float(row.get("E2_dnde"))
+        flux_err = finite_float(row.get("E2_dnde_err"))
+        rel_err = finite_float(row.get("relative_error"))
+        if rel_err is None:
+            rel_err = None if flux is None or flux <= 0.0 or flux_err is None else flux_err / flux
+        significance = finite_float(row.get("significance"))
+        if significance is None:
+            significance = None if rel_err is None or rel_err <= 0.0 else 1.0 / rel_err
+        pass5_ratio = finite_float(row.get("pass5_ratio") or row.get("ratio_to_pass5"))
+        if pass5_ratio is None:
+            pass5_flux = pass5_interp_flux_at(energy) if energy is not None else None
+            pass5_ratio = None if flux is None or pass5_flux is None else flux / pass5_flux
+        body.append(
+            "<tr>"
+            f"<td>{html_escape(point_label)}</td>"
+            f"<td>{html_escape(nhit_label)}</td>"
+            f"<td class=\"num\">{fmt_float(energy, 3)}</td>"
+            f"<td class=\"num\">{fmt_sigma(significance, 3)}</td>"
+            f"<td class=\"num\">{fmt_percent(rel_err, 1)}</td>"
+            f"<td class=\"num\">{fmt_float(pass5_ratio, 3)}</td>"
+            "</tr>"
+        )
+    return (
+        '<div class="table-wrap compact"><table>'
+        "<thead><tr><th>点</th><th>Nhit bin</th><th class=\"num\">E_med [TeV]</th><th class=\"num\">significance</th><th class=\"num\">相对误差</th><th class=\"num\">pass5 ratio</th></tr></thead>"
+        f"<tbody>{''.join(body)}</tbody>"
+        "</table></div>"
+        f'<p class="caption-note">source: {html_escape(source)}</p>'
+    )
+
+
+def conservative_7bin_rows() -> List[Dict[str, object]]:
+    rows = read_csv_rows(MIGRATION_GROUPS_CSV)
+    out: List[Dict[str, object]] = []
+    for row in rows:
+        if row.get("analysis") != "conservative_7bin":
+            continue
+        excess = finite_float(row.get("excess"))
+        error = finite_float(row.get("error"))
+        flux = finite_float(row.get("E2_dnde"))
+        flux_err = finite_float(row.get("E2_dnde_err"))
+        out.append(
+            {
+                "point": row.get("group_label"),
+                "nhit_span": row.get("nhit_span"),
+                "E_p50_TeV": row.get("E_p50_TeV"),
+                "significance": (
+                    None
+                    if excess is None or error in (None, 0.0)
+                    else excess / error
+                ),
+                "relative_error": (
+                    None
+                    if flux is None or flux_err is None or flux <= 0.0
+                    else flux_err / flux
+                ),
+                "ratio_to_pass5": row.get("ratio_to_pass5"),
+                "E2_dnde": row.get("E2_dnde"),
+                "E2_dnde_err": row.get("E2_dnde_err"),
+            }
+        )
+    return out
+
+
+def nhit_flux_point_table(name: str, payload: Dict[str, object]) -> str:
+    if name == "baseline_v4" and MIGRATION_GROUPS_CSV.exists():
+        return flux_point_table_from_rows(conservative_7bin_rows(), "v5_migration_binning_groups.csv / conservative_7bin")
+    rows = [
+        row
+        for row in payload.get("stage_g_rows", [])
+        if isinstance(row, dict) and row.get("grouping") == "nhit"
+    ]
+    rows = sorted(rows, key=lambda row: interval_key(str(row.get("group_label") or "")))
+    normalized = [
+        {
+            **row,
+            "point": str(row.get("cell_ids") or "").replace(";", "+"),
+            "nhit_bin": row.get("group_label"),
+        }
+        for row in rows
+    ]
+    return flux_point_table_from_rows(normalized, "Stage G summary.csv / grouping=nhit")
+
+
+def nhit_flux_point_sections(strategies: Dict[str, Dict[str, object]]) -> str:
+    sections: List[str] = []
+    for name, payload in strategies.items():
+        sections.append(
+            f"""
+<section>
+<h3>{html_escape(name)}</h3>
+{nhit_flux_point_table(name, payload)}
+</section>
+"""
+        )
+    return "".join(sections)
+
+
 def write_report(strategies: Dict[str, Dict[str, object]], figures: Dict[str, Path]) -> None:
     REPORT_HTML.parent.mkdir(parents=True, exist_ok=True)
     generated = time_now_string()
@@ -431,7 +734,7 @@ def write_report(strategies: Dict[str, Dict[str, object]], figures: Dict[str, Pa
         fig_html = f'<figure><img src="{html_escape(relative_path(fig))}" alt="{html_escape(name)} PSF risk"></figure>' if fig and fig.exists() else "<p>PSF heatmap pending.</p>"
         profiles = figures.get(f"psf_profiles_{name}")
         profiles_html = (
-            f'<figure><img src="{html_escape(relative_path(profiles))}" alt="{html_escape(name)} PSF radial profiles"></figure>'
+            f'<figure><img src="{html_escape(relative_path(profiles))}" alt="{html_escape(name)} fit-cell shaded PSF radial profiles"><figcaption>{html_escape(name)} weighted radial PSF profiles. Green shaded panels are cells included in the final SED fit.</figcaption></figure>'
             if profiles and profiles.exists()
             else ""
         )
@@ -465,11 +768,14 @@ h3 {{ margin:26px 0 10px; font-size:19px; }}
 .lead {{ color:#53606a; max-width:960px; font-size:16px; }}
 .table-wrap {{ overflow-x:auto; border:1px solid #d7dee3; border-radius:8px; background:white; margin:14px 0; }}
 table {{ width:100%; border-collapse:collapse; min-width:920px; font-size:14px; }}
+.compact table {{ min-width:760px; }}
 th,td {{ border-bottom:1px solid #d7dee3; padding:9px 11px; text-align:left; vertical-align:top; }}
 th {{ background:#eef2f4; white-space:nowrap; }}
 .num {{ text-align:right; font-variant-numeric:tabular-nums; }}
 figure {{ margin:16px 0; padding:12px; border:1px solid #d7dee3; border-radius:8px; background:white; }}
 figure img {{ display:block; width:100%; height:auto; }}
+figcaption {{ margin-top:8px; color:#53606a; font-size:13px; }}
+.caption-note {{ margin:-6px 0 10px; color:#66727c; font-size:12px; }}
 code {{ background:#edf1f3; border-radius:4px; padding:1px 4px; }}
 .note {{ border-left:4px solid #0f766e; background:white; border-radius:8px; padding:14px 16px; margin:16px 0; }}
 </style>
@@ -491,6 +797,13 @@ code {{ background:#edf1f3; border-radius:4px; padding:1px 4px; }}
 <section>
 <h2>SED Overlay</h2>
 {sed_html}
+<div class="note">The official pass5 curve is an unweighted log-space LogPar fit to the plotted official pass5 SED points.</div>
+</section>
+
+<section>
+<h2>Final Nhit Flux Point Diagnostics</h2>
+<div class="note">baseline_v4 uses the <code>conservative_7bin</code> final flux points from the migration report; gap025 and gap1 use their final Stage G <code>grouping=nhit</code> points. <code>相对误差</code> is <code>E2_dnde_err / E2_dnde</code>; <code>significance</code> is <code>excess/error</code> for baseline_v4 and equivalent flux/error for the Stage G rows. <code>pass5 ratio</code> uses log-log interpolation of the official pass5 SED points at the listed median/effective energy.</div>
+{nhit_flux_point_sections(strategies)}
 </section>
 
 <section>
@@ -538,9 +851,8 @@ def main() -> None:
         plot_psf_heatmap(payload, out)
         if out.exists():
             figures[f"psf_{name}"] = out
-        stage_b_summary = Path(str(payload["config"]["stage_b_summary"]))
-        profiles = stage_b_summary.with_name("psf_radial_profiles_grid.png")
-        if profiles.exists():
+        profiles = ASSET_DIR / f"{name}_psf_radial_profiles_fit_shaded.png"
+        if plot_psf_profile_grid(payload, profiles):
             figures[f"psf_profiles_{name}"] = profiles
     write_report(strategies, figures)
     print(f"Wrote {REPORT_HTML}")

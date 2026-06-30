@@ -1,0 +1,1807 @@
+{
+  "methods": {
+    "rayleigh_baseline": {
+      "run_id": "v5_psf_rayleigh_baseline_drop4",
+      "status": "complete",
+      "paths": {
+        "psf_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v5_psf_compare/runs/v5_psf_rayleigh_baseline_drop4/psf_v5_psf_rayleigh_baseline_drop4.npz",
+        "psf_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v5_psf_compare/runs/v5_psf_rayleigh_baseline_drop4/psf_v5_psf_rayleigh_baseline_drop4_metadata.json",
+        "response_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v5_psf_compare/rayleigh_baseline/response_2d_v5_psf_rayleigh_baseline_drop4.npz",
+        "response_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v5_psf_compare/rayleigh_baseline/response_2d_v5_psf_rayleigh_baseline_drop4_metadata.json",
+        "stage_d_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v5_psf_compare/runs/v5_psf_rayleigh_baseline_drop4/background_v5_psf_rayleigh_baseline_drop4.npz",
+        "stage_d_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v5_psf_compare/runs/v5_psf_rayleigh_baseline_drop4/background_v5_psf_rayleigh_baseline_drop4_metadata.json",
+        "signal_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v5_psf_compare/runs/v5_psf_rayleigh_baseline_drop4/signal_v5_psf_rayleigh_baseline_drop4.npz",
+        "signal_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v5_psf_compare/runs/v5_psf_rayleigh_baseline_drop4/signal_v5_psf_rayleigh_baseline_drop4_metadata.json",
+        "fit_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v5_psf_compare/runs/v5_psf_rayleigh_baseline_drop4/fit_v5_psf_rayleigh_baseline_drop4.npz",
+        "fit_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v5_psf_compare/runs/v5_psf_rayleigh_baseline_drop4/fit_v5_psf_rayleigh_baseline_drop4_metadata.json",
+        "stage_g_summary": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v5_psf_compare/runs/v5_psf_rayleigh_baseline_drop4/sed_points_v5_psf_rayleigh_baseline_drop4_summary.csv",
+        "stage_g_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v5_psf_compare/runs/v5_psf_rayleigh_baseline_drop4/sed_points_v5_psf_rayleigh_baseline_drop4_metadata.json"
+      },
+      "logpar": {
+        "model_name": "logpar",
+        "error_mode": "conservative",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.3678384316162437e-12,
+          "alpha": 2.76152182132255,
+          "beta": 0.1453590035940586
+        },
+        "errors": {
+          "phi0": 6.424567771214723e-14,
+          "alpha": 0.0376595114765752,
+          "beta": 0.028068066052903816
+        },
+        "fit_parameters": {
+          "log10_phi0": -11.625647934825558,
+          "alpha": 2.76152182132255,
+          "beta": 0.1453590035940586
+        },
+        "fit_parameter_errors": {
+          "log10_phi0": 0.011783550323353431,
+          "alpha": 0.0376595114765752,
+          "beta": 0.028068066052903816
+        },
+        "fit_parameter_names": [
+          "log10_phi0",
+          "alpha",
+          "beta"
+        ],
+        "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+        "covariance": [
+          [
+            0.00013885208830830781,
+            2.1509176842586307e-05,
+            0.00016524157374745105
+          ],
+          [
+            2.1509176842586307e-05,
+            0.0014183303593390886,
+            0.0008029375671226761
+          ],
+          [
+            0.00016524157374745105,
+            0.0008029375671226761,
+            0.0007878683333143589
+          ]
+        ],
+        "chi2": 117.29485852619563,
+        "ndof": 23,
+        "chi2_over_ndof": 5.099776457660679,
+        "p_value": 1.2724427246655204e-14,
+        "minuit_status": {
+          "valid": true,
+          "accurate": true,
+          "fmin_is_valid": true,
+          "has_covariance": true,
+          "has_accurate_covar": true,
+          "edm": 1.3586437110412916e-06
+        }
+      },
+      "pl": {
+        "model_name": "pl",
+        "error_mode": "conservative",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.120728385454799e-12,
+          "gamma": 2.6319569798673275
+        },
+        "errors": {
+          "phi0": 4.626845181541038e-14,
+          "gamma": 0.01843421809946255
+        },
+        "fit_parameters": {
+          "log10_phi0": -11.67351495064979,
+          "gamma": 2.6319569798673275
+        },
+        "fit_parameter_errors": {
+          "log10_phi0": 0.009475109329160958,
+          "gamma": 0.01843421809946255
+        },
+        "fit_parameter_names": [
+          "log10_phi0",
+          "gamma"
+        ],
+        "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+        "covariance": [
+          [
+            8.977770935796204e-05,
+            -8.330964384968102e-05
+          ],
+          [
+            -8.330964384968102e-05,
+            0.0003398257577746018
+          ]
+        ],
+        "chi2": 161.08418359174414,
+        "ndof": 24,
+        "chi2_over_ndof": 6.711840982989339,
+        "p_value": 2.8114464639946285e-22,
+        "minuit_status": {
+          "valid": true,
+          "accurate": true,
+          "fmin_is_valid": true,
+          "has_covariance": true,
+          "has_accurate_covar": true,
+          "edm": 2.720589870954381e-05
+        }
+      },
+      "max_abs_pull": 5.537946645622887
+    },
+    "two_1d_gaussian": {
+      "run_id": "v5_psf_two_1d_gaussian_drop4",
+      "status": "complete",
+      "paths": {
+        "psf_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v5_psf_compare/runs/v5_psf_two_1d_gaussian_drop4/psf_v5_psf_two_1d_gaussian_drop4.npz",
+        "psf_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v5_psf_compare/runs/v5_psf_two_1d_gaussian_drop4/psf_v5_psf_two_1d_gaussian_drop4_metadata.json",
+        "response_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v5_psf_compare/two_1d_gaussian/response_2d_v5_psf_two_1d_gaussian_drop4.npz",
+        "response_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v5_psf_compare/two_1d_gaussian/response_2d_v5_psf_two_1d_gaussian_drop4_metadata.json",
+        "stage_d_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v5_psf_compare/runs/v5_psf_two_1d_gaussian_drop4/background_v5_psf_two_1d_gaussian_drop4.npz",
+        "stage_d_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v5_psf_compare/runs/v5_psf_two_1d_gaussian_drop4/background_v5_psf_two_1d_gaussian_drop4_metadata.json",
+        "signal_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v5_psf_compare/runs/v5_psf_two_1d_gaussian_drop4/signal_v5_psf_two_1d_gaussian_drop4.npz",
+        "signal_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v5_psf_compare/runs/v5_psf_two_1d_gaussian_drop4/signal_v5_psf_two_1d_gaussian_drop4_metadata.json",
+        "fit_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v5_psf_compare/runs/v5_psf_two_1d_gaussian_drop4/fit_v5_psf_two_1d_gaussian_drop4.npz",
+        "fit_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v5_psf_compare/runs/v5_psf_two_1d_gaussian_drop4/fit_v5_psf_two_1d_gaussian_drop4_metadata.json",
+        "stage_g_summary": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v5_psf_compare/runs/v5_psf_two_1d_gaussian_drop4/sed_points_v5_psf_two_1d_gaussian_drop4_summary.csv",
+        "stage_g_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v5_psf_compare/runs/v5_psf_two_1d_gaussian_drop4/sed_points_v5_psf_two_1d_gaussian_drop4_metadata.json"
+      },
+      "logpar": {
+        "model_name": "logpar",
+        "error_mode": "conservative",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.3645488313589265e-12,
+          "alpha": 2.750994007083663,
+          "beta": 0.14089784177681033
+        },
+        "errors": {
+          "phi0": 6.423201623182742e-14,
+          "alpha": 0.03717388868014204,
+          "beta": 0.027825477215508626
+        },
+        "fit_parameters": {
+          "log10_phi0": -11.626251712745724,
+          "alpha": 2.750994007083663,
+          "beta": 0.14089784177681033
+        },
+        "fit_parameter_errors": {
+          "log10_phi0": 0.011797434606148904,
+          "alpha": 0.03717388868014204,
+          "beta": 0.027825477215508626
+        },
+        "fit_parameter_names": [
+          "log10_phi0",
+          "alpha",
+          "beta"
+        ],
+        "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+        "covariance": [
+          [
+            0.00013917949351311665,
+            2.5252723484303e-05,
+            0.00016707978920259286
+          ],
+          [
+            2.5252723484303e-05,
+            0.001381985045768017,
+            0.0007808766257912515
+          ],
+          [
+            0.00016707978920259286,
+            0.0007808766257912515,
+            0.0007743073928339355
+          ]
+        ],
+        "chi2": 117.2061024066453,
+        "ndof": 23,
+        "chi2_over_ndof": 5.0959174959411,
+        "p_value": 1.3198600058291355e-14,
+        "minuit_status": {
+          "valid": true,
+          "accurate": true,
+          "fmin_is_valid": true,
+          "has_covariance": true,
+          "has_accurate_covar": true,
+          "edm": 9.229492660796551e-07
+        }
+      },
+      "pl": {
+        "model_name": "pl",
+        "error_mode": "conservative",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.121088215843039e-12,
+          "gamma": 2.6274060462100848
+        },
+        "errors": {
+          "phi0": 4.616806810290155e-14,
+          "gamma": 0.018439669717084106
+        },
+        "fit_parameters": {
+          "log10_phi0": -11.673441268844519,
+          "gamma": 2.6274060462100848
+        },
+        "fit_parameter_errors": {
+          "log10_phi0": 0.009452948287327345,
+          "gamma": 0.018439669717084106
+        },
+        "fit_parameter_names": [
+          "log10_phi0",
+          "gamma"
+        ],
+        "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+        "covariance": [
+          [
+            8.935824376424667e-05,
+            -8.17946214809256e-05
+          ],
+          [
+            -8.17946214809256e-05,
+            0.0003400267906792575
+          ]
+        ],
+        "chi2": 158.98036828194063,
+        "ndof": 24,
+        "chi2_over_ndof": 6.624182011747526,
+        "p_value": 6.979833979961769e-22,
+        "minuit_status": {
+          "valid": true,
+          "accurate": true,
+          "fmin_is_valid": true,
+          "has_covariance": true,
+          "has_accurate_covar": true,
+          "edm": 2.5704870065365478e-05
+        }
+      },
+      "max_abs_pull": 5.487529222652135
+    },
+    "mc_quantile_715": {
+      "run_id": "v5_psf_mc_quantile_715_drop4",
+      "status": "complete",
+      "paths": {
+        "psf_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v5_psf_compare/runs/v5_psf_mc_quantile_715_drop4/psf_v5_psf_mc_quantile_715_drop4.npz",
+        "psf_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v5_psf_compare/runs/v5_psf_mc_quantile_715_drop4/psf_v5_psf_mc_quantile_715_drop4_metadata.json",
+        "response_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v5_psf_compare/mc_quantile_715/response_2d_v5_psf_mc_quantile_715_drop4.npz",
+        "response_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v5_psf_compare/mc_quantile_715/response_2d_v5_psf_mc_quantile_715_drop4_metadata.json",
+        "stage_d_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v5_psf_compare/runs/v5_psf_mc_quantile_715_drop4/background_v5_psf_mc_quantile_715_drop4.npz",
+        "stage_d_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v5_psf_compare/runs/v5_psf_mc_quantile_715_drop4/background_v5_psf_mc_quantile_715_drop4_metadata.json",
+        "signal_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v5_psf_compare/runs/v5_psf_mc_quantile_715_drop4/signal_v5_psf_mc_quantile_715_drop4.npz",
+        "signal_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v5_psf_compare/runs/v5_psf_mc_quantile_715_drop4/signal_v5_psf_mc_quantile_715_drop4_metadata.json",
+        "fit_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v5_psf_compare/runs/v5_psf_mc_quantile_715_drop4/fit_v5_psf_mc_quantile_715_drop4.npz",
+        "fit_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v5_psf_compare/runs/v5_psf_mc_quantile_715_drop4/fit_v5_psf_mc_quantile_715_drop4_metadata.json",
+        "stage_g_summary": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v5_psf_compare/runs/v5_psf_mc_quantile_715_drop4/sed_points_v5_psf_mc_quantile_715_drop4_summary.csv",
+        "stage_g_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v5_psf_compare/runs/v5_psf_mc_quantile_715_drop4/sed_points_v5_psf_mc_quantile_715_drop4_metadata.json"
+      },
+      "logpar": {
+        "model_name": "logpar",
+        "error_mode": "conservative",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.610559491856143e-12,
+          "alpha": 2.9264634069602975,
+          "beta": 0.29994387099458175
+        },
+        "errors": {
+          "phi0": 6.612634224922628e-14,
+          "alpha": 0.05372955776248789,
+          "beta": 0.03761781651317439
+        },
+        "fit_parameters": {
+          "log10_phi0": -11.583266405234173,
+          "alpha": 2.9264634069602975,
+          "beta": 0.29994387099458175
+        },
+        "fit_parameter_errors": {
+          "log10_phi0": 0.011000824013731147,
+          "alpha": 0.05372955776248789,
+          "beta": 0.03761781651317439
+        },
+        "fit_parameter_names": [
+          "log10_phi0",
+          "alpha",
+          "beta"
+        ],
+        "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+        "covariance": [
+          [
+            0.00012101815186530309,
+            -4.565612809044377e-05,
+            0.00012100749008349522
+          ],
+          [
+            -4.565612809044377e-05,
+            0.0028872379486101127,
+            0.0016981785698286691
+          ],
+          [
+            0.00012100749008349522,
+            0.0016981785698286691,
+            0.0014152708675321392
+          ]
+        ],
+        "chi2": 1400.2823920104674,
+        "ndof": 23,
+        "chi2_over_ndof": 60.88184313088989,
+        "p_value": 5.4703879739713334e-282,
+        "minuit_status": {
+          "valid": true,
+          "accurate": true,
+          "fmin_is_valid": true,
+          "has_covariance": true,
+          "has_accurate_covar": true,
+          "edm": 7.264305279841706e-05
+        }
+      },
+      "pl": {
+        "model_name": "pl",
+        "error_mode": "conservative",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.2176005080096925e-12,
+          "gamma": 2.617113093743086
+        },
+        "errors": {
+          "phi0": 4.635830702250614e-14,
+          "gamma": 0.018297216480913647
+        },
+        "fit_parameters": {
+          "log10_phi0": -11.65411668757975,
+          "gamma": 2.617113093743086
+        },
+        "fit_parameter_errors": {
+          "log10_phi0": 0.009078802452259893,
+          "gamma": 0.018297216480913647
+        },
+        "fit_parameter_names": [
+          "log10_phi0",
+          "gamma"
+        ],
+        "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+        "covariance": [
+          [
+            8.242466455909202e-05,
+            -6.176086328585889e-05
+          ],
+          [
+            -6.176086328585889e-05,
+            0.0003347933476767961
+          ]
+        ],
+        "chi2": 1528.2338053018702,
+        "ndof": 24,
+        "chi2_over_ndof": 63.676408554244595,
+        "p_value": 1.8541156344196746e-308,
+        "minuit_status": {
+          "valid": true,
+          "accurate": true,
+          "fmin_is_valid": true,
+          "has_covariance": true,
+          "has_accurate_covar": true,
+          "edm": 1.9376788693642263e-06
+        }
+      },
+      "max_abs_pull": 35.16987136806069
+    },
+    "observed_data": {
+      "run_id": "v5_psf_observed_data_drop4",
+      "status": "complete",
+      "paths": {
+        "psf_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v5_psf_compare/runs/v5_psf_observed_data_drop4/psf_v5_psf_observed_data_drop4.npz",
+        "psf_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v5_psf_compare/runs/v5_psf_observed_data_drop4/psf_v5_psf_observed_data_drop4_metadata.json",
+        "response_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v5_psf_compare/observed_data/response_2d_v5_psf_observed_data_drop4.npz",
+        "response_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v5_psf_compare/observed_data/response_2d_v5_psf_observed_data_drop4_metadata.json",
+        "stage_d_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v5_psf_compare/runs/v5_psf_observed_data_drop4/background_v5_psf_observed_data_drop4.npz",
+        "stage_d_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v5_psf_compare/runs/v5_psf_observed_data_drop4/background_v5_psf_observed_data_drop4_metadata.json",
+        "signal_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v5_psf_compare/runs/v5_psf_observed_data_drop4/signal_v5_psf_observed_data_drop4.npz",
+        "signal_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v5_psf_compare/runs/v5_psf_observed_data_drop4/signal_v5_psf_observed_data_drop4_metadata.json",
+        "fit_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v5_psf_compare/runs/v5_psf_observed_data_drop4/fit_v5_psf_observed_data_drop4.npz",
+        "fit_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v5_psf_compare/runs/v5_psf_observed_data_drop4/fit_v5_psf_observed_data_drop4_metadata.json",
+        "stage_g_summary": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v5_psf_compare/runs/v5_psf_observed_data_drop4/sed_points_v5_psf_observed_data_drop4_summary.csv",
+        "stage_g_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v5_psf_compare/runs/v5_psf_observed_data_drop4/sed_points_v5_psf_observed_data_drop4_metadata.json"
+      },
+      "logpar": {
+        "model_name": "logpar",
+        "error_mode": "conservative",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.5203301474045376e-12,
+          "alpha": 2.831935724193188,
+          "beta": 0.19128953022921388
+        },
+        "errors": {
+          "phi0": 6.915419915577545e-14,
+          "alpha": 0.04525836983128673,
+          "beta": 0.03236638584460258
+        },
+        "fit_parameters": {
+          "log10_phi0": -11.59854256564521,
+          "alpha": 2.831935724193188,
+          "beta": 0.19128953022921388
+        },
+        "fit_parameter_errors": {
+          "log10_phi0": 0.01191640988968068,
+          "alpha": 0.04525836983128673,
+          "beta": 0.03236638584460258
+        },
+        "fit_parameter_names": [
+          "log10_phi0",
+          "alpha",
+          "beta"
+        ],
+        "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+        "covariance": [
+          [
+            0.00014200085615121482,
+            7.480290123416845e-05,
+            0.00019064349891435186
+          ],
+          [
+            7.480290123416845e-05,
+            0.002048509373536918,
+            0.0012006443443773876
+          ],
+          [
+            0.00019064349891435186,
+            0.0012006443443773876,
+            0.0010476752424788626
+          ]
+        ],
+        "chi2": 111.17276166197593,
+        "ndof": 23,
+        "chi2_over_ndof": 4.833598333129388,
+        "p_value": 1.5652416461257418e-13,
+        "minuit_status": {
+          "valid": true,
+          "accurate": true,
+          "fmin_is_valid": true,
+          "has_covariance": true,
+          "has_accurate_covar": true,
+          "edm": 4.0553661899234366e-05
+        }
+      },
+      "pl": {
+        "model_name": "pl",
+        "error_mode": "conservative",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.184862436804802e-12,
+          "gamma": 2.639278016466414
+        },
+        "errors": {
+          "phi0": 4.853856553029642e-14,
+          "gamma": 0.018296389824653092
+        },
+        "fit_parameters": {
+          "log10_phi0": -11.660575901859378,
+          "gamma": 2.639278016466414
+        },
+        "fit_parameter_errors": {
+          "log10_phi0": 0.00964821895154877,
+          "gamma": 0.018296389824653092
+        },
+        "fit_parameter_names": [
+          "log10_phi0",
+          "gamma"
+        ],
+        "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+        "covariance": [
+          [
+            9.3088142444106e-05,
+            -6.949880874358601e-05
+          ],
+          [
+            -6.949880874358601e-05,
+            0.0003347630764026166
+          ]
+        ],
+        "chi2": 174.01312378817568,
+        "ndof": 24,
+        "chi2_over_ndof": 7.25054682450732,
+        "p_value": 1.0123836696984986e-24,
+        "minuit_status": {
+          "valid": true,
+          "accurate": true,
+          "fmin_is_valid": true,
+          "has_covariance": true,
+          "has_accurate_covar": true,
+          "edm": 3.789736121669465e-05
+        }
+      },
+      "max_abs_pull": 4.597450982449259
+    }
+  },
+  "official_forward_fold": {
+    "summary_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/official_pass5_forward_fold_summary.csv",
+    "nhit_summary_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/official_pass5_forward_fold_nhit_summary.csv",
+    "cell_counts_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/official_pass5_forward_fold_cell_counts.csv",
+    "method": "official pass5 dN/dE log-log piecewise interpolation folded through each v5 aperture-conditioned Stage A response and Stage E containment=1 exposure"
+  },
+  "v4_reference": {
+    "stage_b_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v3_candidate_psfborrow/runs/v3_psfborrow_from_nominal/psf_v3_candidate.npz",
+    "stage_f_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v4_aperture_conditioned/runs/v4_stage_f_aperture_conditioned_drop4/fit_v4_aperture_conditioned_drop4.npz",
+    "stage_g_summary_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v4_aperture_conditioned/runs/v4_stage_g_aperture_conditioned_drop4/sed_points_v4_aperture_conditioned_drop4_summary.csv"
+  },
+  "weighted_psf_profiles": {
+    "overlay_figure": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_psf_weighted_profile_overlay.png",
+    "profile_source": "Stage B profile_density arrays, normalized by per-cell peak for display; observed_data uses pedestal-subtracted observed excess profiles for accepted data-PSF cells and fallback/borrowed profiles for fallback cells.",
+    "fit_shaded_grids": {
+      "rayleigh_baseline": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_psf_rayleigh_baseline_weighted_profiles_fit_shaded.png",
+      "two_1d_gaussian": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_psf_two_1d_gaussian_weighted_profiles_fit_shaded.png",
+      "mc_quantile_715": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_psf_mc_quantile_715_weighted_profiles_fit_shaded.png",
+      "observed_data": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_psf_observed_data_weighted_profiles_fit_shaded.png"
+    }
+  },
+  "observed_data_aperture": {
+    "status": "available",
+    "target_containment": 0.7129790300890827,
+    "accepted_data_psf_cells": [
+      {
+        "cell_id": 15,
+        "nhit_bin": "[200,300)",
+        "predE_bin": "[3,3.25)",
+        "r_opt_deg": 0.86842942237854,
+        "observed_data_r715_deg": 0.86842942237854,
+        "observed_data_raw_r715_deg": 0.8488612174987793,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": 1.5880050659179688,
+        "observed_data_r_opt_over_mc_quantile": 1.5554497241973877,
+        "observed_data_positive_total": 2070.587158203125,
+        "observed_data_profile_source": "pedestal_subtracted_observed_excess"
+      },
+      {
+        "cell_id": 26,
+        "nhit_bin": "[300,500)",
+        "predE_bin": "[2.5,3)",
+        "r_opt_deg": 1.0104008913040161,
+        "observed_data_r715_deg": 1.0104008913040161,
+        "observed_data_raw_r715_deg": 1.0243489742279053,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": 2.397660732269287,
+        "observed_data_r_opt_over_mc_quantile": 1.7243221998214722,
+        "observed_data_positive_total": 1483.3795166015625,
+        "observed_data_profile_source": "pedestal_subtracted_observed_excess"
+      },
+      {
+        "cell_id": 27,
+        "nhit_bin": "[300,500)",
+        "predE_bin": "[3,3.25)",
+        "r_opt_deg": 0.8946825861930847,
+        "observed_data_r715_deg": 0.8946825861930847,
+        "observed_data_raw_r715_deg": 0.9542946815490723,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": 2.2587618827819824,
+        "observed_data_r_opt_over_mc_quantile": 1.8621225357055664,
+        "observed_data_positive_total": 3799.40185546875,
+        "observed_data_profile_source": "pedestal_subtracted_observed_excess"
+      },
+      {
+        "cell_id": 40,
+        "nhit_bin": "[500,800)",
+        "predE_bin": "[3.25,3.5)",
+        "r_opt_deg": 0.4148053526878357,
+        "observed_data_r715_deg": 0.4148053526878357,
+        "observed_data_raw_r715_deg": 0.48469123244285583,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": 1.3348355293273926,
+        "observed_data_r_opt_over_mc_quantile": 1.01870858669281,
+        "observed_data_positive_total": 1422.64306640625,
+        "observed_data_profile_source": "pedestal_subtracted_observed_excess"
+      }
+    ],
+    "fallback_cells": [
+      {
+        "cell_id": 1,
+        "nhit_bin": "[125,200)",
+        "predE_bin": "[2,2.5)",
+        "r_opt_deg": 0.7816073894500732,
+        "observed_data_r715_deg": 0.7816073894500732,
+        "observed_data_raw_r715_deg": 2.6015782356262207,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": 3.3938329219818115,
+        "observed_data_r_opt_over_mc_quantile": 1.1015654802322388,
+        "observed_data_positive_total": 2670.2021484375,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_r_opt_over_rayleigh:3.39383>2.5"
+      },
+      {
+        "cell_id": 2,
+        "nhit_bin": "[125,200)",
+        "predE_bin": "[2.5,3)",
+        "r_opt_deg": 0.7211480140686035,
+        "observed_data_r715_deg": 0.7211480140686035,
+        "observed_data_raw_r715_deg": 1.600325107574463,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": 2.439927101135254,
+        "observed_data_r_opt_over_mc_quantile": 2.1023828983306885,
+        "observed_data_positive_total": 7269.83203125,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_r_opt_over_mc_quantile:2.10238>2.0"
+      },
+      {
+        "cell_id": 3,
+        "nhit_bin": "[125,200)",
+        "predE_bin": "[3,3.25)",
+        "r_opt_deg": 0.7878195643424988,
+        "observed_data_r715_deg": 0.7878195643424988,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_not_reliable:significance_lt_5"
+      },
+      {
+        "cell_id": 4,
+        "nhit_bin": "[125,200)",
+        "predE_bin": "[3.25,3.5)",
+        "r_opt_deg": 1.0632951259613037,
+        "observed_data_r715_deg": 1.0632951259613037,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 5,
+        "nhit_bin": "[125,200)",
+        "predE_bin": "[3.5,3.75)",
+        "r_opt_deg": 1.339789867401123,
+        "observed_data_r715_deg": 1.339789867401123,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 6,
+        "nhit_bin": "[125,200)",
+        "predE_bin": "[3.75,4.0)",
+        "r_opt_deg": 1.5549670457839966,
+        "observed_data_r715_deg": 1.5549670457839966,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 7,
+        "nhit_bin": "[125,200)",
+        "predE_bin": "[4.0,4.25)",
+        "r_opt_deg": 1.7794854640960693,
+        "observed_data_r715_deg": 1.7794854640960693,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 8,
+        "nhit_bin": "[125,200)",
+        "predE_bin": "[4.25,4.5)",
+        "r_opt_deg": 1.9745076894760132,
+        "observed_data_r715_deg": 1.9745076894760132,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 9,
+        "nhit_bin": "[125,200)",
+        "predE_bin": "[4.5,4.75)",
+        "r_opt_deg": 2.0433428287506104,
+        "observed_data_r715_deg": 2.0433428287506104,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 10,
+        "nhit_bin": "[125,200)",
+        "predE_bin": "[4.75,5.0)",
+        "r_opt_deg": 2.217029094696045,
+        "observed_data_r715_deg": 2.217029094696045,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 11,
+        "nhit_bin": "[125,200)",
+        "predE_bin": "[5,6)",
+        "r_opt_deg": 2.265471935272217,
+        "observed_data_r715_deg": 2.265471935272217,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 12,
+        "nhit_bin": "[125,200)",
+        "predE_bin": ">=6",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 13,
+        "nhit_bin": "[200,300)",
+        "predE_bin": "[2,2.5)",
+        "r_opt_deg": 0.6385640501976013,
+        "observed_data_r715_deg": 0.6385640501976013,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 14,
+        "nhit_bin": "[200,300)",
+        "predE_bin": "[2.5,3)",
+        "r_opt_deg": 0.5542443990707397,
+        "observed_data_r715_deg": 0.5542443990707397,
+        "observed_data_raw_r715_deg": 1.4163694381713867,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": 2.601820945739746,
+        "observed_data_r_opt_over_mc_quantile": 2.2333357334136963,
+        "observed_data_positive_total": 5597.33544921875,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_r_opt_over_rayleigh:2.60182>2.5"
+      },
+      {
+        "cell_id": 16,
+        "nhit_bin": "[200,300)",
+        "predE_bin": "[3.25,3.5)",
+        "r_opt_deg": 0.72874516248703,
+        "observed_data_r715_deg": 0.72874516248703,
+        "observed_data_raw_r715_deg": 2.9115490913391113,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": 4.004917144775391,
+        "observed_data_r_opt_over_mc_quantile": 3.6584646701812744,
+        "observed_data_positive_total": 1063.0413818359375,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_r_opt_over_rayleigh:4.00492>2.5"
+      },
+      {
+        "cell_id": 17,
+        "nhit_bin": "[200,300)",
+        "predE_bin": "[3.5,3.75)",
+        "r_opt_deg": 1.0330716371536255,
+        "observed_data_r715_deg": 1.0330716371536255,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 18,
+        "nhit_bin": "[200,300)",
+        "predE_bin": "[3.75,4.0)",
+        "r_opt_deg": 1.3009943962097168,
+        "observed_data_r715_deg": 1.3009943962097168,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 19,
+        "nhit_bin": "[200,300)",
+        "predE_bin": "[4.0,4.25)",
+        "r_opt_deg": 1.526131510734558,
+        "observed_data_r715_deg": 1.526131510734558,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 20,
+        "nhit_bin": "[200,300)",
+        "predE_bin": "[4.25,4.5)",
+        "r_opt_deg": 1.7472426891326904,
+        "observed_data_r715_deg": 1.7472426891326904,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 21,
+        "nhit_bin": "[200,300)",
+        "predE_bin": "[4.5,4.75)",
+        "r_opt_deg": 1.9039727449417114,
+        "observed_data_r715_deg": 1.9039727449417114,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 22,
+        "nhit_bin": "[200,300)",
+        "predE_bin": "[4.75,5.0)",
+        "r_opt_deg": 2.1119091510772705,
+        "observed_data_r715_deg": 2.1119091510772705,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 23,
+        "nhit_bin": "[200,300)",
+        "predE_bin": "[5,6)",
+        "r_opt_deg": 2.2743749618530273,
+        "observed_data_r715_deg": 2.2743749618530273,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 24,
+        "nhit_bin": "[200,300)",
+        "predE_bin": ">=6",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 25,
+        "nhit_bin": "[300,500)",
+        "predE_bin": "[2,2.5)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 28,
+        "nhit_bin": "[300,500)",
+        "predE_bin": "[3.25,3.5)",
+        "r_opt_deg": 0.4156150817871094,
+        "observed_data_r715_deg": 0.4156150817871094,
+        "observed_data_raw_r715_deg": 2.4351980686187744,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": 3.7995824813842773,
+        "observed_data_r_opt_over_mc_quantile": 3.780045986175537,
+        "observed_data_positive_total": 1547.2918701171875,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_r_opt_over_rayleigh:3.79958>2.5"
+      },
+      {
+        "cell_id": 29,
+        "nhit_bin": "[300,500)",
+        "predE_bin": "[3.5,3.75)",
+        "r_opt_deg": 0.6477468013763428,
+        "observed_data_r715_deg": 0.6477468013763428,
+        "observed_data_raw_r715_deg": 1.7505091428756714,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": 2.6685914993286133,
+        "observed_data_r_opt_over_mc_quantile": 2.752707004547119,
+        "observed_data_positive_total": 636.6002807617188,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_r_opt_over_rayleigh:2.66859>2.5"
+      },
+      {
+        "cell_id": 30,
+        "nhit_bin": "[300,500)",
+        "predE_bin": "[3.75,4.0)",
+        "r_opt_deg": 0.9900724291801453,
+        "observed_data_r715_deg": 0.9900724291801453,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_not_reliable:significance_lt_5"
+      },
+      {
+        "cell_id": 31,
+        "nhit_bin": "[300,500)",
+        "predE_bin": "[4.0,4.25)",
+        "r_opt_deg": 1.2538275718688965,
+        "observed_data_r715_deg": 1.2538275718688965,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 32,
+        "nhit_bin": "[300,500)",
+        "predE_bin": "[4.25,4.5)",
+        "r_opt_deg": 1.4458905458450317,
+        "observed_data_r715_deg": 1.4458905458450317,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 33,
+        "nhit_bin": "[300,500)",
+        "predE_bin": "[4.5,4.75)",
+        "r_opt_deg": 1.646765112876892,
+        "observed_data_r715_deg": 1.646765112876892,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 34,
+        "nhit_bin": "[300,500)",
+        "predE_bin": "[4.75,5.0)",
+        "r_opt_deg": 1.8282259702682495,
+        "observed_data_r715_deg": 1.8282259702682495,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 35,
+        "nhit_bin": "[300,500)",
+        "predE_bin": "[5,6)",
+        "r_opt_deg": 2.085508346557617,
+        "observed_data_r715_deg": 2.085508346557617,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 36,
+        "nhit_bin": "[300,500)",
+        "predE_bin": ">=6",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 37,
+        "nhit_bin": "[500,800)",
+        "predE_bin": "[2,2.5)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 38,
+        "nhit_bin": "[500,800)",
+        "predE_bin": "[2.5,3)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 39,
+        "nhit_bin": "[500,800)",
+        "predE_bin": "[3,3.25)",
+        "r_opt_deg": 0.4148053526878357,
+        "observed_data_r715_deg": 0.4148053526878357,
+        "observed_data_raw_r715_deg": 0.48469123244285583,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": 1.3348355293273926,
+        "observed_data_r_opt_over_mc_quantile": 1.01870858669281,
+        "observed_data_positive_total": 1422.64306640625,
+        "observed_data_profile_source": "borrowed_profile_from:40",
+        "fallback_reason": "observed_profile_missing_for_cell; psfborrow_from:40"
+      },
+      {
+        "cell_id": 41,
+        "nhit_bin": "[500,800)",
+        "predE_bin": "[3.5,3.75)",
+        "r_opt_deg": 0.32525408267974854,
+        "observed_data_r715_deg": 0.32525408267974854,
+        "observed_data_raw_r715_deg": 2.0598416328430176,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": 6.599987030029297,
+        "observed_data_r_opt_over_mc_quantile": 6.489553451538086,
+        "observed_data_positive_total": 1258.6328125,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_r_opt_over_rayleigh:6.59999>2.5"
+      },
+      {
+        "cell_id": 42,
+        "nhit_bin": "[500,800)",
+        "predE_bin": "[3.75,4.0)",
+        "r_opt_deg": 0.5331345796585083,
+        "observed_data_r715_deg": 0.5331345796585083,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_not_reliable:excess_lt_100;significance_lt_5"
+      },
+      {
+        "cell_id": 43,
+        "nhit_bin": "[500,800)",
+        "predE_bin": "[4.0,4.25)",
+        "r_opt_deg": 0.974081814289093,
+        "observed_data_r715_deg": 0.974081814289093,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 44,
+        "nhit_bin": "[500,800)",
+        "predE_bin": "[4.25,4.5)",
+        "r_opt_deg": 1.18329656124115,
+        "observed_data_r715_deg": 1.18329656124115,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 45,
+        "nhit_bin": "[500,800)",
+        "predE_bin": "[4.5,4.75)",
+        "r_opt_deg": 1.3993562459945679,
+        "observed_data_r715_deg": 1.3993562459945679,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 46,
+        "nhit_bin": "[500,800)",
+        "predE_bin": "[4.75,5.0)",
+        "r_opt_deg": 1.5490642786026,
+        "observed_data_r715_deg": 1.5490642786026,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 47,
+        "nhit_bin": "[500,800)",
+        "predE_bin": "[5,6)",
+        "r_opt_deg": 1.8611623048782349,
+        "observed_data_r715_deg": 1.8611623048782349,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 48,
+        "nhit_bin": "[500,800)",
+        "predE_bin": ">=6",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 49,
+        "nhit_bin": "[800,1100)",
+        "predE_bin": "[2,2.5)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 50,
+        "nhit_bin": "[800,1100)",
+        "predE_bin": "[2.5,3)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 51,
+        "nhit_bin": "[800,1100)",
+        "predE_bin": "[3,3.25)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 52,
+        "nhit_bin": "[800,1100)",
+        "predE_bin": "[3.25,3.5)",
+        "r_opt_deg": 0.27379876375198364,
+        "observed_data_r715_deg": 0.27379876375198364,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "borrowed_profile_from:53,54",
+        "fallback_reason": "observed_profile_not_reliable:N_on_lt_200; psfborrow_from:53,54"
+      },
+      {
+        "cell_id": 53,
+        "nhit_bin": "[800,1100)",
+        "predE_bin": "[3.5,3.75)",
+        "r_opt_deg": 0.2622322738170624,
+        "observed_data_r715_deg": 0.2622322738170624,
+        "observed_data_raw_r715_deg": 2.0349504947662354,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": 7.780330181121826,
+        "observed_data_r_opt_over_mc_quantile": 7.533263683319092,
+        "observed_data_positive_total": 695.2490844726562,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_r_opt_over_rayleigh:7.78033>2.5"
+      },
+      {
+        "cell_id": 54,
+        "nhit_bin": "[800,1100)",
+        "predE_bin": "[3.75,4.0)",
+        "r_opt_deg": 0.29693174362182617,
+        "observed_data_r715_deg": 0.29693174362182617,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_not_reliable:N_on_lt_200;excess_lt_100"
+      },
+      {
+        "cell_id": 55,
+        "nhit_bin": "[800,1100)",
+        "predE_bin": "[4.0,4.25)",
+        "r_opt_deg": 0.5141045451164246,
+        "observed_data_r715_deg": 0.5141045451164246,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_not_reliable:N_on_lt_200;excess_lt_100"
+      },
+      {
+        "cell_id": 56,
+        "nhit_bin": "[800,1100)",
+        "predE_bin": "[4.25,4.5)",
+        "r_opt_deg": 0.986194372177124,
+        "observed_data_r715_deg": 0.986194372177124,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 57,
+        "nhit_bin": "[800,1100)",
+        "predE_bin": "[4.5,4.75)",
+        "r_opt_deg": 1.2344653606414795,
+        "observed_data_r715_deg": 1.2344653606414795,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 58,
+        "nhit_bin": "[800,1100)",
+        "predE_bin": "[4.75,5.0)",
+        "r_opt_deg": 1.4706326723098755,
+        "observed_data_r715_deg": 1.4706326723098755,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 59,
+        "nhit_bin": "[800,1100)",
+        "predE_bin": "[5,6)",
+        "r_opt_deg": 1.7527832984924316,
+        "observed_data_r715_deg": 1.7527832984924316,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 60,
+        "nhit_bin": "[800,1100)",
+        "predE_bin": ">=6",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 61,
+        "nhit_bin": "[1100,2000)",
+        "predE_bin": "[2,2.5)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 62,
+        "nhit_bin": "[1100,2000)",
+        "predE_bin": "[2.5,3)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 63,
+        "nhit_bin": "[1100,2000)",
+        "predE_bin": "[3,3.25)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 64,
+        "nhit_bin": "[1100,2000)",
+        "predE_bin": "[3.25,3.5)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 65,
+        "nhit_bin": "[1100,2000)",
+        "predE_bin": "[3.5,3.75)",
+        "r_opt_deg": 0.22228741645812988,
+        "observed_data_r715_deg": 0.22228741645812988,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "borrowed_profile_from:66,67",
+        "fallback_reason": "observed_profile_not_reliable:N_on_lt_200;excess_lt_100; psfborrow_from:66,67"
+      },
+      {
+        "cell_id": 66,
+        "nhit_bin": "[1100,2000)",
+        "predE_bin": "[3.75,4.0)",
+        "r_opt_deg": 0.2172287553548813,
+        "observed_data_r715_deg": 0.2172287553548813,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_not_reliable:N_on_lt_200"
+      },
+      {
+        "cell_id": 67,
+        "nhit_bin": "[1100,2000)",
+        "predE_bin": "[4.0,4.25)",
+        "r_opt_deg": 0.23240472376346588,
+        "observed_data_r715_deg": 0.23240472376346588,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_not_reliable:N_on_lt_200;excess_lt_100"
+      },
+      {
+        "cell_id": 68,
+        "nhit_bin": "[1100,2000)",
+        "predE_bin": "[4.25,4.5)",
+        "r_opt_deg": 0.29243433475494385,
+        "observed_data_r715_deg": 0.29243433475494385,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_not_reliable:N_on_lt_200;excess_lt_100;significance_lt_5"
+      },
+      {
+        "cell_id": 69,
+        "nhit_bin": "[1100,2000)",
+        "predE_bin": "[4.5,4.75)",
+        "r_opt_deg": 0.5586923360824585,
+        "observed_data_r715_deg": 0.5586923360824585,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_not_reliable:N_on_lt_200;excess_lt_100;significance_lt_5"
+      },
+      {
+        "cell_id": 70,
+        "nhit_bin": "[1100,2000)",
+        "predE_bin": "[4.75,5.0)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 71,
+        "nhit_bin": "[1100,2000)",
+        "predE_bin": "[5,6)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 72,
+        "nhit_bin": "[1100,2000)",
+        "predE_bin": ">=6",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 73,
+        "nhit_bin": "[2000,3000)",
+        "predE_bin": "[2,2.5)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 74,
+        "nhit_bin": "[2000,3000)",
+        "predE_bin": "[2.5,3)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 75,
+        "nhit_bin": "[2000,3000)",
+        "predE_bin": "[3,3.25)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 76,
+        "nhit_bin": "[2000,3000)",
+        "predE_bin": "[3.25,3.5)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 77,
+        "nhit_bin": "[2000,3000)",
+        "predE_bin": "[3.5,3.75)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 78,
+        "nhit_bin": "[2000,3000)",
+        "predE_bin": "[3.75,4.0)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 79,
+        "nhit_bin": "[2000,3000)",
+        "predE_bin": "[4.0,4.25)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 80,
+        "nhit_bin": "[2000,3000)",
+        "predE_bin": "[4.25,4.5)",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      },
+      {
+        "cell_id": 81,
+        "nhit_bin": "[2000,3000)",
+        "predE_bin": "[4.5,4.75)",
+        "r_opt_deg": 0.2023904025554657,
+        "observed_data_r715_deg": 0.2023904025554657,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_not_reliable:N_on_lt_200;excess_lt_100;significance_lt_5"
+      },
+      {
+        "cell_id": 82,
+        "nhit_bin": "[2000,3000)",
+        "predE_bin": "[4.75,5.0)",
+        "r_opt_deg": 0.2559939920902252,
+        "observed_data_r715_deg": 0.2559939920902252,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_not_reliable:N_on_lt_200;excess_lt_100;significance_lt_5"
+      },
+      {
+        "cell_id": 83,
+        "nhit_bin": "[2000,3000)",
+        "predE_bin": "[5,6)",
+        "r_opt_deg": 0.3033556044101715,
+        "observed_data_r715_deg": 0.3033556044101715,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_not_reliable:N_on_lt_200;excess_lt_100;significance_lt_5"
+      },
+      {
+        "cell_id": 84,
+        "nhit_bin": "[2000,3000)",
+        "predE_bin": ">=6",
+        "r_opt_deg": 1.5800000429153442,
+        "observed_data_r715_deg": 1.5800000429153442,
+        "observed_data_raw_r715_deg": null,
+        "containment_r_opt": 0.7129790186882019,
+        "observed_data_containment_r_opt": 0.7129790186882019,
+        "observed_data_r_opt_over_rayleigh": null,
+        "observed_data_r_opt_over_mc_quantile": null,
+        "observed_data_positive_total": null,
+        "observed_data_profile_source": "fallback_mc_profile",
+        "fallback_reason": "observed_profile_missing_for_cell"
+      }
+    ],
+    "accepted_count": 4,
+    "fallback_count": 80,
+    "note": "fallback_cells includes both observed-profile quality-gate fallback and the existing v3/v4 psfborrow cells.",
+    "radius_comparison_figure": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_psf_observed_data_radius_comparison.png"
+  },
+  "observed_excess_r715_diagnostic": {
+    "target_containment": 0.7129790300890827,
+    "csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/observed_excess_r715_diagnostic.csv",
+    "figure": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_observed_excess_r715_diagnostic.png",
+    "note": "legacy diagnostic computed from v4 empirical radial excess profiles using positive shell excess only; observed_data branch uses the pedestal-subtracted version as its aperture input"
+  }
+}

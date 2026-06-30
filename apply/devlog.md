@@ -6,9 +6,17 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
-- **energy** · 2026-06-30 16:02 · [38fa896] Add PredE flux point overlays and diagnostic tables to the v5 PredE binning report.
+- **energy** · 2026-06-30 21:54 · [uncommitted] Add observed-data v5 PSF aperture branch with MC-ratio guard and four-branch comparison report.
+
+- **energy** · 2026-06-30 20:51 · [uncommitted] Add v5.4 de-circularized upgrade: K rebuilt from MEASURED data/MC predE moments (0 free params, shift+broaden, self-consistent with v5.3 fitted Delta) and per-cell significance-gated de-Poissoned background systematic (replaces row-pool); off-source null tests pass (leave-one-out held-out pull RMS 1.07; systematic absorbs the -26σ off-source background failure to -1.8σ); cell chi2/ndof 5.10→1.06 with 7-bin SED invariant (rows conserved to 2e-16).
+
+- **energy** · 2026-06-30 20:37 · [uncommitted] Add v5.3 two-component instrument-side cell-level fix (Nhit-row-dependent row-conserving dispersion kernel K for high-Nhit migration + de-Poissoned off-source-calibrated background systematic for low-Nhit); validated forward-fold reproduces Stage F 117.3/23, full fix drives cell chi2/ndof 5.10→0.96 with the 7-bin Nhit-marginalized SED provably invariant (rows conserved to 2e-16) and MC untouched.
+
+- **energy** · 2026-06-30 20:35 · [uncommitted] Add v5 cellscheck phase-0 triage + v5.2 K demo: localize Stage F cell chi2≈5 to two orthogonal causes (high-Nhit predE energy migration; low-Nhit annulus-background failure, cell 15 worst), ruling out PSF/containment/spectral/aperture/range/MC-stats via instrument-side proxies only.
 
 - **energy** · 2026-06-30 15:38 · [04659e7] Add final Nhit flux point diagnostic tables to the v5 PredE binning report.
+
+- **energy** · 2026-06-29 19:21 · [uncommitted] Add v6 `_64670` MC provenance, drop4 selector enforcement, and staged Slurm wrappers.
 
 - **energy** · 2026-06-29 17:31 · [856e62e] Add v6 roadmap for rerunning apply on the `_64670` half-year dataset.
 

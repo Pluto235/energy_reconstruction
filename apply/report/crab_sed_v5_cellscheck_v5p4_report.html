@@ -1,0 +1,203 @@
+<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Crab SED v5 cellscheck / v5.4 report</title><style>
+    :root { color-scheme: light; --ink:#111827; --muted:#4b5563; --line:#d1d5db; --soft:#f3f4f6; --accent:#2563eb; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif; color:var(--ink); background:#fff; line-height:1.45; }
+    header { padding:28px 36px 22px; border-bottom:1px solid var(--line); background:#f9fafb; }
+    main { padding:24px 36px 44px; max-width:1240px; margin:0 auto; }
+    h1 { margin:0 0 8px; font-size:27px; letter-spacing:0; }
+    h2 { margin:0 0 14px; font-size:21px; border-bottom:1px solid var(--line); padding-bottom:6px; }
+    h3 { margin:18px 0 8px; font-size:16px; }
+    p { margin:8px 0 12px; color:var(--muted); }
+    code { background:#eef2ff; border:1px solid #c7d2fe; border-radius:4px; padding:1px 4px; font-size:12px; }
+    .section { margin:0 0 30px; }
+    .cards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:14px 0 18px; }
+    .card { border:1px solid var(--line); border-radius:8px; padding:13px 14px; background:#fff; min-width:0; }
+    .card .k { color:#6b7280; font-size:12px; text-transform:uppercase; letter-spacing:.03em; }
+    .card .v { font-size:20px; font-weight:650; margin-top:5px; }
+    .card p { font-size:12.5px; margin-bottom:0; }
+    table { border-collapse:collapse; width:100%; margin:12px 0 16px; font-size:13px; }
+    th, td { border:1px solid var(--line); padding:7px 8px; vertical-align:top; }
+    th { background:var(--soft); text-align:left; }
+    table.compact { font-size:12px; }
+    table.compact th, table.compact td { padding:5px 6px; }
+    td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+    .grid2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start; }
+    .figure { margin:0 0 16px; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#fff; }
+    .figure img { width:100%; display:block; }
+    .figure figcaption { padding:8px 11px; font-size:12px; color:var(--muted); border-top:1px solid var(--line); }
+    .note { padding:11px 13px; border-left:4px solid var(--accent); background:#eff6ff; color:#1e3a8a; margin:12px 0 16px; }
+    .note.warn { border-left-color:#d97706; background:#fffbeb; color:#92400e; }
+    .note.good { border-left-color:#16a34a; background:#f0fdf4; color:#166534; }
+    .pill { display:inline-block; padding:1px 7px; border-radius:10px; background:#dcfce7; color:#166534; font-size:11px; font-weight:600; border:1px solid #86efac; }
+    .pill.fix { background:#dbeafe; color:#1e40af; border-color:#93c5fd; }
+    .pill.bad { background:#fee2e2; color:#991b1b; border-color:#fca5a5; }
+    details { margin:10px 0 16px; } summary { cursor:pointer; color:#1d4ed8; font-weight:600; }
+    @media (max-width: 900px) { main, header { padding-left:18px; padding-right:18px; } .cards, .grid2 { grid-template-columns:1fr; } }
+    </style></head><body><header>
+<h1>Crab SED v5 Cellscheck &rarr; v5.4: Two-Component, Instrument-Side Correction of the Stage&nbsp;F Cell&#8209;Level &chi;&sup2;</h1>
+<p>Diagnose and repair the Stage&nbsp;F per-cell <code>&chi;&sup2;/ndof &asymp; 5</code> on the frozen <code>v4_aperture_conditioned_drop4</code> baseline (26 fit cells, 2-month / 15.6-day visible exposure). MC is untouched (no retrain, no re-response); every correction is calibrated from instrument-side data (MC migration physics + off-source control fields), never from the Crab spectrum. This report complements the v4 Stage&nbsp;A&ndash;G baseline report; it does not redefine the baseline.</p>
+</header><main>
+
+<section class="section"><h2>Executive Summary</h2>
+<div class="note">The v4 forward-fold is excellent per <em>Nhit</em> row but poor per <em>cell</em> (<code>&chi;&sup2;/ndof = 117.3/23 = 5.10</code>). This work proves the cell-level scatter is <strong>two orthogonal, separately-fixable effects</strong> &mdash; a high-<em>Nhit</em> reconstructed-energy (predE) migration and a low-<em>Nhit</em> background-model failure &mdash; and corrects each with its own instrument-side handle, leaving the robust 7-bin SED mathematically invariant. The final fix (v5.4) reaches <code>&chi;&sup2;/ndof = 1.06</code> and passes two off-source null tests.</div>
+<div class="cards">
+<div class="card"><div class="k">starting point</div><div class="v">&chi;&sup2;/ndof 5.10</div><p>Stage F LogPar, 117.3 / 23, 26 cells</p></div>
+<div class="card"><div class="k">v5.4 result</div><div class="v">&chi;&sup2;/ndof 1.06</div><p>24.28 / 23; measured-K + de-Poissoned gated bg systematic</p></div>
+<div class="card"><div class="k">off-source null tests</div><div class="v">&minus;26&sigma; &rarr; &minus;1.8&sigma;</div><p>systematic absorbs the real bg failure; leave-one-out pull RMS 1.07</p></div>
+<div class="card"><div class="k">7-bin SED</div><div class="v">0.00% shift</div><p>central E&sup2;dN/dE provably invariant; only error bars change</p></div>
+</div>
+<table class="compact"><thead><tr><th>scope / contract</th><th>setting</th></tr></thead><tbody>
+<tr><td>baseline diagnosed</td><td><code>v4_stage_f_aperture_conditioned_drop4</code> (26 cells), aperture-conditioned response, <code>containment_r_opt=1</code></td></tr>
+<tr><td>data</td><td>old 2-month Crab observation (15.6-day visible exposure); v6 half-year track deliberately untouched</td></tr>
+<tr><td>MC</td><td>frozen &mdash; no retraining, no response regeneration</td></tr>
+<tr><td>calibration allowed</td><td>Crab (for the spectrum normalization) + off-source control fields (for the background systematic) + MC/data predE moments (for the kernel)</td></tr>
+<tr><td>forward fold</td><td>replicated verbatim from <code>stages/06_fit.py</code>; revalidated to reproduce 117.3/23 (model counts to median rel 2.5e-5) before any fix</td></tr>
+</tbody></table>
+</section>
+
+<section class="section"><h2>The Problem and the Strategy</h2>
+<p>Stage&nbsp;F fits one global LogPar spectrum (3 parameters) to the 26 fit cells by forward-folding the MC response. The fit is statistically poor at the cell level (<code>&chi;&sup2;/ndof = 5.10</code>, p = 1.3e-14), yet the same data binned only by <em>Nhit</em> (the robust observable) gives a clean spectrum. The question this report answers, with scripted evidence rather than intuition: <strong>is the cell-level scatter a background / normalization residual, or a data&ndash;MC PSF / energy-migration mismatch?</strong></p>
+<p>The strategy was a gated, instrument-side-only diagnosis (Phase 0), followed by targeted corrections that must (i) be calibrated without touching the Crab spectrum, (ii) leave the MC untouched, and (iii) provably preserve the robust <em>Nhit</em>-marginalized SED.</p>
+</section>
+
+<section class="section"><h2>Phase 0 &mdash; Diagnosis: Two Orthogonal Causes</h2>
+<p>Using only existing artifacts (Stage&nbsp;E signal, the official pass5 forward-fold closure, the observed-excess r715 PSF diagnostic, 6 background-systematics variants, and 2 off-source control fields), no Crab fit was used to tune anything. The headline: the cell-level <code>&chi;&sup2;&asymp;5</code> is <strong>not</strong> driven by the background model or the angular PSF; it is dominated by a <strong>predE energy-migration mismatch</strong> (the data&rsquo;s reconstructed-energy distribution is wider and up-shifted relative to the MC response), <strong>plus</strong> a localized low-<em>Nhit</em> background-model failure.</p>
+<div class="grid2">
+<table class="compact"><thead><tr><th>candidate cause</th><th>test</th><th class="num">corr. with |pull|</th><th>verdict</th></tr></thead><tbody>
+<tr><td>angular PSF mismatch</td><td>obs/MC r715</td><td class="num">&minus;0.37</td><td><span class="pill bad">ruled out</span> wrong sign</td></tr>
+<tr><td>background knob</td><td>annulus/order shift &sigma;</td><td class="num">&minus;0.05</td><td><span class="pill bad">ruled out</span></td></tr>
+<tr><td>off-source residual</td><td>fake-source &sigma;</td><td class="num">+0.14</td><td>secondary, localized</td></tr>
+<tr><td>background fraction</td><td>B_on / N_on</td><td class="num">+0.05</td><td><span class="pill bad">ruled out</span></td></tr>
+<tr><td>containment</td><td>forced 1.000, spread 0</td><td class="num">&mdash;</td><td><span class="pill bad">cannot drive</span></td></tr>
+<tr><td>spectral shape</td><td>tilt vs external pass5 fold</td><td class="num">&mdash;</td><td><span class="pill bad">ruled out</span> organized by predE</td></tr>
+<tr><td><strong>energy migration</strong></td><td>corr(obs/pass5, predE)</td><td class="num"><strong>+0.64</strong></td><td><span class="pill">driver</span> 6/7 rows</td></tr>
+</tbody></table>
+<div>
+<div class="note">Within each fixed-<em>Nhit</em> row the data predE distribution is shifted up (&Delta;&asymp;+0.09&nbsp;dex) and wider (std ratio mean 1.17, up to 1.70) vs both the LogPar model and the external pass5 fold &mdash; the signature of energy migration, not a spectral artifact. The single clean row is <code>[500,800)</code> (&Delta;&asymp;0, ratio&asymp;1), which is also the lowest-pull row.</div>
+<div class="note warn">Independently, the background <em>is</em> biased at a few specific low-<em>Nhit</em> geometries (off-source ON-excess up to &minus;13&sigma;), real but localized &mdash; a second, distinct effect, strongest where the aperture is largest (low <em>Nhit</em>).</div>
+</div>
+</div>
+<h3>The two-component picture</h3>
+<table class="compact"><thead><tr><th>component</th><th>location</th><th>root cause</th><th>instrument-side fix</th></tr></thead><tbody>
+<tr><td>predE energy migration</td><td>high <em>Nhit</em> <code>[800,3000)</code></td><td>data predE wider / up-shifted than MC</td><td>row-conserving dispersion kernel <strong>K</strong></td></tr>
+<tr><td>background-model failure</td><td>low <em>Nhit</em> <code>[125,500)</code>, cell&nbsp;15 worst</td><td>annulus-quadratic surface mis-models the large-aperture background</td><td>de-Poissoned off-source <strong>systematic</strong> in the error bar</td></tr>
+</tbody></table>
+</section>
+
+<section class="section"><h2>Component 1 &mdash; predE Migration Kernel K (measured, 0 free parameters)</h2>
+<p>K redistributes the MC model along predE <em>within each high-Nhit row</em>, with shift <code>&Delta;_row = mean_data &minus; mean_MC</code> and broadening <code>s_row = sqrt(max(0, var_data &minus; var_MC))</code> <strong>measured from the data/MC predE moments</strong> (not fitted to the Crab &chi;&sup2;). K is column-normalized, so each <em>Nhit</em>-row total is conserved exactly (verified to 2&times;10<sup>&minus;16</sup>) &rarr; the <em>Nhit</em>-marginalized SED is invariant. Measuring &Delta;,s instead of fitting them removes the v5.3 circularity and lets K reshape (shift <em>and</em> widen).</p>
+<table class="compact"><thead><tr><th><em>Nhit</em> row</th><th class="num">measured &Delta; (dex)</th><th class="num">width s (dex)</th><th class="num">std<sub>data</sub>/std<sub>MC</sub></th><th class="num">v5.3 <em>fitted</em> &Delta;</th><th>self-consistency</th></tr></thead><tbody>
+<tr><td><code>[800,1100)</code></td><td class="num">+0.055</td><td class="num">0.137</td><td class="num">1.20</td><td class="num">+0.031</td><td><span class="pill">agree</span></td></tr>
+<tr><td><code>[1100,2000)</code></td><td class="num">+0.118</td><td class="num">0.160</td><td class="num">1.20</td><td class="num">+0.089</td><td><span class="pill">agree</span></td></tr>
+<tr><td><code>[2000,3000)</code></td><td class="num">+0.374</td><td class="num">0.312</td><td class="num">1.70</td><td class="num">+0.045</td><td>noisy (3 cells, 16 counts)</td></tr>
+</tbody></table>
+<p>The measured shifts agree with the independently <em>fitted</em> v5.3 shifts for the two populated rows, and the width ratios reproduce the Phase&nbsp;0 measurement &mdash; K reproduces real migration, it does not absorb residual.</p>
+</section>
+
+<section class="section"><h2>Component 2 &mdash; De-Poissoned Off-Source Background Systematic (per-cell, gated)</h2>
+<p>For each cell, the off-source ON-region excess across the two control fields measures background mis-modeling directly (no source there). The fractional systematic is de-Poissoned, <code>&epsilon;&sup2; = max(0, &lang;b&sup2;&rang; &minus; &lang;Poisson&rang;)</code> with <code>b = excess/B_on</code>, and applied as <code>&sigma;_sys = &epsilon;&middot;B_on</code> in quadrature on the error bar (the data point does not move &rarr; the spectrum is unbiased). A significance gate (<code>|off&#8209;sig| &ge; 2</code>) keeps the systematic only where the off-source genuinely fails. <strong>13/26 cells gated.</strong></p>
+<div class="note good">The de-Poissoning is what fixes the v5.2/v5.3 over-correction: all three high-<em>Nhit</em> rows return <code>&epsilon; = 0.000</code> exactly (their off-source excess is pure Poisson), so high-<em>Nhit</em> gets <strong>zero</strong> error inflation and can only be fixed by K, never by widened bars.</div>
+<details open><summary>Gated cells (low-Nhit + any high-Nhit with off-source failure)</summary>
+<table class="compact"><thead><tr><th class="num">cell</th><th><em>Nhit</em></th><th class="num">off-source &sigma;</th><th>gated</th><th class="num">&sigma;_sys / err_cons</th></tr></thead><tbody>
+<tr><td class="num">1</td><td><code>[125,200)</code></td><td class="num">&minus;10.9</td><td><span class="pill">yes</span></td><td class="num">39.2</td></tr>
+<tr><td class="num">2</td><td><code>[125,200)</code></td><td class="num">&minus;18.4</td><td><span class="pill">yes</span></td><td class="num">62.0</td></tr>
+<tr><td class="num">3</td><td><code>[125,200)</code></td><td class="num">&minus;4.9</td><td><span class="pill">yes</span></td><td class="num">17.5</td></tr>
+<tr><td class="num">14</td><td><code>[200,300)</code></td><td class="num">&minus;7.3</td><td><span class="pill">yes</span></td><td class="num">32.9</td></tr>
+<tr><td class="num">15</td><td><code>[200,300)</code></td><td class="num">&minus;5.2</td><td><span class="pill">yes</span></td><td class="num">20.3</td></tr>
+<tr><td class="num">16</td><td><code>[200,300)</code></td><td class="num">&minus;2.9</td><td><span class="pill">yes</span></td><td class="num">12.2</td></tr>
+<tr><td class="num">26</td><td><code>[300,500)</code></td><td class="num">&minus;2.9</td><td><span class="pill">yes</span></td><td class="num">13.4</td></tr>
+<tr><td class="num">27</td><td><code>[300,500)</code></td><td class="num">&minus;2.2</td><td><span class="pill">yes</span></td><td class="num">10.0</td></tr>
+<tr><td class="num">28</td><td><code>[300,500)</code></td><td class="num">&minus;1.9</td><td><span class="pill bad">no</span></td><td class="num">0.0</td></tr>
+<tr><td class="num">29</td><td><code>[300,500)</code></td><td class="num">&minus;2.1</td><td><span class="pill">yes</span></td><td class="num">9.2</td></tr>
+<tr><td class="num">30</td><td><code>[300,500)</code></td><td class="num">&minus;3.1</td><td><span class="pill">yes</span></td><td class="num">8.4</td></tr>
+<tr><td class="num">42</td><td><code>[500,800)</code></td><td class="num">&minus;2.1</td><td><span class="pill">yes</span></td><td class="num">7.5</td></tr>
+<tr><td class="num">52</td><td><code>[800,1100)</code></td><td class="num">&minus;12.1</td><td><span class="pill">yes</span></td><td class="num">2.1</td></tr>
+<tr><td class="num">65</td><td><code>[1100,2000)</code></td><td class="num">&minus;7.7</td><td><span class="pill">yes</span></td><td class="num">1.1</td></tr>
+</tbody></table></details>
+<p>Cell&nbsp;28 (off-source &minus;1.9&sigma;) is correctly <em>not</em> gated. High-<em>Nhit</em> cells 52 and 65 do show background failure, but there <code>B_on</code> is small so <code>&sigma;_sys/err_cons</code> is only ~1&ndash;2 &mdash; K still does the main work for them.</p>
+</section>
+
+<section class="section"><h2>Null Tests &mdash; Is the Systematic Real and Non-Faking?</h2>
+<div class="grid2">
+<div class="note good"><strong>3a &mdash; leave-one-out transferability.</strong> Calibrate the systematic on off-source field A, predict field B (and vice versa): held-out pull <strong>RMS = 1.07</strong> (mean &minus;0.86, n=46). RMS&asymp;1 &rArr; the systematic transfers across fields (not overfit to one); the consistent negative mean &rArr; a real <em>coherent</em> background over-subtraction, exactly what is calibrated out.</div>
+<div class="note good"><strong>3b &mdash; absorb without faking.</strong> Apply the systematic to the off-source fields themselves: total off-source excess significance <strong>&minus;26.1&sigma; &rarr; &minus;1.8&sigma;</strong> (field A) and <strong>&minus;26.2 &rarr; &minus;1.9</strong> (field B). The systematic absorbs a genuine &minus;26&sigma; background-model failure to consistency with zero; the same machinery is what is applied to Crab, so the fix corrects a real effect rather than manufacturing a Crab signal.</div>
+</div>
+</section>
+
+<section class="section"><h2>Combined Result</h2>
+<p>The orthogonal decomposition is established by toggling each correction independently (forward-fold joint refit, 26 cells). Neither correction alone suffices; together they reach <code>&chi;&sup2;/ndof &asymp; 1</code>.</p>
+<div class="grid2">
+<table class="compact"><thead><tr><th>configuration</th><th class="num">&chi;&sup2;</th><th class="num">ndof</th><th class="num">&chi;&sup2;/ndof</th></tr></thead><tbody>
+<tr><td>A &mdash; original (no fix)</td><td class="num">117.29</td><td class="num">23</td><td class="num">5.10</td></tr>
+<tr><td>B &mdash; + K only (high-<em>Nhit</em>)</td><td class="num">84.59</td><td class="num">19</td><td class="num">4.45</td></tr>
+<tr><td>C &mdash; + bg systematic only (low-<em>Nhit</em>)</td><td class="num">37.67</td><td class="num">23</td><td class="num">1.64</td></tr>
+<tr><td>D &mdash; v5.3 full (fitted-K + row-pool)</td><td class="num">18.18</td><td class="num">19</td><td class="num">0.96</td></tr>
+<tr><td><strong>v5.4 (measured-K + per-cell gated)</strong></td><td class="num"><strong>24.28</strong></td><td class="num"><strong>23</strong></td><td class="num"><strong>1.06</strong></td></tr>
+</tbody></table>
+<table class="compact"><thead><tr><th>cell group</th><th class="num">A</th><th class="num">B (K)</th><th class="num">C (sys)</th><th class="num">v5.4</th></tr></thead><tbody>
+<tr><td>HIGH-<em>Nhit</em> (12)</td><td class="num">49.6</td><td class="num">19.1</td><td class="num">36.6</td><td class="num">20.3</td></tr>
+<tr><td>LOW-<em>Nhit</em> (11)</td><td class="num">64.5</td><td class="num">58.1</td><td class="num">0.8</td><td class="num">2.6</td></tr>
+</tbody></table>
+</div>
+<p>K fixes the high-<em>Nhit</em> cells and leaves the low-<em>Nhit</em> ones untouched; the systematic does the reverse. v5.4&rsquo;s 1.06 is <em>more honest</em> than v5.3&rsquo;s 0.96: per-cell gating raises the low-<em>Nhit</em> group from an over-conservative 0.4 to 2.6 while removing the kernel circularity.</p>
+<figure class="figure"><img src="assets/v5-cellscheck/v5p4/v5p4_diagnostics.png" alt="Per-cell pull before/after and SED error inflation">
+<figcaption><strong>Left:</strong> per-cell |pull|, original Stage&nbsp;F (blue) vs v5.4 (red), sorted by original |pull|; dashed/dotted lines at 2&sigma;/5&sigma;. cell&nbsp;15 falls 5.54&rarr;0.21. <strong>Right:</strong> v5.4 SED error inflation per <em>Nhit</em> point &mdash; the two lowest-<em>Nhit</em> points blow up (52&times;, 28&times;) because the background model fails there; everything from <code>[300,500)</code> up is well constrained.</figcaption></figure>
+<details><summary>Worst cells, original &rarr; v5.4 pull</summary>
+<table class="compact"><thead><tr><th class="num">cell</th><th><em>Nhit</em></th><th>predE</th><th class="num">pull (orig)</th><th class="num">pull (v5.4)</th></tr></thead><tbody>
+<tr><td class="num">15</td><td><code>[200,300)</code></td><td><code>[3,3.25)</code></td><td class="num">+5.54</td><td class="num">+0.21</td></tr>
+<tr><td class="num">55</td><td><code>[800,1100)</code></td><td><code>[4.0,4.25)</code></td><td class="num">+3.97</td><td class="num">+1.89</td></tr>
+<tr><td class="num">65</td><td><code>[1100,2000)</code></td><td><code>[3.5,3.75)</code></td><td class="num">&minus;3.92</td><td class="num">+0.30</td></tr>
+<tr><td class="num">29</td><td><code>[300,500)</code></td><td><code>[3.5,3.75)</code></td><td class="num">+3.01</td><td class="num">+0.34</td></tr>
+<tr><td class="num">69</td><td><code>[1100,2000)</code></td><td><code>[4.5,4.75)</code></td><td class="num">+2.96</td><td class="num">+1.23</td></tr>
+<tr><td class="num">16</td><td><code>[200,300)</code></td><td><code>[3.25,3.5)</code></td><td class="num">+2.13</td><td class="num">+0.17</td></tr>
+<tr><td class="num">67</td><td><code>[1100,2000)</code></td><td><code>[4.0,4.25)</code></td><td class="num">+1.91</td><td class="num">&minus;0.31</td></tr>
+</tbody></table></details>
+</section>
+
+<section class="section"><h2>The Corrected SED</h2>
+<p>The 7-bin <em>Nhit</em>-marginalized SED uses the stacked-counts normalization <code>N0 = &sum;excess / &sum;model</code>, which is exactly invariant under K (row totals conserved) and under the error model &mdash; so the <strong>central E&sup2;dN/dE values do not move</strong> (max shift 0.00%). v5.4 only changes the <em>error bars</em>, via the de-Poissoned background systematic. The LogPar curve and 1&sigma; band come from the v5.4 joint fit (<code>phi0 = 2.248e-12</code>, <code>&alpha; = 2.823</code>, <code>&beta; = 0.029</code>; <code>&chi;&sup2;/ndof = 1.06</code>).</p>
+<div class="grid2">
+<figure class="figure"><img src="assets/v5-cellscheck/v5p4/v5p4_sed.png" alt="v5.4 Crab SED with corrected error bars and LogPar band">
+<figcaption><strong>v5.4 Crab SED.</strong> Red: v5.4 points (corrected errors) + LogPar 1&sigma; band; blue open squares: the same central points with v4 conservative errors; green: official LHAASO-WCDA-1 Pool-1 reference. The two lowest-<em>Nhit</em> points carry error &gt; value and should be read as effectively unconstrained (background-limited).</figcaption></figure>
+<table class="compact"><thead><tr><th><em>Nhit</em></th><th class="num">E_eff [TeV]</th><th class="num">E&sup2;dN/dE</th><th class="num">err v4</th><th class="num">err v5.4</th><th class="num">infl.</th></tr></thead><tbody>
+<tr><td><code>[125,200)</code></td><td class="num">0.46</td><td class="num">5.85e&minus;11</td><td class="num">3.98e&minus;12</td><td class="num">2.06e&minus;10</td><td class="num">51.7&times;</td></tr>
+<tr><td><code>[200,300)</code></td><td class="num">0.76</td><td class="num">5.09e&minus;11</td><td class="num">2.23e&minus;12</td><td class="num">6.15e&minus;11</td><td class="num">27.6&times;</td></tr>
+<tr><td><code>[300,500)</code></td><td class="num">1.24</td><td class="num">3.86e&minus;11</td><td class="num">1.25e&minus;12</td><td class="num">1.21e&minus;11</td><td class="num">9.6&times;</td></tr>
+<tr><td><code>[500,800)</code></td><td class="num">2.69</td><td class="num">2.11e&minus;11</td><td class="num">9.11e&minus;13</td><td class="num">2.78e&minus;12</td><td class="num">3.1&times;</td></tr>
+<tr><td><code>[800,1100)</code></td><td class="num">4.41</td><td class="num">1.58e&minus;11</td><td class="num">9.25e&minus;13</td><td class="num">1.32e&minus;12</td><td class="num">1.4&times;</td></tr>
+<tr><td><code>[1100,2000)</code></td><td class="num">9.14</td><td class="num">8.29e&minus;12</td><td class="num">6.28e&minus;13</td><td class="num">6.80e&minus;13</td><td class="num">1.1&times;</td></tr>
+<tr><td><code>[2000,3000)</code></td><td class="num">54.0</td><td class="num">2.85e&minus;12</td><td class="num">1.34e&minus;12</td><td class="num">1.34e&minus;12</td><td class="num">1.0&times;</td></tr>
+</tbody></table>
+</div>
+<div class="note">Physics reading: with this 2-month background model, the two lowest-<em>Nhit</em> Crab points (&lt;1&nbsp;TeV) are not measurable &mdash; the off-source proves the annulus background fails there at 10&ndash;18&sigma;. From <code>[300,500)</code> (&asymp;1.2&nbsp;TeV) upward the SED is solid and consistent with the official WCDA-1 reference.</div>
+</section>
+
+<section class="section"><h2>Method Evolution (honest record)</h2>
+<table class="compact"><thead><tr><th>version</th><th>what</th><th class="num">&chi;&sup2;/ndof</th><th>limitation it exposed / fixed</th></tr></thead><tbody>
+<tr><td>v5.2</td><td>global K (&Delta;,s functions of predE only)</td><td class="num">~4.45</td><td>too rigid: one global K cannot be large for a high row and zero for the clean row</td></tr>
+<tr><td>v5.3</td><td>Nhit-row-dependent fitted K + row-pooled systematic</td><td class="num">0.96</td><td><span class="pill fix">fixed rigidity</span> but K fitted on Crab (circular) and row-pool over-conservative (low-<em>Nhit</em> 0.4)</td></tr>
+<tr><td><strong>v5.4</strong></td><td>measured-moment K (0 free) + per-cell gated de-Poissoned systematic + null tests</td><td class="num"><strong>1.06</strong></td><td><span class="pill fix">de-circularized</span> <span class="pill fix">targeted</span> <span class="pill fix">validated</span></td></tr>
+</tbody></table>
+</section>
+
+<section class="section"><h2>Limitations and Next Step</h2>
+<table class="compact"><thead><tr><th>limitation</th><th>evidence</th><th>implication / next step</th></tr></thead><tbody>
+<tr><td>low-<em>Nhit</em> still mildly conservative</td><td>LOW-<em>Nhit</em> group &chi;&sup2; 2.6/11 (below 1 per cell)</td><td>per-cell &epsilon; from only 2 off-source fields is noisy; the bar is a conservative upper bound</td></tr>
+<tr><td>2 off-source fields only</td><td>per-cell de-Poissoning has 2 samples</td><td><strong>cluster Stage&nbsp;D rerun at more off-source positions</strong> (same Dec, several RA offsets) &rarr; per-cell &epsilon; calibration; the one step that needs the cluster</td></tr>
+<tr><td>cell 55 / 69 residual</td><td>pull 1.89 / 1.23 in migration rows</td><td>within-row structure a rigid per-row &Delta; cannot flatten; &lt;2&sigma; in 26 cells, statistically expected, left un-fudged</td></tr>
+<tr><td>energy migration is intrinsic</td><td>data predE wider/up-shifted than MC</td><td>root cause lives in the estimator/response; the physical cure is the v6 half-year retrain track (deliberately out of scope here)</td></tr>
+</tbody></table>
+</section>
+
+<section class="section"><h2>Reproduction and Artifacts</h2>
+<p>All local, no cluster. Python <code>~/miniconda3/envs/py310/bin/python</code>.</p>
+<table class="compact"><thead><tr><th>artifact</th><th>path (under <code>apply/</code>)</th></tr></thead><tbody>
+<tr><td>Phase 0 triage</td><td><code>report/build_v5_cellscheck_phase0.py</code> &rarr; <code>report/assets/v5-cellscheck/v5_cellscheck_phase0_{percell.csv,findings.md}</code></td></tr>
+<tr><td>v5.3 two-component fix</td><td><code>report/build_v5p3_two_component_fix.py</code> &rarr; <code>report/assets/v5-cellscheck/v5p3/</code></td></tr>
+<tr><td>v5.4 driver (fix + null tests)</td><td><code>report/build_v5p4_decircularized.py</code> &rarr; <code>v5p4/v5p4_{percell.csv,params.npz}</code></td></tr>
+<tr><td>v5.4 SED emission</td><td><code>report/build_v5p4_sed.py</code> &rarr; <code>v5p4/v5p4_sed_{points.csv,.npz,.png}</code></td></tr>
+<tr><td>diagnostic figures</td><td><code>report/build_v5p4_figs.py</code> &rarr; <code>v5p4/v5p4_diagnostics.png</code></td></tr>
+</tbody></table>
+<div class="note warn">Note: this <code>energy/apply</code> tree mirrors a remote ETO directory; an <code>rsync --delete</code> from the remote can remove local-only files. These cellscheck scripts/outputs are local-only until committed/synced &mdash; keep them out of any <code>--delete</code> sweep (as with <code>devlog.md</code>) or commit them to preserve.</div>
+</section>
+
+</main></body></html>

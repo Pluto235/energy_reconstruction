@@ -919,8 +919,17 @@ def psf_profile_grid_figures(runs: Dict[str, Dict[str, object]]) -> str:
 def plot_pull_grid(runs: Dict[str, Dict[str, object]], path: Path) -> None:
     plt = setup_matplotlib()
     n_methods = len(METHODS)
-    fig, axes = plt.subplots(1, n_methods, figsize=(5.1 * n_methods + 1.0, 4.8), dpi=160, sharex=True, sharey=True, squeeze=False)
-    axes_arr = axes.reshape(-1)
+    fig = plt.figure(figsize=(5.1 * n_methods + 1.5, 4.8), dpi=160, constrained_layout=True)
+    grid = fig.add_gridspec(1, n_methods + 1, width_ratios=[1.0] * n_methods + [0.045], wspace=0.08)
+    axes_list = []
+    share_ax = None
+    for idx in range(n_methods):
+        ax = fig.add_subplot(grid[0, idx], sharex=share_ax, sharey=share_ax)
+        if share_ax is None:
+            share_ax = ax
+        axes_list.append(ax)
+    axes_arr = np.asarray(axes_list, dtype=object)
+    cax = fig.add_subplot(grid[0, n_methods])
     labels_nhit = sorted(
         {
             str(value)
@@ -963,9 +972,8 @@ def plot_pull_grid(runs: Dict[str, Dict[str, object]], path: Path) -> None:
     for ax in axes_arr:
         ax.set_xlabel("predicted-energy bin")
     if sc is not None:
-        fig.colorbar(sc, ax=axes_arr.tolist(), shrink=0.86, label="(excess - model) / conservative err")
+        fig.colorbar(sc, cax=cax, label="(excess - model) / conservative err")
     fig.suptitle("Stage F LogPar cell pulls")
-    fig.tight_layout()
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path)
     plt.close(fig)

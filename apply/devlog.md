@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-07-01 10:34 · [9d3ae4d] Add Rayleigh reference curves to the observed-data v5 PSF profile grid and clarify the caption.
+
 - **energy** · 2026-06-30 22:23 · [123f38e] Rebuild v4 split56 ridge-only baseline and compress the v4 report around the current Stage A-G results.
 
 - **energy** · 2026-06-30 21:54 · [cccb7c6] Add observed-data v5 PSF aperture branch with MC-ratio guard and four-branch comparison report.

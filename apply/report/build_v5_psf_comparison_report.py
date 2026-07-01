@@ -741,6 +741,8 @@ def profile_grid_caption(method: str) -> str:
         "observed_data": (
             "Blue steps show the pedestal-subtracted observed Crab excess radial profile when the cell passes the data-PSF quality gates; "
             "fallback or psfborrow cells show the documented fallback display profile. "
+            "The orange curve is the Rayleigh radial PDF reference from the same cell's Rayleigh sigma; it is shown only as a comparison curve, "
+            "not as the fit used to define the observed-data aperture. "
             "The grey dashed line is the observed-Crab radial-profile aperture after annnorm-background and flat-pedestal subtraction, "
             "or the documented fallback radius when the observed profile fails quality gates. "
             "Green shaded panels are cells included in the final SED fit."
@@ -820,7 +822,7 @@ def plot_fit_shaded_psf_profile_grid(method: str, payload: Dict[str, object], pa
             ax.step(centers, density, where="mid", color="#1f4e79", linewidth=0.9)
             has_profile = bool(np.isfinite(density).any() and np.nansum(density) > 0.0)
             if (
-                method == "rayleigh_baseline"
+                method in {"rayleigh_baseline", "observed_data"}
                 and has_profile
                 and idx < sigma_rad.size
                 and np.isfinite(sigma_rad[idx])
@@ -870,8 +872,9 @@ def plot_fit_shaded_psf_profile_grid(method: str, payload: Dict[str, object], pa
     handles = [
         Line2D([0], [0], color="#1f4e79", linewidth=0.9, label=profile_label),
     ]
-    if method == "rayleigh_baseline":
-        handles.append(Line2D([0], [0], color="#c9501a", linewidth=0.9, label="Rayleigh radial PDF"))
+    if method in {"rayleigh_baseline", "observed_data"}:
+        rayleigh_label = "Rayleigh radial PDF reference" if method == "observed_data" else "Rayleigh radial PDF"
+        handles.append(Line2D([0], [0], color="#c9501a", linewidth=0.9, label=rayleigh_label))
     if method == "two_1d_gaussian":
         handles.append(Line2D([0], [0], color="#7c3aed", linewidth=0.9, label="two-1D induced radial PDF"))
     handles.extend(
@@ -885,7 +888,7 @@ def plot_fit_shaded_psf_profile_grid(method: str, payload: Dict[str, object], pa
         "rayleigh_baseline": "MC profile, Rayleigh radial PDF, method r_opt",
         "two_1d_gaussian": "MC profile, two-1D induced radial PDF, method r_opt",
         "mc_quantile_715": "MC profile and empirical-quantile method r_opt",
-        "observed_data": "observed profile or fallback display profile, method r_opt",
+        "observed_data": "observed/fallback profile, Rayleigh radial PDF reference, method r_opt",
     }[method]
     fig.suptitle(
         f"{METHODS[method]['label']} Stage B weighted radial PSF profiles: {title_tail}",

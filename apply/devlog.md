@@ -6,7 +6,9 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
-- **energy** · 2026-07-01 10:34 · [9d3ae4d] Add Rayleigh reference curves to the observed-data v5 PSF profile grid and clarify the caption.
+- **energy** · 2026-07-01 11:19 · [14c2e8c] Move the v5 PSF Stage F pull-grid colorbar into a dedicated column so it no longer overlaps the observed-data panel.
+
+- **energy** · 2026-07-01 10:34 · [373a6e1] Add Rayleigh reference curves to the observed-data v5 PSF profile grid and clarify the caption.
 
 - **energy** · 2026-06-30 22:23 · [123f38e] Rebuild v4 split56 ridge-only baseline and compress the v4 report around the current Stage A-G results.
 

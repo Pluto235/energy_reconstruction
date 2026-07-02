@@ -6,6 +6,18 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-07-02 11:26 · [d07f855] Add fit-cell shaded Stage B radial PSF grid to the v6 `_64670` baselinev4 report.
+
+- **energy** · 2026-07-02 09:04 · [uncommitted] Complete the v6 `_64670` half-year Crab Stage A-G rerun and add the final baselinev4 diagnostic report.
+
+- **energy** · 2026-07-02 07:50 · [uncommitted] Shorten the v6 `_64670` Stage C-G chain time limit after a successful Stage C smoke test.
+
+- **energy** · 2026-07-02 03:43 · [uncommitted] Shorten the v6 `_64670` Stage B PSF job time limit after validating the nominal Stage A response.
+
+- **energy** · 2026-07-02 01:40 · [uncommitted] Shorten the v6 `_64670` Stage A response job time limit to improve Slurm backfill before resubmission.
+
+- **energy** · 2026-07-01 19:53 · [uncommitted] Shorten the v6 `_64670` Phase 2 prepare job time limit to allow Slurm backfill without changing inputs.
+
 - **energy** · 2026-07-01 11:19 · [14c2e8c] Move the v5 PSF Stage F pull-grid colorbar into a dedicated column so it no longer overlaps the observed-data panel.
 
 - **energy** · 2026-07-01 10:34 · [373a6e1] Add Rayleigh reference curves to the observed-data v5 PSF profile grid and clarify the caption.

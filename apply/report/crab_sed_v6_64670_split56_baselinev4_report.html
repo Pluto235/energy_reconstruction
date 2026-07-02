@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crab SED v6 _64670 split56 baselinev4 report</title>
+  <style>
+    :root {
+      --ink: #17202a;
+      --muted: #5d6673;
+      --line: #d7dde5;
+      --panel: #f6f8fb;
+      --ok: #146c43;
+      --warn: #9a5a00;
+      --accent: #005eb8;
+    }
+    body { margin:0; font-family:Arial,Helvetica,sans-serif; color:var(--ink); background:#fff; line-height:1.48; }
+    main { max-width:1180px; margin:0 auto; padding:32px 24px 56px; }
+    header { border-bottom:3px solid var(--ink); padding-bottom:18px; margin-bottom:26px; }
+    h1,h2,h3 { margin:0; line-height:1.18; letter-spacing:0; }
+    h1 { font-size:34px; }
+    h2 { font-size:22px; margin-top:34px; padding-top:14px; border-top:1px solid var(--line); }
+    h3 { font-size:16px; margin-top:18px; color:#2f3b48; }
+    p { margin:10px 0; }
+    .lede { font-size:17px; color:#2f3b48; max-width:940px; }
+    .callout { border-left:5px solid var(--warn); background:#fff8ec; padding:12px 14px; margin:18px 0; }
+    .okbox { border-left:5px solid var(--ok); background:#edf9f1; padding:12px 14px; margin:18px 0; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin:16px 0; }
+    .metric { border:1px solid var(--line); border-radius:6px; padding:12px; background:var(--panel); min-height:78px; }
+    .metric .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:0; }
+    .metric .value { font-size:24px; font-weight:700; margin-top:4px; }
+    .metric .sub { color:var(--muted); font-size:12px; margin-top:4px; }
+    table { border-collapse:collapse; width:100%; margin:14px 0 22px; font-size:13px; }
+    th,td { border:1px solid var(--line); padding:6px 7px; text-align:right; vertical-align:top; }
+    th:first-child,td:first-child { text-align:left; }
+    th { background:#edf1f6; font-weight:700; }
+    code { background:#eef2f6; padding:1px 4px; border-radius:3px; font-size:12px; }
+    .status-pass { color:var(--ok); font-weight:700; }
+    .status-warning { color:var(--warn); font-weight:700; }
+    .figgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px; margin:14px 0 22px; }
+    .figure { margin:0; border:1px solid var(--line); border-radius:6px; padding:10px; background:#fff; }
+    .figure img { display:block; width:100%; height:auto; }
+    .figure figcaption { margin-top:8px; color:var(--muted); font-size:12px; }
+    .pathlist td { text-align:left; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Crab SED v6 <code>_64670</code> split56 baselinev4</h1>
+    <p class="lede">This report reruns the v6 <code>_64670</code> baselinev4 apply chain with the final physical predE bin split from <code>[5,6)</code> into <code>[5,5.5)</code> and <code>[5.5,6)</code>. Nhit bins are unchanged, <code>&gt;=6</code> remains in the candidate cache, and fit-cell selection is frozen by <code>(nhit_bin,predE_bin)</code> mapping rather than old cell ids.</p>
+    <div class="okbox"><strong>Split56 shape check passed.</strong> 91 candidate cells, 27 fit cells, 7 Nhit points, and 12 predE points.</div>
+    <div class="callout"><strong>Split-child gate exception.</strong> The right split child is retained because the old baselinev4 <code>[2000,3000) x [5,6)</code> fit cell is contractually split into two fit cells. Cell-level selector fields record the default count gate and the explicit split-child effective gate.<table><thead><tr><th>Cell</th><th>Nhit</th><th>predE</th><th>MC count</th><th>Default gate</th><th>Effective gate</th><th>ridge fraction</th><th>Exception</th></tr></thead><tbody><tr><td>89</td><td><code>[2000,3000)</code></td><td><code>[5,5.5)</code></td><td>6916</td><td>1000</td><td>500</td><td>1</td><td>0</td></tr><tr><td>90</td><td><code>[2000,3000)</code></td><td><code>[5.5,6)</code></td><td>876</td><td>1000</td><td>500</td><td>0.1267</td><td>1</td></tr></tbody></table></div>
+  </header>
+
+  <section>
+    <h2>Executive Result</h2>
+    <div class="grid">
+      <div class="metric"><div class="label">candidate cells</div><div class="value">91</div><div class="sub">7 Nhit x 13 predE</div></div>
+      <div class="metric"><div class="label">fit cells</div><div class="value">27</div><div class="sub">baselinev4 plus split high-energy cell</div></div>
+      <div class="metric"><div class="label">Stage C files</div><div class="value">3,969</div><div class="sub">entry mismatches 0</div></div>
+      <div class="metric"><div class="label">Selected rows</div><div class="value">79,958,631</div><div class="sub">configured-cell rows after cuts</div></div>
+      <div class="metric"><div class="label">Stage E signal</div><div class="value">68.829 sigma</div><div class="sub">N_on 376,410; B_on 3.357461e+05</div></div>
+      <div class="metric"><div class="label">Preferred Stage F</div><div class="value">LOGPAR</div><div class="sub">chi2/ndof 355.1/24</div></div>
+      <div class="metric"><div class="label">Stage G points</div><div class="value">7/12</div><div class="sub">Nhit / predE</div></div>
+      <div class="metric"><div class="label">LogPar</div><div class="value">n/a</div><div class="sub">alpha n/a, beta n/a</div></div>
+    </div>
+    <table><thead><tr><th>Gate</th><th>Status</th><th>Evidence</th></tr></thead><tbody><tr><td>candidate / fit cells</td><td><span class="status-pass">pass</span></td><td>91 candidates; 27 fit cells</td></tr><tr><td>split child fit cells</td><td><span class="status-warning">warning</span></td><td>2 children included; count-gate exceptions 1</td></tr><tr><td>Stage A nominal response</td><td><span class="status-pass">pass</span></td><td>primary_thrown_response; available</td></tr><tr><td>Stage B PSF</td><td><span class="status-warning">warning</span></td><td>91 cells; warning cells 59, fit subset 9</td></tr><tr><td>Stage A aperture response</td><td><span class="status-pass">pass</span></td><td>primary_thrown_aperture_conditioned_response; PSF path is split56</td></tr><tr><td>Stage C observation</td><td><span class="status-pass">pass</span></td><td>3969 files; 79,958,631 selected rows; rough live time 125.654 d</td></tr><tr><td>Stage D background</td><td><span class="status-warning">warning</span></td><td>24 warning cells; 0 in fit subset</td></tr><tr><td>Stage E signal</td><td><span class="status-pass">pass</span></td><td>formal sigma 68.829</td></tr><tr><td>Stage F fit</td><td><span class="status-pass">pass</span></td><td>preferred logpar</td></tr><tr><td>Stage G SED</td><td><span class="status-pass">pass</span></td><td>7 Nhit points; 12 predE points</td></tr></tbody></table>
+  </section>
+
+  <section>
+    <h2>Paths And Provenance</h2>
+    <p>Main-flow paths are split56-specific and preserve the v6 <code>_64670</code> model/cache provenance. The only v4 path in this report is the explicit diagnostic comparison reference.</p>
+    <table class="pathlist"><thead><tr><th>Stage</th><th>Primary output</th></tr></thead><tbody><tr><td>Prepare split56 cache</td><td><code>/mnt/mydisk/WCDA_simulation_binned_response_v6_64670_split56_candidate</code></td></tr><tr><td>Stage A nominal response</td><td><code>apply/output/stage_a_v6_64670_split56</code></td></tr><tr><td>Stage B PSF</td><td><code>apply/output/stage_b_v6_64670_split56</code></td></tr><tr><td>Stage A aperture-conditioned response</td><td><code>apply/output/stage_a_v6_64670_split56_aperture_conditioned</code></td></tr><tr><td>Stage C observation reduction</td><td><code>apply/output/stage_c_v6_64670_split56</code></td></tr><tr><td>Stage D annulus-normalized background</td><td><code>apply/output/stage_d_v6_64670_split56_annnorm</code></td></tr><tr><td>Stage E signal</td><td><code>apply/output/stage_e_v6_64670_split56_containment1_annnorm</code></td></tr><tr><td>Stage F forward-folding fit</td><td><code>apply/output/stage_f_v6_64670_split56_baselinev4</code></td></tr><tr><td>Stage G diagnostic SED</td><td><code>apply/output/stage_g_v6_64670_split56_baselinev4</code></td></tr></tbody></table>
+    <table class="pathlist"><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Source MC cache</td><td><code>/mnt/mydisk/WCDA_simulation_binned_response_v6_64670</code></td></tr><tr><td>Split56 candidate cache</td><td><code>/mnt/mydisk/WCDA_simulation_binned_response_v6_64670_split56_candidate</code></td></tr><tr><td>Run dir</td><td><code>/mnt/mydisk/server/projects/energy_reconstruction/runs/theta_recoxy_position_embed_midenergy_no_core_cut_64670</code></td></tr><tr><td>Selector</td><td><code>apply/config/cell_selector_v6_split56_drop4_psfborrow.csv</code></td></tr><tr><td>Stage C obs root</td><td><code>/mnt/mydisk/WCDA_observation_eval_64670</code></td></tr><tr><td>Input entries</td><td>254,205,212</td></tr><tr><td>Rows after configured-cell selection</td><td>79,958,631</td></tr><tr><td>Rough live time</td><td>125.654 d</td></tr></tbody></table>
+  </section>
+
+  <section>
+    <h2>Response And PSF</h2>
+    <p>Nominal Stage A is <code>primary_thrown_response</code>; the final fit uses <code>primary_thrown_aperture_conditioned_response</code>. Stage B wrote 91 PSF rows. Pale green panels mark the 27 split56 fit cells in the radial PSF grid.</p>
+    <div class="figgrid">
+      <figure class="figure"><img src="../output/stage_b_v6_64670_split56/runs/v6_64670_split56_stage_b_psf/psf_r_opt_deg_grid.png" alt="Stage B split56 r_opt by candidate cell"><figcaption>Stage B split56 r_opt by candidate cell</figcaption></figure>
+      <figure class="figure"><img src="../output/stage_b_v6_64670_split56/runs/v6_64670_split56_stage_b_psf/psf_effective_events_grid.png" alt="Stage B split56 effective events by candidate cell"><figcaption>Stage B split56 effective events by candidate cell</figcaption></figure>
+      <figure class="figure"><img src="../output/stage_b_v6_64670_split56/runs/v6_64670_split56_stage_b_psf/psf_radial_profiles_grid.png" alt="Stage B split56 radial PSF profiles"><figcaption>Stage B split56 radial PSF profiles</figcaption></figure>
+      <figure class="figure"><img src="assets/v6-64670-split56/v6_64670_split56_stage_b_radial_psf_profiles_fit_shaded.png" alt="Stage B split56 radial PSF profiles; green panels enter the fit"><figcaption>Stage B split56 radial PSF profiles; green panels enter the fit</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Stage C-D-E Diagnostics</h2>
+    <p>Stage C selected 79,958,631 configured-cell rows. Stage D produced the annulus-normalized quadratic ROI-local background with 24 warning cells, including 0 in the fit subset. Stage E passed the total-sigma gate.</p>
+    <table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Stage C processed files</td><td>3,969</td></tr><tr><td>Stage C rough live time</td><td>125.654 d</td></tr><tr><td>Stage D warning cells</td><td>24 / 91</td></tr><tr><td>Stage D warning cells in fit subset</td><td>0 / 27</td></tr><tr><td>Stage E total N_on</td><td>376,410</td></tr><tr><td>Stage E total B_on</td><td>3.357461e+05</td></tr><tr><td>Stage E total excess</td><td>40663.9</td></tr><tr><td>Stage E formal sigma</td><td>68.8288</td></tr></tbody></table>
+    <div class="figgrid">
+      <figure class="figure"><img src="../output/stage_d_v6_64670_split56_annnorm/runs/v6_64670_split56_stage_d_annnorm/roi_excess_grid.png" alt="Stage D ROI excess grid"><figcaption>Stage D ROI excess grid</figcaption></figure>
+      <figure class="figure"><img src="../output/stage_d_v6_64670_split56_annnorm/runs/v6_64670_split56_stage_d_annnorm/annulus_residual_grid.png" alt="Stage D annulus residual diagnostics"><figcaption>Stage D annulus residual diagnostics</figcaption></figure>
+      <figure class="figure"><img src="../output/stage_e_v6_64670_split56_containment1_annnorm/runs/v6_64670_split56_stage_e_containment1_annnorm/formal_sigma_grid.png" alt="Stage E formal sigma grid"><figcaption>Stage E formal sigma grid</figcaption></figure>
+      <figure class="figure"><img src="../output/stage_e_v6_64670_split56_containment1_annnorm/runs/v6_64670_split56_stage_e_containment1_annnorm/on_background_grid.png" alt="Stage E on/background grid"><figcaption>Stage E on/background grid</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Stage F Fit</h2>
+    <p>Stage F uses the split56 aperture-conditioned response, split56 containment-1 signal, and the split56 baselinev4 selector. The fit is diagnostic unless the remaining cell-level residuals are accepted by a later review.</p>
+    <table><thead><tr><th>Fit</th><th>Valid</th><th>chi2/ndof</th><th>p</th><th>phi0</th><th>gamma/alpha</th><th>beta</th></tr></thead><tbody><tr><td>PL conservative</td><td>True</td><td>515.7/25</td><td>4.236e-93</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>LogPar conservative</td><td>True</td><td>355.1/24</td><td>1.136e-60</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>PL sqrt-N</td><td>True</td><td>911.7/25</td><td>2.970e-176</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>LogPar sqrt-N</td><td>True</td><td>602.5/24</td><td>6.944e-112</td><td>n/a</td><td>n/a</td><td>n/a</td></tr></tbody></table>
+    <table><thead><tr><th>Cell</th><th>Bin</th><th>Excess</th><th>Err</th><th>LogPar model</th><th>Pull</th></tr></thead><tbody><tr><td>1</td><td><code>[125,200)</code> <code>[2,2.5)</code></td><td>-804.2</td><td>360</td><td>3005</td><td>-10.6</td></tr><tr><td>2</td><td><code>[125,200)</code> <code>[2.5,3)</code></td><td>8565</td><td>452</td><td>8235</td><td>0.73</td></tr><tr><td>3</td><td><code>[125,200)</code> <code>[3,3.25)</code></td><td>1430</td><td>219</td><td>1316</td><td>0.522</td></tr><tr><td>15</td><td><code>[200,300)</code> <code>[2.5,3)</code></td><td>7434</td><td>216</td><td>6121</td><td>6.07</td></tr><tr><td>16</td><td><code>[200,300)</code> <code>[3,3.25)</code></td><td>3897</td><td>148</td><td>2630</td><td>8.56</td></tr><tr><td>17</td><td><code>[200,300)</code> <code>[3.25,3.5)</code></td><td>1126</td><td>119</td><td>816.2</td><td>2.59</td></tr><tr><td>28</td><td><code>[300,500)</code> <code>[2.5,3)</code></td><td>1651</td><td>93.3</td><td>2231</td><td>-6.22</td></tr><tr><td>29</td><td><code>[300,500)</code> <code>[3,3.25)</code></td><td>4044</td><td>110</td><td>3897</td><td>1.33</td></tr><tr><td>30</td><td><code>[300,500)</code> <code>[3.25,3.5)</code></td><td>2519</td><td>90.1</td><td>2379</td><td>1.55</td></tr><tr><td>31</td><td><code>[300,500)</code> <code>[3.5,3.75)</code></td><td>707.1</td><td>63.3</td><td>661.6</td><td>0.719</td></tr><tr><td>32</td><td><code>[300,500)</code> <code>[3.75,4.0)</code></td><td>270.7</td><td>69.8</td><td>197.9</td><td>1.04</td></tr><tr><td>43</td><td><code>[500,800)</code> <code>[3.25,3.5)</code></td><td>1750</td><td>60.3</td><td>1999</td><td>-4.13</td></tr><tr><td>44</td><td><code>[500,800)</code> <code>[3.5,3.75)</code></td><td>1328</td><td>51.5</td><td>1479</td><td>-2.93</td></tr><tr><td>45</td><td><code>[500,800)</code> <code>[3.75,4.0)</code></td><td>414.7</td><td>30.9</td><td>411</td><td>0.12</td></tr><tr><td>56</td><td><code>[800,1100)</code> <code>[3.25,3.5)</code></td><td>286.5</td><td>55.3</td><td>267.1</td><td>0.351</td></tr><tr><td>57</td><td><code>[800,1100)</code> <code>[3.5,3.75)</code></td><td>815.1</td><td>108</td><td>791.6</td><td>0.219</td></tr><tr><td>58</td><td><code>[800,1100)</code> <code>[3.75,4.0)</code></td><td>446.6</td><td>28</td><td>516.7</td><td>-2.51</td></tr><tr><td>59</td><td><code>[800,1100)</code> <code>[4.0,4.25)</code></td><td>163</td><td>17.7</td><td>126.2</td><td>2.08</td></tr><tr><td>70</td><td><code>[1100,2000)</code> <code>[3.5,3.75)</code></td><td>90.58</td><td>29.1</td><td>132.2</td><td>-1.43</td></tr><tr><td>71</td><td><code>[1100,2000)</code> <code>[3.75,4.0)</code></td><td>363.4</td><td>68</td><td>402.7</td><td>-0.578</td></tr><tr><td>72</td><td><code>[1100,2000)</code> <code>[4.0,4.25)</code></td><td>307.5</td><td>20.7</td><td>298.5</td><td>0.436</td></tr><tr><td>73</td><td><code>[1100,2000)</code> <code>[4.25,4.5)</code></td><td>151.4</td><td>15</td><td>97.74</td><td>3.58</td></tr><tr><td>74</td><td><code>[1100,2000)</code> <code>[4.5,4.75)</code></td><td>72.83</td><td>10.9</td><td>17.1</td><td>5.11</td></tr><tr><td>87</td><td><code>[2000,3000)</code> <code>[4.5,4.75)</code></td><td>12.06</td><td>4.68</td><td>11.85</td><td>0.044</td></tr><tr><td>88</td><td><code>[2000,3000)</code> <code>[4.75,5.0)</code></td><td>8.946</td><td>6.25</td><td>5.718</td><td>0.517</td></tr><tr><td>89</td><td><code>[2000,3000)</code> <code>[5,5.5)</code></td><td>-17.65</td><td>42</td><td>1.073</td><td>-0.445</td></tr><tr><td>90</td><td><code>[2000,3000)</code> <code>[5.5,6)</code></td><td>14.15</td><td>8.82</td><td>0.009389</td><td>1.6</td></tr></tbody></table>
+    <div class="figgrid">
+      <figure class="figure"><img src="../output/stage_f_v6_64670_split56_baselinev4/runs/v6_64670_split56_stage_f_baselinev4/model_counts_vs_excess.png" alt="Stage F model counts versus observed excess"><figcaption>Stage F model counts versus observed excess</figcaption></figure>
+      <figure class="figure"><img src="../output/stage_f_v6_64670_split56_baselinev4/runs/v6_64670_split56_stage_f_baselinev4/pull_grid_logpar.png" alt="Stage F LogPar pull grid"><figcaption>Stage F LogPar pull grid</figcaption></figure>
+      <figure class="figure"><img src="../output/stage_f_v6_64670_split56_baselinev4/runs/v6_64670_split56_stage_f_baselinev4/theta_exposure.png" alt="Stage F theta exposure"><figcaption>Stage F theta exposure</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Stage G Diagnostic SED</h2>
+    <p>Stage G freezes the preferred Stage F spectrum with phi0=2.5323e-12, alpha=2.689, beta=0.1431 at 3 TeV. Actual point counts are 7 Nhit and 12 predE.</p>
+    <table><thead><tr><th>Nhit group</th><th>Cells</th><th>E_eff TeV</th><th>E2 dN/dE</th><th>Err</th><th>chi2/ndof</th><th>StageF ratio</th><th>Full-array PL ratio</th></tr></thead><tbody><tr><td><code>[125,200)</code></td><td>1;2;3</td><td>0.5654</td><td>4.0389e-11</td><td>2.309e-12</td><td>101/2</td><td>0.836</td><td>0.671</td></tr><tr><td><code>[200,300)</code></td><td>15;16;17</td><td>0.8602</td><td>5.5777e-11</td><td>1.264e-12</td><td>16.52/2</td><td>1.29</td><td>1.24</td></tr><tr><td><code>[300,500)</code></td><td>28;29;30;31;32</td><td>1.351</td><td>3.5371e-11</td><td>7.031e-13</td><td>43.49/4</td><td>0.981</td><td>1.07</td></tr><tr><td><code>[500,800)</code></td><td>43;44;45</td><td>2.675</td><td>2.2045e-11</td><td>5.371e-13</td><td>2.727/2</td><td>0.895</td><td>1.07</td></tr><tr><td><code>[800,1100)</code></td><td>56;57;58;59</td><td>4.251</td><td>1.6558e-11</td><td>8.125e-13</td><td>9.118/3</td><td>0.94</td><td>1.11</td></tr><tr><td><code>[1100,2000)</code></td><td>70;71;72;73;74</td><td>8.14</td><td>1.0825e-11</td><td>5.654e-13</td><td>38.98/4</td><td>1.09</td><td>1.13</td></tr><tr><td><code>[2000,3000)</code></td><td>87;88;89;90</td><td>45.41</td><td>1.3146e-12</td><td>4.527e-13</td><td>2.99/3</td><td>1.08</td><td>0.451</td></tr></tbody></table>
+    <table><thead><tr><th>PredE group</th><th>Cells</th><th>E_eff TeV</th><th>E2 dN/dE</th><th>Err</th><th>chi2/ndof</th><th>StageF ratio</th><th>Single cell</th></tr></thead><tbody><tr><td><code>[2,2.5)</code></td><td>1</td><td>0.3232</td><td>-1.3920e-11</td><td>6.231e-12</td><td>0/0</td><td>-0.268</td><td>True</td></tr><tr><td><code>[2.5,3)</code></td><td>2;15;28</td><td>0.6646</td><td>4.7521e-11</td><td>1.127e-12</td><td>75.3/2</td><td>1.02</td><td>False</td></tr><tr><td><code>[3,3.25)</code></td><td>3;16;29</td><td>1.224</td><td>4.2454e-11</td><td>9.429e-13</td><td>49.7/2</td><td>1.13</td><td>False</td></tr><tr><td><code>[3.25,3.5)</code></td><td>17;30;43;56</td><td>2.061</td><td>2.7744e-11</td><td>6.697e-13</td><td>23.18/3</td><td>0.959</td><td>False</td></tr><tr><td><code>[3.5,3.75)</code></td><td>31;44;57;70</td><td>3.413</td><td>1.9117e-11</td><td>6.550e-13</td><td>4.614/3</td><td>0.919</td><td>False</td></tr><tr><td><code>[3.75,4.0)</code></td><td>32;45;58;71</td><td>5.703</td><td>1.2686e-11</td><td>5.822e-13</td><td>4.086/3</td><td>0.919</td><td>False</td></tr><tr><td><code>[4.0,4.25)</code></td><td>59;72</td><td>9.795</td><td>8.9269e-12</td><td>5.130e-13</td><td>2.806/1</td><td>1.08</td><td>False</td></tr><tr><td><code>[4.25,4.5)</code></td><td>73</td><td>16.89</td><td>7.0000e-12</td><td>6.928e-13</td><td>3.5969e-30/0</td><td>1.55</td><td>True</td></tr><tr><td><code>[4.5,4.75)</code></td><td>74;87</td><td>30.9</td><td>4.0178e-12</td><td>7.048e-13</td><td>18.64/1</td><td>1.92</td><td>False</td></tr><tr><td><code>[4.75,5.0)</code></td><td>88</td><td>61.86</td><td>1.1943e-12</td><td>8.343e-13</td><td>0/0</td><td>1.56</td><td>True</td></tr><tr><td><code>[5,5.5)</code></td><td>89</td><td>102.4</td><td>-5.5252e-12</td><td>1.316e-11</td><td>0/0</td><td>-16.4</td><td>True</td></tr><tr><td><code>[5.5,6)</code></td><td>90</td><td>257.2</td><td>9.3828e-11</td><td>5.850e-11</td><td>4.0533e-32/0</td><td>1.51e+03</td><td>True</td></tr></tbody></table>
+    <div class="figgrid">
+      <figure class="figure"><img src="../output/stage_g_v6_64670_split56_baselinev4/runs/v6_64670_split56_stage_g_baselinev4/sed_points_stage_f_fullarray_pool1.png" alt="Stage G split56 SED overlay"><figcaption>Stage G split56 SED overlay</figcaption></figure>
+      <figure class="figure"><img src="../output/stage_g_v6_64670_split56_baselinev4/runs/v6_64670_split56_stage_g_baselinev4/sed_points_ratio.png" alt="Stage G split56 SED ratios"><figcaption>Stage G split56 SED ratios</figcaption></figure>
+      <figure class="figure"><img src="../output/stage_g_v6_64670_split56_baselinev4/runs/v6_64670_split56_stage_g_baselinev4/sed_point_cell_counts.png" alt="Stage G split56 cell grouping counts"><figcaption>Stage G split56 cell grouping counts</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Diagnostic v4 Comparison</h2>
+    <p>The v4 comparison is explicit reference-only; all main split56 paths above point to v6 split56 products.</p><table><thead><tr><th>Nhit group</th><th>split56 E_eff TeV</th><th>split56 E2 dN/dE</th><th>split56 err</th><th>v4 E2 dN/dE</th><th>v4 err</th><th>split56/v4</th><th>split56/full-array PL</th></tr></thead><tbody><tr><td><code>[125,200)</code></td><td>0.5654</td><td>4.0389e-11</td><td>2.309e-12</td><td>5.6359e-11</td><td>3.779e-12</td><td>0.717</td><td>0.671</td></tr><tr><td><code>[200,300)</code></td><td>0.8602</td><td>5.5777e-11</td><td>1.264e-12</td><td>4.7485e-11</td><td>2.085e-12</td><td>1.17</td><td>1.24</td></tr><tr><td><code>[300,500)</code></td><td>1.351</td><td>3.5371e-11</td><td>7.031e-13</td><td>3.6637e-11</td><td>1.139e-12</td><td>0.965</td><td>1.07</td></tr><tr><td><code>[500,800)</code></td><td>2.675</td><td>2.2045e-11</td><td>5.371e-13</td><td>2.1329e-11</td><td>9.003e-13</td><td>1.03</td><td>1.07</td></tr><tr><td><code>[800,1100)</code></td><td>4.251</td><td>1.6558e-11</td><td>8.125e-13</td><td>1.4874e-11</td><td>8.890e-13</td><td>1.11</td><td>1.11</td></tr><tr><td><code>[1100,2000)</code></td><td>8.14</td><td>1.0825e-11</td><td>5.654e-13</td><td>7.2767e-12</td><td>5.829e-13</td><td>1.49</td><td>1.13</td></tr><tr><td><code>[2000,3000)</code></td><td>45.41</td><td>1.3146e-12</td><td>4.527e-13</td><td>1.4312e-12</td><td>8.286e-13</td><td>0.919</td><td>0.451</td></tr></tbody></table>
+  </section>
+
+  <section>
+    <h2>Artifacts</h2>
+    <table class="pathlist"><thead><tr><th>Artifact</th><th>Path</th></tr></thead><tbody><tr><td>split56 selector</td><td><code>../config/cell_selector_v6_split56_drop4_psfborrow.csv</code></td></tr><tr><td>Stage A nominal metadata</td><td><code>../output/stage_a_v6_64670_split56/response_2d_v6_64670_split56_metadata.json</code></td></tr><tr><td>Stage B PSF NPZ</td><td><code>../output/stage_b_v6_64670_split56/runs/v6_64670_split56_stage_b_psf/psf_v6_64670_split56.npz</code></td></tr><tr><td>Stage A aperture response</td><td><code>../output/stage_a_v6_64670_split56_aperture_conditioned/response_2d_v6_64670_split56_aperture_conditioned.npz</code></td></tr><tr><td>Stage C metadata</td><td><code>../output/stage_c_v6_64670_split56/runs/v6_64670_split56_stage_c_halfyear/obs_events_metadata.json</code></td></tr><tr><td>Stage D background</td><td><code>../output/stage_d_v6_64670_split56_annnorm/runs/v6_64670_split56_stage_d_annnorm/background_v6_64670_split56_annnorm.npz</code></td></tr><tr><td>Stage E signal</td><td><code>../output/stage_e_v6_64670_split56_containment1_annnorm/runs/v6_64670_split56_stage_e_containment1_annnorm/signal_v6_64670_split56_containment1_annnorm.npz</code></td></tr><tr><td>Stage F fit</td><td><code>../output/stage_f_v6_64670_split56_baselinev4/runs/v6_64670_split56_stage_f_baselinev4/fit_v6_64670_split56_baselinev4.npz</code></td></tr><tr><td>Stage G SED points</td><td><code>../output/stage_g_v6_64670_split56_baselinev4/runs/v6_64670_split56_stage_g_baselinev4/sed_points_v6_64670_split56_baselinev4.npz</code></td></tr><tr><td>Stage E HTML</td><td><code>stage_e_v6_64670_split56_containment1_annnorm_report.html</code></td></tr><tr><td>Stage F HTML</td><td><code>stage_f_v6_64670_split56_baselinev4_report.html</code></td></tr><tr><td>Stage G HTML</td><td><code>stage_g_v6_64670_split56_baselinev4_report.html</code></td></tr></tbody></table>
+    <p>Generated by <code>apply/report/build_v6_64670_split56_report.py</code>. Main flow uses split56 v6 outputs; v4 appears only in the explicit comparison section.</p>
+  </section>
+</main>
+</body>
+</html>

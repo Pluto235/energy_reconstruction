@@ -47,6 +47,13 @@ METHODS: Dict[str, Dict[str, str]] = {
         "color": "#059669",
         "marker": "D",
     },
+    "double_rayleigh_mixture": {
+        "label": "Double Rayleigh mixture",
+        "run_id": "v5_psf_double_rayleigh_mixture_drop4",
+        "role": "two-component circular 2D-Gaussian / double-Rayleigh radial mixture aperture",
+        "color": "#7e22ce",
+        "marker": "P",
+    },
 }
 
 STAGE_B_RUNS = REPO_ROOT / "apply/output/stage_b_v5_psf_compare/runs"
@@ -66,6 +73,7 @@ V4_EMPIRICAL_PSF_PROFILES = REPO_ROOT / "apply/report/assets/v4-empirical-psf/em
 
 M2_TO_CM2 = 1.0e4
 TARGET_CONTAINMENT = 1.0 - math.exp(-0.5 * 1.58 * 1.58)
+FOCUS_CELLS = (15, 27, 43, 55, 65)
 
 
 def read_csv_rows(path: Path) -> List[Dict[str, str]]:
@@ -697,6 +705,20 @@ def rayleigh_pdf_deg(r_deg: np.ndarray, sigma_rad: float) -> np.ndarray:
     return pdf_per_rad * (math.pi / 180.0)
 
 
+def double_rayleigh_pdf_deg(r_deg: np.ndarray, a_core: float, sigma1_deg: float, sigma2_deg: float) -> np.ndarray:
+    r = np.asarray(r_deg, dtype=np.float64)
+    a = float(a_core)
+    s1 = float(sigma1_deg)
+    s2 = float(sigma2_deg)
+    if not (0.0 < a < 1.0 and 0.0 < s1 < s2):
+        return np.full(r.shape, np.nan, dtype=np.float64)
+    r_pos = np.clip(r, 0.0, None)
+    return (
+        a * r_pos / (s1 * s1) * np.exp(-0.5 * (r_pos / s1) ** 2)
+        + (1.0 - a) * r_pos / (s2 * s2) * np.exp(-0.5 * (r_pos / s2) ** 2)
+    )
+
+
 def two1d_radial_pdf_deg(
     r_deg: np.ndarray,
     *,
@@ -747,6 +769,13 @@ def profile_grid_caption(method: str) -> str:
             "or the documented fallback radius when the observed profile fails quality gates. "
             "Green shaded panels are cells included in the final SED fit."
         ),
+        "double_rayleigh_mixture": (
+            "Blue steps show the Stage B Crab-theta-weighted MC radial profile. "
+            "The purple curve is the fitted two-component Rayleigh radial PDF; "
+            "the grey dashed line is r_opt from the fitted mixture CDF at the Rayleigh-contract target containment. "
+            "Fallback or psfborrow cells are listed in the diagnostics tables. "
+            "Green shaded panels are cells included in the final SED fit."
+        ),
     }
     return captions[method]
 
@@ -770,6 +799,9 @@ def plot_fit_shaded_psf_profile_grid(method: str, payload: Dict[str, object], pa
     sigma_y_deg = np.asarray(psf.get("sigma_y_deg", np.full(cell_ids.shape, np.nan)), dtype=np.float64)
     mu_x_deg = np.asarray(psf.get("mu_x_deg", np.zeros(cell_ids.shape)), dtype=np.float64)
     mu_y_deg = np.asarray(psf.get("mu_y_deg", np.zeros(cell_ids.shape)), dtype=np.float64)
+    double_a = np.asarray(psf.get("double_rayleigh_A", np.full(cell_ids.shape, np.nan)), dtype=np.float64)
+    double_s1 = np.asarray(psf.get("double_rayleigh_sigma1_deg", np.full(cell_ids.shape, np.nan)), dtype=np.float64)
+    double_s2 = np.asarray(psf.get("double_rayleigh_sigma2_deg", np.full(cell_ids.shape, np.nan)), dtype=np.float64)
     if cell_ids.size == 0 or profile_density.size == 0:
         return False
 
@@ -854,6 +886,30 @@ def plot_fit_shaded_psf_profile_grid(method: str, payload: Dict[str, object], pa
                     linewidth=0.8,
                     alpha=0.95,
                 )
+            if (
+                method == "double_rayleigh_mixture"
+                and has_profile
+                and idx < double_a.size
+                and idx < double_s1.size
+                and idx < double_s2.size
+                and np.isfinite(double_a[idx])
+                and np.isfinite(double_s1[idx])
+                and np.isfinite(double_s2[idx])
+                and 0.0 < double_a[idx] < 1.0
+                and 0.0 < double_s1[idx] < double_s2[idx]
+            ):
+                ax.plot(
+                    centers,
+                    double_rayleigh_pdf_deg(
+                        centers,
+                        float(double_a[idx]),
+                        float(double_s1[idx]),
+                        float(double_s2[idx]),
+                    ),
+                    color="#7e22ce",
+                    linewidth=0.8,
+                    alpha=0.95,
+                )
             if idx < r_opt.size and np.isfinite(r_opt[idx]):
                 ax.axvline(float(r_opt[idx]), color="#444444", linewidth=0.7, linestyle="--")
             ax.set_title(f"cell {cell_id}: {pred}", fontsize=6.7)
@@ -877,6 +933,8 @@ def plot_fit_shaded_psf_profile_grid(method: str, payload: Dict[str, object], pa
         handles.append(Line2D([0], [0], color="#c9501a", linewidth=0.9, label=rayleigh_label))
     if method == "two_1d_gaussian":
         handles.append(Line2D([0], [0], color="#7c3aed", linewidth=0.9, label="two-1D induced radial PDF"))
+    if method == "double_rayleigh_mixture":
+        handles.append(Line2D([0], [0], color="#7e22ce", linewidth=0.9, label="double-Rayleigh mixture PDF"))
     handles.extend(
         [
             Line2D([0], [0], color="#444444", linewidth=0.8, linestyle="--", label=f"{method} r_opt"),
@@ -889,6 +947,7 @@ def plot_fit_shaded_psf_profile_grid(method: str, payload: Dict[str, object], pa
         "two_1d_gaussian": "MC profile, two-1D induced radial PDF, method r_opt",
         "mc_quantile_715": "MC profile and empirical-quantile method r_opt",
         "observed_data": "observed/fallback profile, Rayleigh radial PDF reference, method r_opt",
+        "double_rayleigh_mixture": "MC profile, fitted double-Rayleigh mixture PDF, method r_opt",
     }[method]
     fig.suptitle(
         f"{METHODS[method]['label']} Stage B weighted radial PSF profiles: {title_tail}",
@@ -1339,6 +1398,213 @@ def two1d_radius_diagnostic(runs: Dict[str, Dict[str, object]]) -> str:
     )
 
 
+def psf_index_by_cell(psf: Dict[str, np.ndarray]) -> Dict[int, int]:
+    cell_ids = np.asarray(psf.get("cell_id", []), dtype=np.int64)
+    return {int(cell_id): idx for idx, cell_id in enumerate(cell_ids)}
+
+
+def npz_value(psf: Dict[str, np.ndarray], key: str, idx: int) -> object:
+    if key not in psf:
+        return None
+    values = np.asarray(psf[key])
+    if idx >= values.shape[0]:
+        return None
+    value = values[idx]
+    if isinstance(value, np.generic):
+        return value.item()
+    return value
+
+
+def double_rayleigh_focus_rows(runs: Dict[str, Dict[str, object]]) -> List[List[str]]:
+    double_psf = runs.get("double_rayleigh_mixture", {}).get("psf_npz")
+    rayleigh_psf = runs.get("rayleigh_baseline", {}).get("psf_npz")
+    if not isinstance(double_psf, dict) or not double_psf or not isinstance(rayleigh_psf, dict) or not rayleigh_psf:
+        return [["double_rayleigh_mixture not available", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a"]]
+    double_idx = psf_index_by_cell(double_psf)
+    rayleigh_idx = psf_index_by_cell(rayleigh_psf)
+    rows: List[List[str]] = []
+    for cell_id in FOCUS_CELLS:
+        idx = double_idx.get(int(cell_id))
+        if idx is None:
+            rows.append([str(cell_id), "missing", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a"])
+            continue
+        ray_idx = rayleigh_idx.get(int(cell_id))
+        r_double = finite_float(npz_value(double_psf, "r_opt_deg", idx))
+        r_ray = finite_float(npz_value(rayleigh_psf, "r_opt_deg", ray_idx)) if ray_idx is not None else None
+        ratio = r_double / r_ray if r_double is not None and r_ray not in {None, 0.0} else None
+        borrowed = bool(npz_value(double_psf, "psf_borrowed", idx) or False)
+        reason = str(npz_value(double_psf, "double_rayleigh_fallback_reason", idx) or "")
+        borrowed_from = str(npz_value(double_psf, "borrowed_from", idx) or "")
+        if borrowed:
+            reason = "; ".join(bit for bit in [reason, f"psfborrow_from:{borrowed_from}"] if bit)
+        rows.append(
+            [
+                f"<strong>{int(cell_id)}</strong>",
+                esc(npz_value(double_psf, "nhit_bin", idx) or ""),
+                esc(npz_value(double_psf, "predE_bin", idx) or ""),
+                fmt(npz_value(double_psf, "double_rayleigh_A", idx), 4),
+                fmt(npz_value(double_psf, "double_rayleigh_sigma1_deg", idx), 4),
+                fmt(npz_value(double_psf, "double_rayleigh_sigma2_deg", idx), 4),
+                fmt(npz_value(double_psf, "double_rayleigh_sigma_eq_deg", idx), 4),
+                fmt(r_double, 4),
+                fmt(ratio, 4),
+                fmt(npz_value(double_psf, "double_rayleigh_containment_r_opt", idx), 4),
+                fmt(npz_value(double_psf, "double_rayleigh_chi2_ndof", idx), 4),
+                esc(str(npz_value(double_psf, "fit_quality", idx) or "")),
+                esc(reason),
+            ]
+        )
+    return rows
+
+
+def double_rayleigh_summary(runs: Dict[str, Dict[str, object]]) -> Dict[str, object]:
+    psf = runs.get("double_rayleigh_mixture", {}).get("psf_npz")
+    rayleigh = runs.get("rayleigh_baseline", {}).get("psf_npz")
+    if not isinstance(psf, dict) or not psf:
+        return {"status": "missing"}
+    a = np.asarray(psf.get("double_rayleigh_A", []), dtype=np.float64)
+    s1 = np.asarray(psf.get("double_rayleigh_sigma1_deg", []), dtype=np.float64)
+    s2 = np.asarray(psf.get("double_rayleigh_sigma2_deg", []), dtype=np.float64)
+    seq = np.asarray(psf.get("double_rayleigh_sigma_eq_deg", []), dtype=np.float64)
+    r = np.asarray(psf.get("r_opt_deg", []), dtype=np.float64)
+    borrowed = np.asarray(psf.get("psf_borrowed", np.zeros(r.shape, dtype=bool)), dtype=bool)
+    ratio_values: List[float] = []
+    if isinstance(rayleigh, dict) and rayleigh:
+        ray_r = {
+            int(cid): float(value)
+            for cid, value in zip(np.asarray(rayleigh.get("cell_id", []), dtype=np.int64), np.asarray(rayleigh.get("r_opt_deg", []), dtype=np.float64))
+            if np.isfinite(value) and float(value) > 0.0
+        }
+        for cid, value in zip(np.asarray(psf.get("cell_id", []), dtype=np.int64), r):
+            if int(cid) in ray_r and np.isfinite(value):
+                ratio_values.append(float(value) / ray_r[int(cid)])
+    return {
+        "status": "available",
+        "median_A": float(np.nanmedian(a)) if a.size and np.isfinite(a).any() else None,
+        "median_sigma1_deg": float(np.nanmedian(s1)) if s1.size and np.isfinite(s1).any() else None,
+        "median_sigma2_deg": float(np.nanmedian(s2)) if s2.size and np.isfinite(s2).any() else None,
+        "median_sigma_eq_deg": float(np.nanmedian(seq)) if seq.size and np.isfinite(seq).any() else None,
+        "median_r_opt_over_rayleigh": float(np.nanmedian(ratio_values)) if ratio_values else None,
+        "min_r_opt_over_rayleigh": float(np.nanmin(ratio_values)) if ratio_values else None,
+        "max_r_opt_over_rayleigh": float(np.nanmax(ratio_values)) if ratio_values else None,
+        "borrowed_cells": int(np.count_nonzero(borrowed)),
+    }
+
+
+def double_rayleigh_focus_records(runs: Dict[str, Dict[str, object]]) -> List[Dict[str, object]]:
+    double_psf = runs.get("double_rayleigh_mixture", {}).get("psf_npz")
+    rayleigh_psf = runs.get("rayleigh_baseline", {}).get("psf_npz")
+    if not isinstance(double_psf, dict) or not double_psf or not isinstance(rayleigh_psf, dict) or not rayleigh_psf:
+        return []
+    double_idx = psf_index_by_cell(double_psf)
+    rayleigh_idx = psf_index_by_cell(rayleigh_psf)
+    records: List[Dict[str, object]] = []
+    for cell_id in FOCUS_CELLS:
+        idx = double_idx.get(int(cell_id))
+        if idx is None:
+            records.append({"cell_id": int(cell_id), "status": "missing"})
+            continue
+        ray_idx = rayleigh_idx.get(int(cell_id))
+        r_double = finite_float(npz_value(double_psf, "r_opt_deg", idx))
+        r_ray = finite_float(npz_value(rayleigh_psf, "r_opt_deg", ray_idx)) if ray_idx is not None else None
+        records.append(
+            {
+                "cell_id": int(cell_id),
+                "nhit_bin": str(npz_value(double_psf, "nhit_bin", idx) or ""),
+                "predE_bin": str(npz_value(double_psf, "predE_bin", idx) or ""),
+                "A": finite_float(npz_value(double_psf, "double_rayleigh_A", idx)),
+                "sigma1_deg": finite_float(npz_value(double_psf, "double_rayleigh_sigma1_deg", idx)),
+                "sigma2_deg": finite_float(npz_value(double_psf, "double_rayleigh_sigma2_deg", idx)),
+                "sigma_eq_deg": finite_float(npz_value(double_psf, "double_rayleigh_sigma_eq_deg", idx)),
+                "r_opt_deg": r_double,
+                "r_opt_over_rayleigh": r_double / r_ray if r_double is not None and r_ray not in {None, 0.0} else None,
+                "containment_r_opt": finite_float(npz_value(double_psf, "double_rayleigh_containment_r_opt", idx)),
+                "chi2_ndof": finite_float(npz_value(double_psf, "double_rayleigh_chi2_ndof", idx)),
+                "fit_quality": str(npz_value(double_psf, "fit_quality", idx) or ""),
+                "fallback_reason": str(npz_value(double_psf, "double_rayleigh_fallback_reason", idx) or ""),
+                "psf_borrowed": bool(npz_value(double_psf, "psf_borrowed", idx) or False),
+                "borrowed_from": str(npz_value(double_psf, "borrowed_from", idx) or ""),
+            }
+        )
+    return records
+
+
+def fallback_quality_rows(runs: Dict[str, Dict[str, object]]) -> List[List[str]]:
+    rows: List[List[str]] = []
+    for method, payload in runs.items():
+        psf = payload.get("psf_npz")
+        if not isinstance(psf, dict) or not psf:
+            continue
+        cell_ids = np.asarray(psf.get("cell_id", []), dtype=np.int64)
+        fit_quality = np.asarray(psf.get("fit_quality", np.full(cell_ids.shape, "", dtype="U1")), dtype=str)
+        borrowed = np.asarray(psf.get("psf_borrowed", np.zeros(cell_ids.shape, dtype=bool)), dtype=bool)
+        borrowed_from = np.asarray(psf.get("borrowed_from", np.full(cell_ids.shape, "", dtype="U1")), dtype=str)
+        observed_fallback = np.asarray(psf.get("observed_data_fallback", np.zeros(cell_ids.shape, dtype=bool)), dtype=bool)
+        observed_reason = np.asarray(psf.get("observed_data_fallback_reason", np.full(cell_ids.shape, "", dtype="U1")), dtype=str)
+        double_reason = np.asarray(psf.get("double_rayleigh_fallback_reason", np.full(cell_ids.shape, "", dtype="U1")), dtype=str)
+        nhit = np.asarray(psf.get("nhit_bin", np.full(cell_ids.shape, "", dtype="U1")), dtype=str)
+        pred = np.asarray(psf.get("predE_bin", np.full(cell_ids.shape, "", dtype="U1")), dtype=str)
+        for idx, cell_id in enumerate(cell_ids):
+            reasons = []
+            quality = str(fit_quality[idx]) if idx < fit_quality.size else ""
+            if quality and quality != "ok":
+                reasons.append(quality)
+            if method == "observed_data" and idx < observed_fallback.size and bool(observed_fallback[idx]):
+                reasons.append(str(observed_reason[idx] if idx < observed_reason.size else "observed_profile_fallback"))
+            if method == "double_rayleigh_mixture":
+                reason = str(double_reason[idx] if idx < double_reason.size else "")
+                if reason:
+                    reasons.append(reason)
+            if idx < borrowed.size and bool(borrowed[idx]):
+                reasons.append(f"psfborrow_from:{borrowed_from[idx] if idx < borrowed_from.size else ''}")
+            deduped = list(dict.fromkeys(bit for bit in reasons if bit))
+            if deduped:
+                rows.append(
+                    [
+                        method,
+                        int(cell_id),
+                        esc(nhit[idx] if idx < nhit.size else ""),
+                        esc(pred[idx] if idx < pred.size else ""),
+                        esc("; ".join(deduped)),
+                    ]
+                )
+    if not rows:
+        return [["none", "n/a", "n/a", "n/a", "n/a"]]
+    return rows
+
+
+def focus_cell_pull_rows(runs: Dict[str, Dict[str, object]]) -> List[List[str]]:
+    method_pull: Dict[str, Dict[int, float]] = {}
+    method_meta: Dict[int, Tuple[str, str]] = {}
+    for method, payload in runs.items():
+        fit_npz = payload.get("fit_npz")
+        if not isinstance(fit_npz, dict) or not fit_npz:
+            continue
+        cell_ids = np.asarray(fit_npz.get("cell_id", []), dtype=np.int64)
+        pulls = np.asarray(fit_npz.get("logpar_conservative_pull", []), dtype=np.float64)
+        nhit = np.asarray(fit_npz.get("nhit_bin", np.full(cell_ids.shape, "", dtype="U1")), dtype=str)
+        pred = np.asarray(fit_npz.get("predE_bin", np.full(cell_ids.shape, "", dtype="U1")), dtype=str)
+        method_pull[method] = {
+            int(cell_id): float(pull)
+            for cell_id, pull in zip(cell_ids, pulls)
+            if np.isfinite(pull)
+        }
+        for idx, cell_id in enumerate(cell_ids):
+            method_meta.setdefault(int(cell_id), (str(nhit[idx]) if idx < nhit.size else "", str(pred[idx]) if idx < pred.size else ""))
+    rows: List[List[str]] = []
+    for cell_id in FOCUS_CELLS:
+        nhit, pred = method_meta.get(int(cell_id), ("", ""))
+        row = [f"<strong>{int(cell_id)}</strong>", esc(nhit), esc(pred)]
+        for method in METHODS:
+            row.append(fmt(method_pull.get(method, {}).get(int(cell_id)), 4))
+        rows.append(row)
+    return rows
+
+
+def focus_cell_pull_headers() -> List[str]:
+    return ["cell", "Nhit", "predE"] + [METHODS[method]["label"] for method in METHODS]
+
+
 def main_comparison_rows(runs: Dict[str, Dict[str, object]], summary_rows: Sequence[Dict[str, object]]) -> List[List[str]]:
     base_params = fit_parameters(read_json(V4_STAGE_F_META), "logpar")
     rows = []
@@ -1365,6 +1631,33 @@ def main_comparison_rows(runs: Dict[str, Dict[str, object]], summary_rows: Seque
             ]
         )
     return rows
+
+
+def main_comparison_records(runs: Dict[str, Dict[str, object]], summary_rows: Sequence[Dict[str, object]]) -> List[Dict[str, object]]:
+    base_params = fit_parameters(read_json(V4_STAGE_F_META), "logpar")
+    records: List[Dict[str, object]] = []
+    for method, payload in runs.items():
+        logpar = payload["logpar"]  # type: ignore[assignment]
+        params = logpar.get("parameters") if isinstance(logpar.get("parameters"), dict) else {}
+        total = next((row for row in summary_rows if row["method"] == method and row["nhit_bin"] == "all"), {})
+        phi0 = finite_float(params.get("phi0"))
+        base_phi0 = base_params.get("phi0")
+        records.append(
+            {
+                "method": method,
+                "status": payload["status"],
+                "phi0": phi0,
+                "phi0_shift_vs_v4": phi0 / base_phi0 - 1.0 if phi0 is not None and base_phi0 not in {None, 0.0} else None,
+                "alpha": finite_float(params.get("alpha")),
+                "beta": finite_float(params.get("beta")),
+                "chi2": finite_float(logpar.get("chi2")) if isinstance(logpar, dict) else None,
+                "ndof": finite_float(logpar.get("ndof")) if isinstance(logpar, dict) else None,
+                "chi2_over_ndof": chi2_over_ndof(logpar) if isinstance(logpar, dict) else None,
+                "max_abs_pull": finite_float(payload.get("max_abs_pull")),
+                "total_obs_over_pass5": finite_float(total.get("observed_over_expected")),
+            }
+        )
+    return records
 
 
 def low_nhit_rows(nhit_rows: Sequence[Dict[str, object]]) -> List[List[str]]:
@@ -1630,6 +1923,7 @@ def main() -> None:
                 "cell_counts_csv": str(ASSET_DIR / "official_pass5_forward_fold_cell_counts.csv"),
                 "method": "official pass5 dN/dE log-log piecewise interpolation folded through each v5 aperture-conditioned Stage A response and Stage E containment=1 exposure",
             },
+            "main_result": main_comparison_records(runs, summary_rows),
             "v4_reference": {
                 "stage_b_npz": str(V4_STAGE_B_NPZ),
                 "stage_f_npz": str(V4_STAGE_F_NPZ),
@@ -1640,12 +1934,21 @@ def main() -> None:
                 "profile_source": (
                     "Stage B profile_density arrays, normalized by per-cell peak for display; "
                     "observed_data uses pedestal-subtracted observed excess profiles for accepted data-PSF cells "
-                    "and fallback/borrowed profiles for fallback cells."
+                    "and fallback/borrowed profiles for fallback cells; double_rayleigh_mixture overlays the fitted mixture PDF in its fit-shaded grid."
                 ),
                 "fit_shaded_grids": {
                     method: str(ASSET_DIR / f"v5_psf_{method}_weighted_profiles_fit_shaded.png")
                     for method, payload in runs.items()
                 },
+            },
+            "double_rayleigh_mixture_diagnostics": {
+                **double_rayleigh_summary(runs),
+                "focus_cells": list(FOCUS_CELLS),
+                "focus_cell_records": double_rayleigh_focus_records(runs),
+            },
+            "fallback_cells": {
+                "note": "Rows include non-ok fit_quality, observed-data quality-gate fallback, double-Rayleigh fit fallback, and v3/v4 psfborrow cells.",
+                "rows": fallback_quality_rows(runs),
             },
             "observed_data_aperture": {
                 **observed_data_aperture_summary(runs),
@@ -1715,6 +2018,10 @@ def main() -> None:
   {table(["method", "cells", "median r_opt", "min r_opt", "max r_opt", "median sigma_x/sigma_y", "median MC quantile r715", "borrowed cells"], psf_shape_rows(runs))}
   {figure(ASSET_DIR / "v5_psf_r_opt_ratio_heatmap.png", "r_opt ratio heatmap", "Each panel is one PSF method on the same Nhit versus predicted-energy cell grid. The number and color in each cell are r_opt(method) / r_opt(rayleigh_baseline): 1.00 means the same aperture radius as the Rayleigh baseline, values above 1 use a larger aperture, and values below 1 use a smaller aperture. Borrowed PSF cells follow the v3/v4 psfborrow policy by default.")}
   {figure(ASSET_DIR / "v5_psf_observed_data_radius_comparison.png", "Observed-data radius comparison", "The two panels compare the observed-data aperture radius against the Rayleigh baseline and the MC-quantile branch on the same cell grid. A star marks cells where the observed profile failed the data-PSF quality gates and therefore used the fallback radius before the normal psfborrow policy.")}
+  <h3>Double-Rayleigh Mixture Diagnostics</h3>
+  <p>The double-Rayleigh branch fits the Crab-theta-weighted MC radial profile with a two-component circular Gaussian radial mixture and defines <code>r_opt</code> by solving the fitted CDF at <code>{TARGET_CONTAINMENT:.15f}</code>. The equivalent sigma below is only <code>r_opt / 1.58</code> for comparison; it is not used to define the aperture.</p>
+  {table(["cell", "Nhit", "predE", "A", "sigma1", "sigma2", "sigma_eq", "r_opt", "r/r_rayleigh", "empirical containment", "chi2/ndof", "quality", "fallback/borrow reason"], double_rayleigh_focus_rows(runs))}
+  {table(["method", "cell", "Nhit", "predE", "fallback or warning reason"], fallback_quality_rows(runs))}
   <h3>Observed-Data Aperture Cells</h3>
   <p>The observed-data branch uses the pedestal-subtracted observed Crab excess profile only when the profile passes the reliability, positive-total, and radius-divergence gates. Cells without an accepted data profile, and cells handled by the existing psfborrow policy, are explicitly listed as fallback below.</p>
   {table(["cell", "Nhit", "predE", "r_opt_obs", "containment", "r_obs/r_rayleigh", "r_obs/r_mcq", "positive total"], observed_data_used_rows(runs))}
@@ -1723,12 +2030,13 @@ def main() -> None:
   {figure(ASSET_DIR / "v5_psf_radius_shape_scatter.png", "PSF radius versus shape scale", "The two-1D branch uses sigma_eff = sqrt((sigma_x^2 + sigma_y^2)/2).")}
 
   <h2>Weighted PSF Profiles</h2>
-  <p>The overlay below uses the Stage B <code>profile_density</code> arrays for the drop4 fit cells. Rayleigh, two-1D Gaussian, and MC-quantile profiles are Crab-theta-weighted MC profiles; observed_data is the pedestal-subtracted observed excess profile for accepted data-PSF cells and the documented fallback profile otherwise. Each profile is normalized by its own peak for shape comparison; dashed vertical lines mark each branch's <code>r_opt</code>.</p>
+  <p>The overlay below uses the Stage B <code>profile_density</code> arrays for the drop4 fit cells. Rayleigh, two-1D Gaussian, MC-quantile, and double-Rayleigh profiles are Crab-theta-weighted MC profiles; observed_data is the pedestal-subtracted observed excess profile for accepted data-PSF cells and the documented fallback profile otherwise. Each overlay profile is normalized by its own peak for shape comparison; dashed vertical lines mark each branch's <code>r_opt</code>. The double-Rayleigh per-method grid also draws the fitted mixture curve.</p>
   {figure(ASSET_DIR / "v5_psf_weighted_profile_overlay.png", "Weighted PSF profile overlay", f"Each small panel is one drop4 fit cell, with {len(METHODS)} PSF aperture branches overlaid.")}
   {psf_profile_grid_figures(runs)}
 
   <h2>Stage F Fit And Pulls</h2>
   {table(["run", "LogPar phi0", "alpha", "beta", "chi2 / ndof", "chi2/ndof", "max abs pull", "PL phi0", "PL gamma"], stage_f_table_rows(runs))}
+  {table(focus_cell_pull_headers(), focus_cell_pull_rows(runs))}
   {figure(ASSET_DIR / "v5_psf_cell_pull_grid.png", "Cell pull comparison", f"Stage F LogPar conservative pulls for the {len(METHODS)} v5 PSF aperture branches.")}
 
   <h2>Stage G SED</h2>

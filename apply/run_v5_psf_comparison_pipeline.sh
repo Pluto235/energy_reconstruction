@@ -9,8 +9,8 @@ else
   PYTHON_BIN="${PYTHON_BIN:-python}"
 fi
 
-METHODS="${METHODS:-rayleigh_baseline two_1d_gaussian mc_quantile_715}"
-STAGE_B_METHOD="${STAGE_B_METHOD:-all}"
+METHODS="${METHODS:-rayleigh_baseline two_1d_gaussian mc_quantile_715 observed_data double_rayleigh_mixture}"
+STAGE_B_METHOD="${STAGE_B_METHOD:-double_rayleigh_mixture}"
 WORKERS="${WORKERS:-${SLURM_CPUS_PER_TASK:-18}}"
 DENOMINATOR_WORKERS="${DENOMINATOR_WORKERS:-1}"
 MAX_FILES_PER_CELL="${MAX_FILES_PER_CELL:-}"
@@ -107,7 +107,7 @@ if [[ "${STAGE_B_METHOD}" == "all" ]]; then
   STAGE_B_METADATA_NAME="psf_v5_psf_all_drop4_metadata.json"
   STAGE_B_SUMMARY_CSV_NAME="psf_v5_psf_all_drop4_summary.csv"
   STAGE_B_SUMMARY_MD_NAME="psf_v5_psf_all_drop4_summary.md"
-  STAGE_B_SENTINEL="${STAGE_B_DIR}/runs/v5_psf_mc_quantile_715_drop4/psf_v5_psf_mc_quantile_715_drop4_metadata.json"
+  STAGE_B_SENTINEL="${STAGE_B_DIR}/runs/v5_psf_double_rayleigh_mixture_drop4/psf_v5_psf_double_rayleigh_mixture_drop4_metadata.json"
   STAGE_B_LABEL="Stage B v5 PSF all methods"
 else
   STAGE_B_RUN_ID="v5_psf_${STAGE_B_METHOD}_drop4"
@@ -120,6 +120,8 @@ else
 fi
 OBSERVED_STAGE_B_SOURCE_NPZ="${OBSERVED_STAGE_B_SOURCE_NPZ:-${STAGE_B_DIR}/runs/v5_psf_rayleigh_baseline_drop4/psf_v5_psf_rayleigh_baseline_drop4.npz}"
 OBSERVED_STAGE_B_SOURCE_METADATA="${OBSERVED_STAGE_B_SOURCE_METADATA:-${STAGE_B_DIR}/runs/v5_psf_rayleigh_baseline_drop4/psf_v5_psf_rayleigh_baseline_drop4_metadata.json}"
+DOUBLE_RAYLEIGH_STAGE_B_SOURCE_NPZ="${DOUBLE_RAYLEIGH_STAGE_B_SOURCE_NPZ:-${STAGE_B_DIR}/runs/v5_psf_rayleigh_baseline_drop4/psf_v5_psf_rayleigh_baseline_drop4.npz}"
+DOUBLE_RAYLEIGH_STAGE_B_SOURCE_METADATA="${DOUBLE_RAYLEIGH_STAGE_B_SOURCE_METADATA:-${STAGE_B_DIR}/runs/v5_psf_rayleigh_baseline_drop4/psf_v5_psf_rayleigh_baseline_drop4_metadata.json}"
 
 CMD_B=(
   "${PYTHON_BIN}" apply/stages/02e_build_psf_v5_compare.py
@@ -157,6 +159,7 @@ CMD_B=(
   --metadata-name "${STAGE_B_METADATA_NAME}"
   --summary-csv-name "${STAGE_B_SUMMARY_CSV_NAME}"
   --summary-md-name "${STAGE_B_SUMMARY_MD_NAME}"
+  --no-plots
   --overwrite-run-dir
   --no-promote-current
 )
@@ -170,6 +173,12 @@ if [[ "${STAGE_B_METHOD}" == "observed_data" ]]; then
   CMD_B+=(
     --observed-stage-b-source-npz "${OBSERVED_STAGE_B_SOURCE_NPZ}"
     --observed-stage-b-source-metadata "${OBSERVED_STAGE_B_SOURCE_METADATA}"
+  )
+fi
+if [[ "${STAGE_B_METHOD}" == "double_rayleigh_mixture" ]]; then
+  CMD_B+=(
+    --double-rayleigh-stage-b-source-npz "${DOUBLE_RAYLEIGH_STAGE_B_SOURCE_NPZ}"
+    --double-rayleigh-stage-b-source-metadata "${DOUBLE_RAYLEIGH_STAGE_B_SOURCE_METADATA}"
   )
 fi
 run_or_skip "${STAGE_B_LABEL}" "${STAGE_B_SENTINEL}" "${CMD_B[@]}"
@@ -222,6 +231,21 @@ for METHOD in ${METHODS}; do
     --metadata-name "${RESPONSE_META_NAME}"
   )
   run_or_skip "Stage A aperture-conditioned response ${METHOD}" "${RESPONSE_META}" "${CMD_A[@]}"
+
+  if [[ "${METHOD}" == "double_rayleigh_mixture" ]]; then
+    CMD_A_FILL=(
+      "${PYTHON_BIN}" apply/stages/01b_fill_v5_double_rayleigh_response.py
+      --target-response-npz "${RESPONSE_NPZ}"
+      --target-response-metadata "${RESPONSE_META}"
+      --source-response-npz "${STAGE_A_DIR}/rayleigh_baseline/response_2d_v5_psf_rayleigh_baseline_drop4.npz"
+      --source-response-metadata "${STAGE_A_DIR}/rayleigh_baseline/response_2d_v5_psf_rayleigh_baseline_drop4_metadata.json"
+      --target-psf-npz "${PSF_NPZ}"
+      --source-psf-npz "${STAGE_B_DIR}/runs/v5_psf_rayleigh_baseline_drop4/psf_v5_psf_rayleigh_baseline_drop4.npz"
+    )
+    echo "===== Fill zero Stage A response cells ${METHOD} ====="
+    printf '%q ' "${CMD_A_FILL[@]}"; echo
+    "${CMD_A_FILL[@]}"
+  fi
 
   CMD_D=(
     "${PYTHON_BIN}" apply/report/build_v3_annnorm_from_stage_d.py

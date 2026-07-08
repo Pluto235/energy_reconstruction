@@ -45,7 +45,13 @@ DEFAULT_LHAASO_LAT_DEG = 29.45
 DEFAULT_SOURCE_DEC_DEG = 22.01
 DEFAULT_THETA_MAX_DEG = 50.0
 
-PSF_METHODS = ("rayleigh_baseline", "two_1d_gaussian", "mc_quantile_715", "observed_data")
+PSF_METHODS = (
+    "rayleigh_baseline",
+    "two_1d_gaussian",
+    "mc_quantile_715",
+    "observed_data",
+    "double_rayleigh_mixture",
+)
 PSF_METHOD_CHOICES = (*PSF_METHODS, "all")
 RAYLEIGH_OPT_RADIUS_FACTOR = stage02.RAYLEIGH_OPT_RADIUS_FACTOR
 TARGET_CONTAINMENT = stage02.RAYLEIGH_OPT_CONTAINMENT
@@ -118,6 +124,16 @@ BORROW_NUMERIC_KEYS = [
     "two_1d_gaussian_r715_deg",
     "two_1d_gaussian_containment_r_opt",
     "mc_quantile_containment_r_opt",
+    "double_rayleigh_A",
+    "double_rayleigh_sigma1_deg",
+    "double_rayleigh_sigma2_deg",
+    "double_rayleigh_sigma_eq_deg",
+    "double_rayleigh_r_opt_deg",
+    "double_rayleigh_containment_r_opt",
+    "double_rayleigh_model_containment_r_opt",
+    "double_rayleigh_chi2",
+    "double_rayleigh_ndof",
+    "double_rayleigh_chi2_ndof",
 ]
 
 
@@ -193,6 +209,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--observed-profile-summary-csv", type=str, default=DEFAULT_OBSERVED_PROFILE_SUMMARY_CSV)
     parser.add_argument("--observed-stage-b-source-npz", type=str, default=None)
     parser.add_argument("--observed-stage-b-source-metadata", type=str, default=None)
+    parser.add_argument("--double-rayleigh-stage-b-source-npz", type=str, default=None)
+    parser.add_argument("--double-rayleigh-stage-b-source-metadata", type=str, default=None)
     parser.add_argument("--observed-pedestal-min-deg", type=float, default=2.5)
     parser.add_argument("--observed-max-r-opt-over-rayleigh", type=float, default=2.5)
     parser.add_argument("--observed-max-r-opt-over-mc-quantile", type=float, default=2.0)
@@ -498,6 +516,327 @@ def shell_quantile_radius(edges_deg: np.ndarray, shell_values: np.ndarray, quant
     return radius, total
 
 
+def stable_logit(value: float) -> float:
+    clipped = min(max(float(value), 1.0e-6), 1.0 - 1.0e-6)
+    return math.log(clipped / (1.0 - clipped))
+
+
+def stable_sigmoid(value: float) -> float:
+    x = float(value)
+    if x >= 0.0:
+        z = math.exp(-x)
+        return 1.0 / (1.0 + z)
+    z = math.exp(x)
+    return z / (1.0 + z)
+
+
+def double_rayleigh_pdf_deg(r_deg: np.ndarray, a_core: float, sigma1_deg: float, sigma2_deg: float) -> np.ndarray:
+    r = np.asarray(r_deg, dtype=np.float64)
+    a = float(a_core)
+    s1 = float(sigma1_deg)
+    s2 = float(sigma2_deg)
+    if not (0.0 < a < 1.0 and 0.0 < s1 < s2):
+        return np.full(r.shape, np.nan, dtype=np.float64)
+    r_pos = np.clip(r, 0.0, None)
+    core = a * r_pos / (s1 * s1) * np.exp(-0.5 * (r_pos / s1) ** 2)
+    tail = (1.0 - a) * r_pos / (s2 * s2) * np.exp(-0.5 * (r_pos / s2) ** 2)
+    return core + tail
+
+
+def double_rayleigh_cdf_deg(radius_deg: float, a_core: float, sigma1_deg: float, sigma2_deg: float) -> float:
+    r = float(radius_deg)
+    a = float(a_core)
+    s1 = float(sigma1_deg)
+    s2 = float(sigma2_deg)
+    if not (r >= 0.0 and 0.0 < a < 1.0 and 0.0 < s1 < s2):
+        return float("nan")
+    return float(1.0 - a * math.exp(-0.5 * (r / s1) ** 2) - (1.0 - a) * math.exp(-0.5 * (r / s2) ** 2))
+
+
+def double_rayleigh_radius_for_containment(
+    target: float,
+    *,
+    a_core: float,
+    sigma1_deg: float,
+    sigma2_deg: float,
+) -> float:
+    target_value = float(target)
+    if not (0.0 < target_value < 1.0 and 0.0 < a_core < 1.0 and 0.0 < sigma1_deg < sigma2_deg):
+        return float("nan")
+    high = max(RAYLEIGH_OPT_RADIUS_FACTOR * float(sigma2_deg), RAYLEIGH_OPT_RADIUS_FACTOR * float(sigma1_deg), 1.0e-6)
+    for _ in range(40):
+        cdf = double_rayleigh_cdf_deg(high, a_core, sigma1_deg, sigma2_deg)
+        if np.isfinite(cdf) and cdf >= target_value:
+            break
+        high *= 1.8
+    else:
+        return float("nan")
+    low = 0.0
+    for _ in range(64):
+        mid = 0.5 * (low + high)
+        cdf = double_rayleigh_cdf_deg(mid, a_core, sigma1_deg, sigma2_deg)
+        if not np.isfinite(cdf):
+            return float("nan")
+        if cdf < target_value:
+            low = mid
+        else:
+            high = mid
+    return float(high)
+
+
+def weighted_profile_for_fit(
+    r_deg: np.ndarray,
+    weight: np.ndarray,
+    profile_edges_deg: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float, float]:
+    valid = np.isfinite(r_deg) & (r_deg >= 0.0) & np.isfinite(weight) & (weight > 0.0)
+    edges = np.asarray(profile_edges_deg, dtype=np.float64)
+    if not np.any(valid):
+        zeros = np.zeros(edges.size - 1, dtype=np.float64)
+        return 0.5 * (edges[:-1] + edges[1:]), zeros, zeros, zeros, 0.0, 0.0
+    hist, _ = np.histogram(r_deg[valid], bins=edges, weights=weight[valid])
+    hist_w2, _ = np.histogram(r_deg[valid], bins=edges, weights=weight[valid] ** 2)
+    total = float(np.sum(hist))
+    widths = np.diff(edges)
+    centers = 0.5 * (edges[:-1] + edges[1:])
+    if total <= 0.0:
+        zeros = np.zeros(edges.size - 1, dtype=np.float64)
+        return centers, zeros, zeros, hist, 0.0, 0.0
+    density = np.divide(hist, total * widths, out=np.zeros_like(hist, dtype=np.float64), where=widths > 0.0)
+    sigma_density = np.divide(
+        np.sqrt(np.clip(hist_w2, 0.0, None)),
+        total * widths,
+        out=np.zeros_like(hist_w2, dtype=np.float64),
+        where=widths > 0.0,
+    )
+    sumw2 = float(np.sum(hist_w2))
+    neff = (total * total / sumw2) if sumw2 > 0.0 else 0.0
+    return centers, density, sigma_density, hist, total, float(neff)
+
+
+def fit_double_rayleigh_mixture(
+    r_deg: np.ndarray,
+    weight: np.ndarray,
+    profile_edges_deg: np.ndarray,
+    *,
+    rayleigh_sigma_deg: float,
+) -> Dict[str, object]:
+    centers, density, sigma_density, hist, total, profile_neff = weighted_profile_for_fit(r_deg, weight, profile_edges_deg)
+    positive_bins = (hist > 0.0) & np.isfinite(density)
+    if total <= 0.0:
+        return {"status": "fallback", "reason": "double_rayleigh_empty_weighted_profile"}
+    if int(np.count_nonzero(positive_bins)) < 6:
+        return {
+            "status": "fallback",
+            "reason": f"double_rayleigh_positive_profile_bins_below_min:{int(np.count_nonzero(positive_bins))}<6",
+            "profile_effective_events": profile_neff,
+        }
+
+    try:
+        from scipy.optimize import least_squares
+    except Exception as exc:  # pragma: no cover - depends on runtime environment.
+        return {"status": "fallback", "reason": f"double_rayleigh_scipy_unavailable:{type(exc).__name__}"}
+
+    edges = np.asarray(profile_edges_deg, dtype=np.float64)
+    fit_max_deg = float(edges[-1])
+    fit_mask = positive_bins & (centers > 0.0)
+    if int(np.count_nonzero(fit_mask)) < 6:
+        return {
+            "status": "fallback",
+            "reason": f"double_rayleigh_fit_bins_below_min:{int(np.count_nonzero(fit_mask))}<6",
+            "profile_effective_events": profile_neff,
+        }
+
+    x_fit = centers[fit_mask]
+    y_fit = density[fit_mask]
+    err_fit = sigma_density[fit_mask]
+    positive_err = err_fit[np.isfinite(err_fit) & (err_fit > 0.0)]
+    err_floor = float(np.nanmedian(positive_err) * 0.5) if positive_err.size else float("nan")
+    if not np.isfinite(err_floor) or err_floor <= 0.0:
+        err_floor = max(float(np.nanmedian(y_fit[y_fit > 0.0])) * 0.05 if np.any(y_fit > 0.0) else 1.0, 1.0e-9)
+    err_fit = np.maximum(np.where(np.isfinite(err_fit), err_fit, err_floor), err_floor)
+
+    sigma_min = max(float(np.nanmin(np.diff(edges))) * 0.05, 1.0e-4)
+    sigma_seed = float(rayleigh_sigma_deg) if np.isfinite(rayleigh_sigma_deg) and rayleigh_sigma_deg > 0.0 else float("nan")
+    if not np.isfinite(sigma_seed) or sigma_seed <= 0.0:
+        q68 = stage02.weighted_quantile(r_deg, [0.68], weight)[0]
+        sigma_seed = float(q68 / math.sqrt(-2.0 * math.log(1.0 - 0.68))) if np.isfinite(q68) else 0.25
+    sigma_seed = max(float(sigma_seed), sigma_min * 2.0)
+    sigma_max = max(fit_max_deg * 4.0, sigma_seed * 20.0, 5.0)
+    delta_min = sigma_min * 0.2
+    delta_max = sigma_max
+    lower = np.asarray([-8.0, math.log(sigma_min), math.log(delta_min)], dtype=np.float64)
+    upper = np.asarray([8.0, math.log(sigma_max), math.log(delta_max)], dtype=np.float64)
+
+    q_rad = stage02.weighted_quantile(np.radians(r_deg), [0.50, 0.68, 0.90, 0.95], weight)
+    q_deg = np.degrees(q_rad)
+    q68_sigma = (
+        float(q_deg[1]) / math.sqrt(-2.0 * math.log(1.0 - 0.68))
+        if q_deg.size > 1 and np.isfinite(q_deg[1]) and q_deg[1] > 0.0
+        else sigma_seed
+    )
+    q90_sigma = (
+        float(q_deg[2]) / math.sqrt(-2.0 * math.log(1.0 - 0.90))
+        if q_deg.size > 2 and np.isfinite(q_deg[2]) and q_deg[2] > 0.0
+        else sigma_seed * 1.8
+    )
+    q95_sigma = (
+        float(q_deg[3]) / math.sqrt(-2.0 * math.log(1.0 - 0.95))
+        if q_deg.size > 3 and np.isfinite(q_deg[3]) and q_deg[3] > 0.0
+        else sigma_seed * 2.2
+    )
+
+    def normalize_start(a_core: float, sigma1: float, sigma2: float) -> Tuple[float, float, float]:
+        a = min(max(float(a_core), 0.02), 0.98)
+        s1 = min(max(float(sigma1), sigma_min), sigma_max * 0.95)
+        s2 = min(max(float(sigma2), s1 + delta_min), sigma_max)
+        if s2 <= s1:
+            s2 = min(sigma_max, s1 + max(delta_min, 0.25 * s1))
+        return a, s1, s2
+
+    starts = [
+        normalize_start(0.85, 0.75 * sigma_seed, 1.80 * sigma_seed),
+        normalize_start(0.70, 0.60 * sigma_seed, 2.50 * sigma_seed),
+        normalize_start(0.55, 0.50 * sigma_seed, 3.50 * sigma_seed),
+        normalize_start(0.90, min(q68_sigma, sigma_seed), max(q90_sigma, 1.60 * sigma_seed)),
+        normalize_start(0.65, min(q68_sigma, 0.80 * sigma_seed), max(q95_sigma, 2.20 * sigma_seed)),
+    ]
+
+    def pack(a_core: float, sigma1: float, sigma2: float) -> np.ndarray:
+        delta = max(float(sigma2) - float(sigma1), delta_min)
+        return np.asarray([stable_logit(a_core), math.log(float(sigma1)), math.log(delta)], dtype=np.float64)
+
+    def unpack(params: np.ndarray) -> Tuple[float, float, float]:
+        a = stable_sigmoid(float(params[0]))
+        s1 = math.exp(float(params[1]))
+        s2 = s1 + math.exp(float(params[2]))
+        return a, s1, s2
+
+    def residual(params: np.ndarray) -> np.ndarray:
+        a, s1, s2 = unpack(params)
+        cdf_max = double_rayleigh_cdf_deg(fit_max_deg, a, s1, s2)
+        if not np.isfinite(cdf_max) or cdf_max <= 1.0e-6:
+            return np.full(x_fit.shape, 1.0e6, dtype=np.float64)
+        model = double_rayleigh_pdf_deg(x_fit, a, s1, s2) / cdf_max
+        out = (model - y_fit) / err_fit
+        return np.where(np.isfinite(out), out, 1.0e6)
+
+    best = None
+    for start in starts:
+        x0 = np.clip(pack(*start), lower + 1.0e-9, upper - 1.0e-9)
+        try:
+            result = least_squares(
+                residual,
+                x0,
+                bounds=(lower, upper),
+                loss="soft_l1",
+                f_scale=1.0,
+                max_nfev=2500,
+            )
+        except Exception:
+            continue
+        raw_residual = residual(result.x)
+        chi2 = float(np.sum(raw_residual * raw_residual))
+        candidate = (chi2, result)
+        if best is None or candidate[0] < best[0]:
+            best = candidate
+
+    if best is None:
+        return {"status": "fallback", "reason": "double_rayleigh_optimizer_failed", "profile_effective_events": profile_neff}
+
+    chi2, result = best
+    a_fit, sigma1_fit, sigma2_fit = unpack(result.x)
+    r_opt_deg = double_rayleigh_radius_for_containment(
+        TARGET_CONTAINMENT,
+        a_core=a_fit,
+        sigma1_deg=sigma1_fit,
+        sigma2_deg=sigma2_fit,
+    )
+    if not (
+        result.success
+        and np.isfinite(r_opt_deg)
+        and r_opt_deg > 0.0
+        and np.isfinite(a_fit)
+        and 0.0 < a_fit < 1.0
+        and np.isfinite(sigma1_fit)
+        and np.isfinite(sigma2_fit)
+        and 0.0 < sigma1_fit < sigma2_fit
+    ):
+        return {
+            "status": "fallback",
+            "reason": f"double_rayleigh_invalid_fit:{result.message}",
+            "profile_effective_events": profile_neff,
+        }
+
+    ndof = max(0, int(np.count_nonzero(fit_mask)) - 3)
+    return {
+        "status": "ok",
+        "reason": "double_rayleigh_profile_fit",
+        "A": float(a_fit),
+        "sigma1_deg": float(sigma1_fit),
+        "sigma2_deg": float(sigma2_fit),
+        "sigma_eq_deg": float(r_opt_deg / RAYLEIGH_OPT_RADIUS_FACTOR),
+        "r_opt_deg": float(r_opt_deg),
+        "model_containment_r_opt": float(TARGET_CONTAINMENT),
+        "chi2": float(chi2),
+        "ndof": int(ndof),
+        "chi2_ndof": float(chi2 / ndof) if ndof > 0 else None,
+        "positive_profile_bins": int(np.count_nonzero(positive_bins)),
+        "fit_profile_bins": int(np.count_nonzero(fit_mask)),
+        "profile_effective_events": float(profile_neff),
+        "optimizer_nfev": int(result.nfev),
+        "optimizer_status": int(result.status),
+        "optimizer_message": str(result.message),
+    }
+
+
+def fit_double_rayleigh_mixture_from_profile_density(
+    profile_density: np.ndarray,
+    profile_edges_deg: np.ndarray,
+    *,
+    rayleigh_sigma_deg: float,
+) -> Dict[str, object]:
+    edges = np.asarray(profile_edges_deg, dtype=np.float64)
+    density = np.asarray(profile_density, dtype=np.float64)
+    if edges.size != density.size + 1:
+        return {"status": "fallback", "reason": "double_rayleigh_source_profile_shape_mismatch"}
+    widths = np.diff(edges)
+    centers = 0.5 * (edges[:-1] + edges[1:])
+    pseudo_weight = np.clip(np.where(np.isfinite(density), density, 0.0), 0.0, None) * widths
+    if float(np.sum(pseudo_weight)) <= 0.0:
+        return {"status": "fallback", "reason": "double_rayleigh_source_profile_empty"}
+    return fit_double_rayleigh_mixture(
+        centers,
+        pseudo_weight,
+        edges,
+        rayleigh_sigma_deg=rayleigh_sigma_deg,
+    )
+
+
+def profile_density_containment(profile_density: np.ndarray, profile_edges_deg: np.ndarray, radius_deg: float) -> float:
+    edges = np.asarray(profile_edges_deg, dtype=np.float64)
+    density = np.asarray(profile_density, dtype=np.float64)
+    if edges.size != density.size + 1:
+        return float("nan")
+    r = float(radius_deg)
+    if not np.isfinite(r) or r < 0.0:
+        return float("nan")
+    widths = np.diff(edges)
+    mass = np.clip(np.where(np.isfinite(density), density, 0.0), 0.0, None) * widths
+    total = float(np.sum(mass))
+    if total <= 0.0:
+        return float("nan")
+    full = edges[1:] <= r
+    contained = float(np.sum(mass[full]))
+    partial = np.nonzero((edges[:-1] < r) & (r < edges[1:]))[0]
+    if partial.size:
+        idx = int(partial[0])
+        width = float(widths[idx])
+        if width > 0.0:
+            contained += float(mass[idx]) * (r - float(edges[idx])) / width
+    return float(min(max(contained / total, 0.0), 1.0))
+
+
 def load_observed_profile_summary(summary_csv: Path) -> Dict[int, Dict[str, str]]:
     if not summary_csv.exists():
         return {}
@@ -782,6 +1121,9 @@ def method_choice(method: str, row: Dict[str, object]) -> Tuple[float, float]:
     elif method == "observed_data":
         r_opt = finite_float(row.get("observed_data_r715_deg"))
         containment = finite_float(row.get("observed_data_containment_r_opt"))
+    elif method == "double_rayleigh_mixture":
+        r_opt = finite_float(row.get("double_rayleigh_r_opt_deg"))
+        containment = finite_float(row.get("double_rayleigh_containment_r_opt"))
     else:
         raise ValueError(f"Unsupported PSF method: {method}")
     if r_opt is None or r_opt <= 0.0:
@@ -808,6 +1150,11 @@ def apply_method_to_row(row: Dict[str, object], method: str, *, containment_warn
         out["fit_quality"] = row.get("mc_quantile_fit_quality", row.get("fit_quality", "ok"))
     elif method == "observed_data":
         out["fit_quality"] = row.get("observed_data_fit_quality", row.get("fit_quality", "ok"))
+    elif method == "double_rayleigh_mixture":
+        out["fit_quality"] = row.get("double_rayleigh_fit_quality", row.get("fit_quality", "ok"))
+        sigma_eq = finite_float(row.get("double_rayleigh_sigma_eq_deg"))
+        if sigma_eq is not None:
+            out["sigma_eff_deg"] = float(sigma_eq)
     else:
         out["fit_quality"] = row.get("rayleigh_fit_quality", row.get("fit_quality", "ok"))
     if out.get("psf_borrowed"):
@@ -849,6 +1196,21 @@ def fallback_row(
     row["observed_data_fallback"] = True
     row["observed_data_fallback_reason"] = reason
     row["observed_data_profile_source"] = "fallback_low_stat"
+    row["double_rayleigh_A"] = None
+    row["double_rayleigh_sigma1_deg"] = float(sigma_deg)
+    row["double_rayleigh_sigma2_deg"] = None
+    row["double_rayleigh_sigma_eq_deg"] = float(r_opt_deg / RAYLEIGH_OPT_RADIUS_FACTOR)
+    row["double_rayleigh_r_opt_deg"] = float(r_opt_deg)
+    row["double_rayleigh_containment_r_opt"] = float(TARGET_CONTAINMENT)
+    row["double_rayleigh_model_containment_r_opt"] = float(TARGET_CONTAINMENT)
+    row["double_rayleigh_fit_quality"] = f"fallback:{reason}"
+    row["double_rayleigh_fallback_reason"] = reason
+    row["double_rayleigh_chi2"] = None
+    row["double_rayleigh_ndof"] = None
+    row["double_rayleigh_chi2_ndof"] = None
+    row["double_rayleigh_positive_profile_bins"] = None
+    row["double_rayleigh_fit_profile_bins"] = None
+    row["double_rayleigh_profile_effective_events"] = None
     row["rayleigh_fit_quality"] = f"fallback:{reason}"
     row["two_1d_gaussian_fit_quality"] = f"fallback:{reason}"
     row["mc_quantile_fit_quality"] = f"fallback:{reason}"
@@ -1101,6 +1463,23 @@ def _process_cell_v5(
         radial_quadrature=two1d_radial_quadrature,
         angle_samples=two1d_angle_samples,
     )
+    double_fit = fit_double_rayleigh_mixture(
+        np.degrees(events.dangle_rad),
+        full_weight,
+        profile_edges_deg,
+        rayleigh_sigma_deg=float(math.degrees(sigma_rad)),
+    )
+    double_fit_ok = double_fit.get("status") == "ok"
+    double_rayleigh_r_opt_deg = (
+        float(double_fit["r_opt_deg"])
+        if double_fit_ok and finite_float(double_fit.get("r_opt_deg")) is not None
+        else float(rayleigh_r_opt_deg)
+    )
+    double_rayleigh_fit_quality = (
+        "ok"
+        if double_fit_ok
+        else f"fallback:{double_fit.get('reason', 'double_rayleigh_fit_failed')}"
+    )
 
     rayleigh_containment = empirical_containment(events.dangle_rad, full_weight, math.radians(rayleigh_r_opt_deg))
     two1d_containment = empirical_containment(events.dangle_rad, full_weight, math.radians(two1d_r715_deg))
@@ -1109,6 +1488,7 @@ def _process_cell_v5(
         if np.isfinite(mc_quantile_r715_deg) and mc_quantile_r715_deg > 0.0
         else float("nan")
     )
+    double_rayleigh_containment = empirical_containment(events.dangle_rad, full_weight, math.radians(double_rayleigh_r_opt_deg))
     observed_aperture = observed_profile_aperture(
         cell_id=int(cell.cell_id),
         observed_profiles=observed_profiles,
@@ -1158,6 +1538,9 @@ def _process_cell_v5(
         else:
             r_opt_deg = observed_data_r715_deg
             r715_deg = observed_data_r715_deg
+    elif active_method == "double_rayleigh_mixture":
+        r_opt_deg = double_rayleigh_r_opt_deg
+        r715_deg = double_rayleigh_r_opt_deg
     else:
         raise ValueError(f"Unsupported psf_method: {psf_method}")
 
@@ -1248,21 +1631,49 @@ def _process_cell_v5(
         "observed_data_pedestal_per_deg2": finite_float(observed_aperture.get("pedestal_per_deg2")),
         "observed_data_r_opt_over_rayleigh": finite_float(observed_aperture.get("r_opt_over_rayleigh")),
         "observed_data_r_opt_over_mc_quantile": finite_float(observed_aperture.get("r_opt_over_mc_quantile")),
+        "double_rayleigh_A": finite_float(double_fit.get("A")),
+        "double_rayleigh_sigma1_deg": (
+            finite_float(double_fit.get("sigma1_deg"))
+            if double_fit_ok
+            else float(math.degrees(sigma_rad))
+        ),
+        "double_rayleigh_sigma2_deg": finite_float(double_fit.get("sigma2_deg")),
+        "double_rayleigh_sigma_eq_deg": (
+            finite_float(double_fit.get("sigma_eq_deg"))
+            if double_fit_ok
+            else float(double_rayleigh_r_opt_deg / RAYLEIGH_OPT_RADIUS_FACTOR)
+        ),
+        "double_rayleigh_r_opt_deg": float(double_rayleigh_r_opt_deg),
+        "double_rayleigh_containment_r_opt": float(double_rayleigh_containment),
+        "double_rayleigh_model_containment_r_opt": finite_float(double_fit.get("model_containment_r_opt")) or float(TARGET_CONTAINMENT),
+        "double_rayleigh_fit_quality": double_rayleigh_fit_quality,
+        "double_rayleigh_fallback_reason": "" if double_fit_ok else str(double_fit.get("reason", "double_rayleigh_fit_failed")),
+        "double_rayleigh_chi2": finite_float(double_fit.get("chi2")),
+        "double_rayleigh_ndof": finite_float(double_fit.get("ndof")),
+        "double_rayleigh_chi2_ndof": finite_float(double_fit.get("chi2_ndof")),
+        "double_rayleigh_positive_profile_bins": finite_float(double_fit.get("positive_profile_bins")),
+        "double_rayleigh_fit_profile_bins": finite_float(double_fit.get("fit_profile_bins")),
+        "double_rayleigh_profile_effective_events": finite_float(double_fit.get("profile_effective_events")),
         "rayleigh_fit_quality": "ok",
         "two_1d_gaussian_fit_quality": fit_quality,
         "mc_quantile_fit_quality": "ok" if np.isfinite(mc_quantile_r715_deg) and mc_quantile_r715_deg > 0.0 else "invalid_mc_quantile_r715",
     }
+    method_sigma_eff_deg = sigma_eff_deg
+    method_fit_quality = fit_quality
+    if active_method == "double_rayleigh_mixture":
+        method_sigma_eff_deg = float(row["double_rayleigh_sigma_eq_deg"])
+        method_fit_quality = double_rayleigh_fit_quality
     add_method_fields(
         row,
         psf_method=active_method,
         r715_deg=r715_deg,
-        sigma_eff_deg=sigma_eff_deg,
+        sigma_eff_deg=method_sigma_eff_deg,
         sigma_x_deg=sigma_x_deg,
         sigma_y_deg=sigma_y_deg,
         mu_x_deg=mu_x_deg,
         mu_y_deg=mu_y_deg,
         mc_quantile_r715_deg=mc_quantile_r715_deg,
-        fit_quality=fit_quality,
+        fit_quality=method_fit_quality,
         containment_r_opt=containment,
     )
     return row, profile_density
@@ -1451,6 +1862,21 @@ def write_summary_csv(path_: Path, rows: Sequence[Dict[str, object]]) -> None:
         "observed_data_fallback",
         "observed_data_fallback_reason",
         "observed_data_profile_source",
+        "double_rayleigh_A",
+        "double_rayleigh_sigma1_deg",
+        "double_rayleigh_sigma2_deg",
+        "double_rayleigh_sigma_eq_deg",
+        "double_rayleigh_r_opt_deg",
+        "double_rayleigh_containment_r_opt",
+        "double_rayleigh_model_containment_r_opt",
+        "double_rayleigh_fit_quality",
+        "double_rayleigh_fallback_reason",
+        "double_rayleigh_chi2",
+        "double_rayleigh_ndof",
+        "double_rayleigh_chi2_ndof",
+        "double_rayleigh_positive_profile_bins",
+        "double_rayleigh_fit_profile_bins",
+        "double_rayleigh_profile_effective_events",
         "target_containment",
         "containment_r_opt",
         "r68_deg",
@@ -1481,14 +1907,15 @@ def write_summary_md(path_: Path, metadata: Dict[str, object], rows: Sequence[Di
         handle.write(f"- Cells: {metadata['n_cells']}\n")
         handle.write(f"- Output NPZ: `{metadata['outputs']['npz']}`\n")
         handle.write(f"- Borrow policy: `{metadata['psf_comparison']['borrow_policy']['status']}`\n\n")
-        handle.write("| cell | Nhit | predE | r_opt deg | ray sigma | sigma_x | sigma_y | MC q | observed q | containment | quality | borrowed |\n")
-        handle.write("| ---: | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |\n")
+        handle.write("| cell | Nhit | predE | r_opt deg | ray sigma | sigma_x | sigma_y | MC q | observed q | double q | containment | quality | borrowed |\n")
+        handle.write("| ---: | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |\n")
         for row in rows:
             handle.write(
                 f"| {row['cell_id']} | {row['nhit_bin']} | {row['predE_bin']} | "
                 f"{float(row['r_opt_deg']):.6g} | {float(row['sigma_deg']):.6g} | "
                 f"{float(row['sigma_x_deg']):.6g} | {float(row['sigma_y_deg']):.6g} | "
                 f"{float(row['mc_quantile_r715_deg']):.6g} | {float(row['observed_data_r715_deg']):.6g} | "
+                f"{float(row['double_rayleigh_r_opt_deg']):.6g} | "
                 f"{float(row['containment_r_opt']):.6g} | "
                 f"{row.get('fit_quality', '')} | {row.get('borrowed_from', '')} |\n"
             )
@@ -1546,6 +1973,21 @@ def save_npz(path_: Path, rows: Sequence[Dict[str, object]], cells: Sequence[obj
         observed_data_fallback=np.asarray([bool(row.get("observed_data_fallback", False)) for row in rows], dtype=bool),
         observed_data_fallback_reason=string_array(rows, "observed_data_fallback_reason", width=128),
         observed_data_profile_source=string_array(rows, "observed_data_profile_source", width=96),
+        double_rayleigh_A=metric_array(rows, "double_rayleigh_A").astype(np.float32),
+        double_rayleigh_sigma1_deg=metric_array(rows, "double_rayleigh_sigma1_deg").astype(np.float32),
+        double_rayleigh_sigma2_deg=metric_array(rows, "double_rayleigh_sigma2_deg").astype(np.float32),
+        double_rayleigh_sigma_eq_deg=metric_array(rows, "double_rayleigh_sigma_eq_deg").astype(np.float32),
+        double_rayleigh_r_opt_deg=metric_array(rows, "double_rayleigh_r_opt_deg").astype(np.float32),
+        double_rayleigh_containment_r_opt=metric_array(rows, "double_rayleigh_containment_r_opt").astype(np.float32),
+        double_rayleigh_model_containment_r_opt=metric_array(rows, "double_rayleigh_model_containment_r_opt").astype(np.float32),
+        double_rayleigh_fit_quality=string_array(rows, "double_rayleigh_fit_quality", width=128),
+        double_rayleigh_fallback_reason=string_array(rows, "double_rayleigh_fallback_reason", width=160),
+        double_rayleigh_chi2=metric_array(rows, "double_rayleigh_chi2").astype(np.float32),
+        double_rayleigh_ndof=metric_array(rows, "double_rayleigh_ndof").astype(np.float32),
+        double_rayleigh_chi2_ndof=metric_array(rows, "double_rayleigh_chi2_ndof").astype(np.float32),
+        double_rayleigh_positive_profile_bins=metric_array(rows, "double_rayleigh_positive_profile_bins").astype(np.float32),
+        double_rayleigh_fit_profile_bins=metric_array(rows, "double_rayleigh_fit_profile_bins").astype(np.float32),
+        double_rayleigh_profile_effective_events=metric_array(rows, "double_rayleigh_profile_effective_events").astype(np.float32),
         fit_quality=string_array(rows, "fit_quality", width=96),
         psf_borrowed=np.asarray([bool(row.get("psf_borrowed", False)) for row in rows], dtype=bool),
         borrowed_from=string_array(rows, "borrowed_from", width=32),
@@ -1670,6 +2112,7 @@ def build_metadata(
                 "two_1d_gaussian": "Weighted x/y tangent-plane Gaussian core fit; r_opt solves circular 2D Gaussian containment at target_containment.",
                 "mc_quantile_715": "Crab-theta-reweighted empirical mc_dangle quantile at target_containment.",
                 "observed_data": "Pedestal-subtracted observed Crab excess radial-profile quantile at target_containment; fallback to Rayleigh for unreliable or divergent profiles.",
+                "double_rayleigh_mixture": "Two-component circular 2D-Gaussian / double-Rayleigh radial mixture fit to the Crab-theta-weighted MC radial profile; r_opt solves the mixture CDF at target_containment.",
             },
             "radial_residual_branch": "mc_dangle",
             "observed_data_profile": {
@@ -1939,6 +2382,12 @@ def rows_from_stage_b_source(
         row["two_1d_gaussian_r715_deg"] = finite_float(row.get("two_1d_gaussian_r715_deg")) or finite_float(row.get("r_opt_deg")) or float("nan")
         row["two_1d_gaussian_containment_r_opt"] = finite_float(row.get("two_1d_gaussian_containment_r_opt")) or finite_float(row.get("containment_r_opt")) or TARGET_CONTAINMENT
         row["mc_quantile_containment_r_opt"] = finite_float(row.get("mc_quantile_containment_r_opt")) or TARGET_CONTAINMENT
+        row["observed_data_r715_deg"] = finite_float(row.get("observed_data_r715_deg")) or finite_float(row.get("r_opt_deg")) or float("nan")
+        row["observed_data_containment_r_opt"] = finite_float(row.get("observed_data_containment_r_opt")) or finite_float(row.get("containment_r_opt")) or TARGET_CONTAINMENT
+        row["observed_data_fit_quality"] = row.get("observed_data_fit_quality", "not_recomputed_from_source_stage_b")
+        row["observed_data_fallback"] = bool(row.get("observed_data_fallback", False))
+        row["observed_data_fallback_reason"] = row.get("observed_data_fallback_reason", "")
+        row["observed_data_profile_source"] = row.get("observed_data_profile_source", "source_stage_b_profile")
         row["rayleigh_fit_quality"] = row.get("rayleigh_fit_quality", row.get("fit_quality", "ok"))
         row["two_1d_gaussian_fit_quality"] = row.get("two_1d_gaussian_fit_quality", "not_recomputed_from_source_stage_b")
         row["mc_quantile_fit_quality"] = row.get("mc_quantile_fit_quality", "ok")
@@ -2095,6 +2544,149 @@ def write_observed_data_from_stage_b_source(
         print(f"Warnings recorded for {len(warning_rows)} cells in {method}; inspect metadata warning_rows.")
 
 
+def write_double_rayleigh_from_stage_b_source(
+    *,
+    args: argparse.Namespace,
+    start_time: float,
+) -> None:
+    source_npz = path(args.double_rayleigh_stage_b_source_npz)
+    source_meta_path = (
+        path(args.double_rayleigh_stage_b_source_metadata)
+        if args.double_rayleigh_stage_b_source_metadata
+        else source_npz.with_name(source_npz.stem + "_metadata.json")
+    )
+    if not source_npz.exists():
+        raise FileNotFoundError(f"Missing double-Rayleigh source Stage B NPZ: {source_npz}")
+    if not source_meta_path.exists():
+        raise FileNotFoundError(f"Missing double-Rayleigh source Stage B metadata: {source_meta_path}")
+
+    arrays = load_npz_arrays(source_npz)
+    source_metadata = json.loads(source_meta_path.read_text(encoding="utf-8"))
+    cells, rows, profile_density, profile_edges_deg, theta_edges_deg, crab_prob = rows_from_stage_b_source(arrays, source_metadata)
+
+    for idx, row in enumerate(rows):
+        sigma_deg = finite_float(row.get("sigma_deg"))
+        rayleigh_r = finite_float(row.get("rayleigh_baseline_r715_deg")) or finite_float(row.get("r_opt_deg"))
+        if sigma_deg is None or sigma_deg <= 0.0:
+            sigma_deg = (float(rayleigh_r) / RAYLEIGH_OPT_RADIUS_FACTOR) if rayleigh_r is not None and rayleigh_r > 0.0 else 1.0
+        if rayleigh_r is None or rayleigh_r <= 0.0:
+            rayleigh_r = RAYLEIGH_OPT_RADIUS_FACTOR * float(sigma_deg)
+
+        fit = fit_double_rayleigh_mixture_from_profile_density(
+            profile_density[idx],
+            profile_edges_deg,
+            rayleigh_sigma_deg=float(sigma_deg),
+        )
+        fit_ok = fit.get("status") == "ok"
+        r_opt_deg = float(fit["r_opt_deg"]) if fit_ok and finite_float(fit.get("r_opt_deg")) is not None else float(rayleigh_r)
+        containment = profile_density_containment(profile_density[idx], profile_edges_deg, r_opt_deg)
+        if not np.isfinite(containment) or containment <= 0.0:
+            containment = float(TARGET_CONTAINMENT)
+
+        row["double_rayleigh_A"] = finite_float(fit.get("A"))
+        row["double_rayleigh_sigma1_deg"] = finite_float(fit.get("sigma1_deg")) if fit_ok else float(sigma_deg)
+        row["double_rayleigh_sigma2_deg"] = finite_float(fit.get("sigma2_deg"))
+        row["double_rayleigh_sigma_eq_deg"] = finite_float(fit.get("sigma_eq_deg")) if fit_ok else float(r_opt_deg / RAYLEIGH_OPT_RADIUS_FACTOR)
+        row["double_rayleigh_r_opt_deg"] = float(r_opt_deg)
+        row["double_rayleigh_containment_r_opt"] = float(containment)
+        row["double_rayleigh_model_containment_r_opt"] = finite_float(fit.get("model_containment_r_opt")) or float(TARGET_CONTAINMENT)
+        row["double_rayleigh_fit_quality"] = "ok" if fit_ok else f"fallback:{fit.get('reason', 'double_rayleigh_fit_failed')}"
+        row["double_rayleigh_fallback_reason"] = "" if fit_ok else str(fit.get("reason", "double_rayleigh_fit_failed"))
+        row["double_rayleigh_chi2"] = finite_float(fit.get("chi2"))
+        row["double_rayleigh_ndof"] = finite_float(fit.get("ndof"))
+        row["double_rayleigh_chi2_ndof"] = finite_float(fit.get("chi2_ndof"))
+        row["double_rayleigh_positive_profile_bins"] = finite_float(fit.get("positive_profile_bins"))
+        row["double_rayleigh_fit_profile_bins"] = finite_float(fit.get("fit_profile_bins"))
+        row["double_rayleigh_profile_effective_events"] = finite_float(fit.get("profile_effective_events"))
+
+    method = "double_rayleigh_mixture"
+    output_root = path(args.output_dir)
+    output_root.mkdir(parents=True, exist_ok=True)
+    run_id = stage02.sanitize_run_id(args.run_id or "v5_psf_double_rayleigh_mixture_drop4")
+    run_dir = stage02.prepare_run_output_dir(output_root, run_id, overwrite_run_dir=bool(args.overwrite_run_dir))
+    rows = [apply_method_to_row(row, method, containment_warning_tolerance=float(args.containment_warning_tolerance)) for row in rows]
+    borrow_records = apply_borrow_policy(rows, profile_density, enabled=not bool(args.no_borrow_v3_fallback_psf))
+    rows = [apply_method_to_row(row, method, containment_warning_tolerance=float(args.containment_warning_tolerance)) for row in rows]
+
+    npz_path = run_dir / args.npz_name
+    metadata_path = run_dir / args.metadata_name
+    summary_csv_path = run_dir / args.summary_csv_name
+    summary_md_path = run_dir / args.summary_md_name
+    save_npz(npz_path, rows, cells, profile_density, theta_edges_deg, crab_prob, profile_edges_deg)
+    plot_outputs = (
+        stage02.write_plots(run_dir, rows=rows, cells=cells, profile_density=profile_density, profile_edges_deg=profile_edges_deg)
+        if not args.no_plots
+        else {}
+    )
+    warning_rows = [
+        {
+            "cell_id": row["cell_id"],
+            "containment_warning": row.get("containment_warning"),
+            "angle_check_warning": row.get("angle_check_warning"),
+            "fit_quality": row.get("fit_quality"),
+            "double_rayleigh_fallback_reason": row.get("double_rayleigh_fallback_reason"),
+            "psf_borrowed": row.get("psf_borrowed"),
+        }
+        for row in rows
+        if row.get("containment_warning")
+        or row.get("angle_check_warning")
+        or row.get("fit_quality") != "ok"
+        or row.get("double_rayleigh_fallback_reason")
+        or row.get("psf_borrowed")
+    ]
+    source_snapshot = source_metadata.get("stage_a_snapshot") if isinstance(source_metadata, dict) else {}
+    metadata = build_metadata(
+        args=args,
+        method=method,
+        run_id=run_id,
+        run_dir=run_dir,
+        output_root=output_root,
+        binned_root=path(args.binned_root),
+        selection_csv=path(args.cell_selection_csv),
+        stage_a_metadata_path=path(args.stage_a_metadata),
+        stage_a_metadata={"response_snapshot_source": str(source_meta_path), **(source_snapshot if isinstance(source_snapshot, dict) else {})},
+        theta_edges_deg=theta_edges_deg,
+        crab_prob=crab_prob,
+        loge_min=float(source_metadata.get("logE_true_filter", {}).get("min_inclusive", float("nan"))) if isinstance(source_metadata.get("logE_true_filter"), dict) else float("nan"),
+        loge_max=float(source_metadata.get("logE_true_filter", {}).get("max_exclusive", float("nan"))) if isinstance(source_metadata.get("logE_true_filter"), dict) else float("nan"),
+        loge_range_source=f"derived_from:{source_meta_path}",
+        cells=cells,
+        rows=rows,
+        borrow_records=borrow_records,
+        warning_rows=warning_rows,
+        npz_path=npz_path,
+        metadata_path=metadata_path,
+        summary_csv_path=summary_csv_path,
+        summary_md_path=summary_md_path,
+        plot_outputs=plot_outputs,
+        elapsed_seconds=time.perf_counter() - start_time,
+    )
+    metadata["psf_comparison"]["double_rayleigh_mixture_profile"] = {  # type: ignore[index]
+        "source_stage_b_npz": str(source_npz),
+        "source_stage_b_metadata": str(source_meta_path),
+        "derivation_mode": "fit_double_rayleigh_mixture_to_existing_stage_b_profile_density_without_rerunning_mc_event_loop",
+        "aperture_definition": "r_opt solves F(r)=target_containment for the fitted two-component Rayleigh CDF; sigma_eq is diagnostic only",
+    }
+
+    write_summary_csv(summary_csv_path, rows)
+    write_summary_md(summary_md_path, metadata, rows)
+    metadata_path.write_text(json.dumps(json_ready(metadata), indent=2) + "\n", encoding="utf-8")
+    if not args.no_promote_current:
+        stage02.promote_successful_run(output_root, run_dir)
+        metadata["promotion"]["status"] = "promoted"
+        metadata["promotion"]["current_dir"] = str(output_root / "current")
+        metadata["promotion"]["latest"] = str(output_root / "latest")
+    else:
+        metadata["promotion"]["status"] = "skipped"
+    metadata_path.write_text(json.dumps(json_ready(metadata), indent=2) + "\n", encoding="utf-8")
+    print(f"Wrote {npz_path}")
+    print(f"Wrote {summary_csv_path}")
+    print(f"Wrote {summary_md_path}")
+    print(f"Wrote {metadata_path}")
+    if warning_rows:
+        print(f"Warnings recorded for {len(warning_rows)} cells in {method}; inspect metadata warning_rows.")
+
+
 def main() -> None:
     args = parse_args()
     if args.self_test:
@@ -2104,6 +2696,9 @@ def main() -> None:
     start = time.perf_counter()
     if args.psf_method == "observed_data" and args.observed_stage_b_source_npz:
         write_observed_data_from_stage_b_source(args=args, start_time=start)
+        return
+    if args.psf_method == "double_rayleigh_mixture" and args.double_rayleigh_stage_b_source_npz:
+        write_double_rayleigh_from_stage_b_source(args=args, start_time=start)
         return
 
     binned_root = path(args.binned_root)

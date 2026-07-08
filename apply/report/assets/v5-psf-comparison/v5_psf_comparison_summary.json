@@ -507,6 +507,133 @@
         }
       },
       "max_abs_pull": 4.597450982449259
+    },
+    "double_rayleigh_mixture": {
+      "run_id": "v5_psf_double_rayleigh_mixture_drop4",
+      "status": "complete",
+      "paths": {
+        "psf_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v5_psf_compare/runs/v5_psf_double_rayleigh_mixture_drop4/psf_v5_psf_double_rayleigh_mixture_drop4.npz",
+        "psf_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v5_psf_compare/runs/v5_psf_double_rayleigh_mixture_drop4/psf_v5_psf_double_rayleigh_mixture_drop4_metadata.json",
+        "response_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v5_psf_compare/double_rayleigh_mixture/response_2d_v5_psf_double_rayleigh_mixture_drop4.npz",
+        "response_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v5_psf_compare/double_rayleigh_mixture/response_2d_v5_psf_double_rayleigh_mixture_drop4_metadata.json",
+        "stage_d_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v5_psf_compare/runs/v5_psf_double_rayleigh_mixture_drop4/background_v5_psf_double_rayleigh_mixture_drop4.npz",
+        "stage_d_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v5_psf_compare/runs/v5_psf_double_rayleigh_mixture_drop4/background_v5_psf_double_rayleigh_mixture_drop4_metadata.json",
+        "signal_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v5_psf_compare/runs/v5_psf_double_rayleigh_mixture_drop4/signal_v5_psf_double_rayleigh_mixture_drop4.npz",
+        "signal_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v5_psf_compare/runs/v5_psf_double_rayleigh_mixture_drop4/signal_v5_psf_double_rayleigh_mixture_drop4_metadata.json",
+        "fit_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v5_psf_compare/runs/v5_psf_double_rayleigh_mixture_drop4/fit_v5_psf_double_rayleigh_mixture_drop4.npz",
+        "fit_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v5_psf_compare/runs/v5_psf_double_rayleigh_mixture_drop4/fit_v5_psf_double_rayleigh_mixture_drop4_metadata.json",
+        "stage_g_summary": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v5_psf_compare/runs/v5_psf_double_rayleigh_mixture_drop4/sed_points_v5_psf_double_rayleigh_mixture_drop4_summary.csv",
+        "stage_g_meta": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v5_psf_compare/runs/v5_psf_double_rayleigh_mixture_drop4/sed_points_v5_psf_double_rayleigh_mixture_drop4_metadata.json"
+      },
+      "logpar": {
+        "model_name": "logpar",
+        "error_mode": "conservative",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.264882511020806e-12,
+          "alpha": 2.7739067161909783,
+          "beta": 0.09983347618565616
+        },
+        "errors": {
+          "phi0": 6.138405286020038e-14,
+          "alpha": 0.03666209608683735,
+          "beta": 0.025384715609135577
+        },
+        "fit_parameters": {
+          "log10_phi0": -11.644954321747733,
+          "alpha": 2.7739067161909783,
+          "beta": 0.09983347618565616
+        },
+        "fit_parameter_errors": {
+          "log10_phi0": 0.011770480501448688,
+          "alpha": 0.03666209608683735,
+          "beta": 0.025384715609135577
+        },
+        "fit_parameter_names": [
+          "log10_phi0",
+          "alpha",
+          "beta"
+        ],
+        "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+        "covariance": [
+          [
+            0.0001385442411688365,
+            4.329616041726844e-06,
+            0.00013847889326863559
+          ],
+          [
+            4.329616041726844e-06,
+            0.0013441913890325052,
+            0.0007230827042785314
+          ],
+          [
+            0.00013847889326863559,
+            0.0007230827042785314,
+            0.0006444184785173912
+          ]
+        ],
+        "chi2": 129.99605964444257,
+        "ndof": 23,
+        "chi2_over_ndof": 5.652002593236634,
+        "p_value": 6.40751606798746e-17,
+        "minuit_status": {
+          "valid": true,
+          "accurate": true,
+          "fmin_is_valid": true,
+          "has_covariance": true,
+          "has_accurate_covar": true,
+          "edm": 2.940493066512065e-05
+        }
+      },
+      "pl": {
+        "model_name": "pl",
+        "error_mode": "conservative",
+        "valid": true,
+        "parameters": {
+          "phi0": 2.109231682820157e-12,
+          "gamma": 2.6720787634208323
+        },
+        "errors": {
+          "phi0": 4.734202440583016e-14,
+          "gamma": 0.018813637655061166
+        },
+        "fit_parameters": {
+          "log10_phi0": -11.675875713743654,
+          "gamma": 2.6720787634208323
+        },
+        "fit_parameter_errors": {
+          "log10_phi0": 0.00974780538764275,
+          "gamma": 0.018813637655061166
+        },
+        "fit_parameter_names": [
+          "log10_phi0",
+          "gamma"
+        ],
+        "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+        "covariance": [
+          [
+            9.501972394210104e-05,
+            -0.00010050326319523858
+          ],
+          [
+            -0.00010050326319523858,
+            0.00035395873921783763
+          ]
+        ],
+        "chi2": 152.45672307238718,
+        "ndof": 24,
+        "chi2_over_ndof": 6.352363461349466,
+        "p_value": 1.1565559328716002e-20,
+        "minuit_status": {
+          "valid": true,
+          "accurate": true,
+          "fmin_is_valid": true,
+          "has_covariance": true,
+          "has_accurate_covar": true,
+          "edm": 1.0176976251547984e-05
+        }
+      },
+      "max_abs_pull": 5.260856686639597
     }
   },
   "official_forward_fold": {
@@ -515,6 +642,73 @@
     "cell_counts_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/official_pass5_forward_fold_cell_counts.csv",
     "method": "official pass5 dN/dE log-log piecewise interpolation folded through each v5 aperture-conditioned Stage A response and Stage E containment=1 exposure"
   },
+  "main_result": [
+    {
+      "method": "rayleigh_baseline",
+      "status": "complete",
+      "phi0": 2.3678384316162437e-12,
+      "phi0_shift_vs_v4": 0.0,
+      "alpha": 2.76152182132255,
+      "beta": 0.1453590035940586,
+      "chi2": 117.29485852619563,
+      "ndof": 23.0,
+      "chi2_over_ndof": 5.099776457660679,
+      "max_abs_pull": 5.537946645622887,
+      "total_obs_over_pass5": 1.181097741659134
+    },
+    {
+      "method": "two_1d_gaussian",
+      "status": "complete",
+      "phi0": 2.3645488313589265e-12,
+      "phi0_shift_vs_v4": -0.0013892840885565416,
+      "alpha": 2.750994007083663,
+      "beta": 0.14089784177681033,
+      "chi2": 117.2061024066453,
+      "ndof": 23.0,
+      "chi2_over_ndof": 5.0959174959411,
+      "max_abs_pull": 5.487529222652135,
+      "total_obs_over_pass5": 1.1729903158678368
+    },
+    {
+      "method": "mc_quantile_715",
+      "status": "complete",
+      "phi0": 2.610559491856143e-12,
+      "phi0_shift_vs_v4": 0.102507441808106,
+      "alpha": 2.9264634069602975,
+      "beta": 0.29994387099458175,
+      "chi2": 1400.2823920104674,
+      "ndof": 23.0,
+      "chi2_over_ndof": 60.88184313088989,
+      "max_abs_pull": 35.16987136806069,
+      "total_obs_over_pass5": -0.29937415526263705
+    },
+    {
+      "method": "observed_data",
+      "status": "complete",
+      "phi0": 2.5203301474045376e-12,
+      "phi0_shift_vs_v4": 0.0644012335268187,
+      "alpha": 2.831935724193188,
+      "beta": 0.19128953022921388,
+      "chi2": 111.17276166197593,
+      "ndof": 23.0,
+      "chi2_over_ndof": 4.833598333129388,
+      "max_abs_pull": 4.597450982449259,
+      "total_obs_over_pass5": 1.2357899229836413
+    },
+    {
+      "method": "double_rayleigh_mixture",
+      "status": "complete",
+      "phi0": 2.264882511020806e-12,
+      "phi0_shift_vs_v4": -0.04348097371033954,
+      "alpha": 2.7739067161909783,
+      "beta": 0.09983347618565616,
+      "chi2": 129.99605964444257,
+      "ndof": 23.0,
+      "chi2_over_ndof": 5.652002593236634,
+      "max_abs_pull": 5.260856686639597,
+      "total_obs_over_pass5": 1.240259481777077
+    }
+  ],
   "v4_reference": {
     "stage_b_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v3_candidate_psfborrow/runs/v3_psfborrow_from_nominal/psf_v3_candidate.npz",
     "stage_f_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v4_aperture_conditioned/runs/v4_stage_f_aperture_conditioned_drop4/fit_v4_aperture_conditioned_drop4.npz",
@@ -522,13 +716,1524 @@
   },
   "weighted_psf_profiles": {
     "overlay_figure": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_psf_weighted_profile_overlay.png",
-    "profile_source": "Stage B profile_density arrays, normalized by per-cell peak for display; observed_data uses pedestal-subtracted observed excess profiles for accepted data-PSF cells and fallback/borrowed profiles for fallback cells.",
+    "profile_source": "Stage B profile_density arrays, normalized by per-cell peak for display; observed_data uses pedestal-subtracted observed excess profiles for accepted data-PSF cells and fallback/borrowed profiles for fallback cells; double_rayleigh_mixture overlays the fitted mixture PDF in its fit-shaded grid.",
     "fit_shaded_grids": {
       "rayleigh_baseline": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_psf_rayleigh_baseline_weighted_profiles_fit_shaded.png",
       "two_1d_gaussian": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_psf_two_1d_gaussian_weighted_profiles_fit_shaded.png",
       "mc_quantile_715": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_psf_mc_quantile_715_weighted_profiles_fit_shaded.png",
-      "observed_data": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_psf_observed_data_weighted_profiles_fit_shaded.png"
+      "observed_data": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_psf_observed_data_weighted_profiles_fit_shaded.png",
+      "double_rayleigh_mixture": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_psf_double_rayleigh_mixture_weighted_profiles_fit_shaded.png"
     }
+  },
+  "double_rayleigh_mixture_diagnostics": {
+    "status": "available",
+    "median_A": 0.8192664980888367,
+    "median_sigma1_deg": 0.8095760941505432,
+    "median_sigma2_deg": 1.8939391374588013,
+    "median_sigma_eq_deg": 1.0,
+    "median_r_opt_over_rayleigh": 1.0,
+    "min_r_opt_over_rayleigh": 0.42350550531712305,
+    "max_r_opt_over_rayleigh": 91.19948992649027,
+    "borrowed_cells": 3,
+    "focus_cells": [
+      15,
+      27,
+      43,
+      55,
+      65
+    ],
+    "focus_cell_records": [
+      {
+        "cell_id": 15,
+        "nhit_bin": "[200,300)",
+        "predE_bin": "[3,3.25)",
+        "A": 0.9877070188522339,
+        "sigma1_deg": 0.3282585144042969,
+        "sigma2_deg": 1.7750144004821777,
+        "sigma_eq_deg": 0.332114040851593,
+        "r_opt_deg": 0.5247401595115662,
+        "r_opt_over_rayleigh": 0.9595367853648084,
+        "containment_r_opt": 0.7591015100479126,
+        "chi2_ndof": 0.2459869682788849,
+        "fit_quality": "ok",
+        "fallback_reason": "",
+        "psf_borrowed": false,
+        "borrowed_from": ""
+      },
+      {
+        "cell_id": 27,
+        "nhit_bin": "[300,500)",
+        "predE_bin": "[3,3.25)",
+        "A": 0.9989018440246582,
+        "sigma1_deg": 0.2666495144367218,
+        "sigma2_deg": 2.21262788772583,
+        "sigma_eq_deg": 0.2669340670108795,
+        "r_opt_deg": 0.421755850315094,
+        "r_opt_over_rayleigh": 1.0647865675879964,
+        "containment_r_opt": 0.7781566381454468,
+        "chi2_ndof": 0.2557947039604187,
+        "fit_quality": "ok",
+        "fallback_reason": "",
+        "psf_borrowed": false,
+        "borrowed_from": ""
+      },
+      {
+        "cell_id": 43,
+        "nhit_bin": "[500,800)",
+        "predE_bin": "[4.0,4.25)",
+        "A": 0.3981502652168274,
+        "sigma1_deg": 0.1929597407579422,
+        "sigma2_deg": 0.7157262563705444,
+        "sigma_eq_deg": 0.5512756109237671,
+        "r_opt_deg": 0.8710154891014099,
+        "r_opt_over_rayleigh": 0.894191305416267,
+        "containment_r_opt": 0.6729633212089539,
+        "chi2_ndof": 0.060346927493810654,
+        "fit_quality": "ok",
+        "fallback_reason": "",
+        "psf_borrowed": false,
+        "borrowed_from": ""
+      },
+      {
+        "cell_id": 55,
+        "nhit_bin": "[800,1100)",
+        "predE_bin": "[4.0,4.25)",
+        "A": 0.9205586314201355,
+        "sigma1_deg": 0.1653049886226654,
+        "sigma2_deg": 1.2831141948699951,
+        "sigma_eq_deg": 0.18001437187194824,
+        "r_opt_deg": 0.28442272543907166,
+        "r_opt_over_rayleigh": 0.5532390797569413,
+        "containment_r_opt": 0.6957421898841858,
+        "chi2_ndof": 0.2065684199333191,
+        "fit_quality": "ok",
+        "fallback_reason": "",
+        "psf_borrowed": false,
+        "borrowed_from": ""
+      },
+      {
+        "cell_id": 65,
+        "nhit_bin": "[1100,2000)",
+        "predE_bin": "[3.5,3.75)",
+        "A": 0.9937632083892822,
+        "sigma1_deg": 0.13423410058021545,
+        "sigma2_deg": 1.956577181816101,
+        "sigma_eq_deg": 0.13506735861301422,
+        "r_opt_deg": 0.21340642869472504,
+        "r_opt_over_rayleigh": 0.9600472761575433,
+        "containment_r_opt": 0.7132212519645691,
+        "chi2_ndof": 0.1365707367658615,
+        "fit_quality": "borrowed_neighbor_psf",
+        "fallback_reason": "",
+        "psf_borrowed": true,
+        "borrowed_from": "66,67"
+      }
+    ]
+  },
+  "fallback_cells": {
+    "note": "Rows include non-ok fit_quality, observed-data quality-gate fallback, double-Rayleigh fit fallback, and v3/v4 psfborrow cells.",
+    "rows": [
+      [
+        "rayleigh_baseline",
+        12,
+        "[125,200)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:157&lt;1000"
+      ],
+      [
+        "rayleigh_baseline",
+        24,
+        "[200,300)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:203&lt;1000"
+      ],
+      [
+        "rayleigh_baseline",
+        25,
+        "[300,500)",
+        "[2,2.5)",
+        "fallback:events_below_min_events_per_cell:227&lt;1000"
+      ],
+      [
+        "rayleigh_baseline",
+        36,
+        "[300,500)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:433&lt;1000"
+      ],
+      [
+        "rayleigh_baseline",
+        37,
+        "[500,800)",
+        "[2,2.5)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "rayleigh_baseline",
+        38,
+        "[500,800)",
+        "[2.5,3)",
+        "fallback:events_below_min_events_per_cell:913&lt;1000"
+      ],
+      [
+        "rayleigh_baseline",
+        39,
+        "[500,800)",
+        "[3,3.25)",
+        "borrowed_neighbor_psf; psfborrow_from:40"
+      ],
+      [
+        "rayleigh_baseline",
+        48,
+        "[500,800)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:426&lt;1000"
+      ],
+      [
+        "rayleigh_baseline",
+        49,
+        "[800,1100)",
+        "[2,2.5)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "rayleigh_baseline",
+        50,
+        "[800,1100)",
+        "[2.5,3)",
+        "fallback:events_below_min_events_per_cell:5&lt;1000"
+      ],
+      [
+        "rayleigh_baseline",
+        51,
+        "[800,1100)",
+        "[3,3.25)",
+        "fallback:theta_missing_crab_probability_mass:0.415357&gt;0.1"
+      ],
+      [
+        "rayleigh_baseline",
+        52,
+        "[800,1100)",
+        "[3.25,3.5)",
+        "borrowed_neighbor_psf; psfborrow_from:53,54"
+      ],
+      [
+        "rayleigh_baseline",
+        60,
+        "[800,1100)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:71&lt;1000"
+      ],
+      [
+        "rayleigh_baseline",
+        61,
+        "[1100,2000)",
+        "[2,2.5)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "rayleigh_baseline",
+        62,
+        "[1100,2000)",
+        "[2.5,3)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "rayleigh_baseline",
+        63,
+        "[1100,2000)",
+        "[3,3.25)",
+        "fallback:events_below_min_events_per_cell:16&lt;1000"
+      ],
+      [
+        "rayleigh_baseline",
+        64,
+        "[1100,2000)",
+        "[3.25,3.5)",
+        "fallback:theta_missing_crab_probability_mass:0.373731&gt;0.1"
+      ],
+      [
+        "rayleigh_baseline",
+        65,
+        "[1100,2000)",
+        "[3.5,3.75)",
+        "borrowed_neighbor_psf; psfborrow_from:66,67"
+      ],
+      [
+        "rayleigh_baseline",
+        70,
+        "[1100,2000)",
+        "[4.75,5.0)",
+        "fallback:effective_events_below_min:92.1454&lt;200.0"
+      ],
+      [
+        "rayleigh_baseline",
+        71,
+        "[1100,2000)",
+        "[5,6)",
+        "fallback:events_below_min_events_per_cell:910&lt;1000"
+      ],
+      [
+        "rayleigh_baseline",
+        72,
+        "[1100,2000)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:4&lt;1000"
+      ],
+      [
+        "rayleigh_baseline",
+        73,
+        "[2000,3000)",
+        "[2,2.5)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "rayleigh_baseline",
+        74,
+        "[2000,3000)",
+        "[2.5,3)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "rayleigh_baseline",
+        75,
+        "[2000,3000)",
+        "[3,3.25)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "rayleigh_baseline",
+        76,
+        "[2000,3000)",
+        "[3.25,3.5)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "rayleigh_baseline",
+        77,
+        "[2000,3000)",
+        "[3.5,3.75)",
+        "fallback:events_below_min_events_per_cell:4&lt;1000"
+      ],
+      [
+        "rayleigh_baseline",
+        78,
+        "[2000,3000)",
+        "[3.75,4.0)",
+        "fallback:events_below_min_events_per_cell:156&lt;1000"
+      ],
+      [
+        "rayleigh_baseline",
+        79,
+        "[2000,3000)",
+        "[4.0,4.25)",
+        "fallback:theta_missing_crab_probability_mass:0.249078&gt;0.1"
+      ],
+      [
+        "rayleigh_baseline",
+        80,
+        "[2000,3000)",
+        "[4.25,4.5)",
+        "fallback:theta_missing_crab_probability_mass:0.124653&gt;0.1"
+      ],
+      [
+        "rayleigh_baseline",
+        84,
+        "[2000,3000)",
+        "&gt;=6",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "two_1d_gaussian",
+        12,
+        "[125,200)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:157&lt;1000"
+      ],
+      [
+        "two_1d_gaussian",
+        24,
+        "[200,300)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:203&lt;1000"
+      ],
+      [
+        "two_1d_gaussian",
+        25,
+        "[300,500)",
+        "[2,2.5)",
+        "fallback:events_below_min_events_per_cell:227&lt;1000"
+      ],
+      [
+        "two_1d_gaussian",
+        36,
+        "[300,500)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:433&lt;1000"
+      ],
+      [
+        "two_1d_gaussian",
+        37,
+        "[500,800)",
+        "[2,2.5)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "two_1d_gaussian",
+        38,
+        "[500,800)",
+        "[2.5,3)",
+        "fallback:events_below_min_events_per_cell:913&lt;1000"
+      ],
+      [
+        "two_1d_gaussian",
+        39,
+        "[500,800)",
+        "[3,3.25)",
+        "borrowed_neighbor_psf; psfborrow_from:40"
+      ],
+      [
+        "two_1d_gaussian",
+        48,
+        "[500,800)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:426&lt;1000"
+      ],
+      [
+        "two_1d_gaussian",
+        49,
+        "[800,1100)",
+        "[2,2.5)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "two_1d_gaussian",
+        50,
+        "[800,1100)",
+        "[2.5,3)",
+        "fallback:events_below_min_events_per_cell:5&lt;1000"
+      ],
+      [
+        "two_1d_gaussian",
+        51,
+        "[800,1100)",
+        "[3,3.25)",
+        "fallback:theta_missing_crab_probability_mass:0.415357&gt;0.1"
+      ],
+      [
+        "two_1d_gaussian",
+        52,
+        "[800,1100)",
+        "[3.25,3.5)",
+        "borrowed_neighbor_psf; psfborrow_from:53,54"
+      ],
+      [
+        "two_1d_gaussian",
+        60,
+        "[800,1100)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:71&lt;1000"
+      ],
+      [
+        "two_1d_gaussian",
+        61,
+        "[1100,2000)",
+        "[2,2.5)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "two_1d_gaussian",
+        62,
+        "[1100,2000)",
+        "[2.5,3)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "two_1d_gaussian",
+        63,
+        "[1100,2000)",
+        "[3,3.25)",
+        "fallback:events_below_min_events_per_cell:16&lt;1000"
+      ],
+      [
+        "two_1d_gaussian",
+        64,
+        "[1100,2000)",
+        "[3.25,3.5)",
+        "fallback:theta_missing_crab_probability_mass:0.373731&gt;0.1"
+      ],
+      [
+        "two_1d_gaussian",
+        65,
+        "[1100,2000)",
+        "[3.5,3.75)",
+        "borrowed_neighbor_psf; psfborrow_from:66,67"
+      ],
+      [
+        "two_1d_gaussian",
+        70,
+        "[1100,2000)",
+        "[4.75,5.0)",
+        "fallback:effective_events_below_min:92.1454&lt;200.0"
+      ],
+      [
+        "two_1d_gaussian",
+        71,
+        "[1100,2000)",
+        "[5,6)",
+        "fallback:events_below_min_events_per_cell:910&lt;1000"
+      ],
+      [
+        "two_1d_gaussian",
+        72,
+        "[1100,2000)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:4&lt;1000"
+      ],
+      [
+        "two_1d_gaussian",
+        73,
+        "[2000,3000)",
+        "[2,2.5)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "two_1d_gaussian",
+        74,
+        "[2000,3000)",
+        "[2.5,3)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "two_1d_gaussian",
+        75,
+        "[2000,3000)",
+        "[3,3.25)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "two_1d_gaussian",
+        76,
+        "[2000,3000)",
+        "[3.25,3.5)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "two_1d_gaussian",
+        77,
+        "[2000,3000)",
+        "[3.5,3.75)",
+        "fallback:events_below_min_events_per_cell:4&lt;1000"
+      ],
+      [
+        "two_1d_gaussian",
+        78,
+        "[2000,3000)",
+        "[3.75,4.0)",
+        "fallback:events_below_min_events_per_cell:156&lt;1000"
+      ],
+      [
+        "two_1d_gaussian",
+        79,
+        "[2000,3000)",
+        "[4.0,4.25)",
+        "fallback:theta_missing_crab_probability_mass:0.249078&gt;0.1"
+      ],
+      [
+        "two_1d_gaussian",
+        80,
+        "[2000,3000)",
+        "[4.25,4.5)",
+        "fallback:theta_missing_crab_probability_mass:0.124653&gt;0.1"
+      ],
+      [
+        "two_1d_gaussian",
+        84,
+        "[2000,3000)",
+        "&gt;=6",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "mc_quantile_715",
+        12,
+        "[125,200)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:157&lt;1000"
+      ],
+      [
+        "mc_quantile_715",
+        24,
+        "[200,300)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:203&lt;1000"
+      ],
+      [
+        "mc_quantile_715",
+        25,
+        "[300,500)",
+        "[2,2.5)",
+        "fallback:events_below_min_events_per_cell:227&lt;1000"
+      ],
+      [
+        "mc_quantile_715",
+        36,
+        "[300,500)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:433&lt;1000"
+      ],
+      [
+        "mc_quantile_715",
+        37,
+        "[500,800)",
+        "[2,2.5)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "mc_quantile_715",
+        38,
+        "[500,800)",
+        "[2.5,3)",
+        "fallback:events_below_min_events_per_cell:913&lt;1000"
+      ],
+      [
+        "mc_quantile_715",
+        39,
+        "[500,800)",
+        "[3,3.25)",
+        "borrowed_neighbor_psf; psfborrow_from:40"
+      ],
+      [
+        "mc_quantile_715",
+        48,
+        "[500,800)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:426&lt;1000"
+      ],
+      [
+        "mc_quantile_715",
+        49,
+        "[800,1100)",
+        "[2,2.5)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "mc_quantile_715",
+        50,
+        "[800,1100)",
+        "[2.5,3)",
+        "fallback:events_below_min_events_per_cell:5&lt;1000"
+      ],
+      [
+        "mc_quantile_715",
+        51,
+        "[800,1100)",
+        "[3,3.25)",
+        "fallback:theta_missing_crab_probability_mass:0.415357&gt;0.1"
+      ],
+      [
+        "mc_quantile_715",
+        52,
+        "[800,1100)",
+        "[3.25,3.5)",
+        "borrowed_neighbor_psf; psfborrow_from:53,54"
+      ],
+      [
+        "mc_quantile_715",
+        60,
+        "[800,1100)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:71&lt;1000"
+      ],
+      [
+        "mc_quantile_715",
+        61,
+        "[1100,2000)",
+        "[2,2.5)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "mc_quantile_715",
+        62,
+        "[1100,2000)",
+        "[2.5,3)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "mc_quantile_715",
+        63,
+        "[1100,2000)",
+        "[3,3.25)",
+        "fallback:events_below_min_events_per_cell:16&lt;1000"
+      ],
+      [
+        "mc_quantile_715",
+        64,
+        "[1100,2000)",
+        "[3.25,3.5)",
+        "fallback:theta_missing_crab_probability_mass:0.373731&gt;0.1"
+      ],
+      [
+        "mc_quantile_715",
+        65,
+        "[1100,2000)",
+        "[3.5,3.75)",
+        "borrowed_neighbor_psf; psfborrow_from:66,67"
+      ],
+      [
+        "mc_quantile_715",
+        70,
+        "[1100,2000)",
+        "[4.75,5.0)",
+        "fallback:effective_events_below_min:92.1454&lt;200.0"
+      ],
+      [
+        "mc_quantile_715",
+        71,
+        "[1100,2000)",
+        "[5,6)",
+        "fallback:events_below_min_events_per_cell:910&lt;1000"
+      ],
+      [
+        "mc_quantile_715",
+        72,
+        "[1100,2000)",
+        "&gt;=6",
+        "fallback:events_below_min_events_per_cell:4&lt;1000"
+      ],
+      [
+        "mc_quantile_715",
+        73,
+        "[2000,3000)",
+        "[2,2.5)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "mc_quantile_715",
+        74,
+        "[2000,3000)",
+        "[2.5,3)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "mc_quantile_715",
+        75,
+        "[2000,3000)",
+        "[3,3.25)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "mc_quantile_715",
+        76,
+        "[2000,3000)",
+        "[3.25,3.5)",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "mc_quantile_715",
+        77,
+        "[2000,3000)",
+        "[3.5,3.75)",
+        "fallback:events_below_min_events_per_cell:4&lt;1000"
+      ],
+      [
+        "mc_quantile_715",
+        78,
+        "[2000,3000)",
+        "[3.75,4.0)",
+        "fallback:events_below_min_events_per_cell:156&lt;1000"
+      ],
+      [
+        "mc_quantile_715",
+        79,
+        "[2000,3000)",
+        "[4.0,4.25)",
+        "fallback:theta_missing_crab_probability_mass:0.249078&gt;0.1"
+      ],
+      [
+        "mc_quantile_715",
+        80,
+        "[2000,3000)",
+        "[4.25,4.5)",
+        "fallback:theta_missing_crab_probability_mass:0.124653&gt;0.1"
+      ],
+      [
+        "mc_quantile_715",
+        84,
+        "[2000,3000)",
+        "&gt;=6",
+        "fallback:no_input_files_for_cell"
+      ],
+      [
+        "observed_data",
+        1,
+        "[125,200)",
+        "[2,2.5)",
+        "fallback:observed_profile_r_opt_over_rayleigh:3.39383&gt;2.5; observed_profile_r_opt_over_rayleigh:3.39383&gt;2.5"
+      ],
+      [
+        "observed_data",
+        2,
+        "[125,200)",
+        "[2.5,3)",
+        "fallback:observed_profile_r_opt_over_mc_quantile:2.10238&gt;2.0; observed_profile_r_opt_over_mc_quantile:2.10238&gt;2.0"
+      ],
+      [
+        "observed_data",
+        3,
+        "[125,200)",
+        "[3,3.25)",
+        "fallback:observed_profile_not_reliable:significance_lt_5; observed_profile_not_reliable:significance_lt_5"
+      ],
+      [
+        "observed_data",
+        4,
+        "[125,200)",
+        "[3.25,3.5)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        5,
+        "[125,200)",
+        "[3.5,3.75)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        6,
+        "[125,200)",
+        "[3.75,4.0)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        7,
+        "[125,200)",
+        "[4.0,4.25)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        8,
+        "[125,200)",
+        "[4.25,4.5)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        9,
+        "[125,200)",
+        "[4.5,4.75)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        10,
+        "[125,200)",
+        "[4.75,5.0)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        11,
+        "[125,200)",
+        "[5,6)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        12,
+        "[125,200)",
+        "&gt;=6",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        13,
+        "[200,300)",
+        "[2,2.5)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        14,
+        "[200,300)",
+        "[2.5,3)",
+        "fallback:observed_profile_r_opt_over_rayleigh:2.60182&gt;2.5; observed_profile_r_opt_over_rayleigh:2.60182&gt;2.5"
+      ],
+      [
+        "observed_data",
+        16,
+        "[200,300)",
+        "[3.25,3.5)",
+        "fallback:observed_profile_r_opt_over_rayleigh:4.00492&gt;2.5; observed_profile_r_opt_over_rayleigh:4.00492&gt;2.5"
+      ],
+      [
+        "observed_data",
+        17,
+        "[200,300)",
+        "[3.5,3.75)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        18,
+        "[200,300)",
+        "[3.75,4.0)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        19,
+        "[200,300)",
+        "[4.0,4.25)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        20,
+        "[200,300)",
+        "[4.25,4.5)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        21,
+        "[200,300)",
+        "[4.5,4.75)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        22,
+        "[200,300)",
+        "[4.75,5.0)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        23,
+        "[200,300)",
+        "[5,6)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        24,
+        "[200,300)",
+        "&gt;=6",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        25,
+        "[300,500)",
+        "[2,2.5)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        28,
+        "[300,500)",
+        "[3.25,3.5)",
+        "fallback:observed_profile_r_opt_over_rayleigh:3.79958&gt;2.5; observed_profile_r_opt_over_rayleigh:3.79958&gt;2.5"
+      ],
+      [
+        "observed_data",
+        29,
+        "[300,500)",
+        "[3.5,3.75)",
+        "fallback:observed_profile_r_opt_over_rayleigh:2.66859&gt;2.5; observed_profile_r_opt_over_rayleigh:2.66859&gt;2.5"
+      ],
+      [
+        "observed_data",
+        30,
+        "[300,500)",
+        "[3.75,4.0)",
+        "fallback:observed_profile_not_reliable:significance_lt_5; observed_profile_not_reliable:significance_lt_5"
+      ],
+      [
+        "observed_data",
+        31,
+        "[300,500)",
+        "[4.0,4.25)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        32,
+        "[300,500)",
+        "[4.25,4.5)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        33,
+        "[300,500)",
+        "[4.5,4.75)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        34,
+        "[300,500)",
+        "[4.75,5.0)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        35,
+        "[300,500)",
+        "[5,6)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        36,
+        "[300,500)",
+        "&gt;=6",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        37,
+        "[500,800)",
+        "[2,2.5)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        38,
+        "[500,800)",
+        "[2.5,3)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        39,
+        "[500,800)",
+        "[3,3.25)",
+        "borrowed_neighbor_psf; observed_profile_missing_for_cell; psfborrow_from:40"
+      ],
+      [
+        "observed_data",
+        41,
+        "[500,800)",
+        "[3.5,3.75)",
+        "fallback:observed_profile_r_opt_over_rayleigh:6.59999&gt;2.5; observed_profile_r_opt_over_rayleigh:6.59999&gt;2.5"
+      ],
+      [
+        "observed_data",
+        42,
+        "[500,800)",
+        "[3.75,4.0)",
+        "fallback:observed_profile_not_reliable:excess_lt_100;significance_lt_5; observed_profile_not_reliable:excess_lt_100;significance_lt_5"
+      ],
+      [
+        "observed_data",
+        43,
+        "[500,800)",
+        "[4.0,4.25)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        44,
+        "[500,800)",
+        "[4.25,4.5)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        45,
+        "[500,800)",
+        "[4.5,4.75)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        46,
+        "[500,800)",
+        "[4.75,5.0)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        47,
+        "[500,800)",
+        "[5,6)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        48,
+        "[500,800)",
+        "&gt;=6",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        49,
+        "[800,1100)",
+        "[2,2.5)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        50,
+        "[800,1100)",
+        "[2.5,3)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        51,
+        "[800,1100)",
+        "[3,3.25)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        52,
+        "[800,1100)",
+        "[3.25,3.5)",
+        "borrowed_neighbor_psf; observed_profile_not_reliable:N_on_lt_200; psfborrow_from:53,54"
+      ],
+      [
+        "observed_data",
+        53,
+        "[800,1100)",
+        "[3.5,3.75)",
+        "fallback:observed_profile_r_opt_over_rayleigh:7.78033&gt;2.5; observed_profile_r_opt_over_rayleigh:7.78033&gt;2.5"
+      ],
+      [
+        "observed_data",
+        54,
+        "[800,1100)",
+        "[3.75,4.0)",
+        "fallback:observed_profile_not_reliable:N_on_lt_200;excess_lt_100; observed_profile_not_reliable:N_on_lt_200;excess_lt_100"
+      ],
+      [
+        "observed_data",
+        55,
+        "[800,1100)",
+        "[4.0,4.25)",
+        "fallback:observed_profile_not_reliable:N_on_lt_200;excess_lt_100; observed_profile_not_reliable:N_on_lt_200;excess_lt_100"
+      ],
+      [
+        "observed_data",
+        56,
+        "[800,1100)",
+        "[4.25,4.5)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        57,
+        "[800,1100)",
+        "[4.5,4.75)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        58,
+        "[800,1100)",
+        "[4.75,5.0)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        59,
+        "[800,1100)",
+        "[5,6)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        60,
+        "[800,1100)",
+        "&gt;=6",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        61,
+        "[1100,2000)",
+        "[2,2.5)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        62,
+        "[1100,2000)",
+        "[2.5,3)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        63,
+        "[1100,2000)",
+        "[3,3.25)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        64,
+        "[1100,2000)",
+        "[3.25,3.5)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        65,
+        "[1100,2000)",
+        "[3.5,3.75)",
+        "borrowed_neighbor_psf; observed_profile_not_reliable:N_on_lt_200;excess_lt_100; psfborrow_from:66,67"
+      ],
+      [
+        "observed_data",
+        66,
+        "[1100,2000)",
+        "[3.75,4.0)",
+        "fallback:observed_profile_not_reliable:N_on_lt_200; observed_profile_not_reliable:N_on_lt_200"
+      ],
+      [
+        "observed_data",
+        67,
+        "[1100,2000)",
+        "[4.0,4.25)",
+        "fallback:observed_profile_not_reliable:N_on_lt_200;excess_lt_100; observed_profile_not_reliable:N_on_lt_200;excess_lt_100"
+      ],
+      [
+        "observed_data",
+        68,
+        "[1100,2000)",
+        "[4.25,4.5)",
+        "fallback:observed_profile_not_reliable:N_on_lt_200;excess_lt_100;significance_lt_5; observed_profile_not_reliable:N_on_lt_200;excess_lt_100;significance_lt_5"
+      ],
+      [
+        "observed_data",
+        69,
+        "[1100,2000)",
+        "[4.5,4.75)",
+        "fallback:observed_profile_not_reliable:N_on_lt_200;excess_lt_100;significance_lt_5; observed_profile_not_reliable:N_on_lt_200;excess_lt_100;significance_lt_5"
+      ],
+      [
+        "observed_data",
+        70,
+        "[1100,2000)",
+        "[4.75,5.0)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        71,
+        "[1100,2000)",
+        "[5,6)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        72,
+        "[1100,2000)",
+        "&gt;=6",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        73,
+        "[2000,3000)",
+        "[2,2.5)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        74,
+        "[2000,3000)",
+        "[2.5,3)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        75,
+        "[2000,3000)",
+        "[3,3.25)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        76,
+        "[2000,3000)",
+        "[3.25,3.5)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        77,
+        "[2000,3000)",
+        "[3.5,3.75)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        78,
+        "[2000,3000)",
+        "[3.75,4.0)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        79,
+        "[2000,3000)",
+        "[4.0,4.25)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        80,
+        "[2000,3000)",
+        "[4.25,4.5)",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "observed_data",
+        81,
+        "[2000,3000)",
+        "[4.5,4.75)",
+        "fallback:observed_profile_not_reliable:N_on_lt_200;excess_lt_100;significance_lt_5; observed_profile_not_reliable:N_on_lt_200;excess_lt_100;significance_lt_5"
+      ],
+      [
+        "observed_data",
+        82,
+        "[2000,3000)",
+        "[4.75,5.0)",
+        "fallback:observed_profile_not_reliable:N_on_lt_200;excess_lt_100;significance_lt_5; observed_profile_not_reliable:N_on_lt_200;excess_lt_100;significance_lt_5"
+      ],
+      [
+        "observed_data",
+        83,
+        "[2000,3000)",
+        "[5,6)",
+        "fallback:observed_profile_not_reliable:N_on_lt_200;excess_lt_100;significance_lt_5; observed_profile_not_reliable:N_on_lt_200;excess_lt_100;significance_lt_5"
+      ],
+      [
+        "observed_data",
+        84,
+        "[2000,3000)",
+        "&gt;=6",
+        "fallback:observed_profile_missing_for_cell; observed_profile_missing_for_cell"
+      ],
+      [
+        "double_rayleigh_mixture",
+        12,
+        "[125,200)",
+        "&gt;=6",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        24,
+        "[200,300)",
+        "&gt;=6",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        25,
+        "[300,500)",
+        "[2,2.5)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        36,
+        "[300,500)",
+        "&gt;=6",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        37,
+        "[500,800)",
+        "[2,2.5)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        38,
+        "[500,800)",
+        "[2.5,3)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        39,
+        "[500,800)",
+        "[3,3.25)",
+        "borrowed_neighbor_psf; psfborrow_from:40"
+      ],
+      [
+        "double_rayleigh_mixture",
+        48,
+        "[500,800)",
+        "&gt;=6",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        49,
+        "[800,1100)",
+        "[2,2.5)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        50,
+        "[800,1100)",
+        "[2.5,3)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        51,
+        "[800,1100)",
+        "[3,3.25)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        52,
+        "[800,1100)",
+        "[3.25,3.5)",
+        "borrowed_neighbor_psf; psfborrow_from:53,54"
+      ],
+      [
+        "double_rayleigh_mixture",
+        60,
+        "[800,1100)",
+        "&gt;=6",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        61,
+        "[1100,2000)",
+        "[2,2.5)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        62,
+        "[1100,2000)",
+        "[2.5,3)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        63,
+        "[1100,2000)",
+        "[3,3.25)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        64,
+        "[1100,2000)",
+        "[3.25,3.5)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        65,
+        "[1100,2000)",
+        "[3.5,3.75)",
+        "borrowed_neighbor_psf; psfborrow_from:66,67"
+      ],
+      [
+        "double_rayleigh_mixture",
+        70,
+        "[1100,2000)",
+        "[4.75,5.0)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        71,
+        "[1100,2000)",
+        "[5,6)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        72,
+        "[1100,2000)",
+        "&gt;=6",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        73,
+        "[2000,3000)",
+        "[2,2.5)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        74,
+        "[2000,3000)",
+        "[2.5,3)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        75,
+        "[2000,3000)",
+        "[3,3.25)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        76,
+        "[2000,3000)",
+        "[3.25,3.5)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        77,
+        "[2000,3000)",
+        "[3.5,3.75)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        78,
+        "[2000,3000)",
+        "[3.75,4.0)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        79,
+        "[2000,3000)",
+        "[4.0,4.25)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        80,
+        "[2000,3000)",
+        "[4.25,4.5)",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ],
+      [
+        "double_rayleigh_mixture",
+        84,
+        "[2000,3000)",
+        "&gt;=6",
+        "fallback:double_rayleigh_source_profile_empty; double_rayleigh_source_profile_empty"
+      ]
+    ]
   },
   "observed_data_aperture": {
     "status": "available",

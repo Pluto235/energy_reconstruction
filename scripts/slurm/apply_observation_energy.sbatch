@@ -28,10 +28,15 @@ cd /home/server/projects/energy_reconstruction
 export PYTHONPATH=/home/server/projects/energy_reconstruction:$PYTHONPATH
 
 INPUT_ROOT=${INPUT_ROOT:-/mnt/mydisk/WCDA_observation}
-OUTPUT_ROOT=${OUTPUT_ROOT:-/mnt/mydisk/WCDA_observation_eval}
+OUTPUT_ROOT=${OUTPUT_ROOT:-/mnt/mydisk/WCDA_observation_eval_64670}
 RUN_DIR=${RUN_DIR:-/home/server/projects/energy_reconstruction/runs/theta_recoxy_position_embed_midenergy_no_core_cut_64670}
 DAY_PREFIX=${DAY_PREFIX:-}
-SUMMARY_PATH=${SUMMARY_PATH:-${OUTPUT_ROOT}/apply_summary.json}
+SUMMARY_PATH=${SUMMARY_PATH:-${OUTPUT_ROOT}/apply_summary_${DAY_PREFIX:-all}.json}
+
+if [[ "${RUN_DIR}" == *"theta_recoxy_position_embed_midenergy_no_core_cut_64670"* && "${OUTPUT_ROOT}" == "/mnt/mydisk/WCDA_observation_eval" ]]; then
+  echo "Refusing to write _64670 inference output into legacy _8666 eval root: ${OUTPUT_ROOT}" >&2
+  exit 64
+fi
 
 echo "===== Start observation inference ====="
 echo "Input root: ${INPUT_ROOT}"
@@ -56,6 +61,7 @@ CMD=(
   --cut-fitstat-equals 0
   --cut-theta-max-deg 50
   --cut-dcedge-min 20
+  --skip-existing
   --print-every 10
 )
 

@@ -677,11 +677,14 @@ def load_cell_subset(path: Optional[Path], available_cell_ids: np.ndarray) -> Di
                 versions.append(version)
 
     available = [int(v) for v in available_cell_ids]
-    unknown = sorted(set(include_by_id) - set(available))
-    if unknown:
-        raise ValueError(f"{path} references cell ids not present in inputs: {unknown}")
+    available_set = set(available)
+    unknown_included = sorted(
+        cell_id for cell_id, include in include_by_id.items() if include and cell_id not in available_set
+    )
+    if unknown_included:
+        raise ValueError(f"{path} includes cell ids not present in inputs: {unknown_included}")
     included = [cell_id for cell_id in available if include_by_id.get(cell_id, True)]
-    excluded = [cell_id for cell_id in available if not include_by_id.get(cell_id, True)]
+    excluded = [cell_id for cell_id, include in include_by_id.items() if not include]
     if len(included) < 4:
         raise ValueError(f"Cell subset leaves too few cells for PL/LogPar diagnostics: {included}")
     return {
@@ -720,7 +723,8 @@ def apply_cell_subset(
     subset_out["mask"] = mask.tolist()
     subset_out["n_input_cells"] = int(cell_ids.size)
     subset_out["n_included_cells"] = int(np.count_nonzero(mask))
-    subset_out["n_excluded_cells"] = int(cell_ids.size - np.count_nonzero(mask))
+    subset_out["n_excluded_input_cells"] = int(cell_ids.size - np.count_nonzero(mask))
+    subset_out["n_excluded_cells"] = int(len(subset_out.get("excluded_cell_ids", [])))
     return filter_dict(response), filter_dict(signal), subset_out
 
 

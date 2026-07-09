@@ -66,6 +66,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--prefit-selector-csv", type=Path, default=Path("apply/config/cell_selector_v6_split56_drop4_psfborrow.prefit.csv"))
     parser.add_argument("--systematics-selector-csv", type=Path, default=Path("apply/config/cell_selector_v6_split56_systematics.csv"))
     parser.add_argument("--high-energy-selector-csv", type=Path, default=Path("apply/config/cell_selector_v6_split56_high_energy_probes.csv"))
+    parser.add_argument(
+        "--restrict-selector-csv",
+        type=Path,
+        default=None,
+        help="Optional selector CSV; when set, prepare only rows with include truthy, matched by (nhit_bin,predE_bin).",
+    )
     parser.add_argument("--manifest-json", type=Path, default=Path("apply/config/v6_64670_split56_strategy_manifest.json"))
     parser.add_argument("--diagnostics-html", type=Path, default=Path("apply/report/v6_64670_split56_cell_selection_diagnostics.html"))
     parser.add_argument("--tree-name", type=str, default="t_eventout")
@@ -248,6 +254,24 @@ def source_count_lookup(source_counts_csv: Path) -> Dict[Tuple[str, str], int]:
     for row in read_csv(source_counts_csv):
         lookup[(row["nhit_bin"], row["predE_bin"])] = int(row.get("count") or 0)
     return lookup
+
+
+def included_physical_keys(selector_csv: Path) -> set[Tuple[str, str]]:
+    keys: set[Tuple[str, str]] = set()
+    for row in read_csv(selector_csv):
+        if truthy(row.get("include")):
+            keys.add((str(row["nhit_bin"]), str(row["predE_bin"])))
+    if not keys:
+        raise ValueError(f"No include=1 rows found in restrict selector: {selector_csv}")
+    return keys
+
+
+def restrict_rows_to_keys(rows: Sequence[Dict[str, object]], keys: set[Tuple[str, str]]) -> List[Dict[str, object]]:
+    out = [row for row in rows if (str(row["nhit_bin"]), str(row["predE_bin"])) in keys]
+    missing = sorted(keys - {(str(row["nhit_bin"]), str(row["predE_bin"])) for row in out})
+    if missing:
+        raise ValueError(f"Restrict selector has physical bins absent from split56 candidate grid: {missing}")
+    return out
 
 
 def estimated_count(target_nhit: str, target_pred: str, source_counts: Dict[Tuple[str, str], int]) -> int:
@@ -463,22 +487,28 @@ def split_file_batch(task: Dict[str, object]) -> List[Dict[str, object]]:
         target_nhit = str(target_spec["target_nhit"])
         target_pred = str(target_spec["target_pred"])
         if target.exists() and not overwrite:
-            root_file, tree = open_tree(target, tree_name)
             try:
-                kept = int(tree.num_entries)
-            finally:
-                root_file.close()
-            results.append(
-                {
-                    "status": "exists",
-                    "source": str(source),
-                    "target": str(target),
-                    "target_nhit": target_nhit,
-                    "target_pred": target_pred,
-                    "input": kept,
-                    "kept": kept,
-                }
-            )
+                root_file, tree = open_tree(target, tree_name)
+                try:
+                    kept = int(tree.num_entries)
+                finally:
+                    root_file.close()
+            except Exception:
+                target.unlink(missing_ok=True)
+                pending.append(target_spec)
+                continue
+            else:
+                results.append(
+                    {
+                        "status": "exists",
+                        "source": str(source),
+                        "target": str(target),
+                        "target_nhit": target_nhit,
+                        "target_pred": target_pred,
+                        "input": kept,
+                        "kept": kept,
+                    }
+                )
         else:
             pending.append(target_spec)
     if not pending:
@@ -643,12 +673,42 @@ def prepare_cache(
             flush=True,
         )
         with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
-            futures = [executor.submit(split_file_batch, task) for task in tasks]
-            for idx, future in enumerate(concurrent.futures.as_completed(futures), start=1):
-                for result in future.result():
-                    consume(result)
-                if idx % progress_every == 0 or idx == len(tasks):
-                    print(f"[v6-split56-cache] {idx}/{len(tasks)} source files | targets={filtered_target_count:,} kept={kept_events:,}", flush=True)
+            task_iter = iter(tasks)
+            pending: set[concurrent.futures.Future] = set()
+            submitted = 0
+            completed = 0
+            max_pending = max(workers * 4, workers)
+
+            def submit_next() -> bool:
+                nonlocal submitted
+                try:
+                    task = next(task_iter)
+                except StopIteration:
+                    return False
+                pending.add(executor.submit(split_file_batch, task))
+                submitted += 1
+                return True
+
+            for _ in range(min(max_pending, len(tasks))):
+                submit_next()
+
+            while pending:
+                done, pending = concurrent.futures.wait(
+                    pending,
+                    return_when=concurrent.futures.FIRST_COMPLETED,
+                )
+                for future in done:
+                    completed += 1
+                    for result in future.result():
+                        consume(result)
+                    if completed % progress_every == 0 or completed == len(tasks):
+                        print(
+                            f"[v6-split56-cache] {completed}/{len(tasks)} source files | "
+                            f"submitted={submitted}/{len(tasks)} targets={filtered_target_count:,} kept={kept_events:,}",
+                            flush=True,
+                        )
+                while len(pending) < max_pending and submitted < len(tasks):
+                    submit_next()
 
     return {
         "source_root": str(source_root),
@@ -666,15 +726,20 @@ def prepare_cache(
 
 
 def validate_rows(rows: Sequence[Dict[str, object]], selector: Sequence[Dict[str, object]]) -> Dict[str, object]:
-    if len(rows) != 91:
-        raise ValueError(f"split56 ledger expected 91 candidate cells, got {len(rows)}")
+    if not rows:
+        raise ValueError("split56 ledger has no candidate cells")
+    if len(rows) > 91:
+        raise ValueError(f"split56 ledger expected at most 91 candidate cells, got {len(rows)}")
     by_nhit: Dict[str, List[Dict[str, object]]] = {}
     for row in rows:
         by_nhit.setdefault(str(row["nhit_bin"]), []).append(row)
     for nhit, items in by_nhit.items():
         labels = [str(row["predE_bin"]) for row in sorted(items, key=lambda r: interval_key(str(r["predE_bin"])))]
-        if labels != PRED_BINS:
+        if len(rows) == 91 and labels != PRED_BINS:
             raise ValueError(f"split56 ledger predE labels for {nhit} do not match expected bins")
+        unexpected = sorted(set(labels) - set(PRED_BINS), key=interval_key)
+        if unexpected:
+            raise ValueError(f"split56 ledger predE labels for {nhit} include unexpected bins: {unexpected}")
     tail_included = [row for row in selector if truthy(row.get("include")) and str(row.get("predE_bin")) == ">=6"]
     if tail_included:
         raise ValueError(f"selector includes >=6 tail bins: {tail_included}")
@@ -828,10 +893,14 @@ def main() -> None:
     prefit_selector_csv = resolve(args.prefit_selector_csv)
     systematics_selector_csv = resolve(args.systematics_selector_csv)
     high_energy_selector_csv = resolve(args.high_energy_selector_csv)
+    restrict_selector_csv = resolve(args.restrict_selector_csv) if args.restrict_selector_csv is not None else None
     manifest_json = resolve(args.manifest_json)
     diagnostics_html = resolve(args.diagnostics_html)
 
     rows = build_candidate_rows(source_counts_csv=source_counts_csv)
+    restricted_keys = included_physical_keys(restrict_selector_csv) if restrict_selector_csv is not None else None
+    if restricted_keys is not None:
+        rows = restrict_rows_to_keys(rows, restricted_keys)
     cache_manifest: Optional[Dict[str, object]] = None
     if args.prepare_cache:
         cache_manifest = prepare_cache(
@@ -846,6 +915,8 @@ def main() -> None:
         )
         exact_counts = dict(cache_manifest["_exact_counts"])  # type: ignore[index]
         rows = build_candidate_rows(source_counts_csv=source_counts_csv, exact_counts=exact_counts)
+        if restricted_keys is not None:
+            rows = restrict_rows_to_keys(rows, restricted_keys)
         write_json(target_root / "summary" / "v6_64670_split56_prepare_manifest.json", cache_manifest)
         write_csv(
             target_root / "summary" / "bin_counts.csv",
@@ -891,6 +962,7 @@ def main() -> None:
         "prefit_selector_csv": str(prefit_selector_csv),
         "systematics_selector_csv": str(systematics_selector_csv),
         "high_energy_selector_csv": str(high_energy_selector_csv),
+        "restrict_selector_csv": str(restrict_selector_csv) if restrict_selector_csv is not None else None,
         "nhit_bins": NHIT_BINS,
         "predE_bins": PRED_BINS,
         "candidate_cells": len(rows),

@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-07-09 20:43 · [uncommitted] Complete the v6 `_64748` split56 half-year observation apply chain, storage audit, final reports, and 64670 Jan-Feb retention boundary.
+
 - **energy** · 2026-07-09 00:22 · [uncommitted] Add Codex/Claude handoff documenting servers, data paths, workflow, and core code roles.
 
 - **energy** · 2026-07-08 16:44 · [4162c63] Add the v5 PSF double-Rayleigh mixture branch, Slurm pipeline integration, diagnostics, and regenerated comparison report.

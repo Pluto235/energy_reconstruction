@@ -83,6 +83,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--print-every", type=int, default=20)
     parser.add_argument("--reader-workers", type=int, default=0, help="CPU workers for uproot decompression and interpretation.")
     parser.add_argument("--step-size", type=str, default="100 MB", help="Chunk size for streaming ROOT reads, e.g. '10 MB'.")
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Skip output ROOT files that already satisfy the observation eval branch contract.",
+    )
     parser.add_argument("--cut-pinc-max", type=float, default=1.1)
     parser.add_argument("--cut-fitstat-equals", type=int, default=0)
     parser.add_argument("--cut-theta-max-deg", type=float, default=50.0)
@@ -563,6 +568,23 @@ def output_path_for_file(file_path: str, input_root: str, output_root: str) -> s
     return os.path.join(output_root, relative_path)
 
 
+def validate_existing_output(path: str, tree_name: str, header_tree_name: str) -> bool:
+    if not os.path.isfile(path):
+        return False
+    try:
+        with uproot.open(path) as root_file:
+            if header_tree_name not in root_file or tree_name not in root_file:
+                return False
+            branches = set(root_file[tree_name].keys())
+            if not {"ml_logE_pred", "ml_energy_pred"}.issubset(branches):
+                return False
+            if DROP_BRANCHES.intersection(branches):
+                return False
+            return True
+    except Exception:
+        return False
+
+
 def process_one_file(
     file_path: str,
     *,
@@ -790,6 +812,7 @@ def run_file_loop(
     cut_fitstat_equals: int,
     cut_theta_max_deg: float,
     cut_dcedge_min: float,
+    skip_existing: bool,
 ) -> Dict[str, object]:
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -824,6 +847,21 @@ def run_file_loop(
     for idx, file_path in enumerate(root_files, start=1):
         file_name = normalize_observation_relative_path(file_path, input_root_path)
         try:
+            out_path = output_path_for_file(file_path, input_root_path, output_root)
+            if skip_existing and validate_existing_output(out_path, tree_name, header_tree_name):
+                summary["files_completed"] += 1
+                summary["per_file"][file_name] = {
+                    "skipped_existing": True,
+                    "output_path": out_path,
+                }
+                if idx % print_every == 0 or idx == len(root_files):
+                    print(
+                        f"[gpu {gpu_id}] [{idx}/{len(root_files)}] files processed | "
+                        f"completed={summary['files_completed']} failed={summary['files_failed']} "
+                        f"events_total={summary['events_total']} cut_pass={summary['events_cut_pass']} "
+                        f"written={summary['events_written']}"
+                    )
+                continue
             result = process_one_file(
                 file_path,
                 model=model,
@@ -971,6 +1009,7 @@ def main() -> None:
             cut_fitstat_equals=args.cut_fitstat_equals,
             cut_theta_max_deg=args.cut_theta_max_deg,
             cut_dcedge_min=args.cut_dcedge_min,
+            skip_existing=args.skip_existing,
         )
         merge_worker_summary(summary, result)
         print(f"Single-device elapsed seconds: {float(result['elapsed_seconds']):.2f}")
@@ -1001,6 +1040,7 @@ def main() -> None:
                     cut_fitstat_equals=args.cut_fitstat_equals,
                     cut_theta_max_deg=args.cut_theta_max_deg,
                     cut_dcedge_min=args.cut_dcedge_min,
+                    skip_existing=args.skip_existing,
                 )
                 futures.append(executor.submit(run_shard_worker, worker_kwargs))
 
@@ -1026,6 +1066,8 @@ def main() -> None:
         f"Files completed={summary['files_completed']}, failed={summary['files_failed']}, "
         f"events written={summary['events_written']}"
     )
+    if int(summary["files_failed"]):
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

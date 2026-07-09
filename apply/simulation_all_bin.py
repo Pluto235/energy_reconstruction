@@ -365,6 +365,7 @@ def write_summary(
     inferred_events: int,
     out_of_range_events: int,
     per_file_counts: Dict[str, int],
+    run_metadata: Dict[str, object],
 ) -> None:
     os.makedirs(summary_dir, exist_ok=True)
     rows = all_summary_rows(bin_counts)
@@ -408,6 +409,7 @@ def write_summary(
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(
             {
+                "run_metadata": run_metadata,
                 "total_events": total_events,
                 "inferred_events": inferred_events,
                 "out_of_range_events": out_of_range_events,
@@ -941,6 +943,45 @@ def main() -> None:
     root_files = discover_root_files(args.input_root, args.max_files)
     print(f"Discovered {len(root_files)} ROOT files under {args.input_root}")
     gpu_ids = parse_gpu_ids(args.gpu_ids, args.gpu_id, args.device)
+    checkpoint_path = os.path.join(run_dir, "checkpoints", "best_model.pt")
+    run_metadata: Dict[str, object] = {
+        "input_root": os.path.realpath(args.input_root),
+        "output_root": output_root,
+        "run_dir": run_dir,
+        "config_path": os.path.join(run_dir, "config.json"),
+        "checkpoint_path": checkpoint_path,
+        "tree_name": args.tree_name,
+        "processed_file_target": None if args.max_files is None else int(args.max_files),
+        "device_arg": args.device,
+        "gpu_id": int(args.gpu_id),
+        "gpu_ids": [int(value) for value in gpu_ids],
+        "batch_size": int(args.batch_size),
+        "seed": int(args.seed),
+        "reader_workers": int(args.reader_workers),
+        "prefetch_files": args.prefetch_files,
+        "reader_backend": args.reader_backend,
+        "event_cuts": {
+            "apply_event_cuts": bool(args.apply_event_cuts),
+            "pinc_max": float(args.cut_pinc_max),
+            "dangle_max_deg": cut_dangle_max_deg,
+            "theta_max_deg": float(args.cut_theta_max_deg),
+            "fitstat_equals": int(args.cut_fitstat_equals),
+            "dcedge_min": None if args.cut_dcedge_min is None else float(args.cut_dcedge_min),
+            "core_box": None if core_box is None else [float(value) for value in core_box],
+        },
+        "keep_nhit_bins": None if keep_nhit_bins is None else sorted(keep_nhit_bins),
+        "model_config": {
+            "max_points": config.get("max_points"),
+            "sample_mode": config.get("sample_mode"),
+            "norm_mode": config.get("norm_mode"),
+            "theta_embed_dim": config.get("theta_embed_dim"),
+            "theta_embed_dropout": config.get("theta_embed_dropout"),
+            "core_embed_dim": config.get("core_embed_dim", 0),
+            "core_embed_dropout": config.get("core_embed_dropout", 0.0),
+            "core_scale_x": config.get("core_scale_x", 130.0),
+            "core_scale_y": config.get("core_scale_y", 110.0),
+        },
+    }
 
     total_events = 0
     inferred_events = 0
@@ -1043,6 +1084,7 @@ def main() -> None:
         inferred_events=inferred_events,
         out_of_range_events=out_of_range_events,
         per_file_counts=per_file_counts,
+        run_metadata=run_metadata,
     )
     print(f"Elapsed seconds: {time.perf_counter() - loop_start:.2f}")
     print_overall_summary(total_events, inferred_events, out_of_range_events, bin_counts)

@@ -53,11 +53,12 @@ SOURCE_HIGH_NHIT = ">=2000"
 TARGET_HIGH_NHIT = "[2000,3000)"
 SOURCE_GE5_PRED = ">=5"
 VERSION = "v6_64670_split56_candidate"
+STRATEGY_NAME = "split56"
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build the v6 _64670 split56 91-cell candidate cache and prefit selector."
+        description="Build a v6 split56 91-cell candidate cache and prefit selector."
     )
     parser.add_argument("--source-binned-root", type=Path, default=SOURCE_ROOT)
     parser.add_argument("--target-binned-root", type=Path, default=TARGET_ROOT)
@@ -76,6 +77,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--diagnostics-html", type=Path, default=Path("apply/report/v6_64670_split56_cell_selection_diagnostics.html"))
     parser.add_argument("--tree-name", type=str, default="t_eventout")
     parser.add_argument("--run-dir", type=Path, default=RUN_DIR)
+    parser.add_argument("--version", type=str, default=VERSION)
+    parser.add_argument("--strategy-name", type=str, default=STRATEGY_NAME)
+    parser.add_argument("--target-low-nhit-bin", type=str, default=TARGET_LOW_NHIT)
+    parser.add_argument("--source-low-nhit-bin", type=str, default=SOURCE_LOW_NHIT)
+    parser.add_argument("--target-high-nhit-bin", type=str, default=TARGET_HIGH_NHIT)
+    parser.add_argument("--source-high-nhit-bin", type=str, default=SOURCE_HIGH_NHIT)
     parser.add_argument("--write-configs", action="store_true", default=False)
     parser.add_argument("--prepare-cache", action="store_true", default=False)
     parser.add_argument("--overwrite-filtered-cache", action="store_true", default=False)
@@ -86,6 +93,32 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ridge-min-peak-fraction", type=float, default=0.10)
     parser.add_argument("--write-diagnostics", action="store_true", default=False)
     return parser.parse_args()
+
+
+def configure_globals(args: argparse.Namespace) -> None:
+    global SOURCE_LOW_NHIT
+    global TARGET_LOW_NHIT
+    global SOURCE_HIGH_NHIT
+    global TARGET_HIGH_NHIT
+    global VERSION
+    global STRATEGY_NAME
+    global NHIT_BINS
+
+    SOURCE_LOW_NHIT = str(args.source_low_nhit_bin)
+    TARGET_LOW_NHIT = str(args.target_low_nhit_bin)
+    SOURCE_HIGH_NHIT = str(args.source_high_nhit_bin)
+    TARGET_HIGH_NHIT = str(args.target_high_nhit_bin)
+    VERSION = str(args.version)
+    STRATEGY_NAME = str(args.strategy_name)
+    NHIT_BINS = [
+        TARGET_LOW_NHIT,
+        "[200,300)",
+        "[300,500)",
+        "[500,800)",
+        "[800,1100)",
+        "[1100,2000)",
+        TARGET_HIGH_NHIT,
+    ]
 
 
 def resolve(path: Path) -> Path:
@@ -189,7 +222,9 @@ def source_pred_bins(target_pred: str) -> List[str]:
 
 
 def target_cache_needs_filter(target_nhit: str, target_pred: str) -> bool:
-    if target_nhit in {TARGET_LOW_NHIT, TARGET_HIGH_NHIT}:
+    if target_nhit == TARGET_LOW_NHIT and TARGET_LOW_NHIT != SOURCE_LOW_NHIT:
+        return True
+    if target_nhit == TARGET_HIGH_NHIT:
         return True
     return any(not interval_contains(target_pred, source_pred) for source_pred in source_pred_bins(target_pred))
 
@@ -304,13 +339,13 @@ def build_candidate_rows(
                 "predE_bin": pred_bin,
                 "mc_count": count,
                 "candidate_version": VERSION,
-                "strategy": "split56",
+                "strategy": STRATEGY_NAME,
                 "central99_flag": 0,
                 "selection_version": VERSION,
                 "selection_reason": "pending selector evaluation",
                 "raw_ledger_version": VERSION,
                 "cell_role": "candidate" if pred_bin != ">=6" else "diagnostic_tail",
-                "role_reason": "v6 _64670 split56 candidate grid" if pred_bin != ">=6" else "diagnostic tail bin outside [2,6)",
+                "role_reason": f"{VERSION} candidate grid" if pred_bin != ">=6" else "diagnostic tail bin outside [2,6)",
                 "source_pool": source_pool,
                 "source_nhit_bin": source_nhit_bin(nhit_bin),
                 "source_predE_bins": ";".join(source_pred_bins(pred_bin)),
@@ -407,7 +442,7 @@ def selector_rows(
             {
                 "cell_id": cell_id,
                 "include": int(include),
-                "subset_version": "v6_64670_split56_prefit",
+                "subset_version": f"{VERSION}_prefit",
                 "subset_reason": reason,
                 "nhit_bin": row["nhit_bin"],
                 "predE_bin": pred,
@@ -782,7 +817,7 @@ def write_diagnostics_html(path: Path, rows: Sequence[Dict[str, object]], select
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>v6 _64670 split56 cell selection diagnostics</title>
+<title>{html.escape(VERSION)} cell selection diagnostics</title>
 <style>
 body {{ margin:0; background:#f7f8f9; color:#17212b; font-family:Arial,Helvetica,sans-serif; line-height:1.55; }}
 main {{ max-width:1480px; margin:0 auto; padding:36px 20px 60px; }}
@@ -799,7 +834,7 @@ code {{ background:#edf1f3; border-radius:4px; padding:1px 4px; }}
 </style>
 </head>
 <body><main>
-<h1>Crab SED v6 <code>_64670</code> split56 candidate diagnostics</h1>
+<h1>Crab SED <code>{html.escape(VERSION)}</code> candidate diagnostics</h1>
 <p>Candidate grid has <strong>{len(rows)}</strong> cells: Nhit bins unchanged, old predE <code>[5,6)</code> split into <code>[5,5.5)</code> and <code>[5.5,6)</code>, and <code>&gt;=6</code> retained as a diagnostic tail outside the fit.</p>
 <p>Green cells are prefit MC-ridge cells before the drop4-baseline contract is enforced.</p>
 <div class="matrix-wrap"><table>
@@ -865,7 +900,7 @@ def write_configs(
         sys_row = dict(row)
         sys_include = bool(row.get("predE_bin") != ">=6" and truthy(row.get("central99_flag")) and int(row.get("mc_count") or 0) >= 1000)
         sys_row["include"] = int(sys_include)
-        sys_row["subset_version"] = "v6_64670_split56_systematics"
+        sys_row["subset_version"] = f"{VERSION}_systematics"
         sys_row["cell_role"] = "systematics_probe" if sys_include and not truthy(row.get("include")) else row.get("cell_role", "")
         sys_row["exclusion_source"] = "" if sys_include else row.get("exclusion_source", "")
         systematics.append(sys_row)
@@ -873,7 +908,7 @@ def write_configs(
         he_row = dict(row)
         he_include = str(row.get("predE_bin")) in {"[5,5.5)", "[5.5,6)", ">=6"} and int(row.get("mc_count") or 0) > 0
         he_row["include"] = int(he_include)
-        he_row["subset_version"] = "v6_64670_split56_high_energy_probes"
+        he_row["subset_version"] = f"{VERSION}_high_energy_probes"
         he_row["cell_role"] = "high_energy_probe" if he_include and not truthy(row.get("include")) else row.get("cell_role", "")
         he_row["exclusion_source"] = "" if he_include else row.get("exclusion_source", "")
         high_energy.append(he_row)
@@ -883,6 +918,7 @@ def write_configs(
 
 def main() -> None:
     args = parse_args()
+    configure_globals(args)
     start = time.perf_counter()
     if int(args.workers) <= 0:
         raise ValueError("--workers must be positive")
@@ -917,7 +953,7 @@ def main() -> None:
         rows = build_candidate_rows(source_counts_csv=source_counts_csv, exact_counts=exact_counts)
         if restricted_keys is not None:
             rows = restrict_rows_to_keys(rows, restricted_keys)
-        write_json(target_root / "summary" / "v6_64670_split56_prepare_manifest.json", cache_manifest)
+        write_json(target_root / "summary" / f"{VERSION}_prepare_manifest.json", cache_manifest)
         write_csv(
             target_root / "summary" / "bin_counts.csv",
             [{"nhit_bin": row["nhit_bin"], "predE_bin": row["predE_bin"], "count": int(row["mc_count"])} for row in rows],
@@ -953,7 +989,7 @@ def main() -> None:
         write_diagnostics_html(diagnostics_html, rows, selector)
 
     manifest = {
-        "strategy": "split56",
+        "strategy": STRATEGY_NAME,
         "version": VERSION,
         "source_binned_root": str(source_root),
         "target_binned_root": str(target_root),
@@ -972,7 +1008,7 @@ def main() -> None:
             "central99_flag": 1,
             "min_mc_count": int(args.min_baseline_mc_count),
             "ridge_peak_fraction_min": float(args.ridge_min_peak_fraction),
-            "final_drop4_contract": "enforced by 00d_enforce_v6_split56_drop4_selector.py using (nhit_bin,predE_bin), not old cell_id",
+            "final_selector_note": "prefit MC-ridge selector; downstream selectors may apply additional PSF or analysis gates by (nhit_bin,predE_bin)",
         },
         "validation": validation,
         "cache_manifest": cache_manifest,

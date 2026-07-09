@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-07-09 23:50 · [uncommitted] Complete the v6 `_64748` nhit100 highEplus1 Stage A-G Slurm chain, selectors, validation, and final report.
+
 - **energy** · 2026-07-09 20:43 · [uncommitted] Complete the v6 `_64748` split56 half-year observation apply chain, storage audit, final reports, and 64670 Jan-Feb retention boundary.
 
 - **energy** · 2026-07-09 00:22 · [uncommitted] Add Codex/Claude handoff documenting servers, data paths, workflow, and core code roles.

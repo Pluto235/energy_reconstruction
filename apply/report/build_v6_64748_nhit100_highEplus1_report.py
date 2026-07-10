@@ -185,7 +185,7 @@ def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
     psf_path = STAGE_B / f"psf_{RUN_ID}.npz"
     if not psf_path.exists():
         return
-    source_mtime = max(psf_path.stat().st_mtime, FIT_SELECTOR.stat().st_mtime)
+    source_mtime = max(psf_path.stat().st_mtime, FIT_SELECTOR.stat().st_mtime, Path(__file__).stat().st_mtime)
     if STAGE_B_FIT_SHADED_PROFILE.exists() and STAGE_B_FIT_SHADED_PROFILE.stat().st_mtime >= source_mtime:
         return
 
@@ -233,16 +233,28 @@ def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
                     spine.set_color("#059669")
                     spine.set_linewidth(1.25)
                 ax.text(
-                    0.97,
+                    0.03,
                     0.94,
                     "fit",
                     transform=ax.transAxes,
-                    ha="right",
+                    ha="left",
                     va="top",
                     fontsize=5.8,
                     color="#047857",
                     fontweight="bold",
                 )
+            ax.text(
+                0.97,
+                0.94,
+                f"cell {cell_id}",
+                transform=ax.transAxes,
+                ha="right",
+                va="top",
+                fontsize=6.2,
+                color="#0f172a",
+                fontweight="bold",
+                bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.72, "pad": 0.7},
+            )
 
             density = profile_density[idx]
             ax.step(centers, density, where="mid", color="#1f4e79", linewidth=0.9)
@@ -252,7 +264,7 @@ def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
                 if idx < r_opt_deg.size and np.isfinite(r_opt_deg[idx]):
                     ax.axvline(float(r_opt_deg[idx]), color="#444444", linewidth=0.7, linestyle="--")
 
-            ax.set_title(f"cell {cell_id}: {pred}", fontsize=6.4)
+            ax.set_title(pred, fontsize=6.4)
             ax.tick_params(labelsize=6, length=2)
             ax.grid(alpha=0.22, linewidth=0.35)
             if j == 0:

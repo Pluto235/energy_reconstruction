@@ -19,6 +19,11 @@ REPORT_DIR = REPO_ROOT / "apply" / "report"
 REPORT_PATH = REPORT_DIR / "crab_sed_v6_64748_nhit100_highEplus1_stage_a_to_g_report.html"
 ASSET_DIR = REPORT_DIR / "assets" / "v6-64748-nhit100-highEplus1"
 VALIDATION_JSON = ASSET_DIR / "report_validation.json"
+STAGE_B_FIT_SHADED_PROFILE = ASSET_DIR / f"{RUN_ID}_stage_b_radial_psf_profiles_fit_shaded.png"
+STAGE_G_EXTERNAL_OVERLAY = ASSET_DIR / f"{RUN_ID}_stage_g_external_overlay.png"
+
+PASS5_CSV = REPORT_DIR / "assets/official-pass5/wcda_crab_sed_pass5_20260616_104941.csv"
+V099_CSV = REPORT_DIR / "assets/official-v099/wcda_crab_sed_v099_20250731_20260616_123624.csv"
 
 LEDGER = REPO_ROOT / f"apply/config/cell_ledger_{RUN_ID}_candidate.csv"
 PREFIT_SELECTOR = REPO_ROOT / f"apply/config/cell_selector_{RUN_ID}_prefit.csv"
@@ -126,6 +131,406 @@ def sed_rows_by_group(path: Path, grouping: str) -> list[dict[str, str]]:
 
 def fit_metric(meta: dict[str, Any], fit_key: str, metric: str) -> Any:
     return ((meta.get("fits") or {}).get(fit_key) or {}).get(metric)
+
+
+def parse_interval(label: str) -> tuple[float | None, float | None]:
+    label = label.strip()
+    if label.lower() in {"all", "*"}:
+        return None, None
+    if label.startswith("[") and label.endswith(")"):
+        low, high = label[1:-1].split(",", 1)
+        return float(low), float(high)
+    if label.startswith("<"):
+        return None, float(label[1:])
+    if label.startswith(">="):
+        return float(label[2:]), None
+    raise ValueError(f"Unsupported interval label: {label}")
+
+
+def interval_key(label: str) -> float:
+    low, high = parse_interval(label)
+    if low is None and high is None:
+        return 1.0e30
+    if low is None:
+        return -1.0e30
+    if high is None:
+        return 1.0e30
+    return low
+
+
+def setup_matplotlib():
+    os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
+    os.environ.setdefault("XDG_CACHE_HOME", "/tmp/.cache")
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    return plt
+
+
+def rayleigh_pdf_deg(r_deg: Any, sigma_rad: float) -> Any:
+    import numpy as np
+
+    r_rad = np.radians(r_deg)
+    pdf_per_rad = (r_rad / (sigma_rad * sigma_rad)) * np.exp(-0.5 * (r_rad / sigma_rad) ** 2)
+    return pdf_per_rad * (math.pi / 180.0)
+
+
+def fit_cell_ids_from_selector(rows: list[dict[str, str]]) -> set[int]:
+    return {int(float(row["cell_id"])) for row in rows if row.get("cell_id") and truthy(row.get("include"))}
+
+
+def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
+    psf_path = STAGE_B / f"psf_{RUN_ID}.npz"
+    if not psf_path.exists():
+        return
+    source_mtime = max(psf_path.stat().st_mtime, FIT_SELECTOR.stat().st_mtime)
+    if STAGE_B_FIT_SHADED_PROFILE.exists() and STAGE_B_FIT_SHADED_PROFILE.stat().st_mtime >= source_mtime:
+        return
+
+    import numpy as np
+
+    with np.load(psf_path, allow_pickle=False) as psf:
+        cell_ids = np.asarray(psf["cell_id"], dtype=np.int64)
+        nhit_bins = np.asarray(psf["nhit_bin"], dtype=str)
+        pred_bins = np.asarray(psf["predE_bin"], dtype=str)
+        profile_edges_deg = np.asarray(psf["profile_edges_deg"], dtype=np.float64)
+        profile_density = np.asarray(psf["profile_density"], dtype=np.float64)
+        sigma_rad = np.asarray(psf["sigma_rad"], dtype=np.float64)
+        r_opt_deg = np.asarray(psf["r_opt_deg"], dtype=np.float64)
+
+    ordered_nhit = sorted(set(nhit_bins.tolist()), key=interval_key)
+    ordered_pred = sorted(set(pred_bins.tolist()), key=interval_key)
+    index_by_key = {(nhit, pred): idx for idx, (nhit, pred) in enumerate(zip(nhit_bins, pred_bins))}
+    centers = 0.5 * (profile_edges_deg[:-1] + profile_edges_deg[1:])
+
+    plt = setup_matplotlib()
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+
+    fig, axes = plt.subplots(
+        len(ordered_nhit),
+        len(ordered_pred),
+        figsize=(1.78 * len(ordered_pred), 1.55 * len(ordered_nhit)),
+        dpi=150,
+        sharex=True,
+        sharey=False,
+        squeeze=False,
+    )
+    for i, nhit in enumerate(ordered_nhit):
+        for j, pred in enumerate(ordered_pred):
+            ax = axes[i, j]
+            idx = index_by_key.get((nhit, pred))
+            if idx is None:
+                ax.set_axis_off()
+                continue
+
+            cell_id = int(cell_ids[idx])
+            if cell_id in fit_ids:
+                ax.set_facecolor("#ecfdf5")
+                for spine in ax.spines.values():
+                    spine.set_color("#059669")
+                    spine.set_linewidth(1.25)
+                ax.text(
+                    0.97,
+                    0.94,
+                    "fit",
+                    transform=ax.transAxes,
+                    ha="right",
+                    va="top",
+                    fontsize=5.8,
+                    color="#047857",
+                    fontweight="bold",
+                )
+
+            density = profile_density[idx]
+            ax.step(centers, density, where="mid", color="#1f4e79", linewidth=0.9)
+            if np.isfinite(density).any() and np.nansum(density) > 0.0:
+                if idx < sigma_rad.size and np.isfinite(sigma_rad[idx]) and sigma_rad[idx] > 0.0:
+                    ax.plot(centers, rayleigh_pdf_deg(centers, float(sigma_rad[idx])), color="#c9501a", linewidth=0.8, alpha=0.9)
+                if idx < r_opt_deg.size and np.isfinite(r_opt_deg[idx]):
+                    ax.axvline(float(r_opt_deg[idx]), color="#444444", linewidth=0.7, linestyle="--")
+
+            ax.set_title(f"cell {cell_id}: {pred}", fontsize=6.4)
+            ax.tick_params(labelsize=6, length=2)
+            ax.grid(alpha=0.22, linewidth=0.35)
+            if j == 0:
+                ax.set_ylabel(nhit, fontsize=6.7)
+            if i == len(ordered_nhit) - 1:
+                ax.set_xlabel("r (deg)", fontsize=6.7)
+
+    handles = [
+        Line2D([0], [0], color="#1f4e79", linewidth=0.9, label="MC histogram"),
+        Line2D([0], [0], color="#c9501a", linewidth=0.9, label="Rayleigh fit"),
+        Line2D([0], [0], color="#444444", linewidth=0.8, linestyle="--", label="r_opt"),
+        Patch(facecolor="#ecfdf5", edgecolor="#059669", label="included in fit"),
+    ]
+    fig.legend(handles=handles, loc="upper center", ncol=4, fontsize=8, frameon=False, bbox_to_anchor=(0.5, 0.988))
+    fig.suptitle("Stage B v6 64748 nhit100 highEplus1 radial PSF profiles: fit cells shaded", fontsize=11, y=0.999)
+    fig.tight_layout(rect=[0.0, 0.0, 1.0, 0.963])
+    STAGE_B_FIT_SHADED_PROFILE.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(STAGE_B_FIT_SHADED_PROFILE)
+    plt.close(fig)
+
+
+def read_csv_rows(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    return load_csv(path)
+
+
+def pass5_points() -> tuple[list[float], list[float]]:
+    energy: list[float] = []
+    flux: list[float] = []
+    for row in read_csv_rows(PASS5_CSV):
+        e = finite_float(row.get("energy_tev"))
+        dnde = finite_float(row.get("flux_per_tev_cm2_s"))
+        if e is None or dnde is None or e <= 0 or dnde <= 0:
+            continue
+        energy.append(e)
+        flux.append(e * e * dnde)
+    return energy, flux
+
+
+def v099_points() -> tuple[list[float], list[float], list[float], list[float]]:
+    energy: list[float] = []
+    flux: list[float] = []
+    err_low: list[float] = []
+    err_high: list[float] = []
+    for row in read_csv_rows(V099_CSV):
+        e = finite_float(row.get("energy_tev"))
+        y = finite_float(row.get("e2_flux_scaled_1e14_tev_cm2_s"))
+        lo = finite_float(row.get("e2_flux_err_low_scaled_1e14"))
+        hi = finite_float(row.get("e2_flux_err_high_scaled_1e14"))
+        if e is None or y is None or e <= 0 or y <= 0:
+            continue
+        energy.append(e)
+        flux.append(y * 1.0e-14)
+        err_low.append((lo or 0.0) * 1.0e-14)
+        err_high.append((hi or 0.0) * 1.0e-14)
+    return energy, flux, err_low, err_high
+
+
+def logpar_flux_tev(E_tev: Any, *, phi0: float, alpha: float, beta: float, pivot_tev: float) -> Any:
+    import numpy as np
+
+    ratio = np.asarray(E_tev, dtype=np.float64) / float(pivot_tev)
+    log_ratio = np.log(ratio)
+    return float(phi0) * np.exp((-float(alpha) - float(beta) * log_ratio) * log_ratio)
+
+
+def pl_flux_tev(E_tev: Any, *, phi0: float, gamma: float, pivot_tev: float) -> Any:
+    import numpy as np
+
+    ratio = np.asarray(E_tev, dtype=np.float64) / float(pivot_tev)
+    return float(phi0) * np.power(ratio, -float(gamma))
+
+
+def sed_model_curve(E_tev: Any, model: str, params: dict[str, Any], pivot_tev: float) -> Any:
+    if model == "logpar":
+        return E_tev * E_tev * logpar_flux_tev(
+            E_tev,
+            phi0=float(params["phi0"]),
+            alpha=float(params["alpha"]),
+            beta=float(params["beta"]),
+            pivot_tev=pivot_tev,
+        )
+    return E_tev * E_tev * pl_flux_tev(
+        E_tev,
+        phi0=float(params["phi0"]),
+        gamma=float(params["gamma"]),
+        pivot_tev=pivot_tev,
+    )
+
+
+def sed_uncertainty_band(E_tev: Any, fit: dict[str, Any], pivot_tev: float) -> tuple[Any, Any, Any] | None:
+    import numpy as np
+
+    names = [str(name) for name in fit.get("fit_parameter_names") or []]
+    covariance = fit.get("covariance")
+    params = fit.get("parameters") or {}
+    if not names or covariance is None:
+        return None
+    cov = np.asarray(covariance, dtype=np.float64)
+    x = np.asarray(E_tev, dtype=np.float64)
+    if cov.shape != (len(names), len(names)):
+        return None
+    model = str(fit.get("model_name") or "")
+    y = sed_model_curve(x, model, params, pivot_tev)
+    log_ratio = np.log(x / float(pivot_tev))
+    grad = np.zeros((x.size, len(names)), dtype=np.float64)
+    for idx, name in enumerate(names):
+        if name == "log10_phi0":
+            grad[:, idx] = math.log(10.0)
+        elif name in {"gamma", "alpha"}:
+            grad[:, idx] = -log_ratio
+        elif name == "beta":
+            grad[:, idx] = -(log_ratio * log_ratio)
+    var_log_y = np.einsum("ij,jk,ik->i", grad, cov, grad)
+    sigma = np.sqrt(np.clip(var_log_y, 0.0, np.inf))
+    return y, y * np.exp(-sigma), y * np.exp(sigma)
+
+
+def ensure_stage_g_external_overlay(stage_f_meta: dict[str, Any], stage_g_meta: dict[str, Any]) -> None:
+    input_paths = [
+        STAGE_G / f"sed_points_{RUN_ID}_metadata.json",
+        STAGE_G / f"sed_points_{RUN_ID}_summary.csv",
+        STAGE_F / f"fit_{RUN_ID}_metadata.json",
+        STAGE_G / "external_crab_sed_references.csv",
+        STAGE_G / "wcda1_pool1_table1_reference.csv",
+        PASS5_CSV,
+        V099_CSV,
+    ]
+    existing_inputs = [path for path in input_paths if path.exists()]
+    source_mtime = max(path.stat().st_mtime for path in existing_inputs)
+    if STAGE_G_EXTERNAL_OVERLAY.exists() and STAGE_G_EXTERNAL_OVERLAY.stat().st_mtime >= source_mtime:
+        return
+
+    import numpy as np
+
+    plt = setup_matplotlib()
+    fig, ax = plt.subplots(figsize=(8.8, 5.8), dpi=170)
+
+    points = [row for row in stage_g_meta.get("points", []) if isinstance(row, dict)]
+    energies = [finite_float(row.get("effective_energy_tev")) for row in points]
+    energies = [e for e in energies if e is not None and e > 0.0]
+    emin = max(0.12, min(energies) / 2.2) if energies else 0.12
+    emax = min(320.0, max(energies) * 2.2) if energies else 260.0
+    x = np.geomspace(emin, emax, 320)
+
+    frozen = stage_g_meta.get("frozen_spectrum") or {}
+    fit_key = str(frozen.get("fit_key") or "logpar_conservative")
+    fit = ((stage_f_meta.get("fits") or {}).get(fit_key) or {})
+    frozen_params = {str(k): float(v) for k, v in (frozen.get("parameters") or {}).items()}
+    if not frozen_params:
+        frozen_params = {str(k): float(v) for k, v in (fit.get("parameters") or {}).items()}
+    model = str(frozen.get("model") or fit.get("model_name") or "logpar")
+    pivot = float(frozen.get("pivot_tev") or stage_f_meta.get("forward_folding", {}).get("pivot_tev") or 3.0)
+    y_model = sed_model_curve(x, model, frozen_params, pivot)
+    band = sed_uncertainty_band(x, fit, pivot)
+    if band is not None:
+        _, y_low, y_high = band
+        ax.fill_between(x, y_low, y_high, color="#2563eb", alpha=0.18, linewidth=0, label="Stage F LogPar 1-sigma band")
+    ax.plot(x, y_model, color="#2563eb", lw=2.1, label="v6 Stage F LogPar")
+
+    ref = stage_g_meta.get("reference_spectrum") or {}
+    if ref:
+        ax.plot(
+            x,
+            sed_model_curve(
+                x,
+                "pl",
+                {"phi0": float(ref.get("phi0")), "gamma": float(ref.get("gamma"))},
+                float(ref.get("pivot_tev") or pivot),
+            ),
+            color="#4b5563",
+            lw=1.6,
+            ls="--",
+            label="1LHAASO WCDA full-array PL",
+        )
+
+    e_pass5, y_pass5 = pass5_points()
+    if e_pass5:
+        ax.plot(e_pass5, y_pass5, "o", ms=5.2, color="#111827", label="Official pass5 WCDA", zorder=4)
+
+    e_v099, y_v099, ylo_v099, yhi_v099 = v099_points()
+    if e_v099:
+        ax.errorbar(
+            e_v099,
+            y_v099,
+            yerr=[ylo_v099, yhi_v099],
+            fmt="s",
+            ms=4.9,
+            lw=0.9,
+            color="#7c2d12",
+            ecolor="#7c2d12",
+            capsize=2.4,
+            label="Official tutorial v0.99 WCDA",
+            zorder=4,
+        )
+
+    pool1_rows = read_csv_rows(STAGE_G / "wcda1_pool1_table1_reference.csv")
+    if pool1_rows:
+        ax.errorbar(
+            [float(row["emed_tev"]) for row in pool1_rows],
+            [float(row["E2_dnde"]) for row in pool1_rows],
+            yerr=[float(row["E2_dnde_err"]) for row in pool1_rows],
+            fmt="^",
+            color="#7f3fbf",
+            ecolor="#7f3fbf",
+            capsize=2.5,
+            ms=4.8,
+            lw=0.8,
+            label="WCDA-1 Pool-1 Table 1",
+            alpha=0.92,
+        )
+
+    external_styles = {
+        "magic_joint_crab": {"fmt": "v", "color": "#9467bd", "label": "MAGIC"},
+        "hess_2024_stereo": {"fmt": "D", "color": "#8c564b", "label": "H.E.S.S."},
+        "hawc_2019_nn": {"fmt": "P", "color": "#17becf", "label": "HAWC NN"},
+    }
+    external_rows = read_csv_rows(STAGE_G / "external_crab_sed_references.csv")
+    for dataset, style in external_styles.items():
+        selected = [
+            row
+            for row in external_rows
+            if row.get("dataset") == dataset
+            and str(row.get("is_upper_limit")).strip().lower() != "true"
+            and finite_float(row.get("energy_tev"))
+            and finite_float(row.get("e2_dnde"))
+        ]
+        if not selected:
+            continue
+        ax.errorbar(
+            [float(row["energy_tev"]) for row in selected],
+            [float(row["e2_dnde"]) for row in selected],
+            yerr=[finite_float(row.get("e2_dnde_err")) or 0.0 for row in selected],
+            capsize=1.9,
+            ms=3.8,
+            lw=0.65,
+            alpha=0.58,
+            **style,
+        )
+
+    point_styles = {
+        "nhit": {"fmt": "o", "color": "#dc2626", "label": "v6 Nhit grouped"},
+        "predE": {"fmt": "s", "color": "#16a34a", "label": "v6 predE grouped"},
+    }
+    for grouping, style in point_styles.items():
+        selected = [
+            row
+            for row in points
+            if row.get("grouping") == grouping
+            and (finite_float(row.get("effective_energy_tev")) or 0.0) > 0.0
+            and (finite_float(row.get("E2_dnde")) or 0.0) > 0.0
+        ]
+        if not selected:
+            continue
+        ax.errorbar(
+            [float(row["effective_energy_tev"]) for row in selected],
+            [float(row["E2_dnde"]) for row in selected],
+            yerr=[float(row["E2_dnde_err"]) for row in selected],
+            capsize=2.8,
+            ms=5.1,
+            lw=0.9,
+            zorder=6,
+            **style,
+        )
+
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("Effective true energy [TeV]")
+    ax.set_ylabel(r"$E^2 dN/dE$ [TeV cm$^{-2}$ s$^{-1}$]")
+    ax.set_title("Stage G v6 64748 SED overlay with external WCDA references")
+    ax.grid(True, which="both", alpha=0.24, lw=0.45)
+    ax.set_xlim(emin, emax)
+    ax.legend(fontsize=7.0, ncol=2, frameon=True)
+    fig.tight_layout()
+    STAGE_G_EXTERNAL_OVERLAY.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(STAGE_G_EXTERNAL_OVERLAY)
+    plt.close(fig)
 
 
 def parse_pipeline_jobs() -> list[tuple[str, str]]:
@@ -266,6 +671,9 @@ def main() -> None:
     high_inc = [row for row in selector_rows if truthy(row.get("highEplus1_included_flag"))]
     high_rej = [row for row in selector_rows if truthy(row.get("highEplus1_rejected_flag"))]
     original_ridge = [row for row in selector_rows if truthy(row.get("original_ridge_fit_flag"))]
+    fit_cell_ids = fit_cell_ids_from_selector(selector_rows)
+    ensure_stage_b_fit_shaded_profile_grid(fit_cell_ids)
+    ensure_stage_g_external_overlay(stage_f_meta, stage_g_meta)
 
     processing = stage_c_meta.get("processing") or {}
     stage_c_files = int(processing.get("processed_file_count") or 0)
@@ -330,14 +738,14 @@ def main() -> None:
     expected_figures = [
         (STAGE_B / "psf_r_opt_deg_grid.png", "Stage B r_opt by cell"),
         (STAGE_B / "psf_effective_events_grid.png", "Stage B effective events by cell"),
-        (STAGE_B / "psf_radial_profiles_grid.png", "Stage B radial PSF profiles"),
+        (STAGE_B_FIT_SHADED_PROFILE, "Stage B radial PSF profiles; green panels enter the fit"),
         (STAGE_D / "roi_excess_grid.png", "Stage D ROI excess map grid"),
         (STAGE_D / "annulus_residual_grid.png", "Stage D annulus residuals"),
         (STAGE_E / "formal_sigma_grid.png", "Stage E formal sigma grid"),
         (STAGE_E / "on_background_grid.png", "Stage E on/background grid"),
         (STAGE_F / "model_counts_vs_excess.png", "Stage F model counts versus excess"),
         (STAGE_F / "pull_grid_logpar.png", "Stage F LogPar pull grid"),
-        (STAGE_G / "sed_points_stage_f_fullarray_pool1.png", "Stage G SED overlay"),
+        (STAGE_G_EXTERNAL_OVERLAY, "Stage G SED overlay with v6 fit band and external references"),
         (STAGE_G / "sed_points_ratio.png", "Stage G SED ratio plot"),
     ]
     figure_html = "".join(figure(path, caption) for path, caption in expected_figures)
@@ -454,7 +862,7 @@ def main() -> None:
 
   <section>
     <h2>Stage A-B-D-E Diagnostics</h2>
-    <p>Stage A nominal response is <code>{esc(stage_a_meta.get('response_type'))}</code>; Stage F/G use <code>{esc(stage_a_ap_meta.get('response_type'))}</code>. Stage B wrote {esc(stage_b_meta.get('n_cells'))} PSF rows.</p>
+    <p>Stage A nominal response is <code>{esc(stage_a_meta.get('response_type'))}</code>; Stage F/G use <code>{esc(stage_a_ap_meta.get('response_type'))}</code>. Stage B wrote {esc(stage_b_meta.get('n_cells'))} PSF rows. Pale green panels mark the {len(fit_cell_ids)} cells used by Stage F/G.</p>
     <div class="figgrid">{figure_html}</div>
   </section>
 

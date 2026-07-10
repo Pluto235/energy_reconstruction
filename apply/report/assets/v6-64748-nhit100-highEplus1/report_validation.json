@@ -1,17 +1,17 @@
 {
-  "report_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/crab_sed_v6_64748_nhit100_highEplus1_stage_a_to_g_report.html",
+  "report_path": "/Users/luoji/Documents/projects/energy/apply/report/crab_sed_v6_64748_nhit100_highEplus1_stage_a_to_g_report.html",
   "html_image_validation": {
     "image_refs": [
       "../output/stage_b_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_b_psf/psf_r_opt_deg_grid.png",
       "../output/stage_b_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_b_psf/psf_effective_events_grid.png",
-      "../output/stage_b_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_b_psf/psf_radial_profiles_grid.png",
+      "assets/v6-64748-nhit100-highEplus1/v6_64748_nhit100_highEplus1_split56_stage_b_radial_psf_profiles_fit_shaded.png",
       "../output/stage_d_v6_64748_nhit100_highEplus1_split56_annnorm/runs/v6_64748_nhit100_highEplus1_split56_stage_d_annnorm/roi_excess_grid.png",
       "../output/stage_d_v6_64748_nhit100_highEplus1_split56_annnorm/runs/v6_64748_nhit100_highEplus1_split56_stage_d_annnorm/annulus_residual_grid.png",
       "../output/stage_e_v6_64748_nhit100_highEplus1_split56_containment1_annnorm/runs/v6_64748_nhit100_highEplus1_split56_stage_e_containment1_annnorm/formal_sigma_grid.png",
       "../output/stage_e_v6_64748_nhit100_highEplus1_split56_containment1_annnorm/runs/v6_64748_nhit100_highEplus1_split56_stage_e_containment1_annnorm/on_background_grid.png",
       "../output/stage_f_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_f/model_counts_vs_excess.png",
       "../output/stage_f_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_f/pull_grid_logpar.png",
-      "../output/stage_g_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_g/sed_points_stage_f_fullarray_pool1.png",
+      "assets/v6-64748-nhit100-highEplus1/v6_64748_nhit100_highEplus1_split56_stage_g_external_overlay.png",
       "../output/stage_g_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_g/sed_points_ratio.png"
     ],
     "missing_image_refs": [],
@@ -20,15 +20,15 @@
   "metadata_contamination": {
     "status": "passed",
     "metadata_files": [
-      "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v6_64748_nhit100_highEplus1_split56/response_2d_v6_64748_nhit100_highEplus1_split56_metadata.json",
-      "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v6_64748_nhit100_highEplus1_split56_aperture_conditioned/response_2d_v6_64748_nhit100_highEplus1_split56_aperture_conditioned_metadata.json",
-      "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_b_psf/psf_v6_64748_nhit100_highEplus1_split56_metadata.json",
-      "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_c_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_c_halfyear/obs_events_metadata.json",
-      "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v6_64748_nhit100_highEplus1_split56_annnorm/runs/v6_64748_nhit100_highEplus1_split56_stage_d_annnorm/background_v6_64748_nhit100_highEplus1_split56_annnorm_metadata.json",
-      "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v6_64748_nhit100_highEplus1_split56_containment1_annnorm/runs/v6_64748_nhit100_highEplus1_split56_stage_e_containment1_annnorm/signal_v6_64748_nhit100_highEplus1_split56_containment1_annnorm_metadata.json",
-      "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_f/fit_v6_64748_nhit100_highEplus1_split56_metadata.json",
-      "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_g_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_g/sed_points_v6_64748_nhit100_highEplus1_split56_metadata.json",
-      "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v6_64748_nhit100_highEplus1_split56_fit_metadata.json"
+      "/Users/luoji/Documents/projects/energy/apply/output/stage_a_v6_64748_nhit100_highEplus1_split56/response_2d_v6_64748_nhit100_highEplus1_split56_metadata.json",
+      "/Users/luoji/Documents/projects/energy/apply/output/stage_a_v6_64748_nhit100_highEplus1_split56_aperture_conditioned/response_2d_v6_64748_nhit100_highEplus1_split56_aperture_conditioned_metadata.json",
+      "/Users/luoji/Documents/projects/energy/apply/output/stage_b_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_b_psf/psf_v6_64748_nhit100_highEplus1_split56_metadata.json",
+      "/Users/luoji/Documents/projects/energy/apply/output/stage_c_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_c_halfyear/obs_events_metadata.json",
+      "/Users/luoji/Documents/projects/energy/apply/output/stage_d_v6_64748_nhit100_highEplus1_split56_annnorm/runs/v6_64748_nhit100_highEplus1_split56_stage_d_annnorm/background_v6_64748_nhit100_highEplus1_split56_annnorm_metadata.json",
+      "/Users/luoji/Documents/projects/energy/apply/output/stage_e_v6_64748_nhit100_highEplus1_split56_containment1_annnorm/runs/v6_64748_nhit100_highEplus1_split56_stage_e_containment1_annnorm/signal_v6_64748_nhit100_highEplus1_split56_containment1_annnorm_metadata.json",
+      "/Users/luoji/Documents/projects/energy/apply/output/stage_f_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_f/fit_v6_64748_nhit100_highEplus1_split56_metadata.json",
+      "/Users/luoji/Documents/projects/energy/apply/output/stage_g_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_g/sed_points_v6_64748_nhit100_highEplus1_split56_metadata.json",
+      "/Users/luoji/Documents/projects/energy/apply/config/cell_selector_v6_64748_nhit100_highEplus1_split56_fit_metadata.json"
     ],
     "offenders": []
   },

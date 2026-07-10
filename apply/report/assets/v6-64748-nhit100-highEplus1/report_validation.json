@@ -4,6 +4,7 @@
     "image_refs": [
       "../output/stage_b_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_b_psf/psf_r_opt_deg_grid.png",
       "../output/stage_b_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_b_psf/psf_effective_events_grid.png",
+      "assets/v6-64748-nhit100-highEplus1/v6_64748_nhit100_highEplus1_split56_stage_b_raw_theta_profiles.png",
       "assets/v6-64748-nhit100-highEplus1/v6_64748_nhit100_highEplus1_split56_stage_b_radial_psf_profiles_fit_shaded.png",
       "../output/stage_d_v6_64748_nhit100_highEplus1_split56_annnorm/runs/v6_64748_nhit100_highEplus1_split56_stage_d_annnorm/roi_excess_grid.png",
       "../output/stage_d_v6_64748_nhit100_highEplus1_split56_annnorm/runs/v6_64748_nhit100_highEplus1_split56_stage_d_annnorm/annulus_residual_grid.png",
@@ -15,7 +16,7 @@
       "../output/stage_g_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_g/sed_points_ratio.png"
     ],
     "missing_image_refs": [],
-    "image_ref_count": 11
+    "image_ref_count": 12
   },
   "metadata_contamination": {
     "status": "passed",

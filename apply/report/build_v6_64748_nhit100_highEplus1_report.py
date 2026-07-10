@@ -19,6 +19,9 @@ REPORT_DIR = REPO_ROOT / "apply" / "report"
 REPORT_PATH = REPORT_DIR / "crab_sed_v6_64748_nhit100_highEplus1_stage_a_to_g_report.html"
 ASSET_DIR = REPORT_DIR / "assets" / "v6-64748-nhit100-highEplus1"
 VALIDATION_JSON = ASSET_DIR / "report_validation.json"
+STAGE_B_THETA_CACHE = ASSET_DIR / f"{RUN_ID}_stage_b_raw_theta_profiles.npz"
+STAGE_B_THETA_PROFILE = ASSET_DIR / f"{RUN_ID}_stage_b_raw_theta_profiles.png"
+STAGE_B_THETA_PROFILE_PDF = ASSET_DIR / f"{RUN_ID}_stage_b_raw_theta_profiles.pdf"
 STAGE_B_FIT_SHADED_PROFILE = ASSET_DIR / f"{RUN_ID}_stage_b_radial_psf_profiles_fit_shaded.png"
 STAGE_G_EXTERNAL_OVERLAY = ASSET_DIR / f"{RUN_ID}_stage_g_external_overlay.png"
 
@@ -179,6 +182,143 @@ def rayleigh_pdf_deg(r_deg: Any, sigma_rad: float) -> Any:
 
 def fit_cell_ids_from_selector(rows: list[dict[str, str]]) -> set[int]:
     return {int(float(row["cell_id"])) for row in rows if row.get("cell_id") and truthy(row.get("include"))}
+
+
+def ensure_stage_b_theta_profile_grid(fit_ids: set[int]) -> None:
+    if not STAGE_B_THETA_CACHE.exists():
+        raise FileNotFoundError(
+            f"Missing complete Stage B theta cache: {STAGE_B_THETA_CACHE}. "
+            "Build it on ETO with apply/report/build_v6_stage_b_theta_profile_cache.py."
+        )
+    source_mtime = max(STAGE_B_THETA_CACHE.stat().st_mtime, FIT_SELECTOR.stat().st_mtime, Path(__file__).stat().st_mtime)
+    if (
+        STAGE_B_THETA_PROFILE.exists()
+        and STAGE_B_THETA_PROFILE_PDF.exists()
+        and min(STAGE_B_THETA_PROFILE.stat().st_mtime, STAGE_B_THETA_PROFILE_PDF.stat().st_mtime) >= source_mtime
+    ):
+        return
+
+    import numpy as np
+
+    with np.load(STAGE_B_THETA_CACHE, allow_pickle=False) as cache:
+        cell_ids = np.asarray(cache["cell_id"], dtype=np.int64)
+        nhit_bins = np.asarray(cache["nhit_bin"], dtype=str)
+        pred_bins = np.asarray(cache["predE_bin"], dtype=str)
+        theta_edges = np.asarray(cache["theta_edges_deg"], dtype=np.float64)
+        crab_probability = np.asarray(cache["crab_theta_probability"], dtype=np.float64)
+        mc_probability = np.asarray(cache["mc_theta_probability"], dtype=np.float64)
+        missing_mass = np.asarray(cache["theta_missing_crab_probability_mass"], dtype=np.float64)
+        sources = np.asarray(cache["source"], dtype=str)
+
+    if mc_probability.shape != (cell_ids.size, theta_edges.size - 1):
+        raise ValueError("Stage B theta cache has incompatible profile dimensions")
+    ordered_nhit = sorted(set(nhit_bins.tolist()), key=interval_key)
+    ordered_pred = sorted(set(pred_bins.tolist()), key=interval_key)
+    index_by_key = {(nhit, pred): idx for idx, (nhit, pred) in enumerate(zip(nhit_bins, pred_bins))}
+    centers = 0.5 * (theta_edges[:-1] + theta_edges[1:])
+
+    plt = setup_matplotlib()
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+
+    fig, axes = plt.subplots(
+        len(ordered_nhit),
+        len(ordered_pred),
+        figsize=(1.78 * len(ordered_pred), 1.55 * len(ordered_nhit)),
+        dpi=150,
+        sharex=True,
+        sharey=False,
+        squeeze=False,
+    )
+    for i, nhit in enumerate(ordered_nhit):
+        for j, pred in enumerate(ordered_pred):
+            ax = axes[i, j]
+            idx = index_by_key.get((nhit, pred))
+            if idx is None:
+                ax.set_axis_off()
+                continue
+
+            cell_id = int(cell_ids[idx])
+            if cell_id in fit_ids:
+                ax.set_facecolor("#ecfdf5")
+                for spine in ax.spines.values():
+                    spine.set_color("#059669")
+                    spine.set_linewidth(1.25)
+                ax.text(
+                    0.03,
+                    0.94,
+                    "fit",
+                    transform=ax.transAxes,
+                    ha="left",
+                    va="top",
+                    fontsize=5.8,
+                    color="#047857",
+                    fontweight="bold",
+                )
+
+            probability = mc_probability[idx]
+            unsupported = (crab_probability > 0.0) & ~(probability > 0.0)
+            if np.any(unsupported):
+                ax.fill_between(
+                    centers,
+                    0.0,
+                    crab_probability,
+                    where=unsupported,
+                    step="mid",
+                    color="#E69F00",
+                    alpha=0.24,
+                    linewidth=0.0,
+                )
+            ax.step(centers, probability, where="mid", color="#0072B2", linewidth=0.95)
+            ax.step(centers, crab_probability, where="mid", color="#D55E00", linewidth=0.8, alpha=0.9)
+            ax.text(
+                0.97,
+                0.94,
+                f"cell {cell_id}\nmissing={missing_mass[idx]:.1%}",
+                transform=ax.transAxes,
+                ha="right",
+                va="top",
+                fontsize=5.7,
+                color="#0f172a",
+                fontweight="bold",
+                bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.76, "pad": 0.7},
+            )
+            if sources[idx] == "no_input_files":
+                ax.text(
+                    0.5,
+                    0.43,
+                    "no MC files",
+                    transform=ax.transAxes,
+                    ha="center",
+                    va="center",
+                    fontsize=5.8,
+                    color="#6b7280",
+                )
+
+            ax.set_title(pred, fontsize=6.4)
+            ax.set_xlim(float(theta_edges[0]), float(theta_edges[-1]))
+            panel_max = float(max(np.nanmax(probability), np.nanmax(crab_probability)))
+            ax.set_ylim(0.0, 1.18 * panel_max if panel_max > 0.0 else 1.0)
+            ax.tick_params(labelsize=6, length=2, labelleft=(j == 0))
+            ax.grid(alpha=0.18, linewidth=0.35)
+            if j == 0:
+                ax.set_ylabel(nhit, fontsize=6.7)
+            if i == len(ordered_nhit) - 1:
+                ax.set_xlabel("MC true theta (deg)", fontsize=6.7)
+
+    handles = [
+        Line2D([0], [0], color="#0072B2", linewidth=1.1, label="raw weighted MC"),
+        Line2D([0], [0], color="#D55E00", linewidth=1.0, label="Crab theta target"),
+        Patch(facecolor="#E69F00", alpha=0.24, label="missing Crab support"),
+        Patch(facecolor="#ecfdf5", edgecolor="#059669", label="included in fit"),
+    ]
+    fig.legend(handles=handles, loc="upper center", ncol=4, fontsize=8, frameon=False, bbox_to_anchor=(0.5, 0.988))
+    fig.suptitle("Stage B raw normalized MC theta distributions by cell", fontsize=11, y=0.999)
+    fig.tight_layout(rect=[0.0, 0.0, 1.0, 0.963])
+    STAGE_B_THETA_PROFILE.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(STAGE_B_THETA_PROFILE, dpi=300)
+    fig.savefig(STAGE_B_THETA_PROFILE_PDF)
+    plt.close(fig)
 
 
 def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
@@ -684,6 +824,7 @@ def main() -> None:
     high_rej = [row for row in selector_rows if truthy(row.get("highEplus1_rejected_flag"))]
     original_ridge = [row for row in selector_rows if truthy(row.get("original_ridge_fit_flag"))]
     fit_cell_ids = fit_cell_ids_from_selector(selector_rows)
+    ensure_stage_b_theta_profile_grid(fit_cell_ids)
     ensure_stage_b_fit_shaded_profile_grid(fit_cell_ids)
     ensure_stage_g_external_overlay(stage_f_meta, stage_g_meta)
 
@@ -750,6 +891,7 @@ def main() -> None:
     expected_figures = [
         (STAGE_B / "psf_r_opt_deg_grid.png", "Stage B r_opt by cell"),
         (STAGE_B / "psf_effective_events_grid.png", "Stage B effective events by cell"),
+        (STAGE_B_THETA_PROFILE, "Stage B raw normalized MC theta distributions; green panels enter the fit"),
         (STAGE_B_FIT_SHADED_PROFILE, "Stage B radial PSF profiles; green panels enter the fit"),
         (STAGE_D / "roi_excess_grid.png", "Stage D ROI excess map grid"),
         (STAGE_D / "annulus_residual_grid.png", "Stage D annulus residuals"),
@@ -874,7 +1016,7 @@ def main() -> None:
 
   <section>
     <h2>Stage A-B-D-E Diagnostics</h2>
-    <p>Stage A nominal response is <code>{esc(stage_a_meta.get('response_type'))}</code>; Stage F/G use <code>{esc(stage_a_ap_meta.get('response_type'))}</code>. Stage B wrote {esc(stage_b_meta.get('n_cells'))} PSF rows. Pale green panels mark the {len(fit_cell_ids)} cells used by Stage F/G.</p>
+    <p>Stage A nominal response is <code>{esc(stage_a_meta.get('response_type'))}</code>; Stage F/G use <code>{esc(stage_a_ap_meta.get('response_type'))}</code>. Stage B wrote {esc(stage_b_meta.get('n_cells'))} PSF rows. The theta grid shows each cell's raw <code>mc_weight</code>-normalized distribution before Crab reweighting; orange shading marks Crab-positive theta bins without MC support, and each panel reports the corresponding missing probability mass. Pale green panels mark the {len(fit_cell_ids)} cells used by Stage F/G.</p>
     <div class="figgrid">{figure_html}</div>
   </section>
 

@@ -542,6 +542,10 @@ def ensure_stage_g_external_overlay(stage_f_meta: dict[str, Any], stage_g_meta: 
         STAGE_G / f"sed_points_{RUN_ID}_metadata.json",
         STAGE_G / f"sed_points_{RUN_ID}_summary.csv",
         STAGE_F / f"fit_{RUN_ID}_metadata.json",
+        STAGE_G / "external_crab_sed_references.csv",
+        STAGE_G / "wcda1_pool1_table1_reference.csv",
+        PASS5_CSV,
+        V099_CSV,
     ]
     existing_inputs = [path for path in input_paths if path.exists()]
     source_mtime = max(path.stat().st_mtime for path in existing_inputs)
@@ -575,6 +579,86 @@ def ensure_stage_g_external_overlay(stage_f_meta: dict[str, Any], stage_g_meta: 
         ax.fill_between(x, y_low, y_high, color="#2563eb", alpha=0.18, linewidth=0, label="Stage F LogPar 1-sigma band")
     ax.plot(x, y_model, color="#2563eb", lw=2.1, label="v6 Stage F LogPar")
 
+    ref = stage_g_meta.get("reference_spectrum") or {}
+    if ref:
+        ax.plot(
+            x,
+            sed_model_curve(
+                x,
+                "pl",
+                {"phi0": float(ref.get("phi0")), "gamma": float(ref.get("gamma"))},
+                float(ref.get("pivot_tev") or pivot),
+            ),
+            color="#4b5563",
+            lw=1.6,
+            ls="--",
+            label="1LHAASO WCDA full-array PL",
+        )
+
+    e_pass5, y_pass5 = pass5_points()
+    if e_pass5:
+        ax.plot(e_pass5, y_pass5, "o", ms=5.2, color="#111827", label="Official pass5 WCDA", zorder=4)
+
+    e_v099, y_v099, ylo_v099, yhi_v099 = v099_points()
+    if e_v099:
+        ax.errorbar(
+            e_v099,
+            y_v099,
+            yerr=[ylo_v099, yhi_v099],
+            fmt="s",
+            ms=4.9,
+            lw=0.9,
+            color="#7c2d12",
+            ecolor="#7c2d12",
+            capsize=2.4,
+            label="Official tutorial v0.99 WCDA",
+            zorder=4,
+        )
+
+    pool1_rows = read_csv_rows(STAGE_G / "wcda1_pool1_table1_reference.csv")
+    if pool1_rows:
+        ax.errorbar(
+            [float(row["emed_tev"]) for row in pool1_rows],
+            [float(row["E2_dnde"]) for row in pool1_rows],
+            yerr=[float(row["E2_dnde_err"]) for row in pool1_rows],
+            fmt="^",
+            color="#7f3fbf",
+            ecolor="#7f3fbf",
+            capsize=2.5,
+            ms=4.8,
+            lw=0.8,
+            label="WCDA-1 Pool-1 Table 1",
+            alpha=0.92,
+        )
+
+    external_styles = {
+        "magic_joint_crab": {"fmt": "v", "color": "#9467bd", "label": "MAGIC"},
+        "hess_2024_stereo": {"fmt": "D", "color": "#8c564b", "label": "H.E.S.S."},
+        "hawc_2019_nn": {"fmt": "P", "color": "#17becf", "label": "HAWC NN"},
+    }
+    external_rows = read_csv_rows(STAGE_G / "external_crab_sed_references.csv")
+    for dataset, style in external_styles.items():
+        selected = [
+            row
+            for row in external_rows
+            if row.get("dataset") == dataset
+            and str(row.get("is_upper_limit")).strip().lower() != "true"
+            and finite_float(row.get("energy_tev"))
+            and finite_float(row.get("e2_dnde"))
+        ]
+        if not selected:
+            continue
+        ax.errorbar(
+            [float(row["energy_tev"]) for row in selected],
+            [float(row["e2_dnde"]) for row in selected],
+            yerr=[finite_float(row.get("e2_dnde_err")) or 0.0 for row in selected],
+            capsize=1.9,
+            ms=3.8,
+            lw=0.65,
+            alpha=0.58,
+            **style,
+        )
+
     point_styles = {
         "nhit": {"fmt": "o", "color": "#dc2626", "label": "v6 Nhit grouped"},
     }
@@ -603,7 +687,7 @@ def ensure_stage_g_external_overlay(stage_f_meta: dict[str, Any], stage_g_meta: 
     ax.set_yscale("log")
     ax.set_xlabel("Effective true energy [TeV]")
     ax.set_ylabel(r"$E^2 dN/dE$ [TeV cm$^{-2}$ s$^{-1}$]")
-    ax.set_title(f"Stage G {RUN_ID} Nhit-grouped SED")
+    ax.set_title(f"Stage G {RUN_ID} SED overlay with external WCDA references")
     ax.grid(True, which="both", alpha=0.24, lw=0.45)
     ax.set_xlim(emin, emax)
     ax.legend(fontsize=7.0, ncol=2, frameon=True)
@@ -834,7 +918,7 @@ def main() -> None:
         (STAGE_E / "on_background_grid.png", "Stage E on/background grid"),
         (STAGE_F / "model_counts_vs_excess.png", "Stage F model counts versus excess"),
         (STAGE_F / "pull_grid_logpar.png", "Stage F LogPar pull grid"),
-        (STAGE_G_EXTERNAL_OVERLAY, "Stage G Nhit-grouped SED with v6 fit band"),
+        (STAGE_G_EXTERNAL_OVERLAY, "Stage G SED overlay with v6 Nhit points, fit band, and external references"),
         (STAGE_G / "sed_points_ratio.png", "Stage G SED ratio plot"),
     ]
     figure_html = "".join(figure(path, caption) for path, caption in expected_figures)

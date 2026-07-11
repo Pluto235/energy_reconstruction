@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crab SED v6 64748 nhit100 reselect44 miss030 Stage A-G</title>
+  <style>
+    :root {
+      --ink:#17202a; --muted:#5e6875; --line:#d7dde5; --panel:#f6f8fb;
+      --ok:#126b45; --warn:#93620c; --fail:#aa2e25; --accent:#005eb8;
+    }
+    body { margin:0; color:var(--ink); background:#fff; font-family:Arial,Helvetica,sans-serif; line-height:1.48; }
+    main { max-width:1220px; margin:0 auto; padding:32px 24px 58px; }
+    header { border-bottom:3px solid var(--ink); padding-bottom:18px; margin-bottom:26px; }
+    h1,h2,h3 { margin:0; line-height:1.18; letter-spacing:0; }
+    h1 { font-size:32px; }
+    h2 { font-size:21px; margin-top:34px; padding-top:14px; border-top:1px solid var(--line); }
+    h3 { font-size:16px; margin-top:18px; color:#2f3b48; }
+    p { margin:10px 0; }
+    code { background:#eef2f6; padding:1px 4px; border-radius:3px; font-size:12px; }
+    table { border-collapse:collapse; width:100%; margin:14px 0 22px; font-size:13px; }
+    th,td { border:1px solid var(--line); padding:6px 7px; text-align:right; vertical-align:top; }
+    th:first-child,td:first-child { text-align:left; }
+    th { background:#edf1f6; font-weight:700; }
+    .lede { font-size:16px; color:#2f3b48; max-width:960px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin:16px 0; }
+    .metric { border:1px solid var(--line); border-radius:6px; padding:12px; background:var(--panel); min-height:78px; }
+    .metric .label { color:var(--muted); font-size:12px; text-transform:uppercase; }
+    .metric .value { font-size:23px; font-weight:700; margin-top:4px; }
+    .metric .sub { color:var(--muted); font-size:12px; margin-top:4px; }
+    .status-pass { color:var(--ok); font-weight:700; }
+    .status-warn,.status-warning { color:var(--warn); font-weight:700; }
+    .status-fail,.status-failed { color:var(--fail); font-weight:700; }
+    .okbox { border-left:5px solid var(--ok); background:#edf9f1; padding:12px 14px; margin:18px 0; }
+    .callout { border-left:5px solid var(--warn); background:#fff8ec; padding:12px 14px; margin:18px 0; }
+    .figgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); gap:16px; margin:14px 0 22px; }
+    .figure { margin:0; border:1px solid var(--line); border-radius:6px; padding:10px; background:#fff; }
+    .figure img { display:block; width:100%; height:auto; }
+    .figure figcaption { margin-top:8px; color:var(--muted); font-size:12px; }
+    .pathlist td { text-align:left; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Crab SED v6 64748 nhit100 reselect44 miss030 Stage A-G</h1>
+    <p class="lede">v6 chain for <code>v6_64748_nhit100_reselect44_split56_miss030</code>, reusing the <code>v6_64748_nhit100_highEplus1_split56</code> nominal response and Stage C event reduction. The first Nhit bin is <code>[100,200)</code>; <code>&gt;=6</code> remains a diagnostic tail outside Stage F/G.</p>
+  </header>
+
+  <section>
+    <h2>Executive Check</h2>
+    <div class="grid">
+      <div class="metric"><div class="label">candidate cells</div><div class="value">91</div><div class="sub">7 Nhit x 13 predE</div></div>
+      <div class="metric"><div class="label">fit cells</div><div class="value">44</div><div class="sub">33 retained ridge; 9 forced in</div></div>
+      <div class="metric"><div class="label">Stage C files</div><div class="value">3,969</div><div class="sub">missing time 0; entry mismatch 0</div></div>
+      <div class="metric"><div class="label">selected rows</div><div class="value">113,938,262</div><div class="sub">rough live 125.670 d</div></div>
+      <div class="metric"><div class="label">Stage E signal</div><div class="value">65.404</div><div class="sub">formal sigma</div></div>
+      <div class="metric"><div class="label">Stage F preferred</div><div class="value">LOGPAR</div><div class="sub">chi2/ndof 483.7/41</div></div>
+      <div class="metric"><div class="label">Stage G points</div><div class="value">7/12</div><div class="sub">Nhit / predE groupings</div></div>
+      <div class="metric"><div class="label">metadata audit</div><div class="value">PASSED</div><div class="sub">0 offenders</div></div>
+    </div>
+    <table><thead><tr><th>Gate</th><th>Status</th><th>Evidence</th></tr></thead><tbody><tr><td>run id</td><td><span class="status-pass">pass</span></td><td>v6_64748_nhit100_reselect44_split56_miss030</td></tr><tr><td>Nhit binning</td><td><span class="status-pass">pass</span></td><td>[100,200)</td></tr><tr><td>tail policy</td><td><span class="status-pass">pass</span></td><td>7 &gt;=6 tail cells, 0 included</td></tr><tr><td>selector</td><td><span class="status-pass">pass</span></td><td>44 fit cells; 9 forced in, 4 forced out</td></tr><tr><td>Stage C files</td><td><span class="status-pass">pass</span></td><td>3,969 processed, missing time 0, entry mismatch 0</td></tr><tr><td>Stage E signal</td><td><span class="status-pass">pass</span></td><td>formal sigma 65.404</td></tr><tr><td>Stage F fit</td><td><span class="status-pass">pass</span></td><td>preferred logpar</td></tr><tr><td>Stage G points</td><td><span class="status-pass">pass</span></td><td>7 Nhit points, 12 predE points</td></tr><tr><td>metadata pollution</td><td><span class="status-pass">passed</span></td><td>0 legacy main-input path/token offenders</td></tr></tbody></table>
+  </section>
+
+  <section>
+    <h2>Slurm Jobs</h2>
+    <p>All heavy recomputation stages are intended to run through the Slurm dependency chain. This table is populated from <code>PIPELINE_JOB_IDS</code> when available.</p>
+    <div class="callout">No Slurm job id manifest was provided to the report builder.</div>
+  </section>
+
+  <section>
+    <h2>Inputs And Outputs</h2>
+    <p>The main chain uses the 64748 observation eval root and its recovered-time tree. The response, PSF, aperture response, fit, and SED products are all under the new run namespace.</p>
+    <table class="pathlist"><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Run id</td><td><code>v6_64748_nhit100_reselect44_split56_miss030</code></td></tr><tr><td>Observation root</td><td><code>/mnt/mydisk/WCDA_observation_eval_64748</code></td></tr><tr><td>Recovered time root</td><td><code>/mnt/mydisk/WCDA_observation_eval_64748/recovered_time</code></td></tr><tr><td>MC candidate cache</td><td><code>/mnt/mydisk/WCDA_simulation_binned_response_v6_64748_nhit100_highEplus1_split56_candidate</code></td></tr><tr><td>Model run dir</td><td><code>/mnt/mydisk/server/projects/energy_reconstruction/runs/theta_recoxy_position_embed_noemax_no_core_cut_64748</code></td></tr><tr><td>Fit selector</td><td><code>../config/cell_selector_v6_64748_nhit100_reselect44_split56_miss030_fit.csv</code></td></tr><tr><td>Stage C input entries</td><td>254,436,994</td></tr><tr><td>After configured-cell selection</td><td>113,938,262</td></tr></tbody></table>
+    <table class="pathlist"><thead><tr><th>Stage</th><th>Primary output</th></tr></thead><tbody><tr><td>Prepare/cache</td><td><code>/mnt/mydisk/WCDA_simulation_binned_response_v6_64748_nhit100_highEplus1_split56_candidate</code></td></tr><tr><td>Stage A response</td><td><code>apply/output/stage_a_v6_64748_nhit100_highEplus1_split56 (reused)</code></td></tr><tr><td>Stage B PSF</td><td><code>apply/output/stage_b_v6_64748_nhit100_reselect44_split56_miss030</code></td></tr><tr><td>Stage A aperture response</td><td><code>apply/output/stage_a_v6_64748_nhit100_reselect44_split56_miss030_aperture_conditioned</code></td></tr><tr><td>Stage C observation</td><td><code>apply/output/stage_c_v6_64748_nhit100_highEplus1_split56 (reused)</code></td></tr><tr><td>Stage D background</td><td><code>apply/output/stage_d_v6_64748_nhit100_reselect44_split56_miss030_annnorm</code></td></tr><tr><td>Stage E signal</td><td><code>apply/output/stage_e_v6_64748_nhit100_reselect44_split56_miss030_containment1_annnorm</code></td></tr><tr><td>Stage F fit</td><td><code>apply/output/stage_f_v6_64748_nhit100_reselect44_split56_miss030</code></td></tr><tr><td>Stage G SED</td><td><code>apply/output/stage_g_v6_64748_nhit100_reselect44_split56_miss030</code></td></tr></tbody></table>
+  </section>
+
+  <section>
+    <h2>Selector Rule</h2>
+    <p>preserve original MC-ridge fit cells; add at most one adjacent higher predE bin per Nhit; apply explicit include/exclude overrides; never include &gt;=6 tail cells in Stage F/G</p>
+    <table><thead><tr><th>Nhit</th><th>Status</th><th>Candidate</th><th>MC count</th><th>PSF gate</th><th>Reasons</th></tr></thead><tbody><tr><td><code>[100,200)</code></td><td>included_highEplus1</td><td><code>[3.25,3.5)</code> cell 4</td><td>54,366</td><td>1</td><td>pass</td></tr><tr><td><code>[200,300)</code></td><td>included_highEplus1</td><td><code>[3.75,4.0)</code> cell 19</td><td>17,909</td><td>1</td><td>pass</td></tr><tr><td><code>[300,500)</code></td><td>rejected_highEplus1_probe</td><td><code>[5.5,6)</code> cell 38</td><td>13,883</td><td>0</td><td>containment_warning</td></tr><tr><td><code>[500,800)</code></td><td>diagnostic_tail_only</td><td><code>&gt;=6</code> cell 52</td><td>158</td><td>0</td><td>tail_ge6_excluded_from_main_fit</td></tr><tr><td><code>[800,1100)</code></td><td>rejected_highEplus1_probe</td><td><code>[5.5,6)</code> cell 64</td><td>3,211</td><td>0</td><td>containment_warning</td></tr><tr><td><code>[1100,2000)</code></td><td>rejected_highEplus1_probe</td><td><code>[4.75,5.0)</code> cell 75</td><td>2,279</td><td>0</td><td>valid_events_le_0;effective_events_lt_200;core_fit_effective_events_lt_200;theta_missing_mass_gt_0.3;containment_warning;angle_check_warning</td></tr><tr><td><code>[2000,3000)</code></td><td>diagnostic_tail_only</td><td><code>&gt;=6</code> cell 91</td><td>0</td><td>0</td><td>tail_ge6_excluded_from_main_fit</td></tr></tbody></table>
+    <h3>Included highEplus1 cells</h3>
+    <table><thead><tr><th>Cell</th><th>Nhit</th><th>predE</th><th>MC count</th><th>PSF reason</th></tr></thead><tbody><tr><td>4</td><td><code>[100,200)</code></td><td><code>[3.25,3.5)</code></td><td>54,366</td><td>pass</td></tr><tr><td>19</td><td><code>[200,300)</code></td><td><code>[3.75,4.0)</code></td><td>17,909</td><td>pass</td></tr></tbody></table>
+    <h3>Rejected highEplus1 probes</h3>
+    <table><thead><tr><th>Cell</th><th>Nhit</th><th>predE</th><th>MC count</th><th>Reason</th></tr></thead><tbody><tr><td>38</td><td><code>[300,500)</code></td><td><code>[5.5,6)</code></td><td>13,883</td><td>containment_warning</td></tr><tr><td>64</td><td><code>[800,1100)</code></td><td><code>[5.5,6)</code></td><td>3,211</td><td>containment_warning</td></tr><tr><td>75</td><td><code>[1100,2000)</code></td><td><code>[4.75,5.0)</code></td><td>2,279</td><td>valid_events_le_0;effective_events_lt_200;core_fit_effective_events_lt_200;theta_missing_mass_gt_0.3;containment_warning;angle_check_warning</td></tr></tbody></table>
+    <h3>Explicit selector overrides</h3>
+    <table><thead><tr><th>Action</th><th>Cell</th><th>Nhit</th><th>predE</th><th>PSF status</th></tr></thead><tbody><tr><td>include</td><td>5</td><td><code>[100,200)</code></td><td><code>[3.5,3.75)</code></td><td>containment_warning</td></tr><tr><td>include</td><td>6</td><td><code>[100,200)</code></td><td><code>[3.75,4.0)</code></td><td>containment_warning</td></tr><tr><td>include</td><td>20</td><td><code>[200,300)</code></td><td><code>[4.0,4.25)</code></td><td>pass</td></tr><tr><td>include</td><td>21</td><td><code>[200,300)</code></td><td><code>[4.25,4.5)</code></td><td>containment_warning</td></tr><tr><td>include</td><td>34</td><td><code>[300,500)</code></td><td><code>[4.25,4.5)</code></td><td>pass</td></tr><tr><td>include</td><td>47</td><td><code>[500,800)</code></td><td><code>[4.25,4.5)</code></td><td>pass</td></tr><tr><td>include</td><td>48</td><td><code>[500,800)</code></td><td><code>[4.5,4.75)</code></td><td>pass</td></tr><tr><td>include</td><td>61</td><td><code>[800,1100)</code></td><td><code>[4.5,4.75)</code></td><td>pass</td></tr><tr><td>include</td><td>62</td><td><code>[800,1100)</code></td><td><code>[4.75,5.0)</code></td><td>pass</td></tr><tr><td>exclude</td><td>37</td><td><code>[300,500)</code></td><td><code>[5,5.5)</code></td><td>containment_warning</td></tr><tr><td>exclude</td><td>50</td><td><code>[500,800)</code></td><td><code>[5,5.5)</code></td><td>containment_warning</td></tr><tr><td>exclude</td><td>51</td><td><code>[500,800)</code></td><td><code>[5.5,6)</code></td><td>containment_warning</td></tr><tr><td>exclude</td><td>63</td><td><code>[800,1100)</code></td><td><code>[5,5.5)</code></td><td>pass</td></tr></tbody></table>
+  </section>
+
+  <section>
+    <h2>Stage C Time Audit</h2>
+    <p>Stage C used <code>/mnt/mydisk/WCDA_observation_eval_64748/recovered_time</code>. Missing-time and entry-mismatch rows are listed below when present.</p>
+    <table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Processed files</td><td>3,969</td></tr><tr><td>Missing time files</td><td>0</td></tr><tr><td>Entry mismatch files</td><td>0</td></tr><tr><td>Selected rows</td><td>113,938,262</td></tr><tr><td>Matched MJD min</td><td>59579.667</td></tr><tr><td>Matched MJD max</td><td>59760.652</td></tr></tbody></table>
+    <div class="okbox">No missing recovered-time files or entry mismatches were recorded.</div>
+  </section>
+
+  <section>
+    <h2>Stage A-B-D-E Diagnostics</h2>
+    <p>Stage A nominal response is <code>primary_thrown_response</code>; Stage F/G use <code>primary_thrown_aperture_conditioned_response</code>. Stage B wrote 91 PSF rows. The theta grid shows each cell's raw <code>mc_weight</code>-normalized distribution before Crab reweighting; orange shading marks Crab-positive theta bins without MC support, and each panel reports the corresponding missing probability mass. Pale green panels mark the 44 cells used by Stage F/G.</p>
+    <div class="figgrid"><figure class="figure"><img src="../output/stage_b_v6_64748_nhit100_reselect44_split56_miss030/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_b_psf/psf_r_opt_deg_grid.png" alt="Stage B r_opt by cell"><figcaption>Stage B r_opt by cell</figcaption></figure><figure class="figure"><img src="../output/stage_b_v6_64748_nhit100_reselect44_split56_miss030/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_b_psf/psf_effective_events_grid.png" alt="Stage B effective events by cell"><figcaption>Stage B effective events by cell</figcaption></figure><figure class="figure"><img src="assets/v6-64748-nhit100-reselect44-split56-miss030/v6_64748_nhit100_reselect44_split56_miss030_stage_b_raw_theta_profiles.png" alt="Stage B raw normalized MC theta distributions; green panels enter the fit"><figcaption>Stage B raw normalized MC theta distributions; green panels enter the fit</figcaption></figure><figure class="figure"><img src="assets/v6-64748-nhit100-reselect44-split56-miss030/v6_64748_nhit100_reselect44_split56_miss030_stage_b_radial_psf_profiles_fit_shaded.png" alt="Stage B radial PSF profiles; green panels enter the fit"><figcaption>Stage B radial PSF profiles; green panels enter the fit</figcaption></figure><figure class="figure"><img src="../output/stage_d_v6_64748_nhit100_reselect44_split56_miss030_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_d_annnorm/roi_excess_grid.png" alt="Stage D ROI excess map grid"><figcaption>Stage D ROI excess map grid</figcaption></figure><figure class="figure"><img src="../output/stage_d_v6_64748_nhit100_reselect44_split56_miss030_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_d_annnorm/annulus_residual_grid.png" alt="Stage D annulus residuals"><figcaption>Stage D annulus residuals</figcaption></figure><figure class="figure"><img src="../output/stage_e_v6_64748_nhit100_reselect44_split56_miss030_containment1_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_e_containment1_annnorm/formal_sigma_grid.png" alt="Stage E formal sigma grid"><figcaption>Stage E formal sigma grid</figcaption></figure><figure class="figure"><img src="../output/stage_e_v6_64748_nhit100_reselect44_split56_miss030_containment1_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_e_containment1_annnorm/on_background_grid.png" alt="Stage E on/background grid"><figcaption>Stage E on/background grid</figcaption></figure><figure class="figure"><img src="../output/stage_f_v6_64748_nhit100_reselect44_split56_miss030/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_f/model_counts_vs_excess.png" alt="Stage F model counts versus excess"><figcaption>Stage F model counts versus excess</figcaption></figure><figure class="figure"><img src="../output/stage_f_v6_64748_nhit100_reselect44_split56_miss030/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_f/pull_grid_logpar.png" alt="Stage F LogPar pull grid"><figcaption>Stage F LogPar pull grid</figcaption></figure><figure class="figure"><img src="assets/v6-64748-nhit100-reselect44-split56-miss030/v6_64748_nhit100_reselect44_split56_miss030_stage_g_external_overlay.png" alt="Stage G Nhit-grouped SED with v6 fit band"><figcaption>Stage G Nhit-grouped SED with v6 fit band</figcaption></figure><figure class="figure"><img src="../output/stage_g_v6_64748_nhit100_reselect44_split56_miss030/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_g/sed_points_ratio.png" alt="Stage G SED ratio plot"><figcaption>Stage G SED ratio plot</figcaption></figure></div>
+  </section>
+
+  <section>
+    <h2>Stage F Fit</h2>
+    <p>Stage F uses the final selector and the aperture-conditioned 64748 response. The preferred model recorded by Stage F is <code>logpar</code>.</p>
+    <table><thead><tr><th>Fit</th><th>Valid</th><th>chi2/ndof</th><th>p</th><th>phi0</th><th>gamma/alpha</th><th>beta</th></tr></thead><tbody><tr><td>PL conservative</td><td>True</td><td>579.2/42</td><td>1.292e-95</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>LogPar conservative</td><td>True</td><td>483.7/41</td><td>5.645e-77</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>PL sqrt-N</td><td>True</td><td>970.5/42</td><td>4.152e-176</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>LogPar sqrt-N</td><td>True</td><td>777.1/41</td><td>1.109e-136</td><td>n/a</td><td>n/a</td><td>n/a</td></tr></tbody></table>
+  </section>
+
+  <section>
+    <h2>Stage G SED</h2>
+    <p>Stage G freezes the preferred Stage F spectrum with phi0=2.2980e-12, alpha=2.761, beta=0.1074 at 3 TeV. Quality status: <code>passed</code>.</p>
+    <table><thead><tr><th>Nhit group</th><th>Cells</th><th>E_eff TeV</th><th>E2 dN/dE</th><th>Err</th><th>chi2/ndof</th></tr></thead><tbody><tr><td><code>[100,200)</code></td><td>1;2;3;4;5;6</td><td>0.5087</td><td>5.8007e-11</td><td>2.290e-12</td><td>120.8/5</td></tr><tr><td><code>[200,300)</code></td><td>15;16;17;18;19;20;21</td><td>0.8465</td><td>5.2541e-11</td><td>1.237e-12</td><td>60.39/6</td></tr><tr><td><code>[300,500)</code></td><td>28;29;30;31;32;33;34</td><td>1.322</td><td>3.5889e-11</td><td>6.932e-13</td><td>69.8/6</td></tr><tr><td><code>[500,800)</code></td><td>42;43;44;45;46;47;48</td><td>2.426</td><td>2.3492e-11</td><td>5.191e-13</td><td>15.07/6</td></tr><tr><td><code>[800,1100)</code></td><td>56;57;58;59;60;61;62</td><td>4.372</td><td>1.3987e-11</td><td>5.218e-13</td><td>38.91/6</td></tr><tr><td><code>[1100,2000)</code></td><td>70;71;72;73;74</td><td>8.575</td><td>7.1151e-12</td><td>3.382e-13</td><td>119.6/4</td></tr><tr><td><code>[2000,3000)</code></td><td>86;87;88;89;90</td><td>34.44</td><td>2.0168e-12</td><td>4.579e-13</td><td>7.523/4</td></tr></tbody></table>
+    <table><thead><tr><th>PredE group</th><th>Cells</th><th>E_eff TeV</th><th>E2 dN/dE</th><th>Err</th><th>chi2/ndof</th></tr></thead><tbody><tr><td><code>[2,2.5)</code></td><td>1</td><td>0.298</td><td>2.2173e-11</td><td>5.770e-12</td><td>6.1679e-31/0</td></tr><tr><td><code>[2.5,3)</code></td><td>2;15;28</td><td>0.6119</td><td>5.3064e-11</td><td>1.184e-12</td><td>80.23/2</td></tr><tr><td><code>[3,3.25)</code></td><td>3;16;29;42</td><td>1.167</td><td>4.2051e-11</td><td>8.823e-13</td><td>43.71/3</td></tr><tr><td><code>[3.25,3.5)</code></td><td>4;17;30;43;56</td><td>1.913</td><td>2.9042e-11</td><td>6.742e-13</td><td>38.8/4</td></tr><tr><td><code>[3.5,3.75)</code></td><td>5;18;31;44;57;70</td><td>3.163</td><td>1.7197e-11</td><td>5.242e-13</td><td>68.36/5</td></tr><tr><td><code>[3.75,4.0)</code></td><td>6;19;32;45;58;71</td><td>5.313</td><td>1.2542e-11</td><td>4.803e-13</td><td>40.74/5</td></tr><tr><td><code>[4.0,4.25)</code></td><td>20;33;46;59;72</td><td>9.299</td><td>8.9592e-12</td><td>4.821e-13</td><td>19.94/4</td></tr><tr><td><code>[4.25,4.5)</code></td><td>21;34;47;60;73;86</td><td>16.71</td><td>6.9431e-12</td><td>5.559e-13</td><td>17.87/5</td></tr><tr><td><code>[4.5,4.75)</code></td><td>48;61;74;87</td><td>29.94</td><td>4.1793e-12</td><td>6.533e-13</td><td>16.81/3</td></tr><tr><td><code>[4.75,5.0)</code></td><td>62;88</td><td>60.24</td><td>4.7943e-13</td><td>7.034e-13</td><td>0.145/1</td></tr><tr><td><code>[5,5.5)</code></td><td>89</td><td>98.36</td><td>4.2879e-12</td><td>2.592e-12</td><td>4.8773e-32/0</td></tr><tr><td><code>[5.5,6)</code></td><td>90</td><td>257.3</td><td>9.6001e-11</td><td>4.454e-11</td><td>0/0</td></tr></tbody></table>
+  </section>
+
+  <section>
+    <h2>Metadata Audit</h2>
+    <p>Main-input metadata files were scanned for legacy cache/model path tokens. Status: <strong>passed</strong>.</p>
+    <div class="okbox">No legacy main-input metadata path offenders were found.</div>
+  </section>
+</main>
+</body>
+</html>

@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-07-11 12:04 · [uncommitted] Restrict the v6 reselect44 Stage G SED overlay to Nhit-grouped points and the fitted LogPar band.
+
 - **energy** · 2026-07-11 11:08 · [uncommitted] Archive the active v6 64748 model resolution, RMS, bias, loss, metrics, and training configuration.
 
 - **energy** · 2026-07-11 10:59 · [uncommitted] Add normalized v6 64748 true-energy overlays for the final 39-cell 2D selector.

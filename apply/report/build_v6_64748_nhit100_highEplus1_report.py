@@ -14,12 +14,24 @@ from typing import Any, Iterable, List
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-RUN_ID = "v6_64748_nhit100_highEplus1_split56"
+DEFAULT_RUN_ID = "v6_64748_nhit100_highEplus1_split56"
+RUN_ID = os.environ.get("V6_REPORT_RUN_ID", DEFAULT_RUN_ID)
+SOURCE_RUN_ID = os.environ.get("V6_REPORT_SOURCE_RUN_ID", RUN_ID)
+REPORT_TITLE = os.environ.get("V6_REPORT_TITLE", "Crab SED v6 64748 nhit100 highEplus1 Stage A-G")
 REPORT_DIR = REPO_ROOT / "apply" / "report"
-REPORT_PATH = REPORT_DIR / "crab_sed_v6_64748_nhit100_highEplus1_stage_a_to_g_report.html"
-ASSET_DIR = REPORT_DIR / "assets" / "v6-64748-nhit100-highEplus1"
+if RUN_ID == DEFAULT_RUN_ID:
+    REPORT_PATH = REPORT_DIR / "crab_sed_v6_64748_nhit100_highEplus1_stage_a_to_g_report.html"
+    ASSET_DIR = REPORT_DIR / "assets" / "v6-64748-nhit100-highEplus1"
+else:
+    REPORT_PATH = REPORT_DIR / f"crab_sed_{RUN_ID}_stage_a_to_g_report.html"
+    ASSET_DIR = REPORT_DIR / "assets" / RUN_ID.replace("_", "-")
 VALIDATION_JSON = ASSET_DIR / "report_validation.json"
-STAGE_B_THETA_CACHE = ASSET_DIR / f"{RUN_ID}_stage_b_raw_theta_profiles.npz"
+SOURCE_ASSET_DIR = (
+    REPORT_DIR / "assets" / "v6-64748-nhit100-highEplus1"
+    if SOURCE_RUN_ID == DEFAULT_RUN_ID
+    else REPORT_DIR / "assets" / SOURCE_RUN_ID.replace("_", "-")
+)
+STAGE_B_THETA_CACHE = SOURCE_ASSET_DIR / f"{SOURCE_RUN_ID}_stage_b_raw_theta_profiles.npz"
 STAGE_B_THETA_PROFILE = ASSET_DIR / f"{RUN_ID}_stage_b_raw_theta_profiles.png"
 STAGE_B_THETA_PROFILE_PDF = ASSET_DIR / f"{RUN_ID}_stage_b_raw_theta_profiles.pdf"
 STAGE_B_FIT_SHADED_PROFILE = ASSET_DIR / f"{RUN_ID}_stage_b_radial_psf_profiles_fit_shaded.png"
@@ -28,16 +40,16 @@ STAGE_G_EXTERNAL_OVERLAY = ASSET_DIR / f"{RUN_ID}_stage_g_external_overlay.png"
 PASS5_CSV = REPORT_DIR / "assets/official-pass5/wcda_crab_sed_pass5_20260616_104941.csv"
 V099_CSV = REPORT_DIR / "assets/official-v099/wcda_crab_sed_v099_20250731_20260616_123624.csv"
 
-LEDGER = REPO_ROOT / f"apply/config/cell_ledger_{RUN_ID}_candidate.csv"
-PREFIT_SELECTOR = REPO_ROOT / f"apply/config/cell_selector_{RUN_ID}_prefit.csv"
+LEDGER = REPO_ROOT / f"apply/config/cell_ledger_{SOURCE_RUN_ID}_candidate.csv"
+PREFIT_SELECTOR = REPO_ROOT / f"apply/config/cell_selector_{SOURCE_RUN_ID}_prefit.csv"
 FIT_SELECTOR = REPO_ROOT / f"apply/config/cell_selector_{RUN_ID}_fit.csv"
 SELECTOR_META = REPO_ROOT / f"apply/config/cell_selector_{RUN_ID}_fit_metadata.json"
 HIGH_E_DECISIONS = REPO_ROOT / f"apply/config/cell_selector_{RUN_ID}_highEplus1_decisions.csv"
 
-STAGE_A = REPO_ROOT / f"apply/output/stage_a_{RUN_ID}"
+STAGE_A = REPO_ROOT / f"apply/output/stage_a_{SOURCE_RUN_ID}"
 STAGE_A_AP = REPO_ROOT / f"apply/output/stage_a_{RUN_ID}_aperture_conditioned"
 STAGE_B = REPO_ROOT / f"apply/output/stage_b_{RUN_ID}/runs/{RUN_ID}_stage_b_psf"
-STAGE_C = REPO_ROOT / f"apply/output/stage_c_{RUN_ID}/runs/{RUN_ID}_stage_c_halfyear"
+STAGE_C = REPO_ROOT / f"apply/output/stage_c_{SOURCE_RUN_ID}/runs/{SOURCE_RUN_ID}_stage_c_halfyear"
 STAGE_D = REPO_ROOT / f"apply/output/stage_d_{RUN_ID}_annnorm/runs/{RUN_ID}_stage_d_annnorm"
 STAGE_E = REPO_ROOT / f"apply/output/stage_e_{RUN_ID}_containment1_annnorm/runs/{RUN_ID}_stage_e_containment1_annnorm"
 STAGE_F = REPO_ROOT / f"apply/output/stage_f_{RUN_ID}/runs/{RUN_ID}_stage_f"
@@ -419,7 +431,7 @@ def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
         Patch(facecolor="#ecfdf5", edgecolor="#059669", label="included in fit"),
     ]
     fig.legend(handles=handles, loc="upper center", ncol=4, fontsize=8, frameon=False, bbox_to_anchor=(0.5, 0.988))
-    fig.suptitle("Stage B v6 64748 nhit100 highEplus1 radial PSF profiles: fit cells shaded", fontsize=11, y=0.999)
+    fig.suptitle(f"Stage B {RUN_ID} radial PSF profiles: fit cells shaded", fontsize=11, y=0.999)
     fig.tight_layout(rect=[0.0, 0.0, 1.0, 0.963])
     STAGE_B_FIT_SHADED_PROFILE.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(STAGE_B_FIT_SHADED_PROFILE)
@@ -526,13 +538,10 @@ def sed_uncertainty_band(E_tev: Any, fit: dict[str, Any], pivot_tev: float) -> t
 
 def ensure_stage_g_external_overlay(stage_f_meta: dict[str, Any], stage_g_meta: dict[str, Any]) -> None:
     input_paths = [
+        Path(__file__),
         STAGE_G / f"sed_points_{RUN_ID}_metadata.json",
         STAGE_G / f"sed_points_{RUN_ID}_summary.csv",
         STAGE_F / f"fit_{RUN_ID}_metadata.json",
-        STAGE_G / "external_crab_sed_references.csv",
-        STAGE_G / "wcda1_pool1_table1_reference.csv",
-        PASS5_CSV,
-        V099_CSV,
     ]
     existing_inputs = [path for path in input_paths if path.exists()]
     source_mtime = max(path.stat().st_mtime for path in existing_inputs)
@@ -566,89 +575,8 @@ def ensure_stage_g_external_overlay(stage_f_meta: dict[str, Any], stage_g_meta: 
         ax.fill_between(x, y_low, y_high, color="#2563eb", alpha=0.18, linewidth=0, label="Stage F LogPar 1-sigma band")
     ax.plot(x, y_model, color="#2563eb", lw=2.1, label="v6 Stage F LogPar")
 
-    ref = stage_g_meta.get("reference_spectrum") or {}
-    if ref:
-        ax.plot(
-            x,
-            sed_model_curve(
-                x,
-                "pl",
-                {"phi0": float(ref.get("phi0")), "gamma": float(ref.get("gamma"))},
-                float(ref.get("pivot_tev") or pivot),
-            ),
-            color="#4b5563",
-            lw=1.6,
-            ls="--",
-            label="1LHAASO WCDA full-array PL",
-        )
-
-    e_pass5, y_pass5 = pass5_points()
-    if e_pass5:
-        ax.plot(e_pass5, y_pass5, "o", ms=5.2, color="#111827", label="Official pass5 WCDA", zorder=4)
-
-    e_v099, y_v099, ylo_v099, yhi_v099 = v099_points()
-    if e_v099:
-        ax.errorbar(
-            e_v099,
-            y_v099,
-            yerr=[ylo_v099, yhi_v099],
-            fmt="s",
-            ms=4.9,
-            lw=0.9,
-            color="#7c2d12",
-            ecolor="#7c2d12",
-            capsize=2.4,
-            label="Official tutorial v0.99 WCDA",
-            zorder=4,
-        )
-
-    pool1_rows = read_csv_rows(STAGE_G / "wcda1_pool1_table1_reference.csv")
-    if pool1_rows:
-        ax.errorbar(
-            [float(row["emed_tev"]) for row in pool1_rows],
-            [float(row["E2_dnde"]) for row in pool1_rows],
-            yerr=[float(row["E2_dnde_err"]) for row in pool1_rows],
-            fmt="^",
-            color="#7f3fbf",
-            ecolor="#7f3fbf",
-            capsize=2.5,
-            ms=4.8,
-            lw=0.8,
-            label="WCDA-1 Pool-1 Table 1",
-            alpha=0.92,
-        )
-
-    external_styles = {
-        "magic_joint_crab": {"fmt": "v", "color": "#9467bd", "label": "MAGIC"},
-        "hess_2024_stereo": {"fmt": "D", "color": "#8c564b", "label": "H.E.S.S."},
-        "hawc_2019_nn": {"fmt": "P", "color": "#17becf", "label": "HAWC NN"},
-    }
-    external_rows = read_csv_rows(STAGE_G / "external_crab_sed_references.csv")
-    for dataset, style in external_styles.items():
-        selected = [
-            row
-            for row in external_rows
-            if row.get("dataset") == dataset
-            and str(row.get("is_upper_limit")).strip().lower() != "true"
-            and finite_float(row.get("energy_tev"))
-            and finite_float(row.get("e2_dnde"))
-        ]
-        if not selected:
-            continue
-        ax.errorbar(
-            [float(row["energy_tev"]) for row in selected],
-            [float(row["e2_dnde"]) for row in selected],
-            yerr=[finite_float(row.get("e2_dnde_err")) or 0.0 for row in selected],
-            capsize=1.9,
-            ms=3.8,
-            lw=0.65,
-            alpha=0.58,
-            **style,
-        )
-
     point_styles = {
         "nhit": {"fmt": "o", "color": "#dc2626", "label": "v6 Nhit grouped"},
-        "predE": {"fmt": "s", "color": "#16a34a", "label": "v6 predE grouped"},
     }
     for grouping, style in point_styles.items():
         selected = [
@@ -675,7 +603,7 @@ def ensure_stage_g_external_overlay(stage_f_meta: dict[str, Any], stage_g_meta: 
     ax.set_yscale("log")
     ax.set_xlabel("Effective true energy [TeV]")
     ax.set_ylabel(r"$E^2 dN/dE$ [TeV cm$^{-2}$ s$^{-1}$]")
-    ax.set_title("Stage G v6 64748 SED overlay with external WCDA references")
+    ax.set_title(f"Stage G {RUN_ID} Nhit-grouped SED")
     ax.grid(True, which="both", alpha=0.24, lw=0.45)
     ax.set_xlim(emin, emax)
     ax.legend(fontsize=7.0, ncol=2, frameon=True)
@@ -801,7 +729,7 @@ def status_class(value: str) -> str:
 
 
 def main() -> None:
-    stage_a_meta = load_json(STAGE_A / f"response_2d_{RUN_ID}_metadata.json")
+    stage_a_meta = load_json(STAGE_A / f"response_2d_{SOURCE_RUN_ID}_metadata.json")
     stage_a_ap_meta = load_json(STAGE_A_AP / f"response_2d_{RUN_ID}_aperture_conditioned_metadata.json")
     stage_b_meta = load_json(STAGE_B / f"psf_{RUN_ID}_metadata.json")
     stage_c_meta = load_json(STAGE_C / "obs_events_metadata.json")
@@ -823,6 +751,9 @@ def main() -> None:
     high_inc = [row for row in selector_rows if truthy(row.get("highEplus1_included_flag"))]
     high_rej = [row for row in selector_rows if truthy(row.get("highEplus1_rejected_flag"))]
     original_ridge = [row for row in selector_rows if truthy(row.get("original_ridge_fit_flag"))]
+    original_ridge_included = [row for row in original_ridge if truthy(row.get("include"))]
+    forced_included = [row for row in selector_rows if row.get("selection_override_flag") == "force_include"]
+    forced_excluded = [row for row in selector_rows if row.get("selection_override_flag") == "force_exclude"]
     fit_cell_ids = fit_cell_ids_from_selector(selector_rows)
     ensure_stage_b_theta_profile_grid(fit_cell_ids)
     ensure_stage_b_fit_shaded_profile_grid(fit_cell_ids)
@@ -852,7 +783,7 @@ def main() -> None:
     job_rows = sacct_rows(parse_pipeline_jobs())
 
     metadata_files = [
-        STAGE_A / f"response_2d_{RUN_ID}_metadata.json",
+        STAGE_A / f"response_2d_{SOURCE_RUN_ID}_metadata.json",
         STAGE_A_AP / f"response_2d_{RUN_ID}_aperture_conditioned_metadata.json",
         STAGE_B / f"psf_{RUN_ID}_metadata.json",
         STAGE_C / "obs_events_metadata.json",
@@ -865,10 +796,14 @@ def main() -> None:
     contamination = contamination_audit(metadata_files)
 
     validation_rows = [
-        ("run id", "pass" if RUN_ID in str(stage_a_meta.get("npz_path")) else "warning", RUN_ID),
+        ("run id", "pass" if SOURCE_RUN_ID in str(stage_a_meta.get("npz_path")) else "warning", RUN_ID),
         ("Nhit binning", "pass" if selector_rows and selector_rows[0].get("nhit_bin") == "[100,200)" else "fail", selector_rows[0].get("nhit_bin") if selector_rows else "missing"),
         ("tail policy", "pass" if not tail_included else "fail", f"{len(tail_rows)} >=6 tail cells, {len(tail_included)} included"),
-        ("selector", "pass", f"{len(original_ridge)} original ridge cells, {len(high_inc)} highEplus1 included, {len(high_rej)} rejected probes"),
+        (
+            "selector",
+            "pass",
+            f"{len(fit_rows)} fit cells; {len(forced_included)} forced in, {len(forced_excluded)} forced out",
+        ),
         ("Stage C files", "pass" if stage_c_files > 3000 else "warning", f"{stage_c_files:,} processed, missing time {missing_time}, entry mismatch {entry_mismatch}"),
         ("Stage E signal", "pass" if (stage_e_meta.get("quality_gate") or {}).get("status") == "passed" else "warning", f"formal sigma {fmt(e_totals.get('formal_sigma'), 5)}"),
         ("Stage F fit", "pass" if f_quality.get("fit_status") == "passed" else "warning", f"preferred {f_pref.get('model')}"),
@@ -878,10 +813,10 @@ def main() -> None:
 
     stage_rows = [
         ("Prepare/cache", "/mnt/mydisk/WCDA_simulation_binned_response_v6_64748_nhit100_highEplus1_split56_candidate"),
-        ("Stage A response", f"apply/output/stage_a_{RUN_ID}"),
+        ("Stage A response", f"apply/output/stage_a_{SOURCE_RUN_ID} (reused)"),
         ("Stage B PSF", f"apply/output/stage_b_{RUN_ID}"),
         ("Stage A aperture response", f"apply/output/stage_a_{RUN_ID}_aperture_conditioned"),
-        ("Stage C observation", f"apply/output/stage_c_{RUN_ID}"),
+        ("Stage C observation", f"apply/output/stage_c_{SOURCE_RUN_ID} (reused)"),
         ("Stage D background", f"apply/output/stage_d_{RUN_ID}_annnorm"),
         ("Stage E signal", f"apply/output/stage_e_{RUN_ID}_containment1_annnorm"),
         ("Stage F fit", f"apply/output/stage_f_{RUN_ID}"),
@@ -899,7 +834,7 @@ def main() -> None:
         (STAGE_E / "on_background_grid.png", "Stage E on/background grid"),
         (STAGE_F / "model_counts_vs_excess.png", "Stage F model counts versus excess"),
         (STAGE_F / "pull_grid_logpar.png", "Stage F LogPar pull grid"),
-        (STAGE_G_EXTERNAL_OVERLAY, "Stage G SED overlay with v6 fit band and external references"),
+        (STAGE_G_EXTERNAL_OVERLAY, "Stage G Nhit-grouped SED with v6 fit band"),
         (STAGE_G / "sed_points_ratio.png", "Stage G SED ratio plot"),
     ]
     figure_html = "".join(figure(path, caption) for path, caption in expected_figures)
@@ -909,7 +844,7 @@ def main() -> None:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Crab SED v6 64748 nhit100 highEplus1 Stage A-G</title>
+  <title>{esc(REPORT_TITLE)}</title>
   <style>
     :root {{
       --ink:#17202a; --muted:#5e6875; --line:#d7dde5; --panel:#f6f8fb;
@@ -949,15 +884,15 @@ def main() -> None:
 <body>
 <main>
   <header>
-    <h1>Crab SED v6 <code>64748</code> nhit100 highEplus1 Stage A-G</h1>
-    <p class="lede">New v6 chain for <code>{RUN_ID}</code>. The first Nhit bin is <code>[100,200)</code>, predE split56 keeps <code>[5,5.5)</code> and <code>[5.5,6)</code>, and <code>&gt;=6</code> is retained only as a diagnostic tail outside Stage F/G.</p>
+    <h1>{esc(REPORT_TITLE)}</h1>
+    <p class="lede">v6 chain for <code>{RUN_ID}</code>, reusing the <code>{SOURCE_RUN_ID}</code> nominal response and Stage C event reduction. The first Nhit bin is <code>[100,200)</code>; <code>&gt;=6</code> remains a diagnostic tail outside Stage F/G.</p>
   </header>
 
   <section>
     <h2>Executive Check</h2>
     <div class="grid">
       <div class="metric"><div class="label">candidate cells</div><div class="value">{len(selector_rows)}</div><div class="sub">7 Nhit x 13 predE</div></div>
-      <div class="metric"><div class="label">fit cells</div><div class="value">{len(fit_rows)}</div><div class="sub">{len(original_ridge)} ridge + {len(high_inc)} highEplus1</div></div>
+      <div class="metric"><div class="label">fit cells</div><div class="value">{len(fit_rows)}</div><div class="sub">{len(original_ridge_included)} retained ridge; {len(forced_included)} forced in</div></div>
       <div class="metric"><div class="label">Stage C files</div><div class="value">{stage_c_files:,}</div><div class="sub">missing time {missing_time}; entry mismatch {entry_mismatch}</div></div>
       <div class="metric"><div class="label">selected rows</div><div class="value">{selected_rows:,}</div><div class="sub">rough live {rough_live_days:.3f} d</div></div>
       <div class="metric"><div class="label">Stage E signal</div><div class="value">{fmt(e_totals.get('formal_sigma'), 5)}</div><div class="sub">formal sigma</div></div>
@@ -992,12 +927,14 @@ def main() -> None:
 
   <section>
     <h2>Selector Rule</h2>
-    <p>The final selector preserves original MC-ridge fit cells, then considers exactly one adjacent higher predE bin per Nhit band. New high-side cells enter Stage F/G only when both MC statistics and Stage B PSF quality gates pass. No lower-energy expansion is applied.</p>
+    <p>{esc(selector_meta.get('rule'))}</p>
     {table(["Nhit", "Status", "Candidate", "MC count", "PSF gate", "Reasons"], [[f"<code>{esc(row.get('nhit_bin'))}</code>", esc(row.get("status")), f"<code>{esc(row.get('candidate_predE_bin'))}</code> cell {esc(row.get('candidate_cell_id'))}", fmt_int(row.get("mc_count")), esc(row.get("psf_quality_flag")), esc(row.get("psf_quality_reasons"))] for row in decision_rows])}
     <h3>Included highEplus1 cells</h3>
     {table(["Cell", "Nhit", "predE", "MC count", "PSF reason"], [[esc(row.get("cell_id")), f"<code>{esc(row.get('nhit_bin'))}</code>", f"<code>{esc(row.get('predE_bin'))}</code>", fmt_int(row.get("mc_count")), esc(row.get("psf_quality_reasons"))] for row in high_inc]) if high_inc else '<div class="callout">No highEplus1 probe passed the Stage B quality gate.</div>'}
     <h3>Rejected highEplus1 probes</h3>
     {table(["Cell", "Nhit", "predE", "MC count", "Reason"], [[esc(row.get("cell_id")), f"<code>{esc(row.get('nhit_bin'))}</code>", f"<code>{esc(row.get('predE_bin'))}</code>", fmt_int(row.get("mc_count")), esc(row.get("exclusion_source"))] for row in high_rej]) if high_rej else '<div class="okbox">No highEplus1 candidate was rejected by the gate.</div>'}
+    <h3>Explicit selector overrides</h3>
+    {table(["Action", "Cell", "Nhit", "predE", "PSF status"], [["include", esc(row.get("cell_id")), f"<code>{esc(row.get('nhit_bin'))}</code>", f"<code>{esc(row.get('predE_bin'))}</code>", esc(row.get("psf_quality_reasons"))] for row in forced_included] + [["exclude", esc(row.get("cell_id")), f"<code>{esc(row.get('nhit_bin'))}</code>", f"<code>{esc(row.get('predE_bin'))}</code>", esc(row.get("psf_quality_reasons"))] for row in forced_excluded]) if forced_included or forced_excluded else '<div class="callout">No explicit selector overrides.</div>'}
   </section>
 
   <section>
@@ -1022,7 +959,7 @@ def main() -> None:
 
   <section>
     <h2>Stage F Fit</h2>
-    <p>Stage F uses the new highEplus1 selector and the aperture-conditioned 64748 response. The preferred model recorded by Stage F is <code>{esc(f_pref.get('model'))}</code>.</p>
+    <p>Stage F uses the final selector and the aperture-conditioned 64748 response. The preferred model recorded by Stage F is <code>{esc(f_pref.get('model'))}</code>.</p>
     {table(["Fit", "Valid", "chi2/ndof", "p", "phi0", "gamma/alpha", "beta"], [
         ["PL conservative", esc(fit_metric(stage_f_meta, "pl_conservative", "valid")), f"{fmt(fit_metric(stage_f_meta, 'pl_conservative', 'chi2'), 4)}/{esc(fit_metric(stage_f_meta, 'pl_conservative', 'ndof'))}", fmt(fit_metric(stage_f_meta, "pl_conservative", "p_value"), 3), fmt(fit_metric(stage_f_meta, "pl_conservative", "phi0"), 4), fmt(fit_metric(stage_f_meta, "pl_conservative", "gamma"), 4), "n/a"],
         ["LogPar conservative", esc(fit_metric(stage_f_meta, "logpar_conservative", "valid")), f"{fmt(v6_logpar.get('chi2'), 4)}/{esc(v6_logpar.get('ndof'))}", fmt(v6_logpar.get("p_value"), 3), fmt(v6_logpar.get("phi0"), 4), fmt(v6_logpar.get("alpha"), 4), fmt(v6_logpar.get("beta"), 4)],

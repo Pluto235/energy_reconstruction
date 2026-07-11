@@ -457,6 +457,27 @@ def pass5_points() -> tuple[list[float], list[float]]:
     return energy, flux
 
 
+def fit_logpar_to_e2_points(
+    energy: list[float], e2_flux: list[float], *, pivot_tev: float = 3.0
+) -> dict[str, float] | None:
+    import numpy as np
+
+    e = np.asarray(energy, dtype=np.float64)
+    e2 = np.asarray(e2_flux, dtype=np.float64)
+    valid = np.isfinite(e) & np.isfinite(e2) & (e > 0.0) & (e2 > 0.0)
+    if np.count_nonzero(valid) < 3:
+        return None
+    log_ratio = np.log(e[valid] / float(pivot_tev))
+    log_dnde = np.log(e2[valid] / np.square(e[valid]))
+    c2, c1, c0 = np.polyfit(log_ratio, log_dnde, 2)
+    return {
+        "phi0": float(np.exp(c0)),
+        "alpha": float(-c1),
+        "beta": float(-c2),
+        "pivot_tev": float(pivot_tev),
+    }
+
+
 def v099_points() -> tuple[list[float], list[float], list[float], list[float]]:
     energy: list[float] = []
     flux: list[float] = []
@@ -598,6 +619,17 @@ def ensure_stage_g_external_overlay(stage_f_meta: dict[str, Any], stage_g_meta: 
     e_pass5, y_pass5 = pass5_points()
     if e_pass5:
         ax.plot(e_pass5, y_pass5, "o", ms=5.2, color="#111827", label="Official pass5 WCDA", zorder=4)
+        pass5_fit = fit_logpar_to_e2_points(e_pass5, y_pass5)
+        if pass5_fit is not None:
+            ax.plot(
+                x,
+                sed_model_curve(x, "logpar", pass5_fit, pass5_fit["pivot_tev"]),
+                color="#111827",
+                lw=1.7,
+                ls="-",
+                label="Official pass5 point-fit LogPar",
+                zorder=3,
+            )
 
     e_v099, y_v099, ylo_v099, yhi_v099 = v099_points()
     if e_v099:
@@ -918,7 +950,7 @@ def main() -> None:
         (STAGE_E / "on_background_grid.png", "Stage E on/background grid"),
         (STAGE_F / "model_counts_vs_excess.png", "Stage F model counts versus excess"),
         (STAGE_F / "pull_grid_logpar.png", "Stage F LogPar pull grid"),
-        (STAGE_G_EXTERNAL_OVERLAY, "Stage G SED overlay with v6 Nhit points, fit band, and external references"),
+        (STAGE_G_EXTERNAL_OVERLAY, "Stage G SED overlay with v6 Nhit points, v6 fit band, Pass5 point-fit LogPar, and external references"),
         (STAGE_G / "sed_points_ratio.png", "Stage G SED ratio plot"),
     ]
     figure_html = "".join(figure(path, caption) for path, caption in expected_figures)

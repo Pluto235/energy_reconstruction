@@ -1,0 +1,17 @@
+{
+  "n": 857926,
+  "checkpoint": "/home/server/projects/energy_reconstruction/runs/theta_recoxy_position_embed_noemax_no_core_cut_64748/checkpoints/best_model.pt",
+  "space_used_for_plots": "log",
+  "normalize_weight_mean1": true,
+  "log_bias": 0.020405173301696777,
+  "log_sigma": 0.1951478272676468,
+  "log_rmse": 0.19621174037456512,
+  "rel_bias": 0.16022257506847382,
+  "rel_sigma": 0.767329752445221,
+  "r2_log": 0.9208548069000244,
+  "w_log_bias": 0.01998940409488599,
+  "w_log_sigma": 0.20003839186420372,
+  "w_log_rmse": 0.2010346596554397,
+  "w_rel_bias": 0.16504734553443592,
+  "w_rel_sigma": 0.8030367289094008
+}

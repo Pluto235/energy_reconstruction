@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-07-11 10:59 · [uncommitted] Add normalized v6 64748 true-energy overlays for the final 39-cell 2D selector.
+
 - **energy** · 2026-07-10 15:30 · [uncommitted] Add complete per-cell raw MC theta profiles with missing-mass labels and fit-cell shading to the v6 64748 report.
 
 - **energy** · 2026-07-10 13:50 · [uncommitted] Add per-panel cell-number labels to the v6 64748 Stage B radial PSF grid.

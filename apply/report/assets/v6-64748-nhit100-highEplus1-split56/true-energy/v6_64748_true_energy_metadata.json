@@ -1,0 +1,36 @@
+{
+  "response_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v6_64748_nhit100_highEplus1_split56_aperture_conditioned/response_2d_v6_64748_nhit100_highEplus1_split56_aperture_conditioned.npz",
+  "selector_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v6_64748_nhit100_highEplus1_split56_fit.csv",
+  "normalization": "unit integral in log10(E_true/GeV) for each curve",
+  "response_quantity": "numerator_sumw summed over theta bins",
+  "included_cells": 39,
+  "nhit_bins": [
+    "[100,200)",
+    "[200,300)",
+    "[300,500)",
+    "[500,800)",
+    "[800,1100)",
+    "[1100,2000)",
+    "[2000,3000)"
+  ],
+  "predE_bins": [
+    "[2,2.5)",
+    "[2.5,3)",
+    "[3,3.25)",
+    "[3.25,3.5)",
+    "[3.5,3.75)",
+    "[3.75,4.0)",
+    "[4.0,4.25)",
+    "[4.25,4.5)",
+    "[4.5,4.75)",
+    "[4.75,5.0)",
+    "[5,5.5)",
+    "[5.5,6)"
+  ],
+  "outputs": {
+    "predE_overlay_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-highEplus1-split56/true-energy/v6_64748_true_energy_predE_overlay.png",
+    "predE_overlay_pdf": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-highEplus1-split56/true-energy/v6_64748_true_energy_predE_overlay.pdf",
+    "nhit_grid_png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-highEplus1-split56/true-energy/v6_64748_true_energy_nhit_grid.png",
+    "nhit_grid_pdf": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-highEplus1-split56/true-energy/v6_64748_true_energy_nhit_grid.pdf"
+  }
+}

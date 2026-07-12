@@ -1,3 +1,0 @@
-F_RUN=v2_stage_f_baseline24_slurm_42015
-G_RUN=v2_stage_g_baseline24_slurm_42015
-REPORT=report/crab_sed_v2_baseline24_stage_a_to_g_report.html

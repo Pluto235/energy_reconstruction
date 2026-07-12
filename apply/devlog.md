@@ -6,7 +6,7 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
-- **energy_reconstruction** · 2026-07-12 16:26 · [uncommitted] Remove approved v1-v3 obsolete intermediate outputs and legacy response caches from local and ETO storage.
+- **energy_reconstruction** · 2026-07-12 16:26 · [09ca526] Remove approved v1-v3 obsolete intermediate outputs and legacy response caches from local and ETO storage.
 
 - **energy** · 2026-07-12 15:51 · [uncommitted] Extend the v6 true-energy grid to 91 cells and display the C75-in/C90-out selection override.
 

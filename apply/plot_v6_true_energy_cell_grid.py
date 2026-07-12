@@ -24,6 +24,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--prefix", default="v6_64748_reselect44_true_energy_cell_grid")
     parser.add_argument("--y-max", type=float, default=4.2)
+    parser.add_argument("--force-include-cell-ids", type=int, nargs="*", default=[])
+    parser.add_argument("--force-exclude-cell-ids", type=int, nargs="*", default=[])
     return parser.parse_args()
 
 
@@ -66,6 +68,9 @@ def main() -> None:
     with selector_path.open("r", encoding="utf-8") as handle:
         selector_rows = list(csv.DictReader(handle))
     selector_by_id = {int(row["cell_id"]): row for row in selector_rows}
+    included_ids = {int(row["cell_id"]) for row in selector_rows if int(row["include"]) == 1}
+    included_ids.update(args.force_include_cell_ids)
+    included_ids.difference_update(args.force_exclude_cell_ids)
 
     with np.load(response_path) as response:
         cell_ids = np.asarray(response["cell_id"], dtype=np.int64)
@@ -77,10 +82,8 @@ def main() -> None:
     if numerator_count.ndim != 3 or numerator_count.shape[0] != cell_ids.size:
         raise ValueError("numerator_count must have shape (cell, true-energy, theta)")
 
-    candidate_mask = pred_labels != ">=6"
-    candidate_ids = cell_ids[candidate_mask]
-    if candidate_ids.size != 84:
-        raise ValueError(f"Expected 84 main-grid cells, found {candidate_ids.size}")
+    if cell_ids.size != 91:
+        raise ValueError(f"Expected 91 cells including the >=6 tail, found {cell_ids.size}")
 
     centers = 0.5 * (loge_edges[:-1] + loge_edges[1:])
     widths = np.diff(loge_edges)
@@ -89,8 +92,6 @@ def main() -> None:
 
     for idx, cell_id_raw in enumerate(cell_ids):
         cell_id = int(cell_id_raw)
-        if pred_labels[idx] == ">=6":
-            continue
         hist = numerator_count[idx].sum(axis=1)
         count = int(round(float(hist.sum())))
         density = hist / (count * widths) if count > 0 else np.zeros_like(hist)
@@ -100,7 +101,8 @@ def main() -> None:
         hist_by_id[cell_id] = density
         metrics_by_id[cell_id] = {
             "cell_id": cell_id,
-            "include": int(selector["include"]),
+            "include": int(cell_id in included_ids),
+            "selector_include": int(selector["include"]),
             "nhit_bin": nhit_labels[idx],
             "predE_bin": pred_labels[idx],
             "mc_count_selector": int(selector["mc_count"]),
@@ -138,7 +140,7 @@ def main() -> None:
     fig, axes = plt.subplots(
         len(nhit_bins),
         len(pred_bins),
-        figsize=(25.0, 14.5),
+        figsize=(27.0, 14.5),
         sharex=True,
         sharey=True,
         squeeze=False,
@@ -196,7 +198,7 @@ def main() -> None:
                 ax.set_ylabel(f"Nhit {nhit_bin}", fontsize=7.5)
 
     fig.suptitle(
-        "v6 64748: normalized true-energy distributions for 84 candidate cells",
+        "v6 64748: normalized true-energy distributions for 91 cells (including PredE >= 6)",
         fontsize=15,
         y=0.997,
     )
@@ -264,6 +266,10 @@ def main() -> None:
     summary = {
         "response_npz": str(response_path),
         "selector_csv": str(selector_path),
+        "plot_selection_overrides": {
+            "force_include_cell_ids": args.force_include_cell_ids,
+            "force_exclude_cell_ids": args.force_exclude_cell_ids,
+        },
         "distribution": "unweighted numerator_count summed over theta bins",
         "normalization": "unit integral in log10(E_true/GeV) for each cell",
         "candidate_cells": len(metric_rows),

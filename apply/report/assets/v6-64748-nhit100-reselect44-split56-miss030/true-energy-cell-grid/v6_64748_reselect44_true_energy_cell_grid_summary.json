@@ -1,11 +1,19 @@
 {
   "response_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v6_64748_nhit100_highEplus1_split56/response_2d_v6_64748_nhit100_highEplus1_split56.npz",
   "selector_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v6_64748_nhit100_reselect44_split56_miss030_fit.csv",
+  "plot_selection_overrides": {
+    "force_include_cell_ids": [
+      75
+    ],
+    "force_exclude_cell_ids": [
+      90
+    ]
+  },
   "distribution": "unweighted numerator_count summed over theta bins",
   "normalization": "unit integral in log10(E_true/GeV) for each cell",
-  "candidate_cells": 84,
+  "candidate_cells": 91,
   "included_fit_cells": 44,
-  "nonempty_cells": 75,
+  "nonempty_cells": 80,
   "adjacent_included_pairs": 37,
   "adjacent_overlap_median": 0.5034274111720742,
   "adjacent_overlap_max": 0.6289734126927412,

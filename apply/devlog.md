@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-07-12 15:51 · [uncommitted] Extend the v6 true-energy grid to 91 cells and display the C75-in/C90-out selection override.
+
 - **energy** · 2026-07-12 15:43 · [uncommitted] Add the 84-cell v6 true-energy distribution grid with fit selection and adjacent-overlap diagnostics.
 
 - **energy** · 2026-07-12 15:12 · [uncommitted] Archive all 13 images referenced by the latest v6 report in its dedicated assets directory.

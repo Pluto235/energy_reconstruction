@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-12 17:29 · [uncommitted] Add the 84-ID Stage D observed counts skymap before the ROI excess grid in the latest v6 report.
+
 - **energy_reconstruction** · 2026-07-12 17:08 · [uncommitted] Keep flat, presentation-ready copies of all 14 latest v6 report figures in the dedicated asset directory.
 
 - **energy_reconstruction** · 2026-07-12 17:05 · [uncommitted] Renumber latest v6 figure labels to display cells 1-84 while leaving the predE >= 6 tail unnumbered and all analysis data unchanged.

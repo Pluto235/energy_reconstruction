@@ -7,6 +7,7 @@
       "assets/v6-64748-nhit100-reselect44-split56-miss030/v6_64748_nhit100_reselect44_split56_miss030_stage_b_raw_theta_profiles.png",
       "assets/v6-64748-nhit100-reselect44-split56-miss030/v6_64748_nhit100_reselect44_split56_miss030_stage_b_radial_psf_profiles_fit_shaded.png",
       "assets/v6-64748-nhit100-reselect44-split56-miss030/true-energy-cell-grid/v6_64748_reselect44_true_energy_cell_grid.png",
+      "../output/stage_d_v6_64748_nhit100_reselect44_split56_miss030_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_d_annnorm/roi_counts_grid.png",
       "../output/stage_d_v6_64748_nhit100_reselect44_split56_miss030_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_d_annnorm/roi_excess_grid.png",
       "../output/stage_d_v6_64748_nhit100_reselect44_split56_miss030_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_d_annnorm/annulus_residual_grid.png",
       "assets/v6-64748-nhit100-reselect44-split56-miss030/v6_64748_nhit100_reselect44_split56_miss030_stage_d_dec_profile_before_after.png",
@@ -18,7 +19,7 @@
       "../output/stage_g_v6_64748_nhit100_reselect44_split56_miss030/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_g/sed_points_ratio.png"
     ],
     "missing_image_refs": [],
-    "image_ref_count": 14
+    "image_ref_count": 15
   },
   "metadata_contamination": {
     "status": "passed",

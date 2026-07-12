@@ -45,6 +45,86 @@ def display_cell_id(cell_id: int, pred_bin: str) -> int | None:
     return int(cell_id) - ((int(cell_id) - 1) // 13)
 
 
+def plot_counts_grid(
+    counts: np.ndarray,
+    cell_ids: np.ndarray,
+    nhit_bins: np.ndarray,
+    pred_bins: np.ndarray,
+    xy_edges: np.ndarray,
+    r_opt_deg: np.ndarray,
+    output_path: Path,
+    *,
+    roi_fiducial_deg: float,
+) -> None:
+    ordered_nhit = sorted(set(nhit_bins.tolist()), key=interval_key)
+    ordered_pred = sorted(set(pred_bins.tolist()), key=interval_key)
+    index_by_key = {(nhit, pred): idx for idx, (nhit, pred) in enumerate(zip(nhit_bins, pred_bins))}
+    fig, axes = plt.subplots(
+        len(ordered_nhit),
+        len(ordered_pred),
+        figsize=(2.05 * len(ordered_pred), 1.75 * len(ordered_nhit)),
+        dpi=150,
+        sharex=True,
+        sharey=True,
+        squeeze=False,
+    )
+    extent = [float(xy_edges[0]), float(xy_edges[-1]), float(xy_edges[0]), float(xy_edges[-1])]
+    logged = np.full(counts.shape, np.nan, dtype=np.float64)
+    positive = counts > 0
+    logged[positive] = np.log10(counts[positive])
+    finite = logged[np.isfinite(logged)]
+    vmin = float(np.percentile(finite, 5.0)) if finite.size else 0.0
+    vmax = float(np.percentile(finite, 99.5)) if finite.size else 1.0
+    if not np.isfinite(vmin) or not np.isfinite(vmax) or vmin >= vmax:
+        vmin, vmax = 0.0, 1.0
+    cmap = plt.get_cmap("viridis").copy()
+    cmap.set_bad("#eeeeee")
+    theta = np.linspace(0.0, 2.0 * np.pi, 240)
+    fiducial_x = roi_fiducial_deg * np.cos(theta)
+    fiducial_y = roi_fiducial_deg * np.sin(theta)
+    first_image = None
+
+    for i, nhit in enumerate(ordered_nhit):
+        for j, pred in enumerate(ordered_pred):
+            ax = axes[i, j]
+            idx = index_by_key.get((nhit, pred))
+            if idx is None:
+                ax.set_axis_off()
+                continue
+            image = ax.imshow(
+                logged[idx],
+                origin="lower",
+                extent=extent,
+                aspect="equal",
+                interpolation="nearest",
+                cmap=cmap,
+                vmin=vmin,
+                vmax=vmax,
+            )
+            if first_image is None:
+                first_image = image
+            ax.plot(fiducial_x, fiducial_y, color="white", linewidth=0.35, alpha=0.85)
+            on_radius = float(r_opt_deg[idx])
+            ax.plot(on_radius * np.cos(theta), on_radius * np.sin(theta), color="white", linewidth=0.45, alpha=0.9)
+            ax.scatter([0.0], [0.0], marker="+", s=18, c="white", linewidths=0.6)
+            shown = display_cell_id(int(cell_ids[idx]), pred)
+            ax.set_title(f"cell {shown}: {pred}" if shown is not None else pred, fontsize=6.7)
+            ax.tick_params(labelsize=6, length=2)
+            if j == 0:
+                ax.set_ylabel(f"{nhit}\ny (deg)", fontsize=6.7)
+            if i == len(ordered_nhit) - 1:
+                ax.set_xlabel("x (deg)", fontsize=6.7)
+
+    fig.suptitle("Stage D observed counts skymap before background subtraction", fontsize=11, y=0.995)
+    fig.tight_layout(rect=[0.0, 0.0, 0.95, 0.982])
+    if first_image is not None:
+        colorbar = fig.colorbar(first_image, ax=axes.ravel().tolist(), shrink=0.72, pad=0.01)
+        colorbar.set_label("log10 observed counts", fontsize=8)
+        colorbar.ax.tick_params(labelsize=7)
+    fig.savefig(output_path)
+    plt.close(fig)
+
+
 def plot_roi_grid(
     values: np.ndarray,
     cell_ids: np.ndarray,
@@ -168,6 +248,7 @@ def main() -> None:
     preferred_model = str((metadata.get("preferred_fit") or {}).get("model", "unknown"))
     roi_fiducial_deg = float(np.max(np.abs(stage_d["x_edges_deg"])))
 
+    roi_counts = args.stage_d_output_dir / "roi_counts_grid.png"
     roi_excess = args.stage_d_output_dir / "roi_excess_grid.png"
     annulus_residual = args.stage_d_output_dir / "annulus_residual_grid.png"
     model_counts = args.stage_f_output_dir / "model_counts_vs_excess.png"
@@ -177,6 +258,12 @@ def main() -> None:
         stage_d["predE_bin"].astype(str),
         stage_d["x_edges_deg"],
         stage_d["r_opt_deg"],
+    )
+    plot_counts_grid(
+        stage_d["counts_map"],
+        *common,
+        roi_counts,
+        roi_fiducial_deg=roi_fiducial_deg,
     )
     plot_roi_grid(
         stage_d["excess_map"],
@@ -195,7 +282,7 @@ def main() -> None:
         roi_fiducial_deg=roi_fiducial_deg,
     )
     plot_model_counts(stage_f, preferred_model, model_counts)
-    copy_to_assets([roi_excess, annulus_residual, model_counts], args.asset_dir)
+    copy_to_assets([roi_counts, roi_excess, annulus_residual, model_counts], args.asset_dir)
     print("Redrew display-only cell labels: 1-84; predE >= 6 tail unnumbered")
 
 

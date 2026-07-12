@@ -1125,6 +1125,7 @@ def main() -> None:
             TRUE_ENERGY_CELL_GRID,
             "The panels show normalized true-energy distributions for all 91 (Nhit, predE) cells; display IDs 1-84 exclude the unnumbered predE >= 6 tail column. Blue distributions with green borders mark the final 44 cells used by the Stage F/G SED fit, while gray panels are diagnostic-only excluded cells.",
         ),
+        (STAGE_D / "roi_counts_grid.png", "Stage D observed counts skymap before background subtraction"),
         (STAGE_D / "roi_excess_grid.png", "Stage D ROI excess map grid"),
         (STAGE_D / "annulus_residual_grid.png", "Stage D annulus residuals"),
         (STAGE_D_DEC_PROFILE, "Stage D aggregate Dec profile before and after annulus-normalized background subtraction for the 44 active fit cells"),

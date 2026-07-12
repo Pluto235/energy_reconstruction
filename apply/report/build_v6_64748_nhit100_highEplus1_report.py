@@ -181,6 +181,13 @@ def interval_key(label: str) -> float:
     return low
 
 
+def display_cell_id(cell_id: int, pred_bin: str) -> int | None:
+    """Map the internal 13-column ID to the displayed 12-column analysis ID."""
+    if pred_bin.strip().startswith(">="):
+        return None
+    return int(cell_id) - ((int(cell_id) - 1) // 13)
+
+
 def setup_matplotlib():
     os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
     os.environ.setdefault("XDG_CACHE_HOME", "/tmp/.cache")
@@ -259,6 +266,7 @@ def ensure_stage_b_theta_profile_grid(fit_ids: set[int]) -> None:
                 continue
 
             cell_id = int(cell_ids[idx])
+            shown_cell_id = display_cell_id(cell_id, pred)
             if cell_id in fit_ids:
                 ax.set_facecolor("#ecfdf5")
                 for spine in ax.spines.values():
@@ -291,10 +299,11 @@ def ensure_stage_b_theta_profile_grid(fit_ids: set[int]) -> None:
                 )
             ax.step(centers, probability, where="mid", color="#0072B2", linewidth=0.95)
             ax.step(centers, crab_probability, where="mid", color="#D55E00", linewidth=0.8, alpha=0.9)
+            cell_line = f"cell {shown_cell_id}\n" if shown_cell_id is not None else ""
             ax.text(
                 0.97,
                 0.94,
-                f"cell {cell_id}\nmissing={missing_mass[idx]:.1%}",
+                f"{cell_line}missing={missing_mass[idx]:.1%}",
                 transform=ax.transAxes,
                 ha="right",
                 va="top",
@@ -413,6 +422,7 @@ def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
                 continue
 
             cell_id = int(cell_ids[idx])
+            shown_cell_id = display_cell_id(cell_id, pred)
             if cell_id in fit_ids:
                 ax.set_facecolor("#ecfdf5")
                 for spine in ax.spines.values():
@@ -429,18 +439,19 @@ def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
                     color="#047857",
                     fontweight="bold",
                 )
-            ax.text(
-                0.97,
-                0.94,
-                f"cell {cell_id}",
-                transform=ax.transAxes,
-                ha="right",
-                va="top",
-                fontsize=6.2,
-                color="#0f172a",
-                fontweight="bold",
-                bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.72, "pad": 0.7},
-            )
+            if shown_cell_id is not None:
+                ax.text(
+                    0.97,
+                    0.94,
+                    f"cell {shown_cell_id}",
+                    transform=ax.transAxes,
+                    ha="right",
+                    va="top",
+                    fontsize=6.2,
+                    color="#0f172a",
+                    fontweight="bold",
+                    bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.72, "pad": 0.7},
+                )
 
             density = profile_density[idx]
             formal_profile = np.isfinite(density).any() and np.nansum(density) > 0.0
@@ -1102,7 +1113,7 @@ def main() -> None:
         (STAGE_B_FIT_SHADED_PROFILE, "Stage B radial PSF profiles; purple profiles are unfiltered diagnostics only, and green panels enter the final SED fit"),
         (
             TRUE_ENERGY_CELL_GRID,
-            "The panels show normalized true-energy distributions for all 91 (Nhit, predE) cells. Blue distributions with green borders mark the final 44 cells used by the Stage F/G SED fit, while gray panels are diagnostic-only excluded cells.",
+            "The panels show normalized true-energy distributions for all 91 (Nhit, predE) cells; display IDs 1-84 exclude the unnumbered predE >= 6 tail column. Blue distributions with green borders mark the final 44 cells used by the Stage F/G SED fit, while gray panels are diagnostic-only excluded cells.",
         ),
         (STAGE_D / "roi_excess_grid.png", "Stage D ROI excess map grid"),
         (STAGE_D / "annulus_residual_grid.png", "Stage D annulus residuals"),
@@ -1230,7 +1241,7 @@ def main() -> None:
 
   <section>
     <h2>Stage A-B-D-E Diagnostics</h2>
-    <p>Stage A nominal response is <code>{esc(stage_a_meta.get('response_type'))}</code>; Stage F/G use <code>{esc(stage_a_ap_meta.get('response_type'))}</code>. Stage B wrote {esc(stage_b_meta.get('n_cells'))} formal PSF rows. The theta grid shows each cell's raw <code>mc_weight</code>-normalized distribution before Crab reweighting; orange shading marks Crab-positive theta bins without MC support. In the radial grid, purple profiles and dashed Rayleigh curves are diagnostic-only fits made without the formal true-energy cut when the formal profile is empty; they do not replace the Stage B PSF used by Stage A/F. Panels with no raw MC events are labeled explicitly. Pale green panels mark the {len(fit_cell_ids)} cells used by Stage F/G.</p>
+    <p>Stage A nominal response is <code>{esc(stage_a_meta.get('response_type'))}</code>; Stage F/G use <code>{esc(stage_a_ap_meta.get('response_type'))}</code>. Stage B wrote {esc(stage_b_meta.get('n_cells'))} formal PSF rows. Figure labels use display IDs 1-84 after excluding the <code>predE &gt;= 6</code> tail column from numbering; stored data and metadata retain the original 91-cell internal IDs. The theta grid shows each cell's raw <code>mc_weight</code>-normalized distribution before Crab reweighting; orange shading marks Crab-positive theta bins without MC support. In the radial grid, purple profiles and dashed Rayleigh curves are diagnostic-only fits made without the formal true-energy cut when the formal profile is empty; they do not replace the Stage B PSF used by Stage A/F. Panels with no raw MC events are labeled explicitly. Pale green panels mark the {len(fit_cell_ids)} cells used by Stage F/G.</p>
     <div class="figgrid">{figure_html}</div>
   </section>
 

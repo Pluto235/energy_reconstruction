@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-12 17:05 · [uncommitted] Renumber latest v6 figure labels to display cells 1-84 while leaving the predE >= 6 tail unnumbered and all analysis data unchanged.
+
 - **energy_reconstruction** · 2026-07-12 16:54 · [uncommitted] Add the 91-cell true-energy distribution grid and selection explanation to the latest v6 report.
 
 - **energy** · 2026-07-12 16:45 · [uncommitted] Add unfiltered diagnostic Rayleigh profiles, swap selected cell 90 for 75, and refit the overwritten v6 Stage A-G report.

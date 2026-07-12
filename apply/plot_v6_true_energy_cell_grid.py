@@ -37,6 +37,12 @@ def interval_key(label: str) -> float:
     return float(label.split(",", 1)[0].lstrip("["))
 
 
+def display_cell_id(cell_id: int, pred_bin: str) -> int | None:
+    if pred_bin.strip().startswith(">="):
+        return None
+    return int(cell_id) - ((int(cell_id) - 1) // 13)
+
+
 def histogram_quantiles(counts: np.ndarray, centers: np.ndarray) -> tuple[float, float, float]:
     total = float(np.sum(counts))
     if total <= 0:
@@ -155,6 +161,7 @@ def main() -> None:
             ax = axes[row_idx, col_idx]
             cell_id = cell_for_key[(nhit_bin, pred_bin)]
             metric = metrics_by_id[cell_id]
+            shown_cell_id = display_cell_id(cell_id, pred_bin)
             included = int(metric["include"]) == 1
             density = hist_by_id[cell_id]
             line_color = selected_line if included else excluded_line
@@ -169,10 +176,11 @@ def main() -> None:
                 spine.set_color("#009E73" if included else "#9CA3AF")
                 spine.set_linewidth(1.35 if included else 0.65)
             status = "FIT" if included else "OUT"
+            panel_id = f"C{shown_cell_id}" if shown_cell_id is not None else "TAIL"
             ax.text(
                 0.03,
                 0.96,
-                f"C{cell_id} {status}  n={int(metric['response_count_in_true_range']):,}",
+                f"{panel_id} {status}  n={int(metric['response_count_in_true_range']):,}",
                 transform=ax.transAxes,
                 ha="left",
                 va="top",
@@ -198,7 +206,7 @@ def main() -> None:
                 ax.set_ylabel(f"Nhit {nhit_bin}", fontsize=7.5)
 
     fig.suptitle(
-        "v6 64748: normalized true-energy distributions for 91 cells (including PredE >= 6)",
+        "v6 64748: normalized true-energy distributions (display cells 1-84; PredE >= 6 tail unnumbered)",
         fontsize=15,
         y=0.997,
     )

@@ -9,6 +9,8 @@
       "assets/v6-64748-nhit100-reselect44-split56-miss030/true-energy-cell-grid/v6_64748_reselect44_true_energy_cell_grid.png",
       "../output/stage_d_v6_64748_nhit100_reselect44_split56_miss030_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_d_annnorm/roi_counts_grid.png",
       "../output/stage_d_v6_64748_nhit100_reselect44_split56_miss030_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_d_annnorm/roi_excess_grid.png",
+      "../output/stage_d_v6_64748_nhit100_reselect44_split56_miss030_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_d_annnorm/normalized_ra_offset_excess_profiles.png",
+      "../output/stage_d_v6_64748_nhit100_reselect44_split56_miss030_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_d_annnorm/normalized_dec_offset_excess_profiles.png",
       "../output/stage_d_v6_64748_nhit100_reselect44_split56_miss030_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_d_annnorm/annulus_residual_grid.png",
       "assets/v6-64748-nhit100-reselect44-split56-miss030/v6_64748_nhit100_reselect44_split56_miss030_stage_d_dec_profile_before_after.png",
       "../output/stage_e_v6_64748_nhit100_reselect44_split56_miss030_containment1_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_e_containment1_annnorm/formal_sigma_grid.png",
@@ -19,7 +21,7 @@
       "../output/stage_g_v6_64748_nhit100_reselect44_split56_miss030/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_g/sed_points_ratio.png"
     ],
     "missing_image_refs": [],
-    "image_ref_count": 15
+    "image_ref_count": 17
   },
   "metadata_contamination": {
     "status": "passed",

@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-12 17:37 · [uncommitted] Add normalized RA- and Dec-offset Stage D excess profile grids with the final 44 fit cells highlighted.
+
 - **energy_reconstruction** · 2026-07-12 17:29 · [uncommitted] Add the 84-ID Stage D observed counts skymap before the ROI excess grid in the latest v6 report.
 
 - **energy_reconstruction** · 2026-07-12 17:08 · [uncommitted] Keep flat, presentation-ready copies of all 14 latest v6 report figures in the dedicated asset directory.

@@ -1127,6 +1127,8 @@ def main() -> None:
         ),
         (STAGE_D / "roi_counts_grid.png", "Stage D observed counts skymap before background subtraction"),
         (STAGE_D / "roi_excess_grid.png", "Stage D ROI excess map grid"),
+        (STAGE_D / "normalized_ra_offset_excess_profiles.png", "Stage D normalized RA-offset excess profiles after background subtraction; green panels enter the fit"),
+        (STAGE_D / "normalized_dec_offset_excess_profiles.png", "Stage D normalized Dec-offset excess profiles after background subtraction; green panels enter the fit"),
         (STAGE_D / "annulus_residual_grid.png", "Stage D annulus residuals"),
         (STAGE_D_DEC_PROFILE, "Stage D aggregate Dec profile before and after annulus-normalized background subtraction for the 44 active fit cells"),
         (STAGE_E / "formal_sigma_grid.png", "Stage E formal sigma grid"),

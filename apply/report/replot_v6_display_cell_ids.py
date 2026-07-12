@@ -125,6 +125,87 @@ def plot_counts_grid(
     plt.close(fig)
 
 
+def plot_normalized_excess_profiles(
+    excess_map: np.ndarray,
+    counts_map: np.ndarray,
+    cell_ids: np.ndarray,
+    nhit_bins: np.ndarray,
+    pred_bins: np.ndarray,
+    coordinate_centers: np.ndarray,
+    fit_ids: set[int],
+    output_path: Path,
+    *,
+    projection: str,
+) -> None:
+    if projection not in {"ra", "dec"}:
+        raise ValueError(f"Unsupported projection: {projection}")
+    ordered_nhit = sorted(set(nhit_bins.tolist()), key=interval_key)
+    ordered_pred = sorted(set(pred_bins.tolist()), key=interval_key)
+    index_by_key = {(nhit, pred): idx for idx, (nhit, pred) in enumerate(zip(nhit_bins, pred_bins))}
+    sum_axis = 1 if projection == "ra" else 2
+    profiles = np.nansum(excess_map, axis=sum_axis)
+    fig, axes = plt.subplots(
+        len(ordered_nhit),
+        len(ordered_pred),
+        figsize=(2.05 * len(ordered_pred), 1.75 * len(ordered_nhit)),
+        dpi=150,
+        sharex=True,
+        sharey=True,
+        squeeze=False,
+    )
+    x_min = float(coordinate_centers[0])
+    x_max = float(coordinate_centers[-1])
+    band_edges = np.arange(np.floor(x_min / 2.0) * 2.0, x_max + 2.0, 2.0)
+
+    for i, nhit in enumerate(ordered_nhit):
+        for j, pred in enumerate(ordered_pred):
+            ax = axes[i, j]
+            idx = index_by_key.get((nhit, pred))
+            if idx is None:
+                ax.set_axis_off()
+                continue
+            internal_id = int(cell_ids[idx])
+            in_fit = internal_id in fit_ids
+            if in_fit:
+                ax.set_facecolor("#ecfdf5")
+                for spine in ax.spines.values():
+                    spine.set_color("#15803d")
+                    spine.set_linewidth(1.1)
+            for band_index, left in enumerate(band_edges[:-1]):
+                if band_index % 2 == 0:
+                    ax.axvspan(left, band_edges[band_index + 1], color="#64748b", alpha=0.055, linewidth=0.0)
+            profile = np.asarray(profiles[idx], dtype=np.float64)
+            finite = profile[np.isfinite(profile)]
+            peak = float(np.max(finite)) if finite.size else 0.0
+            normalized = profile / peak if peak > 0.0 else np.zeros_like(profile)
+            ax.plot(coordinate_centers, normalized, color="#1f5a91", linewidth=0.85)
+            ax.axhline(0.0, color="#64748b", linewidth=0.45)
+            shown = display_cell_id(internal_id, pred)
+            status = "fit" if in_fit else "diag"
+            cell_text = f"cell {shown}" if shown is not None else "tail"
+            observed_count = int(np.sum(counts_map[idx]))
+            ax.set_title(f"{cell_text}: {pred} [{status}]\nN={observed_count:,}", fontsize=5.7)
+            ax.set_xlim(x_min, x_max)
+            ax.set_ylim(-0.35, 1.08)
+            ax.tick_params(labelsize=5.8, length=2, labelleft=(j == 0))
+            ax.grid(alpha=0.18, linewidth=0.35)
+            if j == 0:
+                ax.set_ylabel(f"{nhit}\nexcess / peak", fontsize=6.2)
+            if i == len(ordered_nhit) - 1:
+                xlabel = "RA offset cos(dec) (deg)" if projection == "ra" else "Dec offset (deg)"
+                ax.set_xlabel(xlabel, fontsize=6.2)
+
+    axis_name = "RA-offset" if projection == "ra" else "Dec-offset"
+    fig.suptitle(
+        f"Stage D normalized {axis_name} excess profiles after background subtraction (green panels enter fit)",
+        fontsize=11,
+        y=0.997,
+    )
+    fig.tight_layout(rect=[0.0, 0.0, 1.0, 0.978], w_pad=0.35, h_pad=0.55)
+    fig.savefig(output_path)
+    plt.close(fig)
+
+
 def plot_roi_grid(
     values: np.ndarray,
     cell_ids: np.ndarray,
@@ -250,6 +331,8 @@ def main() -> None:
 
     roi_counts = args.stage_d_output_dir / "roi_counts_grid.png"
     roi_excess = args.stage_d_output_dir / "roi_excess_grid.png"
+    ra_excess_profile = args.stage_d_output_dir / "normalized_ra_offset_excess_profiles.png"
+    dec_excess_profile = args.stage_d_output_dir / "normalized_dec_offset_excess_profiles.png"
     annulus_residual = args.stage_d_output_dir / "annulus_residual_grid.png"
     model_counts = args.stage_f_output_dir / "model_counts_vs_excess.png"
     common = (
@@ -273,6 +356,29 @@ def main() -> None:
         colorbar_label="counts - background",
         roi_fiducial_deg=roi_fiducial_deg,
     )
+    fit_ids = {int(cell_id) for cell_id in stage_f["cell_id"]}
+    plot_normalized_excess_profiles(
+        stage_d["excess_map"],
+        stage_d["counts_map"],
+        stage_d["cell_id"],
+        stage_d["nhit_bin"].astype(str),
+        stage_d["predE_bin"].astype(str),
+        stage_d["x_centers_deg"],
+        fit_ids,
+        ra_excess_profile,
+        projection="ra",
+    )
+    plot_normalized_excess_profiles(
+        stage_d["excess_map"],
+        stage_d["counts_map"],
+        stage_d["cell_id"],
+        stage_d["nhit_bin"].astype(str),
+        stage_d["predE_bin"].astype(str),
+        stage_d["y_centers_deg"],
+        fit_ids,
+        dec_excess_profile,
+        projection="dec",
+    )
     plot_roi_grid(
         stage_d["annulus_residual_map"],
         *common,
@@ -282,7 +388,10 @@ def main() -> None:
         roi_fiducial_deg=roi_fiducial_deg,
     )
     plot_model_counts(stage_f, preferred_model, model_counts)
-    copy_to_assets([roi_counts, roi_excess, annulus_residual, model_counts], args.asset_dir)
+    copy_to_assets(
+        [roi_counts, roi_excess, ra_excess_profile, dec_excess_profile, annulus_residual, model_counts],
+        args.asset_dir,
+    )
     print("Redrew display-only cell labels: 1-84; predE >= 6 tail unnumbered")
 
 

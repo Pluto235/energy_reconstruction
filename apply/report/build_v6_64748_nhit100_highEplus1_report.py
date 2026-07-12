@@ -9,6 +9,7 @@ import math
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 from typing import Any, Iterable, List
 
@@ -134,6 +135,15 @@ def figure(path: Path, caption: str) -> str:
         f"<figcaption>{esc(caption)}</figcaption>"
         "</figure>"
     )
+
+
+def archive_report_figures(figures: Iterable[tuple[Path, str]]) -> None:
+    """Keep a flat, presentation-ready copy of every report image."""
+    ASSET_DIR.mkdir(parents=True, exist_ok=True)
+    for source, _ in figures:
+        target = ASSET_DIR / source.name
+        if source.resolve() != target.resolve():
+            shutil.copy2(source, target)
 
 
 def global_cutflow_map(rows: list[dict[str, str]]) -> dict[str, int]:
@@ -1125,6 +1135,7 @@ def main() -> None:
         (STAGE_G_EXTERNAL_OVERLAY, "Stage G SED overlay with v6 Nhit points, v6 fit band, Pass5 point-fit LogPar, and external references"),
         (STAGE_G / "sed_points_ratio.png", "Stage G SED ratio plot"),
     ]
+    archive_report_figures(expected_figures)
     figure_html = "".join(figure(path, caption) for path, caption in expected_figures)
 
     html_doc = f"""<!doctype html>

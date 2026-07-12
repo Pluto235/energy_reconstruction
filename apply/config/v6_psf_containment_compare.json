@@ -1,0 +1,34 @@
+{
+  "run_id": "v6_64748_nhit100_reselect44_split56_miss030",
+  "comparison_id": "v6_psf_containment_compare",
+  "scheme_r": {
+    "label": "Fixed 71.5% Rayleigh",
+    "nominal_response_npz": "apply/output/stage_a_v6_64748_nhit100_highEplus1_split56/response_2d_v6_64748_nhit100_highEplus1_split56.npz",
+    "nominal_response_metadata": "apply/output/stage_a_v6_64748_nhit100_highEplus1_split56/response_2d_v6_64748_nhit100_highEplus1_split56_metadata.json",
+    "containment": 0.715,
+    "definition": "Aeff_R = 0.715 * Aeff_nominal"
+  },
+  "scheme_b": {
+    "label": "MC aperture-conditioned",
+    "response_npz": "apply/output/stage_a_v6_64748_nhit100_reselect44_split56_miss030_aperture_conditioned/response_2d_v6_64748_nhit100_reselect44_split56_miss030_aperture_conditioned.npz",
+    "response_metadata": "apply/output/stage_a_v6_64748_nhit100_reselect44_split56_miss030_aperture_conditioned/response_2d_v6_64748_nhit100_reselect44_split56_miss030_aperture_conditioned_metadata.json",
+    "containment": 1.0,
+    "definition": "Aeff_B = Aeff_aperture with mc_dangle <= r_opt(cell)"
+  },
+  "selector_csv": "apply/config/cell_selector_v6_64748_nhit100_reselect44_split56_miss030_fit.csv",
+  "selector_metadata": "apply/config/cell_selector_v6_64748_nhit100_reselect44_split56_miss030_fit_metadata.json",
+  "signal_npz": "apply/output/stage_e_v6_64748_nhit100_reselect44_split56_miss030_containment1_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_e_containment1_annnorm/signal_v6_64748_nhit100_reselect44_split56_miss030_containment1_annnorm.npz",
+  "signal_metadata": "apply/output/stage_e_v6_64748_nhit100_reselect44_split56_miss030_containment1_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_e_containment1_annnorm/signal_v6_64748_nhit100_reselect44_split56_miss030_containment1_annnorm_metadata.json",
+  "stage_c_dir": "apply/output/stage_c_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_c_halfyear",
+  "production_stage_f_metadata": "apply/output/stage_f_v6_64748_nhit100_reselect44_split56_miss030/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_f/fit_v6_64748_nhit100_reselect44_split56_miss030_metadata.json",
+  "production_stage_f_npz": "apply/output/stage_f_v6_64748_nhit100_reselect44_split56_miss030/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_f/fit_v6_64748_nhit100_reselect44_split56_miss030.npz",
+  "stage_b_summary_csv": "apply/output/stage_b_v6_64748_nhit100_reselect44_split56_miss030/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_b_psf/psf_v6_64748_nhit100_reselect44_split56_miss030_summary.csv",
+  "binned_mc_root": "/mnt/mydisk/WCDA_simulation_binned_response_v6_64748_nhit100_highEplus1_split56_candidate",
+  "output_dir": "apply/output/v6_psf_containment_compare",
+  "asset_dir": "apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030/psf-containment-compare",
+  "report_html": "apply/report/v6_psf_containment_compare.html",
+  "special_cells": [6, 75, 89],
+  "expected_fit_cells": 44,
+  "required_included_cells": [6, 75, 89],
+  "required_excluded_cells": [90]
+}

@@ -692,7 +692,7 @@ def ensure_stage_g_external_overlay(stage_f_meta: dict[str, Any], stage_g_meta: 
         )
 
     point_styles = {
-        "nhit": {"fmt": "o", "color": "#dc2626", "label": "v6 Nhit grouped"},
+        "nhit": {"fmt": "o", "color": "#2563eb", "label": "v6 Nhit grouped"},
     }
     for grouping, style in point_styles.items():
         selected = [

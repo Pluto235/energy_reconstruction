@@ -51,6 +51,7 @@ HIGH_E_DECISIONS = REPO_ROOT / f"apply/config/cell_selector_{RUN_ID}_highEplus1_
 STAGE_A = REPO_ROOT / f"apply/output/stage_a_{SOURCE_RUN_ID}"
 STAGE_A_AP = REPO_ROOT / f"apply/output/stage_a_{RUN_ID}_aperture_conditioned"
 STAGE_B = REPO_ROOT / f"apply/output/stage_b_{RUN_ID}/runs/{RUN_ID}_stage_b_psf"
+STAGE_B_UNFILTERED_DIAGNOSTIC = STAGE_B / f"psf_{RUN_ID}_unfiltered_diagnostic.npz"
 STAGE_C = REPO_ROOT / f"apply/output/stage_c_{SOURCE_RUN_ID}/runs/{SOURCE_RUN_ID}_stage_c_halfyear"
 STAGE_D = REPO_ROOT / f"apply/output/stage_d_{RUN_ID}_annnorm/runs/{RUN_ID}_stage_d_annnorm"
 STAGE_E = REPO_ROOT / f"apply/output/stage_e_{RUN_ID}_containment1_annnorm/runs/{RUN_ID}_stage_e_containment1_annnorm"
@@ -339,7 +340,10 @@ def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
     psf_path = STAGE_B / f"psf_{RUN_ID}.npz"
     if not psf_path.exists():
         return
-    source_mtime = max(psf_path.stat().st_mtime, FIT_SELECTOR.stat().st_mtime, Path(__file__).stat().st_mtime)
+    source_paths = [psf_path, FIT_SELECTOR, Path(__file__)]
+    if STAGE_B_UNFILTERED_DIAGNOSTIC.exists():
+        source_paths.append(STAGE_B_UNFILTERED_DIAGNOSTIC)
+    source_mtime = max(path.stat().st_mtime for path in source_paths)
     if STAGE_B_FIT_SHADED_PROFILE.exists() and STAGE_B_FIT_SHADED_PROFILE.stat().st_mtime >= source_mtime:
         return
 
@@ -353,6 +357,29 @@ def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
         profile_density = np.asarray(psf["profile_density"], dtype=np.float64)
         sigma_rad = np.asarray(psf["sigma_rad"], dtype=np.float64)
         r_opt_deg = np.asarray(psf["r_opt_deg"], dtype=np.float64)
+
+    diagnostic_by_cell: dict[int, tuple[np.ndarray, float, float, int, str]] = {}
+    if STAGE_B_UNFILTERED_DIAGNOSTIC.exists():
+        with np.load(STAGE_B_UNFILTERED_DIAGNOSTIC, allow_pickle=False) as diagnostic:
+            diagnostic_ids = np.asarray(diagnostic["cell_id"], dtype=np.int64)
+            diagnostic_edges = np.asarray(diagnostic["profile_edges_deg"], dtype=np.float64)
+            diagnostic_profiles = np.asarray(diagnostic["profile_density"], dtype=np.float64)
+            diagnostic_sigma_deg = np.asarray(diagnostic["sigma_deg"], dtype=np.float64)
+            diagnostic_r_opt_deg = np.asarray(diagnostic["r_opt_deg"], dtype=np.float64)
+            diagnostic_events = np.asarray(diagnostic["events"], dtype=np.int64)
+            diagnostic_status = np.asarray(diagnostic["status"], dtype=str)
+        if diagnostic_edges.shape != profile_edges_deg.shape or not np.allclose(diagnostic_edges, profile_edges_deg):
+            raise ValueError("Formal and unfiltered diagnostic PSF profile edges do not match")
+        diagnostic_by_cell = {
+            int(cell_id): (
+                diagnostic_profiles[idx],
+                float(diagnostic_sigma_deg[idx]),
+                float(diagnostic_r_opt_deg[idx]),
+                int(diagnostic_events[idx]),
+                str(diagnostic_status[idx]),
+            )
+            for idx, cell_id in enumerate(diagnostic_ids)
+        }
 
     ordered_nhit = sorted(set(nhit_bins.tolist()), key=interval_key)
     ordered_pred = sorted(set(pred_bins.tolist()), key=interval_key)
@@ -411,12 +438,50 @@ def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
             )
 
             density = profile_density[idx]
-            ax.step(centers, density, where="mid", color="#1f4e79", linewidth=0.9)
-            if np.isfinite(density).any() and np.nansum(density) > 0.0:
+            formal_profile = np.isfinite(density).any() and np.nansum(density) > 0.0
+            if formal_profile:
+                ax.step(centers, density, where="mid", color="#1f4e79", linewidth=0.9)
                 if idx < sigma_rad.size and np.isfinite(sigma_rad[idx]) and sigma_rad[idx] > 0.0:
                     ax.plot(centers, rayleigh_pdf_deg(centers, float(sigma_rad[idx])), color="#c9501a", linewidth=0.8, alpha=0.9)
                 if idx < r_opt_deg.size and np.isfinite(r_opt_deg[idx]):
                     ax.axvline(float(r_opt_deg[idx]), color="#444444", linewidth=0.7, linestyle="--")
+            else:
+                diagnostic = diagnostic_by_cell.get(cell_id)
+                if diagnostic is not None and diagnostic[4] == "ok" and np.nansum(diagnostic[0]) > 0.0:
+                    diagnostic_density, diagnostic_sigma, diagnostic_r_opt, diagnostic_count, _ = diagnostic
+                    ax.step(centers, diagnostic_density, where="mid", color="#7c3aed", linewidth=0.9)
+                    ax.plot(
+                        centers,
+                        rayleigh_pdf_deg(centers, math.radians(diagnostic_sigma)),
+                        color="#c9501a",
+                        linewidth=0.8,
+                        linestyle="--",
+                        alpha=0.9,
+                    )
+                    ax.axvline(diagnostic_r_opt, color="#7c3aed", linewidth=0.7, linestyle=":")
+                    ax.text(
+                        0.03,
+                        0.80,
+                        f"diag no E cut\nN={diagnostic_count}",
+                        transform=ax.transAxes,
+                        ha="left",
+                        va="top",
+                        fontsize=5.2,
+                        color="#6d28d9",
+                    )
+                else:
+                    diagnostic_count = diagnostic[3] if diagnostic is not None else 0
+                    label = "no MC events" if diagnostic_count == 0 else "no diagnostic fit"
+                    ax.text(
+                        0.5,
+                        0.45,
+                        label,
+                        transform=ax.transAxes,
+                        ha="center",
+                        va="center",
+                        fontsize=5.8,
+                        color="#6b7280",
+                    )
 
             ax.set_title(pred, fontsize=6.4)
             ax.tick_params(labelsize=6, length=2)
@@ -430,9 +495,10 @@ def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
         Line2D([0], [0], color="#1f4e79", linewidth=0.9, label="MC histogram"),
         Line2D([0], [0], color="#c9501a", linewidth=0.9, label="Rayleigh fit"),
         Line2D([0], [0], color="#444444", linewidth=0.8, linestyle="--", label="r_opt"),
+        Line2D([0], [0], color="#7c3aed", linewidth=0.9, label="unfiltered diagnostic only"),
         Patch(facecolor="#ecfdf5", edgecolor="#059669", label="included in fit"),
     ]
-    fig.legend(handles=handles, loc="upper center", ncol=4, fontsize=8, frameon=False, bbox_to_anchor=(0.5, 0.988))
+    fig.legend(handles=handles, loc="upper center", ncol=5, fontsize=8, frameon=False, bbox_to_anchor=(0.5, 0.988))
     fig.suptitle(f"Stage B {RUN_ID} radial PSF profiles: fit cells shaded", fontsize=11, y=0.999)
     fig.tight_layout(rect=[0.0, 0.0, 1.0, 0.963])
     STAGE_B_FIT_SHADED_PROFILE.parent.mkdir(parents=True, exist_ok=True)
@@ -940,7 +1006,11 @@ def main() -> None:
     tail_rows = [row for row in selector_rows if row.get("predE_bin") == ">=6"]
     tail_included = [row for row in tail_rows if truthy(row.get("include"))]
     high_inc = [row for row in selector_rows if truthy(row.get("highEplus1_included_flag"))]
-    high_rej = [row for row in selector_rows if truthy(row.get("highEplus1_rejected_flag"))]
+    high_rej = [
+        row
+        for row in selector_rows
+        if truthy(row.get("highEplus1_rejected_flag")) and not truthy(row.get("include"))
+    ]
     original_ridge = [row for row in selector_rows if truthy(row.get("original_ridge_fit_flag"))]
     original_ridge_included = [row for row in original_ridge if truthy(row.get("include"))]
     forced_included = [row for row in selector_rows if row.get("selection_override_flag") == "force_include"]
@@ -996,6 +1066,11 @@ def main() -> None:
             "pass",
             f"{len(fit_rows)} fit cells; {len(forced_included)} forced in, {len(forced_excluded)} forced out",
         ),
+        (
+            "selector 75/90 swap",
+            "pass" if 75 in fit_cell_ids and 90 not in fit_cell_ids and len(fit_cell_ids) == 44 else "fail",
+            f"cell 75 included={75 in fit_cell_ids}; cell 90 included={90 in fit_cell_ids}; total={len(fit_cell_ids)}",
+        ),
         ("Stage C files", "pass" if stage_c_files > 3000 else "warning", f"{stage_c_files:,} processed, missing time {missing_time}, entry mismatch {entry_mismatch}"),
         ("Stage E signal", "pass" if (stage_e_meta.get("quality_gate") or {}).get("status") == "passed" else "warning", f"formal sigma {fmt(e_totals.get('formal_sigma'), 5)}"),
         ("Stage F fit", "pass" if f_quality.get("fit_status") == "passed" else "warning", f"preferred {f_pref.get('model')}"),
@@ -1019,7 +1094,7 @@ def main() -> None:
         (STAGE_B / "psf_r_opt_deg_grid.png", "Stage B r_opt by cell"),
         (STAGE_B / "psf_effective_events_grid.png", "Stage B effective events by cell"),
         (STAGE_B_THETA_PROFILE, "Stage B raw normalized MC theta distributions; green panels enter the fit"),
-        (STAGE_B_FIT_SHADED_PROFILE, "Stage B radial PSF profiles; green panels enter the fit"),
+        (STAGE_B_FIT_SHADED_PROFILE, "Stage B radial PSF profiles; purple profiles are unfiltered diagnostics only, and green panels enter the final SED fit"),
         (STAGE_D / "roi_excess_grid.png", "Stage D ROI excess map grid"),
         (STAGE_D / "annulus_residual_grid.png", "Stage D annulus residuals"),
         (STAGE_D_DEC_PROFILE, "Stage D aggregate Dec profile before and after annulus-normalized background subtraction for the 44 active fit cells"),
@@ -1146,7 +1221,7 @@ def main() -> None:
 
   <section>
     <h2>Stage A-B-D-E Diagnostics</h2>
-    <p>Stage A nominal response is <code>{esc(stage_a_meta.get('response_type'))}</code>; Stage F/G use <code>{esc(stage_a_ap_meta.get('response_type'))}</code>. Stage B wrote {esc(stage_b_meta.get('n_cells'))} PSF rows. The theta grid shows each cell's raw <code>mc_weight</code>-normalized distribution before Crab reweighting; orange shading marks Crab-positive theta bins without MC support, and each panel reports the corresponding missing probability mass. Pale green panels mark the {len(fit_cell_ids)} cells used by Stage F/G.</p>
+    <p>Stage A nominal response is <code>{esc(stage_a_meta.get('response_type'))}</code>; Stage F/G use <code>{esc(stage_a_ap_meta.get('response_type'))}</code>. Stage B wrote {esc(stage_b_meta.get('n_cells'))} formal PSF rows. The theta grid shows each cell's raw <code>mc_weight</code>-normalized distribution before Crab reweighting; orange shading marks Crab-positive theta bins without MC support. In the radial grid, purple profiles and dashed Rayleigh curves are diagnostic-only fits made without the formal true-energy cut when the formal profile is empty; they do not replace the Stage B PSF used by Stage A/F. Panels with no raw MC events are labeled explicitly. Pale green panels mark the {len(fit_cell_ids)} cells used by Stage F/G.</p>
     <div class="figgrid">{figure_html}</div>
   </section>
 

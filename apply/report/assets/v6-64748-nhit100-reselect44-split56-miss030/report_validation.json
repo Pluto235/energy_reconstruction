@@ -95,11 +95,11 @@
       72,
       73,
       74,
+      75,
       86,
       87,
       88,
-      89,
-      90
+      89
     ],
     "selection_overrides": {
       "force_include_cell_ids": [
@@ -111,13 +111,15 @@
         47,
         48,
         61,
-        62
+        62,
+        75
       ],
       "force_exclude_cell_ids": [
         37,
         50,
         51,
-        63
+        63,
+        90
       ],
       "expected_fit_cells": 44
     },
@@ -150,7 +152,7 @@
         "cell_id": 75,
         "nhit_bin": "[1100,2000)",
         "predE_bin": "[4.75,5.0)",
-        "reason": "valid_events_le_0;effective_events_lt_200;core_fit_effective_events_lt_200;theta_missing_mass_gt_0.3;containment_warning;angle_check_warning"
+        "reason": ""
       }
     ],
     "tail_policy": ">=6 diagnostic only; no Stage F/G include rows",

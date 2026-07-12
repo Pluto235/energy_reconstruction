@@ -1,0 +1,8 @@
+nhit_bin,status,candidate_cell_id,candidate_predE_bin,mc_count,psf_quality_flag,psf_quality_reasons
+"[100,200)",included_highEplus1,4,"[3.25,3.5)",54366,1,pass
+"[200,300)",included_highEplus1,19,"[3.75,4.0)",17909,1,pass
+"[300,500)",rejected_highEplus1_probe,38,"[5.5,6)",13883,0,containment_warning
+"[500,800)",diagnostic_tail_only,52,>=6,158,0,tail_ge6_excluded_from_main_fit
+"[800,1100)",rejected_highEplus1_probe,64,"[5.5,6)",3211,0,containment_warning
+"[1100,2000)",rejected_highEplus1_probe,75,"[4.75,5.0)",2279,0,valid_events_le_0;effective_events_lt_200;core_fit_effective_events_lt_200;theta_missing_mass_gt_0.3;containment_warning;angle_check_warning
+"[2000,3000)",diagnostic_tail_only,91,>=6,0,0,tail_ge6_excluded_from_main_fit

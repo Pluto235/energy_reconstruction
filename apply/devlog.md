@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-13 00:21 · [uncommitted] Add a seven-bin Nhit-grouped v6 forward-folding diagnostic and compare it with the official 2D fit.
+
 - **energy_reconstruction** · 2026-07-12 23:48 · [uncommitted] Refit v6 after diagnostically removing five largest-pull display cells and document the remaining poor goodness of fit.
 
 - **energy_reconstruction** · 2026-07-12 21:34 · [uncommitted] Add the v6 fixed-Rayleigh versus MC aperture-conditioned PSF response comparison, Slurm workflow, and independent HTML report.

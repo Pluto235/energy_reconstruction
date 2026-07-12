@@ -1,0 +1,346 @@
+{
+  "description": "Diagnostic forward-folding fit after aggregation of the official 44 cells into seven Nhit bins",
+  "diagnostic_only": true,
+  "aggregation": {
+    "observed": "sum of Stage E excess within each Nhit bin",
+    "model": "sum of aperture-conditioned per-cell forward-folded counts within each Nhit bin",
+    "error": "sqrt(sum(error_conservative^2)) within each Nhit bin",
+    "selected_cells": 44,
+    "group_count": 7
+  },
+  "inputs": {
+    "response_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v6_64748_nhit100_reselect44_split56_miss030_aperture_conditioned/response_2d_v6_64748_nhit100_reselect44_split56_miss030_aperture_conditioned.npz",
+    "signal_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v6_64748_nhit100_reselect44_split56_miss030_containment1_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_e_containment1_annnorm/signal_v6_64748_nhit100_reselect44_split56_miss030_containment1_annnorm.npz",
+    "selector_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v6_64748_nhit100_reselect44_split56_miss030_fit.csv",
+    "source_files_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_c_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_c_halfyear/source_files.csv"
+  },
+  "exposure": {
+    "source_files_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_c_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_c_halfyear/source_files.csv",
+    "processed_files": 3849,
+    "skipped_files": 120,
+    "sample_step_seconds": 60.0,
+    "total_samples": 218652,
+    "total_live_seconds": 10857909.230103046,
+    "total_live_days": 125.67024571878525,
+    "source_visible_live_seconds": 3646555.2079242785,
+    "source_visible_live_days": 42.20550009171619,
+    "source_visible_fraction_of_live": 0.33584322088587504,
+    "mjd_min": 59579.6669078,
+    "mjd_max": 59760.6521386,
+    "theta_edges_deg": [
+      0.0,
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      5.0,
+      6.0,
+      7.0,
+      8.0,
+      9.0,
+      10.0,
+      11.0,
+      12.0,
+      13.0,
+      14.0,
+      15.0,
+      16.0,
+      17.0,
+      18.0,
+      19.0,
+      20.0,
+      21.0,
+      22.0,
+      23.0,
+      24.0,
+      25.0,
+      26.0,
+      27.0,
+      28.0,
+      29.0,
+      30.0,
+      31.0,
+      32.0,
+      33.0,
+      34.0,
+      35.0,
+      36.0,
+      37.0,
+      38.0,
+      39.0,
+      40.0,
+      41.0,
+      42.0,
+      43.0,
+      44.0,
+      45.0,
+      46.0,
+      47.0,
+      48.0,
+      49.0,
+      50.0
+    ],
+    "theta_exposure_sec": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      214673.01456555031,
+      154928.6974126003,
+      116644.3033492122,
+      102480.80355266332,
+      95052.07087032835,
+      90765.214332458,
+      85752.33099546087,
+      84833.79464414592,
+      82857.76906056138,
+      81764.99268968987,
+      80693.14217610924,
+      80017.35808711093,
+      79033.73414106548,
+      78341.69209180375,
+      79561.51885902262,
+      78413.50042884448,
+      76998.6921666128,
+      76134.04681526354,
+      77421.39576910516,
+      77406.3965536517,
+      75177.17981954385,
+      76038.61383922724,
+      76532.79567615796,
+      75134.26414825597,
+      75136.03743819319,
+      75327.11841379834,
+      74595.73983194723,
+      75206.74576849214,
+      75828.77782189661,
+      75715.7553099888,
+      75349.80484546957,
+      76620.20910546313,
+      75125.31279606515,
+      76587.18348144705,
+      76380.66497864878,
+      76848.28239841669,
+      76730.09002952656,
+      76957.46890515077,
+      77279.31601922003,
+      77329.29401701454,
+      77664.82889859719,
+      76947.71252110085,
+      78267.543299397
+    ],
+    "method": "per-file midpoint integration of Stage C rough live time into source theta bins"
+  },
+  "fits": {
+    "pl_conservative": {
+      "model_name": "pl",
+      "error_mode": "conservative",
+      "valid": true,
+      "parameters": {
+        "phi0": 2.1573002454163384e-12,
+        "gamma": 2.6509289886081766
+      },
+      "errors": {
+        "phi0": 2.9839519135327057e-14,
+        "gamma": 0.013314807384908756
+      },
+      "fit_parameters": {
+        "log10_phi0": -11.666089407121303,
+        "gamma": 2.6509289886081766
+      },
+      "fit_parameter_errors": {
+        "log10_phi0": 0.00600710936303539,
+        "gamma": 0.013314807384908756
+      },
+      "fit_parameter_names": [
+        "log10_phi0",
+        "gamma"
+      ],
+      "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+      "covariance": [
+        [
+          3.608536492883693e-05,
+          -3.7624347295114865e-05
+        ],
+        [
+          -3.7624347295114865e-05,
+          0.0001772855500627424
+        ]
+      ],
+      "chi2": 83.2883752284906,
+      "ndof": 5,
+      "chi2_over_ndof": 16.65767504569812,
+      "p_value": 1.7194975345888218e-16,
+      "minuit_status": {
+        "valid": true,
+        "accurate": true,
+        "fmin_is_valid": true,
+        "has_covariance": true,
+        "has_accurate_covar": true,
+        "edm": 8.955765610787849e-09
+      }
+    },
+    "logpar_conservative": {
+      "model_name": "logpar",
+      "error_mode": "conservative",
+      "valid": true,
+      "parameters": {
+        "phi0": 2.358343622633557e-12,
+        "alpha": 2.735234056747383,
+        "beta": 0.10383442443247974
+      },
+      "errors": {
+        "phi0": 4.3184523061494887e-14,
+        "alpha": 0.023169698992986376,
+        "beta": 0.01692695837146361
+      },
+      "fit_parameters": {
+        "log10_phi0": -11.627392915720552,
+        "alpha": 2.735234056747383,
+        "beta": 0.10383442443247974
+      },
+      "fit_parameter_errors": {
+        "log10_phi0": 0.00795253070385371,
+        "alpha": 0.023169698992986376,
+        "beta": 0.01692695837146361
+      },
+      "fit_parameter_names": [
+        "log10_phi0",
+        "alpha",
+        "beta"
+      ],
+      "covariance_parameterization": "minuit_fit_space: log10_phi0 plus shape parameters",
+      "covariance": [
+        [
+          6.324275083663373e-05,
+          9.391045159066243e-06,
+          7.910205539966027e-05
+        ],
+        [
+          9.391045159066243e-06,
+          0.000536848115862715,
+          0.0002630413127077887
+        ],
+        [
+          7.910205539966027e-05,
+          0.0002630413127077887,
+          0.0002865287796959286
+        ]
+      ],
+      "chi2": 27.845154074780247,
+      "ndof": 4,
+      "chi2_over_ndof": 6.961288518695062,
+      "p_value": 1.3407427227578627e-05,
+      "minuit_status": {
+        "valid": true,
+        "accurate": true,
+        "fmin_is_valid": true,
+        "has_covariance": true,
+        "has_accurate_covar": true,
+        "edm": 1.6972766312935822e-05
+      }
+    }
+  },
+  "preferred_model": "logpar",
+  "delta_chi2_pl_minus_logpar": 55.44322115371035,
+  "baseline_2d_logpar": {
+    "chi2": 480.5152751200419,
+    "ndof": 41,
+    "chi2_over_ndof": 11.719884759025412,
+    "p_value": 2.422886490854453e-76,
+    "parameters": {
+      "phi0": 2.2979317960607643e-12,
+      "alpha": 2.7606450747821047,
+      "beta": 0.10714774344716506
+    }
+  },
+  "groups": [
+    {
+      "nhit_bin": "[100,200)",
+      "internal_cell_ids": "1;2;3;4;5;6",
+      "n_cells": 6,
+      "observed_excess": 18395.56563628064,
+      "error_conservative": 935.3226365077023,
+      "error_sqrt_n": 668.290356057904,
+      "pl_model_counts": 24963.119341620917,
+      "pl_pull": -7.021698662038308,
+      "logpar_model_counts": 21360.65738000071,
+      "logpar_pull": -3.1701272138468686
+    },
+    {
+      "nhit_bin": "[200,300)",
+      "internal_cell_ids": "15;16;17;18;19;20;21",
+      "n_cells": 7,
+      "observed_excess": 11957.61018373233,
+      "error_conservative": 345.7114256374349,
+      "error_sqrt_n": 256.3922775748131,
+      "pl_model_counts": 10938.21387644598,
+      "pl_pull": 2.9486913989225294,
+      "logpar_model_counts": 10759.87328536391,
+      "logpar_pull": 3.4645568805253966
+    },
+    {
+      "nhit_bin": "[300,500)",
+      "internal_cell_ids": "28;29;30;31;32;33;34",
+      "n_cells": 7,
+      "observed_excess": 9564.719863555052,
+      "error_conservative": 205.59494190384387,
+      "error_sqrt_n": 160.98757716047533,
+      "pl_model_counts": 8975.720307259235,
+      "pl_pull": 2.8648543142237943,
+      "logpar_model_counts": 9416.501953136012,
+      "logpar_pull": 0.7209219694147974
+    },
+    {
+      "nhit_bin": "[500,800)",
+      "internal_cell_ids": "42;43;44;45;46;47;48",
+      "n_cells": 7,
+      "observed_excess": 4365.679138847881,
+      "error_conservative": 101.15493493227169,
+      "error_sqrt_n": 85.43418519538885,
+      "pl_model_counts": 4206.029969292217,
+      "pl_pull": 1.57826377588555,
+      "logpar_model_counts": 4507.531641271845,
+      "logpar_pull": -1.4023290363336283
+    },
+    {
+      "nhit_bin": "[800,1100)",
+      "internal_cell_ids": "56;57;58;59;60;61;62",
+      "n_cells": 7,
+      "observed_excess": 1345.0886786694205,
+      "error_conservative": 49.7082621033021,
+      "error_sqrt_n": 43.68065933568311,
+      "pl_model_counts": 1382.2549911165816,
+      "pl_pull": -0.7476888322895551,
+      "logpar_model_counts": 1399.9538110087715,
+      "logpar_pull": -1.1037427183700788
+    },
+    {
+      "nhit_bin": "[1100,2000)",
+      "internal_cell_ids": "70;71;72;73;74;75",
+      "n_cells": 6,
+      "observed_excess": 827.5394397691213,
+      "error_conservative": 39.50266522946115,
+      "error_sqrt_n": 34.55430508634199,
+      "pl_model_counts": 923.9086261377214,
+      "pl_pull": -2.439561629799294,
+      "logpar_model_counts": 782.441062574088,
+      "logpar_pull": 1.1416540360775143
+    },
+    {
+      "nhit_bin": "[2000,3000)",
+      "internal_cell_ids": "86;87;88;89",
+      "n_cells": 4,
+      "observed_excess": 44.34096357899562,
+      "error_conservative": 11.817742441811989,
+      "error_sqrt_n": 9.591663046625438,
+      "pl_model_counts": 77.93441307379076,
+      "pl_pull": -2.8426283327972355,
+      "logpar_model_counts": 33.87431256120581,
+      "logpar_pull": 0.8856726290427581
+    }
+  ]
+}

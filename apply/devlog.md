@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-12 16:54 · [uncommitted] Add the 91-cell true-energy distribution grid and selection explanation to the latest v6 report.
+
 - **energy** · 2026-07-12 16:45 · [uncommitted] Add unfiltered diagnostic Rayleigh profiles, swap selected cell 90 for 75, and refit the overwritten v6 Stage A-G report.
 
 - **energy_reconstruction** · 2026-07-12 16:26 · [09ca526] Remove approved v1-v3 obsolete intermediate outputs and legacy response caches from local and ETO storage.

@@ -38,6 +38,11 @@ STAGE_B_FIT_SHADED_PROFILE = ASSET_DIR / f"{RUN_ID}_stage_b_radial_psf_profiles_
 STAGE_D_DEC_PROFILE = ASSET_DIR / f"{RUN_ID}_stage_d_dec_profile_before_after.png"
 STAGE_D_DEC_PROFILE_PDF = ASSET_DIR / f"{RUN_ID}_stage_d_dec_profile_before_after.pdf"
 STAGE_G_EXTERNAL_OVERLAY = ASSET_DIR / f"{RUN_ID}_stage_g_external_overlay.png"
+TRUE_ENERGY_CELL_GRID = (
+    ASSET_DIR
+    / "true-energy-cell-grid"
+    / "v6_64748_reselect44_true_energy_cell_grid.png"
+)
 
 PASS5_CSV = REPORT_DIR / "assets/official-pass5/wcda_crab_sed_pass5_20260616_104941.csv"
 V099_CSV = REPORT_DIR / "assets/official-v099/wcda_crab_sed_v099_20250731_20260616_123624.csv"
@@ -1095,6 +1100,10 @@ def main() -> None:
         (STAGE_B / "psf_effective_events_grid.png", "Stage B effective events by cell"),
         (STAGE_B_THETA_PROFILE, "Stage B raw normalized MC theta distributions; green panels enter the fit"),
         (STAGE_B_FIT_SHADED_PROFILE, "Stage B radial PSF profiles; purple profiles are unfiltered diagnostics only, and green panels enter the final SED fit"),
+        (
+            TRUE_ENERGY_CELL_GRID,
+            "The panels show normalized true-energy distributions for all 91 (Nhit, predE) cells. Blue distributions with green borders mark the final 44 cells used by the Stage F/G SED fit, while gray panels are diagnostic-only excluded cells.",
+        ),
         (STAGE_D / "roi_excess_grid.png", "Stage D ROI excess map grid"),
         (STAGE_D / "annulus_residual_grid.png", "Stage D annulus residuals"),
         (STAGE_D_DEC_PROFILE, "Stage D aggregate Dec profile before and after annulus-normalized background subtraction for the 44 active fit cells"),

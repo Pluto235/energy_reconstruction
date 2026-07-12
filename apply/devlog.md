@@ -6,7 +6,7 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
-- **energy_reconstruction** · 2026-07-12 21:34 · [uncommitted] Add the v6 fixed-Rayleigh versus MC aperture-conditioned PSF response comparison, Slurm workflow, and independent HTML report.
+- **energy_reconstruction** · 2026-07-12 23:48 · [uncommitted] Refit v6 after diagnostically removing five largest-pull display cells and document the remaining poor goodness of fit.
 
 - **energy_reconstruction** · 2026-07-12 18:50 · [uncommitted] Replace the Stage G external ratio panels with the official Pass5 WCDA point-fit LogPar comparison.
 

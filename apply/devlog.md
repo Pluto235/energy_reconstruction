@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-12 18:50 · [uncommitted] Replace the Stage G external ratio panels with the official Pass5 WCDA point-fit LogPar comparison.
+
 - **energy_reconstruction** · 2026-07-12 17:58 · [uncommitted] Append the final v6 LogPar parameters, uncertainties, fit diagnostics, and goodness-of-fit caveat to the report.
 
 - **energy_reconstruction** · 2026-07-12 17:37 · [uncommitted] Add normalized RA- and Dec-offset Stage D excess profile grids with the final 44 fit cells highlighted.

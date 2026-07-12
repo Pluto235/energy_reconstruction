@@ -43,6 +43,7 @@ M2_TO_CM2 = 1.0e4
 ERG_TO_TEV = 0.6241509074460763
 REQUIRED_CELL_IDS = list(range(8, 19))
 EXCLUDED_CELL_IDS = list(range(1, 8))
+OFFICIAL_PASS5_CSV = REPO_ROOT / "apply/report/assets/official-pass5/wcda_crab_sed_pass5_20260616_104941.csv"
 
 WCDA1_POOL1_TABLE1_SOURCE = {
     "name": "LHAASO-WCDA-1 / Pool-1 Crab Table 1 SED points",
@@ -1432,6 +1433,35 @@ def interpolate_pool1_e2_sed(E_tev: np.ndarray | float) -> np.ndarray:
     return out
 
 
+def official_pass5_point_fit(*, pivot_tev: float = DEFAULT_PIVOT_TEV) -> Dict[str, float]:
+    energy: List[float] = []
+    e2_flux: List[float] = []
+    with OFFICIAL_PASS5_CSV.open("r", encoding="utf-8") as handle:
+        for row in csv.DictReader(handle):
+            try:
+                e = float(row["energy_tev"])
+                dnde = float(row["flux_per_tev_cm2_s"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if e > 0.0 and dnde > 0.0 and math.isfinite(e) and math.isfinite(dnde):
+                energy.append(e)
+                e2_flux.append(e * e * dnde)
+    if len(energy) < 3:
+        raise ValueError(f"Need at least three official Pass5 SED points from {OFFICIAL_PASS5_CSV}")
+    e = np.asarray(energy, dtype=np.float64)
+    e2 = np.asarray(e2_flux, dtype=np.float64)
+    log_ratio = np.log(e / float(pivot_tev))
+    log_dnde = np.log(e2 / np.square(e))
+    c2, c1, c0 = np.polyfit(log_ratio, log_dnde, 2)
+    return {
+        "phi0": float(np.exp(c0)),
+        "alpha": float(-c1),
+        "beta": float(-c2),
+        "pivot_tev": float(pivot_tev),
+        "n_points": int(e.size),
+    }
+
+
 def plot_sed_points(
     points: Sequence[SedPoint],
     path: Path,
@@ -1539,7 +1569,8 @@ def plot_sed_points(
 
 def plot_ratio_points(points: Sequence[SedPoint], path: Path, *, frozen_model_label: str) -> None:
     plt = setup_matplotlib()
-    fig, axes = plt.subplots(3, 1, figsize=(8.4, 8.4), sharex=True, constrained_layout=True)
+    fig, axes = plt.subplots(2, 1, figsize=(8.4, 6.2), sharex=True, constrained_layout=True)
+    pass5_fit = official_pass5_point_fit()
     styles = {
         "nhit": {"fmt": "o", "color": "#d62728", "label": "Nhit grouped"},
         "predE": {"fmt": "s", "color": "#2ca02c", "label": "predE grouped"},
@@ -1557,29 +1588,17 @@ def plot_ratio_points(points: Sequence[SedPoint], path: Path, *, frozen_model_la
             lw=0.9,
             **styles[grouping],
         )
+        energies = np.asarray([p.effective_energy_tev for p in selected], dtype=np.float64)
+        pass5_e2 = sed_curve(
+            energies,
+            model_name="logpar",
+            params={key: float(pass5_fit[key]) for key in ["phi0", "alpha", "beta"]},
+            pivot_tev=float(pass5_fit["pivot_tev"]),
+        )
         axes[1].errorbar(
             [p.effective_energy_tev for p in selected],
-            [p.ratio_to_wcda1_ref for p in selected],
-            yerr=[p.ratio_to_wcda1_ref_err for p in selected],
-            capsize=3,
-            ms=5,
-            lw=0.9,
-            **styles[grouping],
-        )
-        pool1_interp = interpolate_pool1_e2_sed(np.asarray([p.effective_energy_tev for p in selected], dtype=np.float64))
-        ratio_pool1: List[float] = []
-        ratio_pool1_err: List[float] = []
-        for p, ref in zip(selected, pool1_interp):
-            if ref > 0.0 and math.isfinite(float(ref)):
-                ratio_pool1.append(p.e2_dnde / float(ref))
-                ratio_pool1_err.append(p.e2_dnde_err / float(ref))
-            else:
-                ratio_pool1.append(float("nan"))
-                ratio_pool1_err.append(float("nan"))
-        axes[2].errorbar(
-            [p.effective_energy_tev for p in selected],
-            ratio_pool1,
-            yerr=ratio_pool1_err,
+            [p.e2_dnde / ref for p, ref in zip(selected, pass5_e2)],
+            yerr=[p.e2_dnde_err / ref for p, ref in zip(selected, pass5_e2)],
             capsize=3,
             ms=5,
             lw=0.9,
@@ -1587,13 +1606,13 @@ def plot_ratio_points(points: Sequence[SedPoint], path: Path, *, frozen_model_la
         )
     for ax, ylabel in zip(
         axes,
-        [f"Point / Stage F {frozen_model_label}", "Point / 1LHAASO full-array PL", "Point / WCDA-1 Pool-1 points"],
+        [f"Point / Stage F {frozen_model_label}", "Point / official Pass5 WCDA LogPar"],
     ):
         ax.axhline(1.0, color="#333333", lw=1.0, ls="--")
         ax.set_xscale("log")
         ax.set_ylabel(ylabel)
         ax.grid(True, which="both", alpha=0.25)
-    axes[2].set_xlabel("Effective true energy [TeV]")
+    axes[1].set_xlabel("Effective true energy [TeV]")
     axes[0].legend()
     fig.savefig(path, dpi=180)
     plt.close(fig)
@@ -1796,7 +1815,7 @@ footer {{ margin-top:54px; padding-top:18px; border-top:1px solid var(--border);
     <h2>对比图</h2>
     <div class="figure-grid">
 	      {img('sed_png', 'E^2 dN/dE SED points + Stage F model + LHAASO/WCDA-1/MAGIC/H.E.S.S./HAWC references')}
-	      {img('ratio_png', '每点相对 Stage F model、1LHAASO full-array PL 和 WCDA-1 Pool-1 points 的 ratio')}
+	      {img('ratio_png', '每点相对 Stage F model 和 official Pass5 WCDA point-fit LogPar 的 ratio')}
       {img('cell_counts_png', '每个 SED 点使用的 cell 数量')}
     </div>
   </section>
@@ -1818,6 +1837,7 @@ def make_summary_json(metadata: Dict[str, object], points: Sequence[SedPoint]) -
         "diagnostic_only": True,
         "frozen_spectrum": metadata["frozen_spectrum"],
         "reference_spectrum": metadata["reference_spectrum"],
+        "official_pass5_reference": metadata["official_pass5_reference"],
         "wcda1_pool1_reference": metadata["wcda1_pool1_reference"],
         "external_crab_sed_references": metadata["external_crab_sed_references"],
         "validation": metadata["validation"],
@@ -1906,6 +1926,12 @@ def make_metadata(
                 "This is an analytic PL curve from the full-array catalog fit, not digitized Fig. 6-32 SED points.",
                 "It should not be labeled WCDA-1/Pool-1.",
             ],
+        },
+        "official_pass5_reference": {
+            "name": "Official Pass5 WCDA point-fit LogPar",
+            "source_csv": str(OFFICIAL_PASS5_CSV),
+            "fit_method": "unweighted quadratic fit in log(dN/dE) versus log(E/pivot)",
+            **official_pass5_point_fit(pivot_tev=float(args.pivot_tev)),
         },
         "wcda1_pool1_reference": {
             **WCDA1_POOL1_TABLE1_SOURCE,

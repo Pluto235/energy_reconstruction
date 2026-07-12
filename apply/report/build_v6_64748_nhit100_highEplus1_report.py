@@ -1158,7 +1158,7 @@ def main() -> None:
         (STAGE_F / "model_counts_vs_excess.png", "Stage F model counts versus excess"),
         (STAGE_F / "pull_grid_logpar.png", "Stage F LogPar pull grid"),
         (STAGE_G_EXTERNAL_OVERLAY, "Stage G SED overlay with v6 Nhit points, v6 fit band, Pass5 point-fit LogPar, and external references"),
-        (STAGE_G / "sed_points_ratio.png", "Stage G SED ratio plot"),
+        (STAGE_G / "sed_points_ratio.png", "Stage G SED ratios to the Stage F LogPar and official Pass5 WCDA point-fit LogPar"),
     ]
     archive_report_figures(expected_figures)
     figure_html = "".join(figure(path, caption) for path, caption in expected_figures)

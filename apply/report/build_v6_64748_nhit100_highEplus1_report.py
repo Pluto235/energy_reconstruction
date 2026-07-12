@@ -35,6 +35,8 @@ STAGE_B_THETA_CACHE = SOURCE_ASSET_DIR / f"{SOURCE_RUN_ID}_stage_b_raw_theta_pro
 STAGE_B_THETA_PROFILE = ASSET_DIR / f"{RUN_ID}_stage_b_raw_theta_profiles.png"
 STAGE_B_THETA_PROFILE_PDF = ASSET_DIR / f"{RUN_ID}_stage_b_raw_theta_profiles.pdf"
 STAGE_B_FIT_SHADED_PROFILE = ASSET_DIR / f"{RUN_ID}_stage_b_radial_psf_profiles_fit_shaded.png"
+STAGE_D_DEC_PROFILE = ASSET_DIR / f"{RUN_ID}_stage_d_dec_profile_before_after.png"
+STAGE_D_DEC_PROFILE_PDF = ASSET_DIR / f"{RUN_ID}_stage_d_dec_profile_before_after.pdf"
 STAGE_G_EXTERNAL_OVERLAY = ASSET_DIR / f"{RUN_ID}_stage_g_external_overlay.png"
 
 PASS5_CSV = REPORT_DIR / "assets/official-pass5/wcda_crab_sed_pass5_20260616_104941.csv"
@@ -435,6 +437,79 @@ def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
     fig.tight_layout(rect=[0.0, 0.0, 1.0, 0.963])
     STAGE_B_FIT_SHADED_PROFILE.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(STAGE_B_FIT_SHADED_PROFILE)
+    plt.close(fig)
+
+
+def ensure_stage_d_dec_profile(fit_ids: set[int]) -> None:
+    import numpy as np
+
+    stage_d_npz = STAGE_D / f"background_{RUN_ID}_annnorm.npz"
+    input_paths = [Path(__file__), stage_d_npz, FIT_SELECTOR]
+    existing_inputs = [path for path in input_paths if path.exists()]
+    source_mtime = max(path.stat().st_mtime for path in existing_inputs)
+    if (
+        STAGE_D_DEC_PROFILE.exists()
+        and STAGE_D_DEC_PROFILE_PDF.exists()
+        and min(STAGE_D_DEC_PROFILE.stat().st_mtime, STAGE_D_DEC_PROFILE_PDF.stat().st_mtime) >= source_mtime
+    ):
+        return
+
+    with np.load(stage_d_npz, allow_pickle=False) as data:
+        required = {"cell_id", "x_centers_deg", "y_centers_deg", "counts_map", "background_map"}
+        missing = required.difference(data.files)
+        if missing:
+            raise KeyError(f"Stage D profile input is missing arrays: {sorted(missing)}")
+        cell_ids = np.asarray(data["cell_id"], dtype=np.int64)
+        x_centers = np.asarray(data["x_centers_deg"], dtype=np.float64)
+        y_centers = np.asarray(data["y_centers_deg"], dtype=np.float64)
+        counts = np.asarray(data["counts_map"], dtype=np.float64)
+        background = np.asarray(data["background_map"], dtype=np.float64)
+
+    selected = np.isin(cell_ids, np.asarray(sorted(fit_ids), dtype=np.int64))
+    x_band = np.abs(x_centers) < 1.0
+    if np.count_nonzero(selected) != len(fit_ids):
+        raise ValueError(f"Stage D profile matched {np.count_nonzero(selected)} of {len(fit_ids)} fit cells")
+    counts_profile = np.nansum(counts[selected][:, :, x_band], axis=(0, 2))
+    background_profile = np.nansum(background[selected][:, :, x_band], axis=(0, 2))
+    excess_profile = counts_profile - background_profile
+
+    roi = np.abs(y_centers) <= 6.0
+    core = np.abs(y_centers) < 1.0
+    core_counts = float(np.nansum(counts_profile[core]))
+    core_background = float(np.nansum(background_profile[core]))
+    core_excess = float(np.nansum(excess_profile[core]))
+    core_fraction = core_excess / core_counts if core_counts > 0.0 else float("nan")
+
+    plt = setup_matplotlib()
+    fig, ax = plt.subplots(figsize=(8.8, 5.2), dpi=170)
+    ax.plot(y_centers[roi], counts_profile[roi], color="#111827", lw=1.35, label="Observed counts (before subtraction)")
+    ax.plot(y_centers[roi], background_profile[roi], color="#6b7280", lw=1.2, ls=":", label="Annulus-normalized fitted background")
+    ax.plot(y_centers[roi], excess_profile[roi], color="#2563eb", lw=2.0, label="Counts - background (after subtraction)")
+    ax.axhline(0.0, color="#111827", lw=0.8, ls="--")
+    ax.axvspan(-1.0, 1.0, color="#e5e7eb", alpha=0.5, label=r"Central $|\Delta\mathrm{Dec}|<1^\circ$")
+    ax.text(
+        0.985,
+        0.48,
+        "Central $|\\Delta\\mathrm{Dec}|<1^\\circ$, $|\\Delta\\mathrm{RA}|<1^\\circ$\n"
+        f"observed = {core_counts:,.0f}\n"
+        f"fitted background = {core_background:,.0f}\n"
+        f"excess = {core_excess:,.0f} ({100.0 * core_fraction:.2f}% of observed)",
+        transform=ax.transAxes,
+        ha="right",
+        va="center",
+        fontsize=8.0,
+        bbox={"boxstyle": "round,pad=0.35", "facecolor": "white", "edgecolor": "#cbd5e1", "alpha": 0.92},
+    )
+    ax.set_xlim(-6.0, 6.0)
+    ax.set_xlabel("Dec offset from Crab [deg]")
+    ax.set_ylabel(r"Summed counts in $|\Delta\mathrm{RA}|<1^\circ$")
+    ax.set_title(f"Before/after background subtraction for {len(fit_ids)} active v6 fit cells")
+    ax.grid(True, alpha=0.24, lw=0.45)
+    ax.legend(fontsize=7.7, ncol=2, loc="upper left", frameon=True)
+    fig.tight_layout()
+    STAGE_D_DEC_PROFILE.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(STAGE_D_DEC_PROFILE)
+    fig.savefig(STAGE_D_DEC_PROFILE_PDF)
     plt.close(fig)
 
 
@@ -873,6 +948,7 @@ def main() -> None:
     fit_cell_ids = fit_cell_ids_from_selector(selector_rows)
     ensure_stage_b_theta_profile_grid(fit_cell_ids)
     ensure_stage_b_fit_shaded_profile_grid(fit_cell_ids)
+    ensure_stage_d_dec_profile(fit_cell_ids)
     ensure_stage_g_external_overlay(stage_f_meta, stage_g_meta)
 
     processing = stage_c_meta.get("processing") or {}
@@ -946,6 +1022,7 @@ def main() -> None:
         (STAGE_B_FIT_SHADED_PROFILE, "Stage B radial PSF profiles; green panels enter the fit"),
         (STAGE_D / "roi_excess_grid.png", "Stage D ROI excess map grid"),
         (STAGE_D / "annulus_residual_grid.png", "Stage D annulus residuals"),
+        (STAGE_D_DEC_PROFILE, "Stage D aggregate Dec profile before and after annulus-normalized background subtraction for the 44 active fit cells"),
         (STAGE_E / "formal_sigma_grid.png", "Stage E formal sigma grid"),
         (STAGE_E / "on_background_grid.png", "Stage E on/background grid"),
         (STAGE_F / "model_counts_vs_excess.png", "Stage F model counts versus excess"),

@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-07-12 14:58 · [uncommitted] Add an aggregate v6 Dec profile comparing observed counts, fitted background, and post-subtraction excess.
+
 - **energy** · 2026-07-12 14:50 · [uncommitted] Match the v6 Nhit-grouped SED points to the blue Stage F LogPar curve.
 
 - **energy** · 2026-07-11 12:25 · [uncommitted] Add the established Pass5 point-fit LogPar curve to the v6 reselect44 Stage G SED overlay.

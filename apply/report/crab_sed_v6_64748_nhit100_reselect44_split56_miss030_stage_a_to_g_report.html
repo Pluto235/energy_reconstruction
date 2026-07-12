@@ -65,7 +65,7 @@
   <section>
     <h2>Slurm Jobs</h2>
     <p>All heavy recomputation stages are intended to run through the Slurm dependency chain. This table is populated from <code>PIPELINE_JOB_IDS</code> when available.</p>
-    <table><thead><tr><th>Stage</th><th>Job</th><th>State</th><th>Elapsed</th><th>Exit</th><th>Name</th></tr></thead><tbody><tr><td>stage_b</td><td>65113</td><td><span class="status-pass">COMPLETED</span></td><td>00:44:43</td><td>0:0</td><td>psf_b_v6_64748_r44_m030</td></tr><tr><td>stage_a_aperture</td><td>65114</td><td><span class="status-pass">COMPLETED</span></td><td>00:17:22</td><td>0:0</td><td>resp_a_ap_v6_64748_r44_m030</td></tr><tr><td>stage_d_to_g</td><td>65115</td><td><span class="status-pass">COMPLETED</span></td><td>00:04:44</td><td>0:0</td><td>v6_64748_r44_m030_dg</td></tr><tr><td>display_relabel</td><td>65120</td><td><span class="status-pass">COMPLETED</span></td><td>00:01:43</td><td>0:0</td><td>v6_r44_display84</td></tr><tr><td>figure_archive</td><td>65121</td><td><span class="status-pass">COMPLETED</span></td><td>00:00:32</td><td>0:0</td><td>v6_r44_archive14</td></tr><tr><td>counts_map</td><td>65122</td><td><span class="status-pass">COMPLETED</span></td><td>00:01:50</td><td>0:0</td><td>v6_r44_countsmap</td></tr><tr><td>radec_profiles</td><td>65123</td><td><span class="status-pass">COMPLETED</span></td><td>00:02:21</td><td>0:0</td><td>v6_r44_radecprof</td></tr></tbody></table>
+    <table><thead><tr><th>Stage</th><th>Job</th><th>State</th><th>Elapsed</th><th>Exit</th><th>Name</th></tr></thead><tbody><tr><td>stage_b</td><td>65113</td><td><span class="status-pass">COMPLETED</span></td><td>00:44:43</td><td>0:0</td><td>psf_b_v6_64748_r44_m030</td></tr><tr><td>stage_a_aperture</td><td>65114</td><td><span class="status-pass">COMPLETED</span></td><td>00:17:22</td><td>0:0</td><td>resp_a_ap_v6_64748_r44_m030</td></tr><tr><td>stage_d_to_g</td><td>65115</td><td><span class="status-pass">COMPLETED</span></td><td>00:04:44</td><td>0:0</td><td>v6_64748_r44_m030_dg</td></tr><tr><td>display_relabel</td><td>65120</td><td><span class="status-pass">COMPLETED</span></td><td>00:01:43</td><td>0:0</td><td>v6_r44_display84</td></tr><tr><td>figure_archive</td><td>65121</td><td><span class="status-pass">COMPLETED</span></td><td>00:00:32</td><td>0:0</td><td>v6_r44_archive14</td></tr><tr><td>counts_map</td><td>65122</td><td><span class="status-pass">COMPLETED</span></td><td>00:01:50</td><td>0:0</td><td>v6_r44_countsmap</td></tr><tr><td>radec_profiles</td><td>65123</td><td><span class="status-pass">COMPLETED</span></td><td>00:02:21</td><td>0:0</td><td>v6_r44_radecprof</td></tr><tr><td>final_fit_report</td><td>65124</td><td><span class="status-pass">COMPLETED</span></td><td>00:00:33</td><td>0:0</td><td>v6_r44_finalfit</td></tr><tr><td>fit_parameter_validation</td><td>65125</td><td><span class="status-pass">COMPLETED</span></td><td>00:00:32</td><td>0:0</td><td>v6_r44_fitparams</td></tr><tr><td>fit_table_fix</td><td>65126</td><td><span class="status-pass">COMPLETED</span></td><td>00:00:32</td><td>0:0</td><td>v6_r44_fitfinal</td></tr></tbody></table>
   </section>
 
   <section>
@@ -103,7 +103,7 @@
   <section>
     <h2>Stage F Fit</h2>
     <p>Stage F uses the final selector and the aperture-conditioned 64748 response. The preferred model recorded by Stage F is <code>logpar</code>.</p>
-    <table><thead><tr><th>Fit</th><th>Valid</th><th>chi2/ndof</th><th>p</th><th>phi0</th><th>gamma/alpha</th><th>beta</th></tr></thead><tbody><tr><td>PL conservative</td><td>True</td><td>575.7/42</td><td>6.500e-95</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>LogPar conservative</td><td>True</td><td>480.5/41</td><td>2.423e-76</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>PL sqrt-N</td><td>True</td><td>965.1/42</td><td>5.499e-175</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>LogPar sqrt-N</td><td>True</td><td>772.4/41</td><td>1.019e-135</td><td>n/a</td><td>n/a</td><td>n/a</td></tr></tbody></table>
+    <table><thead><tr><th>Fit</th><th>Valid</th><th>chi2/ndof</th><th>p</th><th>phi0</th><th>gamma/alpha</th><th>beta</th></tr></thead><tbody><tr><td>PL conservative</td><td>True</td><td>575.7/42</td><td>6.500e-95</td><td>2.1249e-12</td><td>2.656</td><td>n/a</td></tr><tr><td>LogPar conservative</td><td>True</td><td>480.5/41</td><td>2.423e-76</td><td>2.2979e-12</td><td>2.761</td><td>0.1071</td></tr><tr><td>PL sqrt-N</td><td>True</td><td>965.1/42</td><td>5.499e-175</td><td>2.1497e-12</td><td>2.642</td><td>n/a</td></tr><tr><td>LogPar sqrt-N</td><td>True</td><td>772.4/41</td><td>1.019e-135</td><td>2.3388e-12</td><td>2.783</td><td>0.1289</td></tr></tbody></table>
   </section>
 
   <section>
@@ -117,6 +117,14 @@
     <h2>Metadata Audit</h2>
     <p>Main-input metadata files were scanned for legacy cache/model path tokens. Status: <strong>passed</strong>.</p>
     <div class="okbox">No legacy main-input metadata path offenders were found.</div>
+  </section>
+
+  <section>
+    <h2>Final v6 Fit Parameters</h2>
+    <p>The preferred conservative-error fit is <strong>logpar</strong> at pivot energy <strong>3 TeV</strong>, using <code>dN/dE = phi0 * (E/E0)^[-alpha - beta * ln(E/E0)]</code>.</p>
+    <table><thead><tr><th>Parameter</th><th>Best fit +/- 1 sigma</th><th>Unit</th></tr></thead><tbody><tr><td><code>phi0</code></td><td>2.2979318e-12 &plusmn; 3.461353e-14</td><td>TeV^-1 cm^-2 s^-1</td></tr><tr><td><code>alpha</code></td><td>2.760645 &plusmn; 0.0204796</td><td>dimensionless</td></tr><tr><td><code>beta</code></td><td>0.1071477 &plusmn; 0.0135774</td><td>dimensionless</td></tr></tbody></table>
+    <table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Fit valid</td><td>True</td></tr><tr><td>chi2</td><td>480.5153</td></tr><tr><td>ndof</td><td>41</td></tr><tr><td>chi2/ndof</td><td>11.71988</td></tr><tr><td>p-value</td><td>2.422886e-76</td></tr><tr><td>Delta chi2 (PL - LogPar)</td><td>95.20353</td></tr><tr><td>Physical flux status</td><td><code>ok</code></td></tr></tbody></table>
+    <div class="callout">The fit is numerically valid and has physical flux status <code>ok</code>, but chi2/ndof=11.72 and p=2.4229e-76 indicate poor global goodness of fit.</div>
   </section>
 </main>
 </body>

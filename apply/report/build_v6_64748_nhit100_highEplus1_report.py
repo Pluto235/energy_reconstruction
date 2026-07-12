@@ -163,7 +163,10 @@ def sed_rows_by_group(path: Path, grouping: str) -> list[dict[str, str]]:
 
 
 def fit_metric(meta: dict[str, Any], fit_key: str, metric: str) -> Any:
-    return ((meta.get("fits") or {}).get(fit_key) or {}).get(metric)
+    fit = (meta.get("fits") or {}).get(fit_key) or {}
+    if metric in fit:
+        return fit.get(metric)
+    return (fit.get("parameters") or {}).get(metric)
 
 
 def parse_interval(label: str) -> tuple[float | None, float | None]:
@@ -1063,6 +1066,25 @@ def main() -> None:
     f_pref = stage_f_meta.get("preferred_fit") or {}
     f_quality = stage_f_meta.get("quality") or {}
     v6_logpar = (stage_f_meta.get("fits") or {}).get("logpar_conservative") or {}
+    final_model = str(f_pref.get("model") or "unknown")
+    final_fit = (stage_f_meta.get("fits") or {}).get(f"{final_model}_conservative") or {}
+    final_params = final_fit.get("parameters") or {}
+    final_errors = final_fit.get("errors") or {}
+    final_pivot_tev = (stage_f_meta.get("forward_folding") or {}).get("pivot_tev")
+    final_parameter_order = ["phi0", "alpha", "beta"] if final_model == "logpar" else ["phi0", "gamma"]
+    final_parameter_rows = [
+        [
+            f"<code>{esc(name)}</code>",
+            f"{fmt(final_params.get(name), 7)} &plusmn; {fmt(final_errors.get(name), 6)}",
+            "TeV^-1 cm^-2 s^-1" if name == "phi0" else "dimensionless",
+        ]
+        for name in final_parameter_order
+    ]
+    final_formula = (
+        "dN/dE = phi0 * (E/E0)^[-alpha - beta * ln(E/E0)]"
+        if final_model == "logpar"
+        else "dN/dE = phi0 * (E/E0)^(-gamma)"
+    )
     g_quality = stage_g_meta.get("quality") or {}
     g_frozen = stage_g_summary.get("frozen_spectrum") or {}
     g_csv = STAGE_G / f"sed_points_{RUN_ID}_summary.csv"
@@ -1264,7 +1286,7 @@ def main() -> None:
     <p>Stage F uses the final selector and the aperture-conditioned 64748 response. The preferred model recorded by Stage F is <code>{esc(f_pref.get('model'))}</code>.</p>
     {table(["Fit", "Valid", "chi2/ndof", "p", "phi0", "gamma/alpha", "beta"], [
         ["PL conservative", esc(fit_metric(stage_f_meta, "pl_conservative", "valid")), f"{fmt(fit_metric(stage_f_meta, 'pl_conservative', 'chi2'), 4)}/{esc(fit_metric(stage_f_meta, 'pl_conservative', 'ndof'))}", fmt(fit_metric(stage_f_meta, "pl_conservative", "p_value"), 3), fmt(fit_metric(stage_f_meta, "pl_conservative", "phi0"), 4), fmt(fit_metric(stage_f_meta, "pl_conservative", "gamma"), 4), "n/a"],
-        ["LogPar conservative", esc(fit_metric(stage_f_meta, "logpar_conservative", "valid")), f"{fmt(v6_logpar.get('chi2'), 4)}/{esc(v6_logpar.get('ndof'))}", fmt(v6_logpar.get("p_value"), 3), fmt(v6_logpar.get("phi0"), 4), fmt(v6_logpar.get("alpha"), 4), fmt(v6_logpar.get("beta"), 4)],
+        ["LogPar conservative", esc(fit_metric(stage_f_meta, "logpar_conservative", "valid")), f"{fmt(v6_logpar.get('chi2'), 4)}/{esc(v6_logpar.get('ndof'))}", fmt(v6_logpar.get("p_value"), 3), fmt(fit_metric(stage_f_meta, "logpar_conservative", "phi0"), 4), fmt(fit_metric(stage_f_meta, "logpar_conservative", "alpha"), 4), fmt(fit_metric(stage_f_meta, "logpar_conservative", "beta"), 4)],
         ["PL sqrt-N", esc(fit_metric(stage_f_meta, "pl_sqrt_n", "valid")), f"{fmt(fit_metric(stage_f_meta, 'pl_sqrt_n', 'chi2'), 4)}/{esc(fit_metric(stage_f_meta, 'pl_sqrt_n', 'ndof'))}", fmt(fit_metric(stage_f_meta, "pl_sqrt_n", "p_value"), 3), fmt(fit_metric(stage_f_meta, "pl_sqrt_n", "phi0"), 4), fmt(fit_metric(stage_f_meta, "pl_sqrt_n", "gamma"), 4), "n/a"],
         ["LogPar sqrt-N", esc(fit_metric(stage_f_meta, "logpar_sqrt_n", "valid")), f"{fmt(fit_metric(stage_f_meta, 'logpar_sqrt_n', 'chi2'), 4)}/{esc(fit_metric(stage_f_meta, 'logpar_sqrt_n', 'ndof'))}", fmt(fit_metric(stage_f_meta, "logpar_sqrt_n", "p_value"), 3), fmt(fit_metric(stage_f_meta, "logpar_sqrt_n", "phi0"), 4), fmt(fit_metric(stage_f_meta, "logpar_sqrt_n", "alpha"), 4), fmt(fit_metric(stage_f_meta, "logpar_sqrt_n", "beta"), 4)],
     ])}
@@ -1281,6 +1303,22 @@ def main() -> None:
     <h2>Metadata Audit</h2>
     <p>Main-input metadata files were scanned for legacy cache/model path tokens. Status: <strong>{esc(contamination['status'])}</strong>.</p>
     {table(["Metadata", "Field", "Value"], [[f"<code>{esc(row['metadata'])}</code>", esc(row["field"]), f"<code>{esc(row['value'])}</code>"] for row in contamination["offenders"]], "pathlist") if contamination["offenders"] else '<div class="okbox">No legacy main-input metadata path offenders were found.</div>'}
+  </section>
+
+  <section>
+    <h2>Final v6 Fit Parameters</h2>
+    <p>The preferred conservative-error fit is <strong>{esc(final_model)}</strong> at pivot energy <strong>{fmt(final_pivot_tev, 4)} TeV</strong>, using <code>{esc(final_formula)}</code>.</p>
+    {table(["Parameter", "Best fit +/- 1 sigma", "Unit"], final_parameter_rows)}
+    {table(["Metric", "Value"], [
+        ["Fit valid", esc(final_fit.get("valid"))],
+        ["chi2", fmt(final_fit.get("chi2"), 7)],
+        ["ndof", esc(final_fit.get("ndof"))],
+        ["chi2/ndof", fmt(final_fit.get("chi2_over_ndof"), 7)],
+        ["p-value", fmt(final_fit.get("p_value"), 6)],
+        ["Delta chi2 (PL - LogPar)", fmt(f_pref.get("delta_chi2_pl_minus_logpar"), 7)],
+        ["Physical flux status", f"<code>{esc(f_quality.get('physical_flux_status'))}</code>"],
+    ])}
+    <div class="callout">The fit is numerically valid and has physical flux status <code>{esc(f_quality.get('physical_flux_status'))}</code>, but chi2/ndof={fmt(final_fit.get('chi2_over_ndof'), 5)} and p={fmt(final_fit.get('p_value'), 4)} indicate poor global goodness of fit.</div>
   </section>
 </main>
 </body>

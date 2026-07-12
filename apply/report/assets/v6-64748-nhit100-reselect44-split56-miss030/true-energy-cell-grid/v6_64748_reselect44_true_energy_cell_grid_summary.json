@@ -1,0 +1,20 @@
+{
+  "response_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v6_64748_nhit100_highEplus1_split56/response_2d_v6_64748_nhit100_highEplus1_split56.npz",
+  "selector_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v6_64748_nhit100_reselect44_split56_miss030_fit.csv",
+  "distribution": "unweighted numerator_count summed over theta bins",
+  "normalization": "unit integral in log10(E_true/GeV) for each cell",
+  "candidate_cells": 84,
+  "included_fit_cells": 44,
+  "nonempty_cells": 75,
+  "adjacent_included_pairs": 37,
+  "adjacent_overlap_median": 0.5034274111720742,
+  "adjacent_overlap_max": 0.6289734126927412,
+  "adjacent_pairs_overlap_ge_0p5": 20,
+  "median_monotonicity_violations_for_cells_with_n_ge_1000": [],
+  "outputs": {
+    "png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030/true-energy-cell-grid/v6_64748_reselect44_true_energy_cell_grid.png",
+    "pdf": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030/true-energy-cell-grid/v6_64748_reselect44_true_energy_cell_grid.pdf",
+    "cell_metrics_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030/true-energy-cell-grid/v6_64748_reselect44_true_energy_cell_grid_cell_metrics.csv",
+    "adjacent_overlap_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030/true-energy-cell-grid/v6_64748_reselect44_true_energy_cell_grid_adjacent_overlap.csv"
+  }
+}

@@ -6,7 +6,7 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
-- **energy_reconstruction** · 2026-07-14 00:22 · [uncommitted] Add a PPT-ready PNG/PDF table comparing controlled 1D and 2D v6 LogPar parameter uncertainties.
+- **energy_reconstruction** · 2026-07-14 00:22 · [63645bd] Add a PPT-ready PNG/PDF table comparing controlled 1D and 2D v6 LogPar parameter uncertainties.
 
 - **energy_reconstruction** · 2026-07-14 00:21 · [662e527] Add an English PPT workflow diagram using the numbered-card design and the v6 observation/MC-to-SED analysis logic.
 

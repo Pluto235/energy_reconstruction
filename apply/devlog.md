@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-13 19:45 · [cf3aea5] Hide the two highest-energy predE outliers from the Scheme R Stage G ratio figure while retaining all Stage G data points.
+
 - **energy_reconstruction** · 2026-07-13 17:37 · [c05d3a8] Match predE-grouped points in the new Stage G overlays to the green square styling used by the Stage G ratio plot.
 
 - **energy_reconstruction** · 2026-07-13 16:58 · [34c5c21] Add separate Scheme B/R Stage G external overlays containing both Nhit-grouped and predE-grouped SED points while preserving the Nhit-only figures.

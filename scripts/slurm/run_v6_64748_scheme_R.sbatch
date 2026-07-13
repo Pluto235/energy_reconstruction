@@ -95,6 +95,7 @@ python apply/stages/07_sed_points.py \
   --output-dir "${G_ROOT}" --run-id "${G_RUN}" --no-promote-current --overwrite-run-dir \
   --report-html "apply/report/stage_g_${RUN_ID}_scheme_R_report.html" \
   --baseline-name "${RUN_ID}_scheme_R" --required-cell-ids "${included}" --excluded-cell-ids "${excluded}" \
+  --plot-hide-last-prede-points 2 \
   --skip-expected-stage-f-validation --pivot-tev 3 --reference-phi0 2.114e-12 --reference-gamma 2.69 \
   --npz-name "${G_STEM}.npz" --metadata-name "${G_STEM}_metadata.json" \
   --summary-csv-name "${G_STEM}_summary.csv" --summary-json-name "${G_STEM}_summary.json" \

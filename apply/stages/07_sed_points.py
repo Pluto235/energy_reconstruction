@@ -282,6 +282,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--validation-rtol", type=float, default=1.0e-4)
     parser.add_argument("--model-counts-rtol", type=float, default=1.0e-8)
+    parser.add_argument(
+        "--plot-hide-last-prede-points",
+        type=int,
+        default=0,
+        help="Hide the highest-energy N predE points from the ratio figure only; data products remain complete.",
+    )
 
     parser.add_argument("--npz-name", type=str, default="sed_points_v1.npz")
     parser.add_argument("--metadata-name", type=str, default="sed_points_v1_metadata.json")
@@ -1567,7 +1573,13 @@ def plot_sed_points(
     plt.close(fig)
 
 
-def plot_ratio_points(points: Sequence[SedPoint], path: Path, *, frozen_model_label: str) -> None:
+def plot_ratio_points(
+    points: Sequence[SedPoint],
+    path: Path,
+    *,
+    frozen_model_label: str,
+    hide_last_prede_points: int = 0,
+) -> None:
     plt = setup_matplotlib()
     fig, axes = plt.subplots(2, 1, figsize=(8.4, 6.2), sharex=True, constrained_layout=True)
     pass5_fit = official_pass5_point_fit()
@@ -1577,6 +1589,8 @@ def plot_ratio_points(points: Sequence[SedPoint], path: Path, *, frozen_model_la
     }
     for grouping in ["nhit", "predE"]:
         selected = [p for p in points if p.grouping == grouping and p.effective_energy_tev > 0.0]
+        if grouping == "predE" and hide_last_prede_points > 0:
+            selected = selected[:-hide_last_prede_points]
         if not selected:
             continue
         axes[0].errorbar(
@@ -2071,7 +2085,12 @@ def main() -> None:
             reference_gamma=float(args.reference_gamma),
             pivot_tev=float(args.pivot_tev),
         )
-        plot_ratio_points(points, Path(plot_outputs["ratio_png"]), frozen_model_label=spectrum_label(frozen_model["model"]))
+        plot_ratio_points(
+            points,
+            Path(plot_outputs["ratio_png"]),
+            frozen_model_label=spectrum_label(frozen_model["model"]),
+            hide_last_prede_points=max(0, int(args.plot_hide_last_prede_points)),
+        )
         plot_point_cell_counts(points, Path(plot_outputs["cell_counts_png"]), baseline_name=baseline_name)
 
     outputs: Dict[str, object] = {

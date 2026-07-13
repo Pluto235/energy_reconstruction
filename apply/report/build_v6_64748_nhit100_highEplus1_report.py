@@ -93,6 +93,7 @@ SCHEME_CONTRACT = os.environ.get(
     "V6_REPORT_SCHEME_CONTRACT",
     "Uses the MC aperture-conditioned response; downstream containment is 1 and no additional 0.715 factor is applied.",
 )
+RATIO_HIDDEN_PREDE_POINTS = max(0, int(os.environ.get("V6_REPORT_RATIO_HIDDEN_PREDE_POINTS", "0")))
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -1227,7 +1228,15 @@ def main() -> None:
         (STAGE_F / "pull_grid_logpar.png", "Stage F LogPar pull grid"),
         (STAGE_G_EXTERNAL_OVERLAY, "Stage G SED overlay with v6 Nhit points, v6 fit band, Pass5 point-fit LogPar, and external references"),
         (STAGE_G_EXTERNAL_OVERLAY_WITH_PREDE, "Stage G SED overlay with both v6 Nhit-grouped and predE-grouped points, v6 fit band, Pass5 point-fit LogPar, and external references; this is an additional figure and does not replace the Nhit-only overlay"),
-        (STAGE_G / "sed_points_ratio.png", "Stage G SED ratios to the Stage F LogPar and official Pass5 WCDA point-fit LogPar"),
+        (
+            STAGE_G / "sed_points_ratio.png",
+            "Stage G SED ratios to the Stage F LogPar and official Pass5 WCDA point-fit LogPar"
+            + (
+                f"; the highest-energy {RATIO_HIDDEN_PREDE_POINTS} predE diagnostic points are omitted from this figure only and remain in the Stage G data products"
+                if RATIO_HIDDEN_PREDE_POINTS
+                else ""
+            ),
+        ),
     ]
     archived_figures = archive_report_figures(expected_figures)
     figure_html = "".join(figure(path, caption) for path, caption in archived_figures)

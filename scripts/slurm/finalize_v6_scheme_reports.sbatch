@@ -69,7 +69,11 @@ export V6_REPORT_STAGE_G_RUN_DIR="${G_ROOT}/runs/${G_RUN}"
 export V6_REPORT_STAGE_E_STEM="signal_${RUN_ID}_fixed715_rayleigh_annnorm"
 export V6_REPORT_STAGE_F_STEM="fit_${RUN_ID}_scheme_R"
 export V6_REPORT_STAGE_G_STEM="sed_points_${RUN_ID}_scheme_R"
+export V6_REPORT_RATIO_HIDDEN_PREDE_POINTS=2
 export PIPELINE_JOB_IDS="scheme_R_stage_e_f_g:${SCHEME_R_JOB_ID:?SCHEME_R_JOB_ID is required}"
+if [[ -n "${SCHEME_R_RATIO_JOB_ID:-}" ]]; then
+  export PIPELINE_JOB_IDS="${PIPELINE_JOB_IDS};scheme_R_ratio_redraw:${SCHEME_R_RATIO_JOB_ID}"
+fi
 python apply/report/build_v6_64748_nhit100_highEplus1_report.py
 
 echo "Scheme reports finalized: ${SLURM_JOB_ID}"

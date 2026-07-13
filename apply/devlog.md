@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-13 23:59 · [eb64386] Add a PPT-ready v6 workflow diagram tracing observation and simulation inputs through Stage A-G to the final SED.
+
 - **energy_reconstruction** · 2026-07-13 19:45 · [cf3aea5] Hide the two highest-energy predE outliers from the Scheme R Stage G ratio figure while retaining all Stage G data points.
 
 - **energy_reconstruction** · 2026-07-13 17:37 · [c05d3a8] Match predE-grouped points in the new Stage G overlays to the green square styling used by the Stage G ratio plot.

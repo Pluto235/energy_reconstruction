@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#0B2A63" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#0B2A63"/>
+    </marker>
+    <style>
+      .title { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 43px; font-weight: 700; fill: #0B2A63; }
+      .card-title { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 25px; font-weight: 700; }
+      .body { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 18px; font-weight: 400; fill: #17202A; }
+      .body-small { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 16px; font-weight: 400; fill: #344054; }
+      .subhead { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 20px; font-weight: 700; }
+      .number { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 27px; font-weight: 750; fill: #FFFFFF; }
+      .footer-title { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 19px; font-weight: 700; fill: #0B2A63; }
+      .footer-text { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 17px; fill: #17202A; }
+      .arrow { fill: none; stroke: #0B2A63; stroke-width: 3.2; marker-end: url(#arrow); }
+      .thin { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <line x1="48" y1="48" x2="430" y2="48" stroke="#0B2A63" stroke-width="2"/>
+  <circle cx="48" cy="48" r="5" fill="#0B2A63"/>
+  <line x1="1490" y1="48" x2="1872" y2="48" stroke="#0B2A63" stroke-width="2"/>
+  <circle cx="1872" cy="48" r="5" fill="#0B2A63"/>
+  <text x="960" y="63" text-anchor="middle" class="title">From Observation and Simulation Data to the Final SED</text>
+
+  <!-- 01 Observation data -->
+  <rect x="90" y="116" width="700" height="210" rx="12" fill="#FFFFFF" stroke="#005EB8" stroke-width="2" filter="url(#shadow)"/>
+  <circle cx="150" cy="116" r="34" fill="#005EB8"/>
+  <text x="150" y="126" text-anchor="middle" class="number">01</text>
+  <g class="thin" stroke="#005EB8">
+    <path d="M160,184 L160,231 M134,231 L186,231 M143,231 L132,250 M177,231 L188,250"/>
+    <path d="M136,184 Q160,163 184,184 Q160,205 136,184 Z"/>
+    <circle cx="160" cy="184" r="6" fill="#005EB8" stroke="none"/>
+  </g>
+  <text x="218" y="194" class="card-title" fill="#005EB8">Observation Data</text>
+  <line x1="218" y1="211" x2="752" y2="211" stroke="#005EB8" stroke-width="1.6"/>
+  <text x="218" y="244" class="body">WCDA 64748 event-level reconstruction</text>
+  <text x="218" y="273" class="body">Recovered event time and MJD coverage</text>
+  <text x="218" y="302" class="body">Source coordinates and quality variables</text>
+
+  <!-- 02 Simulation data -->
+  <rect x="1130" y="116" width="700" height="210" rx="12" fill="#FFFFFF" stroke="#2F6B2F" stroke-width="2" filter="url(#shadow)"/>
+  <circle cx="1190" cy="116" r="34" fill="#2F6B2F"/>
+  <text x="1190" y="126" text-anchor="middle" class="number">02</text>
+  <g fill="#2F6B2F">
+    <circle cx="1170" cy="181" r="7"/><circle cx="1201" cy="169" r="6"/><circle cx="1221" cy="194" r="8"/>
+    <circle cx="1188" cy="207" r="8"/><circle cx="1157" cy="218" r="5"/><circle cx="1210" cy="226" r="5"/>
+    <circle cx="1234" cy="171" r="4"/><circle cx="1160" cy="165" r="4"/>
+  </g>
+  <text x="1260" y="194" class="card-title" fill="#2F6B2F">Simulation Data</text>
+  <line x1="1260" y1="211" x2="1792" y2="211" stroke="#2F6B2F" stroke-width="1.6"/>
+  <text x="1260" y="244" class="body">MC showers with Etrue, theta, and weights</text>
+  <text x="1260" y="273" class="body">Detector-level hit and reconstruction features</text>
+  <text x="1260" y="302" class="body">Known angular offset to the source direction</text>
+
+  <!-- arrows from inputs -->
+  <path d="M440,326 C440,352 690,348 805,366" class="arrow"/>
+  <path d="M1480,326 C1480,352 1230,348 1115,366" class="arrow"/>
+
+  <!-- 03 common reconstruction -->
+  <rect x="560" y="382" width="800" height="174" rx="12" fill="#FFFFFF" stroke="#0B2A63" stroke-width="2" filter="url(#shadow)"/>
+  <circle cx="620" cy="382" r="34" fill="#0B2A63"/>
+  <text x="620" y="392" text-anchor="middle" class="number">03</text>
+  <g class="thin" stroke="#0B2A63">
+    <circle cx="635" cy="454" r="7" fill="#0B2A63"/>
+    <circle cx="681" cy="429" r="7" fill="#0B2A63"/>
+    <circle cx="681" cy="454" r="7" fill="#0B2A63"/>
+    <circle cx="681" cy="479" r="7" fill="#0B2A63"/>
+    <circle cx="727" cy="441" r="7" fill="#0B2A63"/>
+    <circle cx="727" cy="467" r="7" fill="#0B2A63"/>
+    <path d="M642,451 L674,432 M642,454 L674,454 M642,457 L674,476 M688,431 L720,440 M688,454 L720,442 M688,454 L720,466 M688,477 L720,468"/>
+  </g>
+  <text x="770" y="432" class="card-title" fill="#0B2A63">Common Reconstruction and Cell Assignment</text>
+  <line x1="770" y1="449" x2="1318" y2="449" stroke="#0B2A63" stroke-width="1.6"/>
+  <text x="770" y="480" class="body">Trained AI energy estimator → predE; identical event-quality cuts</text>
+  <text x="770" y="509" class="body">Events mapped into the frozen 44-cell (Nhit, predE) selector</text>
+  <text x="770" y="538" class="body-small">The predE ≥ 6 tail remains diagnostic-only and is excluded from fitting</text>
+
+  <path d="M960,556 L960,580" class="arrow"/>
+
+  <!-- 04 products and response -->
+  <rect x="180" y="594" width="1560" height="220" rx="12" fill="#FFFFFF" stroke="#2F6B2F" stroke-width="2" filter="url(#shadow)"/>
+  <circle cx="240" cy="594" r="34" fill="#2F6B2F"/>
+  <text x="240" y="604" text-anchor="middle" class="number">04</text>
+  <text x="960" y="630" text-anchor="middle" class="card-title" fill="#2F6B2F">Signal Products and Detector Response</text>
+  <line x1="222" y1="650" x2="1698" y2="650" stroke="#B9C8B3" stroke-width="1.5"/>
+  <line x1="960" y1="668" x2="960" y2="788" stroke="#D6DCE5" stroke-width="1.5"/>
+
+  <g class="thin" stroke="#005EB8">
+    <path d="M246,716 L246,769 L301,769"/>
+    <path d="M254,758 C267,750 277,757 288,735 C298,715 310,733 322,700"/>
+    <circle cx="288" cy="735" r="5" fill="#005EB8"/>
+  </g>
+  <text x="350" y="694" class="subhead" fill="#005EB8">Observation branch · Stage C–E</text>
+  <text x="350" y="725" class="body">Stage C event sample and per-cell counts maps</text>
+  <text x="350" y="754" class="body">Stage D annulus-normalized quadratic background</text>
+  <text x="350" y="783" class="body">Stage E: N_on, B_on, excess, and statistical error</text>
+
+  <g class="thin" stroke="#2F6B2F">
+    <rect x="1034" y="707" width="68" height="68" rx="3"/>
+    <path d="M1051,707 V775 M1068,707 V775 M1085,707 V775 M1034,724 H1102 M1034,741 H1102 M1034,758 H1102"/>
+    <rect x="1068" y="724" width="17" height="17" fill="#2F6B2F" opacity="0.7"/>
+    <rect x="1051" y="741" width="17" height="17" fill="#2F6B2F" opacity="0.45"/>
+  </g>
+  <text x="1135" y="694" class="subhead" fill="#2F6B2F">Simulation branch · Stage A–B</text>
+  <text x="1135" y="725" class="body">Aeff(cell, Etrue, theta) and energy migration</text>
+  <text x="1135" y="754" class="body">PSF fit, sigma, r_opt, and containment</text>
+  <text x="1135" y="783" class="body">Scheme B aperture response / Scheme R 0.715 × nominal Aeff</text>
+
+  <path d="M960,814 L960,834" class="arrow"/>
+
+  <!-- 05 Forward folding -->
+  <rect x="270" y="850" width="850" height="132" rx="12" fill="#FFFFFF" stroke="#0B2A63" stroke-width="2" filter="url(#shadow)"/>
+  <circle cx="330" cy="850" r="34" fill="#0B2A63"/>
+  <text x="330" y="860" text-anchor="middle" class="number">05</text>
+  <g class="thin" stroke="#0B2A63">
+    <path d="M350,919 L350,958 L395,958"/>
+    <path d="M358,950 C369,940 377,948 386,928 C394,912 403,920 411,901"/>
+  </g>
+  <text x="450" y="895" class="card-title" fill="#0B2A63">Forward Folding and Global Spectral Fit</text>
+  <text x="450" y="927" class="body-small">Recovered-time exposure + response → predicted counts μᵢ(Φ)</text>
+  <text x="450" y="954" class="body-small">PL vs LogPar; MIGRAD + HESSE → parameters and covariance</text>
+
+  <path d="M1120,916 L1165,916" class="arrow"/>
+
+  <!-- 06 final SED -->
+  <rect x="1170" y="850" width="580" height="132" rx="12" fill="#FFFFFF" stroke="#B91C1C" stroke-width="2" filter="url(#shadow)"/>
+  <circle cx="1230" cy="850" r="34" fill="#B91C1C"/>
+  <text x="1230" y="860" text-anchor="middle" class="number">06</text>
+  <text x="1280" y="895" class="card-title" fill="#B91C1C">Final Crab SED</text>
+  <line x1="1280" y1="909" x2="1710" y2="909" stroke="#B91C1C" stroke-width="1.5"/>
+  <text x="1280" y="936" class="body-small">Stage G Nhit / predE grouped SED points</text>
+  <text x="1280" y="962" class="body-small">LogPar curve, fit band, Pass5 and external comparisons</text>
+
+  <!-- calibration footer -->
+  <rect x="74" y="1010" width="1772" height="52" rx="10" fill="#F4F7FB" stroke="#B9CAE8" stroke-width="1.5"/>
+  <rect x="74" y="1010" width="90" height="52" rx="10" fill="#0B2A63"/>
+  <path d="M101,1024 L119,1017 L137,1024 V1038 C137,1048 129,1054 119,1057 C109,1054 101,1048 101,1038 Z" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+  <path d="M110,1037 L117,1044 L130,1029" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+  <text x="190" y="1043" class="footer-title">Calibration:</text>
+  <text x="305" y="1043" class="footer-text">The simulation-derived response must be validated with Crab observations; Scheme B/R differences define a key response systematic.</text>
+</svg>

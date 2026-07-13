@@ -32,7 +32,8 @@ python apply/report/replot_v6_display_cell_ids.py \
   --stage-f-metadata "${STAGE_F_B_RUN_DIR}/fit_${RUN_ID}_metadata.json" \
   --stage-d-output-dir "${STAGE_D_RUN_DIR}" \
   --stage-f-output-dir "${STAGE_F_B_RUN_DIR}" \
-  --asset-dir "${SHARED_ASSET_DIR}"
+  --asset-dir "${SHARED_ASSET_DIR}" \
+  --profile-half-width-deg 1.0
 
 export V6_REPORT_RUN_ID="${RUN_ID}"
 export V6_REPORT_SOURCE_RUN_ID="${SOURCE_RUN_ID}"

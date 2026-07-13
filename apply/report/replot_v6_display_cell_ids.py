@@ -28,6 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stage-d-output-dir", type=Path, required=True)
     parser.add_argument("--stage-f-output-dir", type=Path, required=True)
     parser.add_argument("--asset-dir", type=Path, required=True)
+    parser.add_argument("--profile-half-width-deg", type=float, default=1.0)
     return parser.parse_args()
 
 
@@ -132,6 +133,7 @@ def plot_normalized_offset_profiles(
     nhit_bins: np.ndarray,
     pred_bins: np.ndarray,
     coordinate_centers: np.ndarray,
+    orthogonal_centers: np.ndarray,
     fit_ids: set[int],
     output_path: Path,
     *,
@@ -139,14 +141,28 @@ def plot_normalized_offset_profiles(
     quantity: str,
     phase: str,
     y_min: float,
+    profile_half_width_deg: float,
 ) -> None:
     if projection not in {"ra", "dec"}:
         raise ValueError(f"Unsupported projection: {projection}")
     ordered_nhit = sorted(set(nhit_bins.tolist()), key=interval_key)
     ordered_pred = sorted(set(pred_bins.tolist()), key=interval_key)
     index_by_key = {(nhit, pred): idx for idx, (nhit, pred) in enumerate(zip(nhit_bins, pred_bins))}
-    sum_axis = 1 if projection == "ra" else 2
-    profiles = np.nansum(profile_map, axis=sum_axis)
+    central_band = np.abs(orthogonal_centers) < float(profile_half_width_deg)
+    if not np.any(central_band):
+        raise ValueError(
+            f"No bins found inside central profile half-width {profile_half_width_deg} deg"
+        )
+    if projection == "ra":
+        profiles = np.nansum(profile_map[:, central_band, :], axis=1)
+        count_profiles = np.nansum(counts_map[:, central_band, :], axis=1)
+        supported_coordinates = np.any(np.isfinite(profile_map[:, central_band, :]), axis=(0, 1))
+        slice_label = f"|Dec offset| < {profile_half_width_deg:g} deg"
+    else:
+        profiles = np.nansum(profile_map[:, :, central_band], axis=2)
+        count_profiles = np.nansum(counts_map[:, :, central_band], axis=2)
+        supported_coordinates = np.any(np.isfinite(profile_map[:, :, central_band]), axis=(0, 2))
+        slice_label = f"|RA offset cos(dec)| < {profile_half_width_deg:g} deg"
     fig, axes = plt.subplots(
         len(ordered_nhit),
         len(ordered_pred),
@@ -156,8 +172,10 @@ def plot_normalized_offset_profiles(
         sharey=True,
         squeeze=False,
     )
-    x_min = float(coordinate_centers[0])
-    x_max = float(coordinate_centers[-1])
+    if not np.any(supported_coordinates):
+        raise ValueError(f"No finite Stage D support for {projection} profile")
+    x_min = float(np.min(coordinate_centers[supported_coordinates]))
+    x_max = float(np.max(coordinate_centers[supported_coordinates]))
     band_edges = np.arange(np.floor(x_min / 2.0) * 2.0, x_max + 2.0, 2.0)
 
     for i, nhit in enumerate(ordered_nhit):
@@ -186,8 +204,8 @@ def plot_normalized_offset_profiles(
             shown = display_cell_id(internal_id, pred)
             status = "fit" if in_fit else "diag"
             cell_text = f"cell {shown}" if shown is not None else "tail"
-            observed_count = int(np.sum(counts_map[idx]))
-            ax.set_title(f"{cell_text}: {pred} [{status}]\nN={observed_count:,}", fontsize=5.7)
+            observed_count = int(np.nansum(count_profiles[idx]))
+            ax.set_title(f"{cell_text}: {pred} [{status}]\nN_slice={observed_count:,}", fontsize=5.7)
             ax.set_xlim(x_min, x_max)
             ax.set_ylim(float(y_min), 1.08)
             ax.tick_params(labelsize=5.8, length=2, labelleft=(j == 0))
@@ -200,7 +218,7 @@ def plot_normalized_offset_profiles(
 
     axis_name = "RA-offset" if projection == "ra" else "Dec-offset"
     fig.suptitle(
-        f"Stage D normalized {axis_name} {quantity} profiles {phase} (green panels enter fit)",
+        f"Stage D normalized {axis_name} {quantity} profiles {phase}; {slice_label} (green panels enter fit)",
         fontsize=11,
         y=0.997,
     )
@@ -372,59 +390,67 @@ def main() -> None:
     )
     plot_normalized_offset_profiles(
         counts_on_background_support,
-        stage_d["counts_map"],
+        counts_on_background_support,
         stage_d["cell_id"],
         stage_d["nhit_bin"].astype(str),
         stage_d["predE_bin"].astype(str),
         stage_d["x_centers_deg"],
+        stage_d["y_centers_deg"],
         fit_ids,
         ra_counts_profile,
         projection="ra",
         quantity="observed-count",
         phase="before background subtraction",
         y_min=-0.05,
+        profile_half_width_deg=float(args.profile_half_width_deg),
     )
     plot_normalized_offset_profiles(
         counts_on_background_support,
-        stage_d["counts_map"],
+        counts_on_background_support,
         stage_d["cell_id"],
         stage_d["nhit_bin"].astype(str),
         stage_d["predE_bin"].astype(str),
         stage_d["y_centers_deg"],
+        stage_d["x_centers_deg"],
         fit_ids,
         dec_counts_profile,
         projection="dec",
         quantity="observed-count",
         phase="before background subtraction",
         y_min=-0.05,
+        profile_half_width_deg=float(args.profile_half_width_deg),
     )
     plot_normalized_offset_profiles(
         stage_d["excess_map"],
-        stage_d["counts_map"],
+        counts_on_background_support,
         stage_d["cell_id"],
         stage_d["nhit_bin"].astype(str),
         stage_d["predE_bin"].astype(str),
         stage_d["x_centers_deg"],
+        stage_d["y_centers_deg"],
         fit_ids,
         ra_excess_profile,
         projection="ra",
         quantity="excess",
         phase="after background subtraction",
         y_min=-0.35,
+        profile_half_width_deg=float(args.profile_half_width_deg),
     )
     plot_normalized_offset_profiles(
         stage_d["excess_map"],
-        stage_d["counts_map"],
+        counts_on_background_support,
         stage_d["cell_id"],
         stage_d["nhit_bin"].astype(str),
         stage_d["predE_bin"].astype(str),
         stage_d["y_centers_deg"],
+        stage_d["x_centers_deg"],
         fit_ids,
         dec_excess_profile,
         projection="dec",
         quantity="excess",
         phase="after background subtraction",
         y_min=-0.35,
+        profile_half_width_deg=float(args.profile_half_width_deg),
     )
     plot_roi_grid(
         stage_d["annulus_residual_map"],

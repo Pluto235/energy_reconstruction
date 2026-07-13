@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-13 14:22 · [uncommitted] Replace circular-ROI RA/Dec projections with matched one-degree central slices in the v6 background before/after diagnostics.
+
 - **energy_reconstruction** · 2026-07-13 13:55 · [88a755a] Add matched-support RA/Dec observed-count profiles before background subtraction to both v6 Scheme B and Scheme R reports.
 
 - **energy_reconstruction** · 2026-07-13 11:31 · [8222a28] Add parallel full v6 Scheme B and fixed-71.5%-Rayleigh Scheme R Stage A-G reports with isolated Slurm outputs.

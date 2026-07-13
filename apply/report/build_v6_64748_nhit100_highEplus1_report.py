@@ -1183,14 +1183,14 @@ def main() -> None:
         (STAGE_D / "roi_excess_grid.png", "Stage D ROI excess map grid"),
         (
             STAGE_D / "normalized_ra_offset_counts_profiles.png",
-            "Stage D normalized RA-offset observed-count profiles before background subtraction; the projection uses the same valid background-model support as the after-subtraction profile, and green panels enter the fit",
+            "Stage D normalized RA-offset observed-count profiles before background subtraction, integrated only over |Dec offset| < 1 deg; the after-subtraction profile uses the identical slice and green panels enter the fit",
         ),
-        (STAGE_D / "normalized_ra_offset_excess_profiles.png", "Stage D normalized RA-offset excess profiles after background subtraction; green panels enter the fit"),
+        (STAGE_D / "normalized_ra_offset_excess_profiles.png", "Stage D normalized RA-offset excess profiles after background subtraction, integrated only over |Dec offset| < 1 deg; green panels enter the fit"),
         (
             STAGE_D / "normalized_dec_offset_counts_profiles.png",
-            "Stage D normalized Dec-offset observed-count profiles before background subtraction; the projection uses the same valid background-model support as the after-subtraction profile, and green panels enter the fit",
+            "Stage D normalized Dec-offset observed-count profiles before background subtraction, integrated only over |RA offset cos(dec)| < 1 deg; the after-subtraction profile uses the identical slice and green panels enter the fit",
         ),
-        (STAGE_D / "normalized_dec_offset_excess_profiles.png", "Stage D normalized Dec-offset excess profiles after background subtraction; green panels enter the fit"),
+        (STAGE_D / "normalized_dec_offset_excess_profiles.png", "Stage D normalized Dec-offset excess profiles after background subtraction, integrated only over |RA offset cos(dec)| < 1 deg; green panels enter the fit"),
         (STAGE_D / "annulus_residual_grid.png", "Stage D annulus residuals"),
         (STAGE_D_DEC_PROFILE, "Stage D aggregate Dec profile before and after annulus-normalized background subtraction for the 44 active fit cells"),
         (STAGE_E / "formal_sigma_grid.png", "Stage E formal sigma grid"),

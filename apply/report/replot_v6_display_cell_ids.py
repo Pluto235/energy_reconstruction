@@ -125,8 +125,8 @@ def plot_counts_grid(
     plt.close(fig)
 
 
-def plot_normalized_excess_profiles(
-    excess_map: np.ndarray,
+def plot_normalized_offset_profiles(
+    profile_map: np.ndarray,
     counts_map: np.ndarray,
     cell_ids: np.ndarray,
     nhit_bins: np.ndarray,
@@ -136,6 +136,9 @@ def plot_normalized_excess_profiles(
     output_path: Path,
     *,
     projection: str,
+    quantity: str,
+    phase: str,
+    y_min: float,
 ) -> None:
     if projection not in {"ra", "dec"}:
         raise ValueError(f"Unsupported projection: {projection}")
@@ -143,7 +146,7 @@ def plot_normalized_excess_profiles(
     ordered_pred = sorted(set(pred_bins.tolist()), key=interval_key)
     index_by_key = {(nhit, pred): idx for idx, (nhit, pred) in enumerate(zip(nhit_bins, pred_bins))}
     sum_axis = 1 if projection == "ra" else 2
-    profiles = np.nansum(excess_map, axis=sum_axis)
+    profiles = np.nansum(profile_map, axis=sum_axis)
     fig, axes = plt.subplots(
         len(ordered_nhit),
         len(ordered_pred),
@@ -186,23 +189,24 @@ def plot_normalized_excess_profiles(
             observed_count = int(np.sum(counts_map[idx]))
             ax.set_title(f"{cell_text}: {pred} [{status}]\nN={observed_count:,}", fontsize=5.7)
             ax.set_xlim(x_min, x_max)
-            ax.set_ylim(-0.35, 1.08)
+            ax.set_ylim(float(y_min), 1.08)
             ax.tick_params(labelsize=5.8, length=2, labelleft=(j == 0))
             ax.grid(alpha=0.18, linewidth=0.35)
             if j == 0:
-                ax.set_ylabel(f"{nhit}\nexcess / peak", fontsize=6.2)
+                ax.set_ylabel(f"{nhit}\n{quantity} / peak", fontsize=6.2)
             if i == len(ordered_nhit) - 1:
                 xlabel = "RA offset cos(dec) (deg)" if projection == "ra" else "Dec offset (deg)"
                 ax.set_xlabel(xlabel, fontsize=6.2)
 
     axis_name = "RA-offset" if projection == "ra" else "Dec-offset"
     fig.suptitle(
-        f"Stage D normalized {axis_name} excess profiles after background subtraction (green panels enter fit)",
+        f"Stage D normalized {axis_name} {quantity} profiles {phase} (green panels enter fit)",
         fontsize=11,
         y=0.997,
     )
     fig.tight_layout(rect=[0.0, 0.0, 1.0, 0.978], w_pad=0.35, h_pad=0.55)
     fig.savefig(output_path)
+    fig.savefig(output_path.with_suffix(".pdf"))
     plt.close(fig)
 
 
@@ -331,6 +335,8 @@ def main() -> None:
 
     roi_counts = args.stage_d_output_dir / "roi_counts_grid.png"
     roi_excess = args.stage_d_output_dir / "roi_excess_grid.png"
+    ra_counts_profile = args.stage_d_output_dir / "normalized_ra_offset_counts_profiles.png"
+    dec_counts_profile = args.stage_d_output_dir / "normalized_dec_offset_counts_profiles.png"
     ra_excess_profile = args.stage_d_output_dir / "normalized_ra_offset_excess_profiles.png"
     dec_excess_profile = args.stage_d_output_dir / "normalized_dec_offset_excess_profiles.png"
     annulus_residual = args.stage_d_output_dir / "annulus_residual_grid.png"
@@ -357,7 +363,42 @@ def main() -> None:
         roi_fiducial_deg=roi_fiducial_deg,
     )
     fit_ids = {int(cell_id) for cell_id in stage_f["cell_id"]}
-    plot_normalized_excess_profiles(
+    # Use the same valid Stage D support before and after subtraction so the
+    # comparison changes only the background treatment, not the projection area.
+    counts_on_background_support = np.where(
+        np.isfinite(stage_d["excess_map"]),
+        stage_d["counts_map"],
+        np.nan,
+    )
+    plot_normalized_offset_profiles(
+        counts_on_background_support,
+        stage_d["counts_map"],
+        stage_d["cell_id"],
+        stage_d["nhit_bin"].astype(str),
+        stage_d["predE_bin"].astype(str),
+        stage_d["x_centers_deg"],
+        fit_ids,
+        ra_counts_profile,
+        projection="ra",
+        quantity="observed-count",
+        phase="before background subtraction",
+        y_min=-0.05,
+    )
+    plot_normalized_offset_profiles(
+        counts_on_background_support,
+        stage_d["counts_map"],
+        stage_d["cell_id"],
+        stage_d["nhit_bin"].astype(str),
+        stage_d["predE_bin"].astype(str),
+        stage_d["y_centers_deg"],
+        fit_ids,
+        dec_counts_profile,
+        projection="dec",
+        quantity="observed-count",
+        phase="before background subtraction",
+        y_min=-0.05,
+    )
+    plot_normalized_offset_profiles(
         stage_d["excess_map"],
         stage_d["counts_map"],
         stage_d["cell_id"],
@@ -367,8 +408,11 @@ def main() -> None:
         fit_ids,
         ra_excess_profile,
         projection="ra",
+        quantity="excess",
+        phase="after background subtraction",
+        y_min=-0.35,
     )
-    plot_normalized_excess_profiles(
+    plot_normalized_offset_profiles(
         stage_d["excess_map"],
         stage_d["counts_map"],
         stage_d["cell_id"],
@@ -378,6 +422,9 @@ def main() -> None:
         fit_ids,
         dec_excess_profile,
         projection="dec",
+        quantity="excess",
+        phase="after background subtraction",
+        y_min=-0.35,
     )
     plot_roi_grid(
         stage_d["annulus_residual_map"],
@@ -389,7 +436,16 @@ def main() -> None:
     )
     plot_model_counts(stage_f, preferred_model, model_counts)
     copy_to_assets(
-        [roi_counts, roi_excess, ra_excess_profile, dec_excess_profile, annulus_residual, model_counts],
+        [
+            roi_counts,
+            roi_excess,
+            ra_counts_profile,
+            dec_counts_profile,
+            ra_excess_profile,
+            dec_excess_profile,
+            annulus_residual,
+            model_counts,
+        ],
         args.asset_dir,
     )
     print("Redrew display-only cell labels: 1-84; predE >= 6 tail unnumbered")

@@ -134,6 +134,8 @@ def plot_normalized_offset_profiles(
     pred_bins: np.ndarray,
     coordinate_centers: np.ndarray,
     orthogonal_centers: np.ndarray,
+    annulus_inner_deg: np.ndarray,
+    annulus_outer_deg: np.ndarray,
     fit_ids: set[int],
     output_path: Path,
     *,
@@ -176,8 +178,6 @@ def plot_normalized_offset_profiles(
         raise ValueError(f"No finite Stage D support for {projection} profile")
     x_min = float(np.min(coordinate_centers[supported_coordinates]))
     x_max = float(np.max(coordinate_centers[supported_coordinates]))
-    band_edges = np.arange(np.floor(x_min / 2.0) * 2.0, x_max + 2.0, 2.0)
-
     for i, nhit in enumerate(ordered_nhit):
         for j, pred in enumerate(ordered_pred):
             ax = axes[i, j]
@@ -192,9 +192,21 @@ def plot_normalized_offset_profiles(
                 for spine in ax.spines.values():
                     spine.set_color("#15803d")
                     spine.set_linewidth(1.1)
-            for band_index, left in enumerate(band_edges[:-1]):
-                if band_index % 2 == 0:
-                    ax.axvspan(left, band_edges[band_index + 1], color="#64748b", alpha=0.055, linewidth=0.0)
+            annulus_inner = float(annulus_inner_deg[idx])
+            annulus_outer = float(annulus_outer_deg[idx])
+            if np.isfinite(annulus_inner) and np.isfinite(annulus_outer) and annulus_outer > annulus_inner:
+                for left, right in ((-annulus_outer, -annulus_inner), (annulus_inner, annulus_outer)):
+                    clipped_left = max(float(left), x_min)
+                    clipped_right = min(float(right), x_max)
+                    if clipped_right > clipped_left:
+                        ax.axvspan(
+                            clipped_left,
+                            clipped_right,
+                            color="#9ca3af",
+                            alpha=0.24,
+                            linewidth=0.0,
+                            zorder=0.5,
+                        )
             profile = np.asarray(profiles[idx], dtype=np.float64)
             finite = profile[np.isfinite(profile)]
             peak = float(np.max(finite)) if finite.size else 0.0
@@ -218,7 +230,8 @@ def plot_normalized_offset_profiles(
 
     axis_name = "RA-offset" if projection == "ra" else "Dec-offset"
     fig.suptitle(
-        f"Stage D normalized {axis_name} {quantity} profiles {phase}; {slice_label} (green panels enter fit)",
+        f"Stage D normalized {axis_name} {quantity} profiles {phase}; {slice_label}; "
+        "gray = projected Stage D annulus (green panels enter fit)",
         fontsize=11,
         y=0.997,
     )
@@ -396,6 +409,8 @@ def main() -> None:
         stage_d["predE_bin"].astype(str),
         stage_d["x_centers_deg"],
         stage_d["y_centers_deg"],
+        stage_d["annulus_inner_deg"],
+        stage_d["annulus_outer_deg"],
         fit_ids,
         ra_counts_profile,
         projection="ra",
@@ -412,6 +427,8 @@ def main() -> None:
         stage_d["predE_bin"].astype(str),
         stage_d["y_centers_deg"],
         stage_d["x_centers_deg"],
+        stage_d["annulus_inner_deg"],
+        stage_d["annulus_outer_deg"],
         fit_ids,
         dec_counts_profile,
         projection="dec",
@@ -428,6 +445,8 @@ def main() -> None:
         stage_d["predE_bin"].astype(str),
         stage_d["x_centers_deg"],
         stage_d["y_centers_deg"],
+        stage_d["annulus_inner_deg"],
+        stage_d["annulus_outer_deg"],
         fit_ids,
         ra_excess_profile,
         projection="ra",
@@ -444,6 +463,8 @@ def main() -> None:
         stage_d["predE_bin"].astype(str),
         stage_d["y_centers_deg"],
         stage_d["x_centers_deg"],
+        stage_d["annulus_inner_deg"],
+        stage_d["annulus_outer_deg"],
         fit_ids,
         dec_excess_profile,
         projection="dec",

@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-13 15:31 · [uncommitted] Replace decorative profile stripes with per-cell Stage D annulus spans in all v6 RA/Dec background diagnostics.
+
 - **energy_reconstruction** · 2026-07-13 14:22 · [3f36252] Replace circular-ROI RA/Dec projections with matched one-degree central slices in the v6 background before/after diagnostics.
 
 - **energy_reconstruction** · 2026-07-13 13:55 · [88a755a] Add matched-support RA/Dec observed-count profiles before background subtraction to both v6 Scheme B and Scheme R reports.

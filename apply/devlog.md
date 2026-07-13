@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-13 16:58 · [uncommitted] Add separate Scheme B/R Stage G external overlays containing both Nhit-grouped and predE-grouped SED points while preserving the Nhit-only figures.
+
 - **energy_reconstruction** · 2026-07-13 15:31 · [567a3ab] Replace decorative profile stripes with per-cell Stage D annulus spans in all v6 RA/Dec background diagnostics.
 
 - **energy_reconstruction** · 2026-07-13 14:22 · [3f36252] Replace circular-ROI RA/Dec projections with matched one-degree central slices in the v6 background before/after diagnostics.

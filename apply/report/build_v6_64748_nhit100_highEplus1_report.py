@@ -46,6 +46,7 @@ STAGE_B_FIT_SHADED_PROFILE = ASSET_DIR / f"{RUN_ID}_stage_b_radial_psf_profiles_
 STAGE_D_DEC_PROFILE = ASSET_DIR / f"{RUN_ID}_stage_d_dec_profile_before_after.png"
 STAGE_D_DEC_PROFILE_PDF = ASSET_DIR / f"{RUN_ID}_stage_d_dec_profile_before_after.pdf"
 STAGE_G_EXTERNAL_OVERLAY = ASSET_DIR / f"{RUN_ID}_stage_g_external_overlay.png"
+STAGE_G_EXTERNAL_OVERLAY_WITH_PREDE = ASSET_DIR / f"{RUN_ID}_stage_g_external_overlay_with_predE.png"
 TRUE_ENERGY_CELL_GRID = (
     ASSET_DIR
     / "true-energy-cell-grid"
@@ -759,12 +760,17 @@ def sed_uncertainty_band(E_tev: Any, fit: dict[str, Any], pivot_tev: float) -> t
     return y, y * np.exp(-sigma), y * np.exp(sigma)
 
 
-def ensure_stage_g_external_overlay(stage_f_meta: dict[str, Any], stage_g_meta: dict[str, Any]) -> None:
+def ensure_stage_g_external_overlay(
+    stage_f_meta: dict[str, Any],
+    stage_g_meta: dict[str, Any],
+    *,
+    output_path: Path,
+    include_predE: bool,
+) -> None:
     input_paths = [
-        Path(__file__),
-        STAGE_G / f"sed_points_{RUN_ID}_metadata.json",
-        STAGE_G / f"sed_points_{RUN_ID}_summary.csv",
-        STAGE_F / f"fit_{RUN_ID}_metadata.json",
+        STAGE_G / f"{STAGE_G_STEM}_metadata.json",
+        STAGE_G / f"{STAGE_G_STEM}_summary.csv",
+        STAGE_F / f"{STAGE_F_STEM}_metadata.json",
         STAGE_G / "external_crab_sed_references.csv",
         STAGE_G / "wcda1_pool1_table1_reference.csv",
         PASS5_CSV,
@@ -772,7 +778,7 @@ def ensure_stage_g_external_overlay(stage_f_meta: dict[str, Any], stage_g_meta: 
     ]
     existing_inputs = [path for path in input_paths if path.exists()]
     source_mtime = max(path.stat().st_mtime for path in existing_inputs)
-    if STAGE_G_EXTERNAL_OVERLAY.exists() and STAGE_G_EXTERNAL_OVERLAY.stat().st_mtime >= source_mtime:
+    if output_path.exists() and output_path.stat().st_mtime >= source_mtime:
         return
 
     import numpy as np
@@ -896,6 +902,16 @@ def ensure_stage_g_external_overlay(stage_f_meta: dict[str, Any], stage_g_meta: 
     point_styles = {
         "nhit": {"fmt": "o", "color": "#2563eb", "label": "v6 Nhit grouped"},
     }
+    if include_predE:
+        point_styles["predE"] = {
+            "fmt": "s",
+            "color": "#D55E00",
+            "ecolor": "#D55E00",
+            "markerfacecolor": "white",
+            "markeredgecolor": "#D55E00",
+            "markeredgewidth": 1.2,
+            "label": "v6 predE grouped",
+        }
     for grouping, style in point_styles.items():
         selected = [
             row
@@ -921,13 +937,16 @@ def ensure_stage_g_external_overlay(stage_f_meta: dict[str, Any], stage_g_meta: 
     ax.set_yscale("log")
     ax.set_xlabel("Effective true energy [TeV]")
     ax.set_ylabel(r"$E^2 dN/dE$ [TeV cm$^{-2}$ s$^{-1}$]")
-    ax.set_title(f"Stage G {RUN_ID} SED overlay with external WCDA references")
+    grouping_label = "Nhit + predE grouped points" if include_predE else "Nhit grouped points"
+    ax.set_title(f"Stage G {RUN_ID} SED overlay: {grouping_label}")
     ax.grid(True, which="both", alpha=0.24, lw=0.45)
     ax.set_xlim(emin, emax)
     ax.legend(fontsize=7.0, ncol=2, frameon=True)
     fig.tight_layout()
-    STAGE_G_EXTERNAL_OVERLAY.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(STAGE_G_EXTERNAL_OVERLAY)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path)
+    if include_predE:
+        fig.savefig(output_path.with_suffix(".pdf"))
     plt.close(fig)
 
 
@@ -1080,7 +1099,18 @@ def main() -> None:
     ensure_stage_b_theta_profile_grid(fit_cell_ids)
     ensure_stage_b_fit_shaded_profile_grid(fit_cell_ids)
     ensure_stage_d_dec_profile(fit_cell_ids)
-    ensure_stage_g_external_overlay(stage_f_meta, stage_g_meta)
+    ensure_stage_g_external_overlay(
+        stage_f_meta,
+        stage_g_meta,
+        output_path=STAGE_G_EXTERNAL_OVERLAY,
+        include_predE=False,
+    )
+    ensure_stage_g_external_overlay(
+        stage_f_meta,
+        stage_g_meta,
+        output_path=STAGE_G_EXTERNAL_OVERLAY_WITH_PREDE,
+        include_predE=True,
+    )
 
     processing = stage_c_meta.get("processing") or {}
     stage_c_files = int(processing.get("processed_file_count") or 0)
@@ -1198,6 +1228,7 @@ def main() -> None:
         (STAGE_F / "model_counts_vs_excess.png", "Stage F model counts versus excess"),
         (STAGE_F / "pull_grid_logpar.png", "Stage F LogPar pull grid"),
         (STAGE_G_EXTERNAL_OVERLAY, "Stage G SED overlay with v6 Nhit points, v6 fit band, Pass5 point-fit LogPar, and external references"),
+        (STAGE_G_EXTERNAL_OVERLAY_WITH_PREDE, "Stage G SED overlay with both v6 Nhit-grouped and predE-grouped points, v6 fit band, Pass5 point-fit LogPar, and external references; this is an additional figure and does not replace the Nhit-only overlay"),
         (STAGE_G / "sed_points_ratio.png", "Stage G SED ratios to the Stage F LogPar and official Pass5 WCDA point-fit LogPar"),
     ]
     archived_figures = archive_report_figures(expected_figures)

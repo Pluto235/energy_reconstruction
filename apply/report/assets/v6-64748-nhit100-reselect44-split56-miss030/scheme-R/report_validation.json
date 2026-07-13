@@ -20,10 +20,11 @@
       "assets/v6-64748-nhit100-reselect44-split56-miss030/scheme-R/model_counts_vs_excess.png",
       "assets/v6-64748-nhit100-reselect44-split56-miss030/scheme-R/pull_grid_logpar.png",
       "assets/v6-64748-nhit100-reselect44-split56-miss030/scheme-R/v6_64748_nhit100_reselect44_split56_miss030_stage_g_external_overlay.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030/scheme-R/v6_64748_nhit100_reselect44_split56_miss030_stage_g_external_overlay_with_predE.png",
       "assets/v6-64748-nhit100-reselect44-split56-miss030/scheme-R/sed_points_ratio.png"
     ],
     "missing_image_refs": [],
-    "image_ref_count": 19
+    "image_ref_count": 20
   },
   "metadata_contamination": {
     "status": "passed",

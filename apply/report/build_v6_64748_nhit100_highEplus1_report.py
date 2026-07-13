@@ -776,6 +776,8 @@ def ensure_stage_g_external_overlay(
         PASS5_CSV,
         V099_CSV,
     ]
+    if include_predE:
+        input_paths.append(Path(__file__))
     existing_inputs = [path for path in input_paths if path.exists()]
     source_mtime = max(path.stat().st_mtime for path in existing_inputs)
     if output_path.exists() and output_path.stat().st_mtime >= source_mtime:
@@ -905,11 +907,7 @@ def ensure_stage_g_external_overlay(
     if include_predE:
         point_styles["predE"] = {
             "fmt": "s",
-            "color": "#D55E00",
-            "ecolor": "#D55E00",
-            "markerfacecolor": "white",
-            "markeredgecolor": "#D55E00",
-            "markeredgewidth": 1.2,
+            "color": "#2ca02c",
             "label": "v6 predE grouped",
         }
     for grouping, style in point_styles.items():

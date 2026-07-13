@@ -20,12 +20,19 @@ RUN_ID = os.environ.get("V6_REPORT_RUN_ID", DEFAULT_RUN_ID)
 SOURCE_RUN_ID = os.environ.get("V6_REPORT_SOURCE_RUN_ID", RUN_ID)
 REPORT_TITLE = os.environ.get("V6_REPORT_TITLE", "Crab SED v6 64748 nhit100 highEplus1 Stage A-G")
 REPORT_DIR = REPO_ROOT / "apply" / "report"
+SCHEME = os.environ.get("V6_REPORT_SCHEME", "B").upper()
+SCHEME_LABEL = os.environ.get(
+    "V6_REPORT_SCHEME_LABEL",
+    "Scheme B - MC Aperture-conditioned Response",
+)
 if RUN_ID == DEFAULT_RUN_ID:
     REPORT_PATH = REPORT_DIR / "crab_sed_v6_64748_nhit100_highEplus1_stage_a_to_g_report.html"
     ASSET_DIR = REPORT_DIR / "assets" / "v6-64748-nhit100-highEplus1"
 else:
     REPORT_PATH = REPORT_DIR / f"crab_sed_{RUN_ID}_stage_a_to_g_report.html"
     ASSET_DIR = REPORT_DIR / "assets" / RUN_ID.replace("_", "-")
+REPORT_PATH = Path(os.environ.get("V6_REPORT_PATH", str(REPORT_PATH)))
+ASSET_DIR = Path(os.environ.get("V6_REPORT_ASSET_DIR", str(ASSET_DIR)))
 VALIDATION_JSON = ASSET_DIR / "report_validation.json"
 SOURCE_ASSET_DIR = (
     REPORT_DIR / "assets" / "v6-64748-nhit100-highEplus1"
@@ -44,6 +51,12 @@ TRUE_ENERGY_CELL_GRID = (
     / "true-energy-cell-grid"
     / "v6_64748_reselect44_true_energy_cell_grid.png"
 )
+TRUE_ENERGY_CELL_GRID = Path(
+    os.environ.get(
+        "V6_REPORT_TRUE_ENERGY_GRID",
+        str(TRUE_ENERGY_CELL_GRID),
+    )
+)
 
 PASS5_CSV = REPORT_DIR / "assets/official-pass5/wcda_crab_sed_pass5_20260616_104941.csv"
 V099_CSV = REPORT_DIR / "assets/official-v099/wcda_crab_sed_v099_20250731_20260616_123624.csv"
@@ -56,6 +69,12 @@ HIGH_E_DECISIONS = REPO_ROOT / f"apply/config/cell_selector_{RUN_ID}_highEplus1_
 
 STAGE_A = REPO_ROOT / f"apply/output/stage_a_{SOURCE_RUN_ID}"
 STAGE_A_AP = REPO_ROOT / f"apply/output/stage_a_{RUN_ID}_aperture_conditioned"
+RESPONSE_META = Path(
+    os.environ.get(
+        "V6_REPORT_RESPONSE_META",
+        str(STAGE_A_AP / f"response_2d_{RUN_ID}_aperture_conditioned_metadata.json"),
+    )
+)
 STAGE_B = REPO_ROOT / f"apply/output/stage_b_{RUN_ID}/runs/{RUN_ID}_stage_b_psf"
 STAGE_B_UNFILTERED_DIAGNOSTIC = STAGE_B / f"psf_{RUN_ID}_unfiltered_diagnostic.npz"
 STAGE_C = REPO_ROOT / f"apply/output/stage_c_{SOURCE_RUN_ID}/runs/{SOURCE_RUN_ID}_stage_c_halfyear"
@@ -63,6 +82,16 @@ STAGE_D = REPO_ROOT / f"apply/output/stage_d_{RUN_ID}_annnorm/runs/{RUN_ID}_stag
 STAGE_E = REPO_ROOT / f"apply/output/stage_e_{RUN_ID}_containment1_annnorm/runs/{RUN_ID}_stage_e_containment1_annnorm"
 STAGE_F = REPO_ROOT / f"apply/output/stage_f_{RUN_ID}/runs/{RUN_ID}_stage_f"
 STAGE_G = REPO_ROOT / f"apply/output/stage_g_{RUN_ID}/runs/{RUN_ID}_stage_g"
+STAGE_E = Path(os.environ.get("V6_REPORT_STAGE_E_RUN_DIR", str(STAGE_E)))
+STAGE_F = Path(os.environ.get("V6_REPORT_STAGE_F_RUN_DIR", str(STAGE_F)))
+STAGE_G = Path(os.environ.get("V6_REPORT_STAGE_G_RUN_DIR", str(STAGE_G)))
+STAGE_E_STEM = os.environ.get("V6_REPORT_STAGE_E_STEM", f"signal_{RUN_ID}_containment1_annnorm")
+STAGE_F_STEM = os.environ.get("V6_REPORT_STAGE_F_STEM", f"fit_{RUN_ID}")
+STAGE_G_STEM = os.environ.get("V6_REPORT_STAGE_G_STEM", f"sed_points_{RUN_ID}")
+SCHEME_CONTRACT = os.environ.get(
+    "V6_REPORT_SCHEME_CONTRACT",
+    "Uses the MC aperture-conditioned response; downstream containment is 1 and no additional 0.715 factor is applied.",
+)
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -137,13 +166,16 @@ def figure(path: Path, caption: str) -> str:
     )
 
 
-def archive_report_figures(figures: Iterable[tuple[Path, str]]) -> None:
+def archive_report_figures(figures: Iterable[tuple[Path, str]]) -> list[tuple[Path, str]]:
     """Keep a flat, presentation-ready copy of every report image."""
     ASSET_DIR.mkdir(parents=True, exist_ok=True)
-    for source, _ in figures:
+    archived: list[tuple[Path, str]] = []
+    for source, caption in figures:
         target = ASSET_DIR / source.name
         if source.resolve() != target.resolve():
             shutil.copy2(source, target)
+        archived.append((target, caption))
+    return archived
 
 
 def global_cutflow_map(rows: list[dict[str, str]]) -> dict[str, int]:
@@ -1016,14 +1048,14 @@ def status_class(value: str) -> str:
 
 def main() -> None:
     stage_a_meta = load_json(STAGE_A / f"response_2d_{SOURCE_RUN_ID}_metadata.json")
-    stage_a_ap_meta = load_json(STAGE_A_AP / f"response_2d_{RUN_ID}_aperture_conditioned_metadata.json")
+    response_meta = load_json(RESPONSE_META)
     stage_b_meta = load_json(STAGE_B / f"psf_{RUN_ID}_metadata.json")
     stage_c_meta = load_json(STAGE_C / "obs_events_metadata.json")
     stage_d_meta = load_json(STAGE_D / f"background_{RUN_ID}_annnorm_metadata.json")
-    stage_e_meta = load_json(STAGE_E / f"signal_{RUN_ID}_containment1_annnorm_metadata.json")
-    stage_f_meta = load_json(STAGE_F / f"fit_{RUN_ID}_metadata.json")
-    stage_g_meta = load_json(STAGE_G / f"sed_points_{RUN_ID}_metadata.json")
-    stage_g_summary = load_json(STAGE_G / f"sed_points_{RUN_ID}_summary.json")
+    stage_e_meta = load_json(STAGE_E / f"{STAGE_E_STEM}_metadata.json")
+    stage_f_meta = load_json(STAGE_F / f"{STAGE_F_STEM}_metadata.json")
+    stage_g_meta = load_json(STAGE_G / f"{STAGE_G_STEM}_metadata.json")
+    stage_g_summary = load_json(STAGE_G / f"{STAGE_G_STEM}_summary.json")
     selector_meta = load_json(SELECTOR_META)
 
     selector_rows = load_csv(FIT_SELECTOR)
@@ -1087,20 +1119,20 @@ def main() -> None:
     )
     g_quality = stage_g_meta.get("quality") or {}
     g_frozen = stage_g_summary.get("frozen_spectrum") or {}
-    g_csv = STAGE_G / f"sed_points_{RUN_ID}_summary.csv"
+    g_csv = STAGE_G / f"{STAGE_G_STEM}_summary.csv"
     g_nhit_rows = sed_rows_by_group(g_csv, "nhit")
     g_pred_rows = sed_rows_by_group(g_csv, "predE")
     job_rows = sacct_rows(parse_pipeline_jobs())
 
     metadata_files = [
         STAGE_A / f"response_2d_{SOURCE_RUN_ID}_metadata.json",
-        STAGE_A_AP / f"response_2d_{RUN_ID}_aperture_conditioned_metadata.json",
+        RESPONSE_META,
         STAGE_B / f"psf_{RUN_ID}_metadata.json",
         STAGE_C / "obs_events_metadata.json",
         STAGE_D / f"background_{RUN_ID}_annnorm_metadata.json",
-        STAGE_E / f"signal_{RUN_ID}_containment1_annnorm_metadata.json",
-        STAGE_F / f"fit_{RUN_ID}_metadata.json",
-        STAGE_G / f"sed_points_{RUN_ID}_metadata.json",
+        STAGE_E / f"{STAGE_E_STEM}_metadata.json",
+        STAGE_F / f"{STAGE_F_STEM}_metadata.json",
+        STAGE_G / f"{STAGE_G_STEM}_metadata.json",
         SELECTOR_META,
     ]
     contamination = contamination_audit(metadata_files)
@@ -1130,12 +1162,12 @@ def main() -> None:
         ("Prepare/cache", "/mnt/mydisk/WCDA_simulation_binned_response_v6_64748_nhit100_highEplus1_split56_candidate"),
         ("Stage A response", f"apply/output/stage_a_{SOURCE_RUN_ID} (reused)"),
         ("Stage B PSF", f"apply/output/stage_b_{RUN_ID}"),
-        ("Stage A aperture response", f"apply/output/stage_a_{RUN_ID}_aperture_conditioned"),
+        ("Analysis response", str(RESPONSE_META.parent)),
         ("Stage C observation", f"apply/output/stage_c_{SOURCE_RUN_ID} (reused)"),
         ("Stage D background", f"apply/output/stage_d_{RUN_ID}_annnorm"),
-        ("Stage E signal", f"apply/output/stage_e_{RUN_ID}_containment1_annnorm"),
-        ("Stage F fit", f"apply/output/stage_f_{RUN_ID}"),
-        ("Stage G SED", f"apply/output/stage_g_{RUN_ID}"),
+        ("Stage E signal", str(STAGE_E)),
+        ("Stage F fit", str(STAGE_F)),
+        ("Stage G SED", str(STAGE_G)),
     ]
 
     expected_figures = [
@@ -1160,8 +1192,15 @@ def main() -> None:
         (STAGE_G_EXTERNAL_OVERLAY, "Stage G SED overlay with v6 Nhit points, v6 fit band, Pass5 point-fit LogPar, and external references"),
         (STAGE_G / "sed_points_ratio.png", "Stage G SED ratios to the Stage F LogPar and official Pass5 WCDA point-fit LogPar"),
     ]
-    archive_report_figures(expected_figures)
-    figure_html = "".join(figure(path, caption) for path, caption in expected_figures)
+    archived_figures = archive_report_figures(expected_figures)
+    figure_html = "".join(figure(path, caption) for path, caption in archived_figures)
+
+    input_commit = os.environ.get("V6_REPORT_INPUT_COMMIT")
+    if not input_commit:
+        input_commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, text=True
+        ).strip()
+    response_path = response_meta.get("npz_path") or response_meta.get("outputs", {}).get("npz") or "unknown"
 
     html_doc = f"""<!doctype html>
 <html lang="en">
@@ -1209,7 +1248,8 @@ def main() -> None:
 <main>
   <header>
     <h1>{esc(REPORT_TITLE)}</h1>
-    <p class="lede">v6 chain for <code>{RUN_ID}</code>, reusing the <code>{SOURCE_RUN_ID}</code> nominal response and Stage C event reduction. The first Nhit bin is <code>[100,200)</code>; <code>&gt;=6</code> remains a diagnostic tail outside Stage F/G.</p>
+    <p class="lede"><strong>{esc(SCHEME_LABEL)}</strong>. v6 chain for <code>{RUN_ID}</code>, reusing the <code>{SOURCE_RUN_ID}</code> nominal inputs and Stage C event reduction. The first Nhit bin is <code>[100,200)</code>; <code>&gt;=6</code> remains a diagnostic tail outside Stage F/G.</p>
+    <div class="okbox"><strong>Response contract:</strong> {esc(SCHEME_CONTRACT)}</div>
   </header>
 
   <section>
@@ -1238,6 +1278,9 @@ def main() -> None:
     <p>The main chain uses the 64748 observation eval root and its recovered-time tree. The response, PSF, aperture response, fit, and SED products are all under the new run namespace.</p>
     {table(["Field", "Value"], [
         ["Run id", f"<code>{RUN_ID}</code>"],
+        ["Scheme", f"<code>{esc(SCHEME)}</code> - {esc(SCHEME_LABEL)}"],
+        ["Input commit SHA", f"<code>{esc(input_commit)}</code>"],
+        ["Analysis response", f"<code>{esc(response_path)}</code>"],
         ["Observation root", f"<code>{esc(stage_c_meta.get('obs_root'))}</code>"],
         ["Recovered time root", f"<code>{esc(stage_c_meta.get('time_root'))}</code>"],
         ["MC candidate cache", "<code>/mnt/mydisk/WCDA_simulation_binned_response_v6_64748_nhit100_highEplus1_split56_candidate</code>"],
@@ -1277,13 +1320,13 @@ def main() -> None:
 
   <section>
     <h2>Stage A-B-D-E Diagnostics</h2>
-    <p>Stage A nominal response is <code>{esc(stage_a_meta.get('response_type'))}</code>; Stage F/G use <code>{esc(stage_a_ap_meta.get('response_type'))}</code>. Stage B wrote {esc(stage_b_meta.get('n_cells'))} formal PSF rows. Figure labels use display IDs 1-84 after excluding the <code>predE &gt;= 6</code> tail column from numbering; stored data and metadata retain the original 91-cell internal IDs. The theta grid shows each cell's raw <code>mc_weight</code>-normalized distribution before Crab reweighting; orange shading marks Crab-positive theta bins without MC support. In the radial grid, purple profiles and dashed Rayleigh curves are diagnostic-only fits made without the formal true-energy cut when the formal profile is empty; they do not replace the Stage B PSF used by Stage A/F. Panels with no raw MC events are labeled explicitly. Pale green panels mark the {len(fit_cell_ids)} cells used by Stage F/G.</p>
+    <p>Stage A nominal response is <code>{esc(stage_a_meta.get('response_type'))}</code>; Stage F/G use <code>{esc(response_meta.get('response_type'))}</code> under {esc(SCHEME_LABEL)}. Stage B wrote {esc(stage_b_meta.get('n_cells'))} formal PSF rows. Shared Stage B and Stage D figures are scheme-independent inputs copied into this report's asset directory. Figure labels use display IDs 1-84 after excluding the <code>predE &gt;= 6</code> tail column from numbering; stored data and metadata retain the original 91-cell internal IDs. The theta grid shows each cell's raw <code>mc_weight</code>-normalized distribution before Crab reweighting; orange shading marks Crab-positive theta bins without MC support. In the radial grid, purple profiles and dashed Rayleigh curves are diagnostic-only fits made without the formal true-energy cut when the formal profile is empty; they do not replace the Stage B PSF used by Stage A/F. Panels with no raw MC events are labeled explicitly. Pale green panels mark the {len(fit_cell_ids)} cells used by Stage F/G.</p>
     <div class="figgrid">{figure_html}</div>
   </section>
 
   <section>
     <h2>Stage F Fit</h2>
-    <p>Stage F uses the final selector and the aperture-conditioned 64748 response. The preferred model recorded by Stage F is <code>{esc(f_pref.get('model'))}</code>.</p>
+    <p>Stage F uses the frozen final selector and {esc(SCHEME_LABEL)}. {esc(SCHEME_CONTRACT)} The preferred model recorded by Stage F is <code>{esc(f_pref.get('model'))}</code>.</p>
     {table(["Fit", "Valid", "chi2/ndof", "p", "phi0", "gamma/alpha", "beta"], [
         ["PL conservative", esc(fit_metric(stage_f_meta, "pl_conservative", "valid")), f"{fmt(fit_metric(stage_f_meta, 'pl_conservative', 'chi2'), 4)}/{esc(fit_metric(stage_f_meta, 'pl_conservative', 'ndof'))}", fmt(fit_metric(stage_f_meta, "pl_conservative", "p_value"), 3), fmt(fit_metric(stage_f_meta, "pl_conservative", "phi0"), 4), fmt(fit_metric(stage_f_meta, "pl_conservative", "gamma"), 4), "n/a"],
         ["LogPar conservative", esc(fit_metric(stage_f_meta, "logpar_conservative", "valid")), f"{fmt(v6_logpar.get('chi2'), 4)}/{esc(v6_logpar.get('ndof'))}", fmt(v6_logpar.get("p_value"), 3), fmt(fit_metric(stage_f_meta, "logpar_conservative", "phi0"), 4), fmt(fit_metric(stage_f_meta, "logpar_conservative", "alpha"), 4), fmt(fit_metric(stage_f_meta, "logpar_conservative", "beta"), 4)],

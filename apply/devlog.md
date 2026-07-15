@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-15 14:02 · [uncommitted] Replace v6 reselect44 Scheme B with an isolated double-Rayleigh aperture chain, validated Slurm rerun, and old-versus-new report.
+
 - **energy_reconstruction** · 2026-07-15 11:29 · [d60fc41] Align all five v5 PSF profile grids to the Rayleigh-baseline MC profile and common per-cell axes.
 
 - **energy_reconstruction** · 2026-07-14 00:41 · [2d06233] Add a PPT-ready spectral precision figure comparing 1D/2D relative uncertainty, per-energy improvement, and joint covariance volume.

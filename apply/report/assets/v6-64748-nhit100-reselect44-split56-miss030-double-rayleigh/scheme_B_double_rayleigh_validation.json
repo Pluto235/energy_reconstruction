@@ -1,0 +1,284 @@
+{
+  "status": "passed",
+  "checks": [
+    {
+      "name": "required_artifacts",
+      "status": "passed",
+      "detail": {
+        "missing": [],
+        "count": 22
+      }
+    },
+    {
+      "name": "selector_sha256",
+      "status": "passed",
+      "detail": "c85c3b03839ee6b4d3321bbaa87a0dc171a5f8427c4ed7ff298fbc19f295b4f6"
+    },
+    {
+      "name": "selector_44_cells",
+      "status": "passed",
+      "detail": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        86,
+        87,
+        88,
+        89
+      ]
+    },
+    {
+      "name": "same_crab_theta_weighted_profiles",
+      "status": "passed",
+      "detail": "cell IDs, profile bins/densities, and Crab theta weights are byte-equal arrays"
+    },
+    {
+      "name": "psf_method",
+      "status": "passed",
+      "detail": [
+        "double_rayleigh_mixture"
+      ]
+    },
+    {
+      "name": "double_rayleigh_constraints",
+      "status": "passed",
+      "detail": {
+        "fit_cells": 47
+      }
+    },
+    {
+      "name": "double_rayleigh_stability_support",
+      "status": "passed",
+      "detail": {
+        "profile_max_deg": 5.0
+      }
+    },
+    {
+      "name": "double_rayleigh_empirical_containment",
+      "status": "passed",
+      "detail": {
+        "tolerance": 0.12
+      }
+    },
+    {
+      "name": "fallback_reasons_recorded",
+      "status": "passed",
+      "detail": {
+        "fallback_cells": 44
+      }
+    },
+    {
+      "name": "target_containment",
+      "status": "passed",
+      "detail": 0.7129790300890827
+    },
+    {
+      "name": "observed_psf_not_used",
+      "status": "passed",
+      "detail": {
+        "status": "not_used_by_double_rayleigh_mixture",
+        "note": "No observed-data PSF profile enters this branch."
+      }
+    },
+    {
+      "name": "aperture_conditioned_response",
+      "status": "passed",
+      "detail": "primary_thrown_aperture_conditioned_response"
+    },
+    {
+      "name": "response_uses_new_psf",
+      "status": "passed",
+      "detail": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh/runs/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_stage_b_psf/psf_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh.npz"
+    },
+    {
+      "name": "stage_d_background_contract_unchanged",
+      "status": "passed",
+      "detail": {
+        "background_mode": "crab_roi_local",
+        "method": "annulus_quadratic",
+        "background_form": "direct_expectation",
+        "surface_order": 2,
+        "annulus_normalize_surface": true,
+        "annulus_default_inner_deg": 1.5,
+        "annulus_width_deg": 2.0,
+        "annulus_max_inner_deg": 4.5
+      }
+    },
+    {
+      "name": "stage_c_reused",
+      "status": "passed",
+      "detail": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_c_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_c_halfyear"
+    },
+    {
+      "name": "stage_e_containment_one",
+      "status": "passed",
+      "detail": {
+        "override": "fixed1",
+        "source": "fixed1_cli_for_aperture_conditioned_response"
+      }
+    },
+    {
+      "name": "stage_e_quality",
+      "status": "passed",
+      "detail": {
+        "status": "passed",
+        "reason": "total formal sigma 73.4907 within [50, 300]",
+        "exit_code": 0,
+        "promotable": true,
+        "min_total_sigma": 50.0,
+        "max_total_sigma": 300.0
+      }
+    },
+    {
+      "name": "stage_f_selector_unchanged",
+      "status": "passed",
+      "detail": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        86,
+        87,
+        88,
+        89
+      ]
+    },
+    {
+      "name": "stage_f_exposure_unchanged",
+      "status": "passed",
+      "detail": "theta_exposure_sec arrays are exactly equal"
+    },
+    {
+      "name": "stage_f_fit",
+      "status": "passed",
+      "detail": {
+        "error_mode": "conservative",
+        "model": "logpar",
+        "reason": "logpar improves chi2 by 33.1888 >= 4",
+        "delta_chi2_pl_minus_logpar": 33.18877257219174
+      }
+    },
+    {
+      "name": "stage_g_groupings_unchanged",
+      "status": "passed",
+      "detail": {
+        "nhit": {
+          "n_points": 7,
+          "labels": [
+            "[100,200)",
+            "[200,300)",
+            "[300,500)",
+            "[500,800)",
+            "[800,1100)",
+            "[1100,2000)",
+            "[2000,3000)"
+          ]
+        },
+        "predE": {
+          "n_points": 11,
+          "labels": [
+            "[2,2.5)",
+            "[2.5,3)",
+            "[3,3.25)",
+            "[3.25,3.5)",
+            "[3.5,3.75)",
+            "[3.75,4.0)",
+            "[4.0,4.25)",
+            "[4.25,4.5)",
+            "[4.5,4.75)",
+            "[4.75,5.0)",
+            "[5,5.5)"
+          ]
+        }
+      }
+    },
+    {
+      "name": "stage_g_quality",
+      "status": "passed",
+      "detail": {
+        "status": "passed",
+        "diagnostic_only": true,
+        "stage_g_publication_ready": false,
+        "reason": "Stage G uses diagnostic baseline v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh; included cells=1,2,3,4,5,6,15,16,17,18,19,20,21,28,29,30,31,32,33,34,42,43,44,45,46,47,48,56,57,58,59,60,61,62,70,71,72,73,74,75,86,87,88,89, excluded cells=7,8,9,10,11,12,13,14,22,23,24,25,26,27,35,36,37,38,39,40,41,49,50,51,52,53,54,55,63,64,65,66,67,68,69,76,77,78,79,80,81,82,83,84,85,90,91."
+      }
+    },
+    {
+      "name": "final_report",
+      "status": "passed",
+      "detail": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/crab_sed_v6_64748_nhit100_reselect44_scheme_B_report.html"
+    }
+  ]
+}

@@ -62,11 +62,11 @@ TRUE_ENERGY_CELL_GRID = Path(
 PASS5_CSV = REPORT_DIR / "assets/official-pass5/wcda_crab_sed_pass5_20260616_104941.csv"
 V099_CSV = REPORT_DIR / "assets/official-v099/wcda_crab_sed_v099_20250731_20260616_123624.csv"
 
-LEDGER = REPO_ROOT / f"apply/config/cell_ledger_{SOURCE_RUN_ID}_candidate.csv"
-PREFIT_SELECTOR = REPO_ROOT / f"apply/config/cell_selector_{SOURCE_RUN_ID}_prefit.csv"
-FIT_SELECTOR = REPO_ROOT / f"apply/config/cell_selector_{RUN_ID}_fit.csv"
-SELECTOR_META = REPO_ROOT / f"apply/config/cell_selector_{RUN_ID}_fit_metadata.json"
-HIGH_E_DECISIONS = REPO_ROOT / f"apply/config/cell_selector_{RUN_ID}_highEplus1_decisions.csv"
+LEDGER = Path(os.environ.get("V6_REPORT_CELL_LEDGER", str(REPO_ROOT / f"apply/config/cell_ledger_{SOURCE_RUN_ID}_candidate.csv")))
+PREFIT_SELECTOR = Path(os.environ.get("V6_REPORT_PREFIT_SELECTOR", str(REPO_ROOT / f"apply/config/cell_selector_{SOURCE_RUN_ID}_prefit.csv")))
+FIT_SELECTOR = Path(os.environ.get("V6_REPORT_FIT_SELECTOR", str(REPO_ROOT / f"apply/config/cell_selector_{RUN_ID}_fit.csv")))
+SELECTOR_META = Path(os.environ.get("V6_REPORT_SELECTOR_META", str(REPO_ROOT / f"apply/config/cell_selector_{RUN_ID}_fit_metadata.json")))
+HIGH_E_DECISIONS = Path(os.environ.get("V6_REPORT_HIGH_E_DECISIONS", str(REPO_ROOT / f"apply/config/cell_selector_{RUN_ID}_highEplus1_decisions.csv")))
 
 STAGE_A = REPO_ROOT / f"apply/output/stage_a_{SOURCE_RUN_ID}"
 STAGE_A_AP = REPO_ROOT / f"apply/output/stage_a_{RUN_ID}_aperture_conditioned"
@@ -77,7 +77,12 @@ RESPONSE_META = Path(
     )
 )
 STAGE_B = REPO_ROOT / f"apply/output/stage_b_{RUN_ID}/runs/{RUN_ID}_stage_b_psf"
-STAGE_B_UNFILTERED_DIAGNOSTIC = STAGE_B / f"psf_{RUN_ID}_unfiltered_diagnostic.npz"
+STAGE_B_UNFILTERED_DIAGNOSTIC = Path(
+    os.environ.get(
+        "V6_REPORT_STAGE_B_UNFILTERED_DIAGNOSTIC",
+        str(STAGE_B / f"psf_{RUN_ID}_unfiltered_diagnostic.npz"),
+    )
+)
 STAGE_C = REPO_ROOT / f"apply/output/stage_c_{SOURCE_RUN_ID}/runs/{SOURCE_RUN_ID}_stage_c_halfyear"
 STAGE_D = REPO_ROOT / f"apply/output/stage_d_{RUN_ID}_annnorm/runs/{RUN_ID}_stage_d_annnorm"
 STAGE_E = REPO_ROOT / f"apply/output/stage_e_{RUN_ID}_containment1_annnorm/runs/{RUN_ID}_stage_e_containment1_annnorm"
@@ -254,6 +259,23 @@ def rayleigh_pdf_deg(r_deg: Any, sigma_rad: float) -> Any:
     return pdf_per_rad * (math.pi / 180.0)
 
 
+def double_rayleigh_pdf_deg(r_deg: Any, a_core: float, sigma1_deg: float, sigma2_deg: float) -> Any:
+    import numpy as np
+
+    r = np.asarray(r_deg, dtype=np.float64)
+    core = float(a_core) * r / float(sigma1_deg) ** 2 * np.exp(-0.5 * (r / float(sigma1_deg)) ** 2)
+    tail = (1.0 - float(a_core)) * r / float(sigma2_deg) ** 2 * np.exp(-0.5 * (r / float(sigma2_deg)) ** 2)
+    return core + tail
+
+
+def double_rayleigh_cdf_deg(radius_deg: float, a_core: float, sigma1_deg: float, sigma2_deg: float) -> float:
+    return float(
+        1.0
+        - float(a_core) * math.exp(-0.5 * (float(radius_deg) / float(sigma1_deg)) ** 2)
+        - (1.0 - float(a_core)) * math.exp(-0.5 * (float(radius_deg) / float(sigma2_deg)) ** 2)
+    )
+
+
 def fit_cell_ids_from_selector(rows: list[dict[str, str]]) -> set[int]:
     return {int(float(row["cell_id"])) for row in rows if row.get("cell_id") and truthy(row.get("include"))}
 
@@ -418,6 +440,22 @@ def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
         profile_density = np.asarray(psf["profile_density"], dtype=np.float64)
         sigma_rad = np.asarray(psf["sigma_rad"], dtype=np.float64)
         r_opt_deg = np.asarray(psf["r_opt_deg"], dtype=np.float64)
+        double_a = np.asarray(
+            psf["double_rayleigh_A"] if "double_rayleigh_A" in psf.files else np.full(cell_ids.shape, np.nan),
+            dtype=np.float64,
+        )
+        double_sigma1 = np.asarray(
+            psf["double_rayleigh_sigma1_deg"]
+            if "double_rayleigh_sigma1_deg" in psf.files
+            else np.full(cell_ids.shape, np.nan),
+            dtype=np.float64,
+        )
+        double_sigma2 = np.asarray(
+            psf["double_rayleigh_sigma2_deg"]
+            if "double_rayleigh_sigma2_deg" in psf.files
+            else np.full(cell_ids.shape, np.nan),
+            dtype=np.float64,
+        )
 
     diagnostic_by_cell: dict[int, tuple[np.ndarray, float, float, int, str]] = {}
     if STAGE_B_UNFILTERED_DIAGNOSTIC.exists():
@@ -504,7 +542,34 @@ def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
             formal_profile = np.isfinite(density).any() and np.nansum(density) > 0.0
             if formal_profile:
                 ax.step(centers, density, where="mid", color="#1f4e79", linewidth=0.9)
-                if idx < sigma_rad.size and np.isfinite(sigma_rad[idx]) and sigma_rad[idx] > 0.0:
+                has_double_fit = (
+                    idx < double_a.size
+                    and np.isfinite(double_a[idx])
+                    and 0.0 < double_a[idx] < 1.0
+                    and np.isfinite(double_sigma1[idx])
+                    and np.isfinite(double_sigma2[idx])
+                    and 0.0 < double_sigma1[idx] < double_sigma2[idx]
+                )
+                if has_double_fit:
+                    profile_cdf = double_rayleigh_cdf_deg(
+                        float(profile_edges_deg[-1]),
+                        float(double_a[idx]),
+                        float(double_sigma1[idx]),
+                        float(double_sigma2[idx]),
+                    )
+                    ax.plot(
+                        centers,
+                        double_rayleigh_pdf_deg(
+                            centers,
+                            float(double_a[idx]),
+                            float(double_sigma1[idx]),
+                            float(double_sigma2[idx]),
+                        ) / profile_cdf,
+                        color="#c9501a",
+                        linewidth=0.8,
+                        alpha=0.9,
+                    )
+                elif idx < sigma_rad.size and np.isfinite(sigma_rad[idx]) and sigma_rad[idx] > 0.0:
                     ax.plot(centers, rayleigh_pdf_deg(centers, float(sigma_rad[idx])), color="#c9501a", linewidth=0.8, alpha=0.9)
                 if idx < r_opt_deg.size and np.isfinite(r_opt_deg[idx]):
                     ax.axvline(float(r_opt_deg[idx]), color="#444444", linewidth=0.7, linestyle="--")
@@ -556,7 +621,7 @@ def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
 
     handles = [
         Line2D([0], [0], color="#1f4e79", linewidth=0.9, label="MC histogram"),
-        Line2D([0], [0], color="#c9501a", linewidth=0.9, label="Rayleigh fit"),
+        Line2D([0], [0], color="#c9501a", linewidth=0.9, label="active PSF fit (double-Rayleigh or fallback)"),
         Line2D([0], [0], color="#444444", linewidth=0.8, linestyle="--", label="r_opt"),
         Line2D([0], [0], color="#7c3aed", linewidth=0.9, label="unfiltered diagnostic only"),
         Patch(facecolor="#ecfdf5", edgecolor="#059669", label="included in fit"),

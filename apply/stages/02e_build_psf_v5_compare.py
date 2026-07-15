@@ -2379,6 +2379,16 @@ def rows_from_stage_b_source(
             row["psf_borrowed"] = bool(np.asarray(arrays["psf_borrowed"], dtype=bool)[idx])
         row["rayleigh_baseline_r715_deg"] = finite_float(row.get("rayleigh_baseline_r715_deg")) or finite_float(row.get("r_opt_deg")) or float("nan")
         row["rayleigh_baseline_containment_r_opt"] = finite_float(row.get("rayleigh_baseline_containment_r_opt")) or finite_float(row.get("containment_r_opt")) or TARGET_CONTAINMENT
+        source_sigma_deg = finite_float(row.get("sigma_deg")) or float("nan")
+        source_r_opt_deg = finite_float(row.get("r_opt_deg")) or float("nan")
+        row["r715_deg"] = finite_float(row.get("r715_deg")) or source_r_opt_deg
+        row["sigma_eff_deg"] = finite_float(row.get("sigma_eff_deg")) or source_sigma_deg
+        row["sigma_x_deg"] = finite_float(row.get("sigma_x_deg")) or source_sigma_deg
+        row["sigma_y_deg"] = finite_float(row.get("sigma_y_deg")) or source_sigma_deg
+        row["sigma_x_over_y"] = finite_float(row.get("sigma_x_over_y")) or 1.0
+        row["mu_x_deg"] = finite_float(row.get("mu_x_deg")) or 0.0
+        row["mu_y_deg"] = finite_float(row.get("mu_y_deg")) or 0.0
+        row["mc_quantile_r715_deg"] = finite_float(row.get("mc_quantile_r715_deg")) or source_r_opt_deg
         row["two_1d_gaussian_r715_deg"] = finite_float(row.get("two_1d_gaussian_r715_deg")) or finite_float(row.get("r_opt_deg")) or float("nan")
         row["two_1d_gaussian_containment_r_opt"] = finite_float(row.get("two_1d_gaussian_containment_r_opt")) or finite_float(row.get("containment_r_opt")) or TARGET_CONTAINMENT
         row["mc_quantile_containment_r_opt"] = finite_float(row.get("mc_quantile_containment_r_opt")) or TARGET_CONTAINMENT
@@ -2572,11 +2582,57 @@ def write_double_rayleigh_from_stage_b_source(
         if rayleigh_r is None or rayleigh_r <= 0.0:
             rayleigh_r = RAYLEIGH_OPT_RADIUS_FACTOR * float(sigma_deg)
 
-        fit = fit_double_rayleigh_mixture_from_profile_density(
-            profile_density[idx],
-            profile_edges_deg,
-            rayleigh_sigma_deg=float(sigma_deg),
-        )
+        source_quality = str(row.get("psf_quality_flag") or row.get("fit_quality") or "ok")
+        source_warnings = row.get("warnings") if isinstance(row.get("warnings"), list) else []
+        source_fallback = source_quality in {"fallback", "fallback_low_stat"} or source_quality.startswith("fallback:")
+        if source_fallback:
+            detail = ";".join(str(item) for item in source_warnings if item) or source_quality
+            fit: Dict[str, object] = {
+                "status": "fallback",
+                "reason": f"source_rayleigh_fallback:{detail}",
+            }
+        elif bool(row.get("psf_borrowed")):
+            fit = {
+                "status": "fallback",
+                "reason": f"source_psfborrow:{row.get('borrowed_from', 'unknown')}",
+            }
+        else:
+            fit = fit_double_rayleigh_mixture_from_profile_density(
+                profile_density[idx],
+                profile_edges_deg,
+                rayleigh_sigma_deg=float(sigma_deg),
+            )
+
+        if fit.get("status") == "ok":
+            candidate_r = finite_float(fit.get("r_opt_deg"))
+            candidate_containment = (
+                profile_density_containment(profile_density[idx], profile_edges_deg, float(candidate_r))
+                if candidate_r is not None
+                else float("nan")
+            )
+            profile_max_deg = float(profile_edges_deg[-1])
+            if candidate_r is None or candidate_r > profile_max_deg:
+                fit = {
+                    **fit,
+                    "status": "fallback",
+                    "reason": (
+                        "double_rayleigh_unstable_r_opt_outside_profile_support:"
+                        f"{candidate_r}>{profile_max_deg}"
+                    ),
+                }
+            elif (
+                not np.isfinite(candidate_containment)
+                or abs(candidate_containment - TARGET_CONTAINMENT) > float(args.containment_warning_tolerance)
+            ):
+                fit = {
+                    **fit,
+                    "status": "fallback",
+                    "reason": (
+                        "double_rayleigh_unstable_empirical_containment:"
+                        f"{candidate_containment:.6g};target={TARGET_CONTAINMENT:.6g};"
+                        f"tolerance={float(args.containment_warning_tolerance):.6g}"
+                    ),
+                }
         fit_ok = fit.get("status") == "ok"
         r_opt_deg = float(fit["r_opt_deg"]) if fit_ok and finite_float(fit.get("r_opt_deg")) is not None else float(rayleigh_r)
         containment = profile_density_containment(profile_density[idx], profile_edges_deg, r_opt_deg)
@@ -2666,6 +2722,18 @@ def write_double_rayleigh_from_stage_b_source(
         "source_stage_b_metadata": str(source_meta_path),
         "derivation_mode": "fit_double_rayleigh_mixture_to_existing_stage_b_profile_density_without_rerunning_mc_event_loop",
         "aperture_definition": "r_opt solves F(r)=target_containment for the fitted two-component Rayleigh CDF; sigma_eq is diagnostic only",
+        "fallback_contract": (
+            "Keep the source Stage B Rayleigh/psfborrow aperture for source low-stat fallbacks, "
+            "optimizer failures, invalid constrained fits, fitted apertures outside the saved radial-profile "
+            "support, or empirical-containment disagreement beyond containment_warning_tolerance."
+        ),
+    }
+    metadata["description"] = (
+        "Stage B double-Rayleigh mixture PSF artifact derived from an existing Crab-theta-weighted MC radial profile."
+    )
+    metadata["psf_comparison"]["observed_data_profile"] = {  # type: ignore[index]
+        "status": "not_used_by_double_rayleigh_mixture",
+        "note": "No observed-data PSF profile enters this branch.",
     }
 
     write_summary_csv(summary_csv_path, rows)

@@ -740,29 +740,30 @@ def two1d_radial_pdf_deg(
 
 
 def profile_grid_caption(method: str) -> str:
+    common = (
+        "Blue steps are the same Rayleigh-baseline Stage B Crab-theta-weighted MC radial profile in all five grids. "
+        "Each cell uses the same Rayleigh-baseline 0-5 deg x range and Rayleigh-reference y scale, so model overlays cannot rescale the MC profile. "
+    )
     captions = {
         "rayleigh_baseline": (
-            "Blue steps show the Stage B Crab-theta-weighted MC radial profile. "
-            "The orange curve is the Rayleigh radial PDF fit/reference from the same cell's Rayleigh sigma. "
+            common + "The orange curve is the Rayleigh radial PDF fit/reference from the same cell's Rayleigh sigma. "
             "The grey dashed line is Rayleigh r_opt = 1.58 sigma. "
             "Green shaded panels are cells included in the final SED fit."
         ),
         "two_1d_gaussian": (
-            "Blue steps show the Stage B Crab-theta-weighted MC radial profile. "
-            "The purple curve is the radial PDF induced by the fitted independent x/y Gaussian model; "
+            common + "The purple curve is the radial PDF induced by the fitted independent x/y Gaussian model; "
             "this is not Rayleigh except in the circular sigma_x = sigma_y limit. "
             "The grey dashed line is the two-1D circular containment radius solved from the fitted x/y Gaussian sigmas. "
             "Green shaded panels are cells included in the final SED fit."
         ),
         "mc_quantile_715": (
-            "Blue steps show the Stage B Crab-theta-weighted MC radial profile. "
-            "No parametric fit curve is drawn because this branch defines the aperture directly from the weighted empirical quantile. "
+            common + "No parametric fit curve is drawn because this branch defines the aperture directly from the weighted empirical quantile. "
             "The grey dashed line is the empirical Crab-theta-reweighted mc_dangle quantile radius. "
             "Green shaded panels are cells included in the final SED fit."
         ),
         "observed_data": (
-            "Blue steps show the pedestal-subtracted observed Crab excess radial profile when the cell passes the data-PSF quality gates; "
-            "fallback or psfborrow cells show the documented fallback display profile. "
+            common + "Teal steps additionally show the pedestal-subtracted observed Crab excess radial profile for cells that pass the data-PSF quality gates; "
+            "they are omitted for fallback cells. "
             "The orange curve is the Rayleigh radial PDF reference from the same cell's Rayleigh sigma; it is shown only as a comparison curve, "
             "not as the fit used to define the observed-data aperture. "
             "The grey dashed line is the observed-Crab radial-profile aperture after annnorm-background and flat-pedestal subtraction, "
@@ -770,8 +771,7 @@ def profile_grid_caption(method: str) -> str:
             "Green shaded panels are cells included in the final SED fit."
         ),
         "double_rayleigh_mixture": (
-            "Blue steps show the Stage B Crab-theta-weighted MC radial profile. "
-            "The purple curve is the fitted two-component Rayleigh radial PDF; "
+            common + "The purple curve is the fitted two-component Rayleigh radial PDF; "
             "the grey dashed line is r_opt from the fitted mixture CDF at the Rayleigh-contract target containment. "
             "Fallback or psfborrow cells are listed in the diagnostics tables. "
             "Green shaded panels are cells included in the final SED fit."
@@ -780,12 +780,21 @@ def profile_grid_caption(method: str) -> str:
     return captions[method]
 
 
-def plot_fit_shaded_psf_profile_grid(method: str, payload: Dict[str, object], path: Path) -> bool:
+def plot_fit_shaded_psf_profile_grid(
+    method: str,
+    payload: Dict[str, object],
+    path: Path,
+    *,
+    rayleigh_reference: Optional[Dict[str, object]] = None,
+) -> bool:
     psf = payload.get("psf_npz")
     if not isinstance(psf, dict):
         return False
     required = {"cell_id", "nhit_bin", "predE_bin", "profile_edges_deg", "profile_density"}
     if any(key not in psf for key in required):
+        return False
+    reference = rayleigh_reference if isinstance(rayleigh_reference, dict) else psf
+    if any(key not in reference for key in required):
         return False
 
     cell_ids = np.asarray(psf["cell_id"], dtype=np.int64)
@@ -802,14 +811,33 @@ def plot_fit_shaded_psf_profile_grid(method: str, payload: Dict[str, object], pa
     double_a = np.asarray(psf.get("double_rayleigh_A", np.full(cell_ids.shape, np.nan)), dtype=np.float64)
     double_s1 = np.asarray(psf.get("double_rayleigh_sigma1_deg", np.full(cell_ids.shape, np.nan)), dtype=np.float64)
     double_s2 = np.asarray(psf.get("double_rayleigh_sigma2_deg", np.full(cell_ids.shape, np.nan)), dtype=np.float64)
+    observed_fallback = np.asarray(psf.get("observed_data_fallback", np.ones(cell_ids.shape, dtype=bool)), dtype=bool)
     if cell_ids.size == 0 or profile_density.size == 0:
+        return False
+
+    reference_cell_ids = np.asarray(reference["cell_id"], dtype=np.int64)
+    reference_edges_deg = np.asarray(reference["profile_edges_deg"], dtype=np.float64)
+    reference_density = np.asarray(reference["profile_density"], dtype=np.float64)
+    reference_sigma_rad = np.asarray(
+        reference.get("sigma_rad", np.full(reference_cell_ids.shape, np.nan)),
+        dtype=np.float64,
+    )
+    if (
+        reference_cell_ids.size == 0
+        or reference_density.size == 0
+        or profile_edges_deg.shape != reference_edges_deg.shape
+        or not np.allclose(profile_edges_deg, reference_edges_deg, rtol=0.0, atol=1.0e-12)
+    ):
         return False
 
     fit_ids = fit_cell_ids(payload)
     ordered_nhit = sorted(set(nhit_bins.tolist()), key=interval_key)
     ordered_pred = sorted(set(pred_bins.tolist()), key=interval_key)
     index_by_key = {(nhit, pred): idx for idx, (nhit, pred) in enumerate(zip(nhit_bins, pred_bins))}
-    centers = 0.5 * (profile_edges_deg[:-1] + profile_edges_deg[1:])
+    reference_index_by_cell = {int(cell_id): idx for idx, cell_id in enumerate(reference_cell_ids)}
+    centers = 0.5 * (reference_edges_deg[:-1] + reference_edges_deg[1:])
+    x_min = float(reference_edges_deg[0])
+    x_max = float(reference_edges_deg[-1])
 
     plt = setup_matplotlib()
     from matplotlib.lines import Line2D
@@ -833,6 +861,10 @@ def plot_fit_shaded_psf_profile_grid(method: str, payload: Dict[str, object], pa
                 continue
 
             cell_id = int(cell_ids[idx])
+            reference_idx = reference_index_by_cell.get(cell_id)
+            if reference_idx is None:
+                ax.set_axis_off()
+                continue
             if cell_id in fit_ids:
                 ax.set_facecolor("#ecfdf5")
                 for spine in ax.spines.values():
@@ -850,17 +882,34 @@ def plot_fit_shaded_psf_profile_grid(method: str, payload: Dict[str, object], pa
                     fontweight="bold",
                 )
 
-            density = np.asarray(profile_density[idx], dtype=np.float64)
-            ax.step(centers, density, where="mid", color="#1f4e79", linewidth=0.9)
+            density = np.asarray(reference_density[reference_idx], dtype=np.float64)
+            method_density = np.asarray(profile_density[idx], dtype=np.float64)
             has_profile = bool(np.isfinite(density).any() and np.nansum(density) > 0.0)
+            rayleigh_curve = np.full(centers.shape, np.nan, dtype=np.float64)
+            if (
+                has_profile
+                and reference_idx < reference_sigma_rad.size
+                and np.isfinite(reference_sigma_rad[reference_idx])
+                and reference_sigma_rad[reference_idx] > 0.0
+            ):
+                rayleigh_curve = rayleigh_pdf_deg(centers, float(reference_sigma_rad[reference_idx]))
+
+            if method == "observed_data" and idx < observed_fallback.size and not observed_fallback[idx]:
+                ax.step(
+                    centers,
+                    method_density,
+                    where="mid",
+                    color="#0f766e",
+                    linewidth=0.9,
+                    alpha=0.9,
+                    zorder=2.5,
+                )
             if (
                 method in {"rayleigh_baseline", "observed_data"}
                 and has_profile
-                and idx < sigma_rad.size
-                and np.isfinite(sigma_rad[idx])
-                and sigma_rad[idx] > 0.0
+                and np.isfinite(rayleigh_curve).any()
             ):
-                ax.plot(centers, rayleigh_pdf_deg(centers, float(sigma_rad[idx])), color="#c9501a", linewidth=0.8, alpha=0.9)
+                ax.plot(centers, rayleigh_curve, color="#c9501a", linewidth=1.0, alpha=0.95, zorder=3)
             if (
                 method == "two_1d_gaussian"
                 and has_profile
@@ -883,8 +932,9 @@ def plot_fit_shaded_psf_profile_grid(method: str, payload: Dict[str, object], pa
                         sigma_y_deg=float(sigma_y_deg[idx]),
                     ),
                     color="#7c3aed",
-                    linewidth=0.8,
+                    linewidth=1.0,
                     alpha=0.95,
+                    zorder=3,
                 )
             if (
                 method == "double_rayleigh_mixture"
@@ -907,11 +957,33 @@ def plot_fit_shaded_psf_profile_grid(method: str, payload: Dict[str, object], pa
                         float(double_s2[idx]),
                     ),
                     color="#7e22ce",
-                    linewidth=0.8,
+                    linewidth=1.0,
                     alpha=0.95,
+                    zorder=3,
                 )
             if idx < r_opt.size and np.isfinite(r_opt[idx]):
-                ax.axvline(float(r_opt[idx]), color="#444444", linewidth=0.7, linestyle="--")
+                radius = float(r_opt[idx])
+                if x_min <= radius <= x_max:
+                    ax.axvline(radius, color="#444444", linewidth=0.7, linestyle="--", zorder=2)
+                else:
+                    ax.text(
+                        0.98,
+                        0.06,
+                        f"r_opt={radius:.2g} outside",
+                        transform=ax.transAxes,
+                        ha="right",
+                        va="bottom",
+                        fontsize=5.2,
+                        color="#4b5563",
+                    )
+            ax.step(centers, density, where="mid", color="#1f4e79", linewidth=0.9, zorder=4)
+
+            reference_peak = max(
+                float(np.nanmax(density)) if np.isfinite(density).any() else 0.0,
+                float(np.nanmax(rayleigh_curve)) if np.isfinite(rayleigh_curve).any() else 0.0,
+            )
+            ax.set_xlim(x_min, x_max)
+            ax.set_ylim(0.0, max(1.0e-6, 1.25 * reference_peak))
             ax.set_title(f"cell {cell_id}: {pred}", fontsize=6.7)
             ax.tick_params(labelsize=6, length=2)
             ax.grid(alpha=0.22, linewidth=0.35)
@@ -920,14 +992,11 @@ def plot_fit_shaded_psf_profile_grid(method: str, payload: Dict[str, object], pa
             if i == len(ordered_nhit) - 1:
                 ax.set_xlabel("dangle [deg]", fontsize=6.7)
 
-    profile_label = (
-        "pedestal-subtracted observed excess profile / fallback profile"
-        if method == "observed_data"
-        else "weighted MC radial profile"
-    )
     handles = [
-        Line2D([0], [0], color="#1f4e79", linewidth=0.9, label=profile_label),
+        Line2D([0], [0], color="#1f4e79", linewidth=0.9, label="common Rayleigh-baseline weighted MC profile"),
     ]
+    if method == "observed_data":
+        handles.append(Line2D([0], [0], color="#0f766e", linewidth=0.9, label="accepted observed excess profile"))
     if method in {"rayleigh_baseline", "observed_data"}:
         rayleigh_label = "Rayleigh radial PDF reference" if method == "observed_data" else "Rayleigh radial PDF"
         handles.append(Line2D([0], [0], color="#c9501a", linewidth=0.9, label=rayleigh_label))
@@ -946,7 +1015,7 @@ def plot_fit_shaded_psf_profile_grid(method: str, payload: Dict[str, object], pa
         "rayleigh_baseline": "MC profile, Rayleigh radial PDF, method r_opt",
         "two_1d_gaussian": "MC profile, two-1D induced radial PDF, method r_opt",
         "mc_quantile_715": "MC profile and empirical-quantile method r_opt",
-        "observed_data": "observed/fallback profile, Rayleigh radial PDF reference, method r_opt",
+        "observed_data": "common MC profile, observed profile, Rayleigh reference, method r_opt",
         "double_rayleigh_mixture": "MC profile, fitted double-Rayleigh mixture PDF, method r_opt",
     }[method]
     fig.suptitle(
@@ -1894,8 +1963,14 @@ def main() -> None:
     plot_observed_data_radius_comparison(runs, ASSET_DIR / "v5_psf_observed_data_radius_comparison.png")
     plot_shape_scatter(runs, ASSET_DIR / "v5_psf_radius_shape_scatter.png")
     plot_weighted_psf_profile_overlay(runs, ASSET_DIR / "v5_psf_weighted_profile_overlay.png")
+    rayleigh_reference = runs.get("rayleigh_baseline", {}).get("psf_npz")
     for method, payload in runs.items():
-        plot_fit_shaded_psf_profile_grid(method, payload, ASSET_DIR / f"v5_psf_{method}_weighted_profiles_fit_shaded.png")
+        plot_fit_shaded_psf_profile_grid(
+            method,
+            payload,
+            ASSET_DIR / f"v5_psf_{method}_weighted_profiles_fit_shaded.png",
+            rayleigh_reference=rayleigh_reference if isinstance(rayleigh_reference, dict) else None,
+        )
     plot_pull_grid(runs, ASSET_DIR / "v5_psf_cell_pull_grid.png")
     plot_sed_overlay(runs, ASSET_DIR / "v5_psf_sed_overlay.png")
     plot_sed_flux_ratio_to_v4(runs, ASSET_DIR / "v5_psf_sed_flux_ratio_to_v4.png")
@@ -1932,9 +2007,10 @@ def main() -> None:
             "weighted_psf_profiles": {
                 "overlay_figure": str(ASSET_DIR / "v5_psf_weighted_profile_overlay.png"),
                 "profile_source": (
-                    "Stage B profile_density arrays, normalized by per-cell peak for display; "
-                    "observed_data uses pedestal-subtracted observed excess profiles for accepted data-PSF cells "
-                    "and fallback/borrowed profiles for fallback cells; double_rayleigh_mixture overlays the fitted mixture PDF in its fit-shaded grid."
+                    "All five fit-shaded grids use the exact Rayleigh-baseline Stage B profile_density as the common blue MC reference, "
+                    "with identical 0-5 deg x limits and per-cell Rayleigh-reference y limits. "
+                    "The observed_data grid overlays accepted pedestal-subtracted observed excess profiles in teal, "
+                    "and double_rayleigh_mixture overlays the fitted mixture PDF."
                 ),
                 "fit_shaded_grids": {
                     method: str(ASSET_DIR / f"v5_psf_{method}_weighted_profiles_fit_shaded.png")
@@ -2030,7 +2106,7 @@ def main() -> None:
   {figure(ASSET_DIR / "v5_psf_radius_shape_scatter.png", "PSF radius versus shape scale", "The two-1D branch uses sigma_eff = sqrt((sigma_x^2 + sigma_y^2)/2).")}
 
   <h2>Weighted PSF Profiles</h2>
-  <p>The overlay below uses the Stage B <code>profile_density</code> arrays for the drop4 fit cells. Rayleigh, two-1D Gaussian, MC-quantile, and double-Rayleigh profiles are Crab-theta-weighted MC profiles; observed_data is the pedestal-subtracted observed excess profile for accepted data-PSF cells and the documented fallback profile otherwise. Each overlay profile is normalized by its own peak for shape comparison; dashed vertical lines mark each branch's <code>r_opt</code>. The double-Rayleigh per-method grid also draws the fitted mixture curve.</p>
+  <p>The overlay below uses the Stage B <code>profile_density</code> arrays for the drop4 fit cells. In the five per-method grids, the blue steps are always the exact Rayleigh-baseline Crab-theta-weighted MC profile. Every matching cell uses the same 0-5 deg x range and the same Rayleigh-reference y scale, and the blue steps are drawn above the model curves so they remain visually identical. The observed_data grid adds accepted pedestal-subtracted observed excess profiles in teal; dashed vertical lines mark each branch's <code>r_opt</code>, with out-of-range radii annotated instead of expanding the axes.</p>
   {figure(ASSET_DIR / "v5_psf_weighted_profile_overlay.png", "Weighted PSF profile overlay", f"Each small panel is one drop4 fit cell, with {len(METHODS)} PSF aperture branches overlaid.")}
   {psf_profile_grid_figures(runs)}
 

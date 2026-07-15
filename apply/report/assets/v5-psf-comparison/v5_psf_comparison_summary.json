@@ -716,7 +716,7 @@
   },
   "weighted_psf_profiles": {
     "overlay_figure": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_psf_weighted_profile_overlay.png",
-    "profile_source": "Stage B profile_density arrays, normalized by per-cell peak for display; observed_data uses pedestal-subtracted observed excess profiles for accepted data-PSF cells and fallback/borrowed profiles for fallback cells; double_rayleigh_mixture overlays the fitted mixture PDF in its fit-shaded grid.",
+    "profile_source": "All five fit-shaded grids use the exact Rayleigh-baseline Stage B profile_density as the common blue MC reference, with identical 0-5 deg x limits and per-cell Rayleigh-reference y limits. The observed_data grid overlays accepted pedestal-subtracted observed excess profiles in teal, and double_rayleigh_mixture overlays the fitted mixture PDF.",
     "fit_shaded_grids": {
       "rayleigh_baseline": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_psf_rayleigh_baseline_weighted_profiles_fit_shaded.png",
       "two_1d_gaussian": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v5-psf-comparison/v5_psf_two_1d_gaussian_weighted_profiles_fit_shaded.png",

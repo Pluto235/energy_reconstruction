@@ -60,6 +60,7 @@ class FitResult:
     model_counts: np.ndarray
     residual: np.ndarray
     pull: np.ndarray
+    whitened_residual: np.ndarray
     minuit_status: Dict[str, object]
 
 
@@ -69,6 +70,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--response-metadata", type=str, default=DEFAULT_RESPONSE_METADATA)
     parser.add_argument("--signal-npz", type=str, default=DEFAULT_SIGNAL_NPZ)
     parser.add_argument("--signal-metadata", type=str, default=DEFAULT_SIGNAL_METADATA)
+    parser.add_argument(
+        "--excess-covariance-npz",
+        type=str,
+        default=None,
+        help=(
+            "Optional bootstrap covariance artifact. Its cell_id must exactly match the selected "
+            "Stage E cells and excess_covariance must be symmetric positive definite."
+        ),
+    )
     parser.add_argument("--stage-c-dir", type=str, default=DEFAULT_STAGE_C_DIR)
     parser.add_argument("--source-files-csv", type=str, default=None)
     parser.add_argument(
@@ -468,6 +478,80 @@ def covariance_to_list(minuit: Minuit, names: Sequence[str]) -> Optional[List[Li
     return rows
 
 
+def covariance_cholesky(covariance: np.ndarray, *, name: str = "covariance") -> np.ndarray:
+    matrix = np.asarray(covariance, dtype=np.float64)
+    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
+        raise ValueError(f"{name} must be a square matrix, got shape {matrix.shape}")
+    if matrix.shape[0] == 0:
+        raise ValueError(f"{name} must not be empty")
+    if not np.all(np.isfinite(matrix)):
+        raise ValueError(f"{name} contains non-finite values")
+    if not np.allclose(matrix, matrix.T, rtol=1.0e-12, atol=1.0e-12):
+        asymmetry = float(np.max(np.abs(matrix - matrix.T)))
+        raise ValueError(f"{name} must be symmetric; maximum asymmetry is {asymmetry:.6g}")
+    try:
+        return np.linalg.cholesky(matrix)
+    except np.linalg.LinAlgError as exc:
+        minimum_eigenvalue = float(np.linalg.eigvalsh(matrix)[0])
+        raise ValueError(
+            f"{name} must be positive definite; minimum eigenvalue is {minimum_eigenvalue:.6g}"
+        ) from exc
+
+
+def generalized_chi2(residual: np.ndarray, covariance: np.ndarray) -> float:
+    vector = np.asarray(residual, dtype=np.float64)
+    if vector.ndim != 1:
+        raise ValueError(f"residual must be one-dimensional, got shape {vector.shape}")
+    if not np.all(np.isfinite(vector)):
+        raise ValueError("residual contains non-finite values")
+    cholesky = covariance_cholesky(covariance)
+    if cholesky.shape[0] != vector.size:
+        raise ValueError(
+            f"covariance dimension {cholesky.shape[0]} does not match residual length {vector.size}"
+        )
+    whitened = np.linalg.solve(cholesky, vector)
+    return float(whitened @ whitened)
+
+
+def load_excess_covariance(path: Path, expected_cell_ids: np.ndarray) -> Tuple[np.ndarray, Dict[str, object]]:
+    expected = np.asarray(expected_cell_ids, dtype=np.int64)
+    if expected.ndim != 1:
+        raise ValueError(f"Expected cell ids must be one-dimensional, got shape {expected.shape}")
+    if expected.size != 44:
+        raise ValueError(
+            f"Background covariance diagnostic requires exactly 44 selected cells, got {expected.size}"
+        )
+    if not path.exists():
+        raise FileNotFoundError(f"Excess covariance NPZ does not exist: {path}")
+    with np.load(path, allow_pickle=False) as data:
+        required = {"cell_id", "excess_covariance"}
+        missing = sorted(required - set(data.files))
+        if missing:
+            raise ValueError(f"{path} is missing required arrays: {missing}")
+        actual = np.asarray(data["cell_id"], dtype=np.int64)
+        covariance = np.asarray(data["excess_covariance"], dtype=np.float64)
+    if actual.ndim != 1 or actual.size != 44:
+        raise ValueError(f"Covariance artifact cell_id must contain exactly 44 entries, got shape {actual.shape}")
+    if not np.array_equal(actual, expected):
+        raise ValueError(
+            "Covariance artifact cell_id order does not exactly match selected Stage E cells: "
+            f"artifact={actual.tolist()} selected={expected.tolist()}"
+        )
+    if covariance.shape != (44, 44):
+        raise ValueError(f"excess_covariance must have shape (44, 44), got {covariance.shape}")
+    cholesky = covariance_cholesky(covariance, name="excess_covariance")
+    eigenvalues = np.linalg.eigvalsh(covariance)
+    return covariance, {
+        "path": str(path),
+        "n_cells": 44,
+        "cell_id": actual.tolist(),
+        "minimum_eigenvalue": float(eigenvalues[0]),
+        "maximum_eigenvalue": float(eigenvalues[-1]),
+        "condition_number": float(np.linalg.cond(covariance)),
+        "cholesky_diagonal_minimum": float(np.min(np.diag(cholesky))),
+    }
+
+
 def fit_model(
     *,
     model_name: str,
@@ -482,8 +566,23 @@ def fit_model(
     quadrature_points: int,
     start_gamma: float,
     start_phi0: float,
+    full_covariance: Optional[np.ndarray] = None,
 ) -> FitResult:
+    observed = np.asarray(observed, dtype=np.float64)
+    errors = np.asarray(errors, dtype=np.float64)
     valid_mask = np.isfinite(observed) & np.isfinite(errors) & (errors > 0.0)
+    fit_cholesky: Optional[np.ndarray] = None
+    if full_covariance is not None:
+        if not np.all(valid_mask):
+            raise ValueError(
+                f"Full covariance fit {model_name}/{error_mode} requires every selected cell to have finite positive errors"
+            )
+        matrix = np.asarray(full_covariance, dtype=np.float64)
+        if matrix.shape != (observed.size, observed.size):
+            raise ValueError(
+                f"Full covariance shape {matrix.shape} does not match {observed.size} observed cells"
+            )
+        fit_cholesky = covariance_cholesky(matrix, name="full excess covariance")
     if not np.any(valid_mask):
         raise ValueError(f"No valid cells for {model_name}/{error_mode} fit")
 
@@ -514,8 +613,12 @@ def fit_model(
         def objective(log10_phi0: float, gamma: float) -> float:
             phi0 = math.pow(10.0, float(log10_phi0))
             model = counts_for_params({"phi0": phi0, "gamma": float(gamma)})
-            residual = (observed_fit - model[valid_mask]) / errors_fit
-            return float(np.sum(residual * residual))
+            residual = observed_fit - model[valid_mask]
+            if fit_cholesky is not None:
+                whitened = np.linalg.solve(fit_cholesky, residual)
+                return float(whitened @ whitened)
+            scaled = residual / errors_fit
+            return float(scaled @ scaled)
 
         minuit = Minuit(objective, log10_phi0=log10_phi0_start, gamma=float(start_gamma))
         minuit.limits["log10_phi0"] = (-30.0, 0.0)
@@ -535,8 +638,12 @@ def fit_model(
         def objective(log10_phi0: float, alpha: float, beta: float) -> float:
             phi0 = math.pow(10.0, float(log10_phi0))
             model = counts_for_params({"phi0": phi0, "alpha": float(alpha), "beta": float(beta)})
-            residual = (observed_fit - model[valid_mask]) / errors_fit
-            return float(np.sum(residual * residual))
+            residual = observed_fit - model[valid_mask]
+            if fit_cholesky is not None:
+                whitened = np.linalg.solve(fit_cholesky, residual)
+                return float(whitened @ whitened)
+            scaled = residual / errors_fit
+            return float(scaled @ scaled)
 
         minuit = Minuit(objective, log10_phi0=log10_phi0_start, alpha=float(start_gamma), beta=0.0)
         minuit.limits["log10_phi0"] = (-30.0, 0.0)
@@ -579,7 +686,13 @@ def fit_model(
         }
     model = counts_for_params(physical_params)
     residual = observed - model
-    pull = np.divide(residual, errors, out=np.full_like(residual, np.nan, dtype=np.float64), where=errors > 0.0)
+    if full_covariance is not None:
+        marginal_errors = np.sqrt(np.diag(np.asarray(full_covariance, dtype=np.float64)))
+        pull = residual / marginal_errors
+        whitened_residual = np.linalg.solve(fit_cholesky, residual)
+    else:
+        pull = np.divide(residual, errors, out=np.full_like(residual, np.nan, dtype=np.float64), where=errors > 0.0)
+        whitened_residual = pull.copy()
     chi2_value = float(minuit.fval) if minuit.fval is not None else float("nan")
     ndof = int(np.count_nonzero(valid_mask) - len(param_names))
     minuit_status = {
@@ -607,6 +720,7 @@ def fit_model(
         model_counts=model,
         residual=residual,
         pull=pull,
+        whitened_residual=whitened_residual,
         minuit_status=minuit_status,
     )
 
@@ -1303,6 +1417,7 @@ def write_npz(path: Path, signal: Dict[str, np.ndarray], fits: Dict[str, FitResu
         payload[f"{key}_model_counts"] = result.model_counts.astype(np.float64)
         payload[f"{key}_residual"] = result.residual.astype(np.float64)
         payload[f"{key}_pull"] = result.pull.astype(np.float64)
+        payload[f"{key}_whitened_residual"] = result.whitened_residual.astype(np.float64)
     np.savez_compressed(path, **payload)
 
 
@@ -1328,6 +1443,7 @@ def make_metadata(
     rows: Sequence[Dict[str, object]],
     outputs: Dict[str, object],
     elapsed_seconds: float,
+    excess_covariance_info: Optional[Dict[str, object]] = None,
 ) -> Dict[str, object]:
     return {
         "description": "Stage F forward-folding chi2 fit for Crab SED cells.",
@@ -1340,6 +1456,9 @@ def make_metadata(
             "signal_metadata_json": str(signal_metadata_path),
             "source_files_csv": str(source_files_csv),
             "cell_subset_csv": str(Path(args.cell_subset_csv).resolve()) if str(args.cell_subset_csv or "").strip() else None,
+            "excess_covariance_npz": (
+                str(Path(args.excess_covariance_npz).resolve()) if args.excess_covariance_npz else None
+            ),
             "stage_a_run_dir": response_metadata.get("run_dir") if isinstance(response_metadata, dict) else None,
             "stage_e_run_id": signal_metadata.get("run_id") if isinstance(signal_metadata, dict) else None,
         },
@@ -1374,6 +1493,17 @@ def make_metadata(
             "main_error_mode": "conservative sqrt(N_on + B_on)",
             "comparison_error_mode": "sqrt(N_on)",
             "li_ma_status": "not_applicable_for_direct_expectation_background",
+            "background_covariance_diagnostic": excess_covariance_info,
+            "background_covariance_objective": (
+                "r.T @ C^-1 @ r evaluated by Cholesky solve; no explicit inverse"
+                if excess_covariance_info is not None
+                else None
+            ),
+            "background_covariance_pull": (
+                "marginal residual / sqrt(diag(C)); whitened residual stored separately"
+                if excess_covariance_info is not None
+                else None
+            ),
         },
         "reference_count_preflight": reference,
         "fits": {key: result_to_metadata(result) for key, result in fits.items()},
@@ -1417,6 +1547,15 @@ def main() -> None:
     response, signal, cell_subset = apply_cell_subset(response, signal, cell_subset)
     validation = validate_inputs(response, signal, response_metadata, signal_metadata)
     validation["cell_subset"] = {key: value for key, value in cell_subset.items() if key != "mask"}
+
+    excess_covariance: Optional[np.ndarray] = None
+    excess_covariance_info: Optional[Dict[str, object]] = None
+    if args.excess_covariance_npz:
+        excess_covariance_path = Path(args.excess_covariance_npz).resolve()
+        excess_covariance, excess_covariance_info = load_excess_covariance(
+            excess_covariance_path,
+            np.asarray(signal["cell_id"], dtype=np.int64),
+        )
 
     a_eff = np.asarray(response["a_eff"], dtype=np.float64)
     loge_edges = np.asarray(response["logE_true_edges"], dtype=np.float64)
@@ -1520,6 +1659,42 @@ def main() -> None:
         start_gamma=float(fits["pl_sqrt_n"].parameters.get("gamma", args.reference_gamma)),
         start_phi0=float(fits["pl_sqrt_n"].parameters.get("phi0", args.reference_phi0)),
     )
+    if excess_covariance is not None:
+        covariance_errors = np.sqrt(np.diag(excess_covariance))
+        fits["pl_background_covariance"] = fit_model(
+            model_name="pl",
+            error_mode="background_covariance",
+            observed=observed,
+            errors=covariance_errors,
+            full_covariance=excess_covariance,
+            a_eff_m2=a_eff,
+            containment=containment,
+            theta_exposure_sec=theta_exposure,
+            loge_edges=loge_edges,
+            pivot_tev=float(args.pivot_tev),
+            quadrature_points=int(args.energy_quadrature_points),
+            start_gamma=float(fits["pl_conservative"].parameters.get("gamma", args.reference_gamma)),
+            start_phi0=float(fits["pl_conservative"].parameters.get("phi0", args.reference_phi0)),
+        )
+        fits["logpar_background_covariance"] = fit_model(
+            model_name="logpar",
+            error_mode="background_covariance",
+            observed=observed,
+            errors=covariance_errors,
+            full_covariance=excess_covariance,
+            a_eff_m2=a_eff,
+            containment=containment,
+            theta_exposure_sec=theta_exposure,
+            loge_edges=loge_edges,
+            pivot_tev=float(args.pivot_tev),
+            quadrature_points=int(args.energy_quadrature_points),
+            start_gamma=float(
+                fits["pl_background_covariance"].parameters.get("gamma", args.reference_gamma)
+            ),
+            start_phi0=float(
+                fits["pl_background_covariance"].parameters.get("phi0", args.reference_phi0)
+            ),
+        )
     preferred = choose_preferred_fit(fits, error_mode="conservative")
     quality = fit_quality(fits, reference)
     rows = build_rows(signal, fits, preferred)
@@ -1582,6 +1757,7 @@ def main() -> None:
         rows=rows,
         outputs=outputs,
         elapsed_seconds=time.perf_counter() - start,
+        excess_covariance_info=excess_covariance_info,
     )
 
     write_npz(npz_path, signal, fits, theta_exposure)

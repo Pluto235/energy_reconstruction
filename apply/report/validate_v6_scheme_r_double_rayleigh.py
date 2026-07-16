@@ -487,6 +487,7 @@ def main() -> None:
             REPORT.exists()
             and "Scheme R Double-Rayleigh Contract" in report_text
             and "Three-Branch Controlled Comparison" in report_text
+            and "Global-fit conclusion" in report_text
             and "Large-Pull Migration" in report_text,
             str(REPORT),
         )

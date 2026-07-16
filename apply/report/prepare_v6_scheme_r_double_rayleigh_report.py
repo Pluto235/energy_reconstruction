@@ -90,6 +90,7 @@ def copy_reference_images() -> dict[str, str]:
 
 def build_insert(payload: dict[str, Any], images: dict[str, str]) -> str:
     records = payload["comparison"]
+    r1_record, b2_record, r2_record = records
     comparison_rows = [
         [
             esc(record["label"]),
@@ -123,6 +124,13 @@ def build_insert(payload: dict[str, Any], images: dict[str, str]) -> str:
             ]
         )
 
+    r2_large_pull_count = sum(
+        finite(row.get(ids[2])) is not None and abs(float(row[ids[2]])) >= float(payload["large_pull_threshold"])
+        for row in payload["cell_pulls"]
+    )
+    best_reference_chi2 = min(float(r1_record["chi2"]), float(b2_record["chi2"]))
+    global_fit_result = "does not improve" if float(r2_record["chi2"]) >= best_reference_chi2 else "improves"
+
     shared = payload["shared_artifacts"]
     provenance_rows = [
         [esc(name), f"<code>{esc(item['path'])}</code>", f"<code>{esc(item['sha256'])}</code>"]
@@ -151,6 +159,13 @@ def build_insert(payload: dict[str, Any], images: dict[str, str]) -> str:
       response contract under the same double-Rayleigh aperture and the same Stage D/E arrays. The reported
       <code>total obs/pass5</code> forward-folds the official Pass5 spectrum through each branch response and its unchanged exposure.</p>
     {html_table(["Branch", "Response contract", "phi0", "alpha", "beta", "chi2/ndof", "chi2/ndof value", "max |pull|", "total obs/pass5"], comparison_rows)}
+    <div class="callout"><strong>Global-fit conclusion:</strong> Scheme R double-Rayleigh {global_fit_result} the global fit:
+      <code>chi2/ndof={fmt(r2_record['chi2'], 5)}/{esc(r2_record['ndof'])}</code>, compared with
+      <code>{fmt(r1_record['chi2'], 5)}/{esc(r1_record['ndof'])}</code> for R-1R and
+      <code>{fmt(b2_record['chi2'], 5)}/{esc(b2_record['ndof'])}</code> for B-2R. Its maximum absolute pull is
+      <code>{fmt(r2_record['max_abs_pull'], 5)}</code>, with {r2_large_pull_count} selected cells at
+      <code>|pull| &gt;= {fmt(payload['large_pull_threshold'], 1)}</code>; <code>total obs/pass5</code> rises to
+      <code>{fmt(r2_record['total_obs_over_pass5'], 5)}</code>.</div>
     <h3>Large-Pull Migration</h3>
     <p>The table includes the union of selected cells with <code>|pull| &gt;= 5</code> in any of the three branches.</p>
     {html_table(["Cell", "Nhit", "predE", "R-1R pull", "B-2R pull", "R-2R pull", "max |pull|"], pull_rows)}

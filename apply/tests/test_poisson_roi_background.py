@@ -156,7 +156,7 @@ class ProfiledPoissonSurfaceTests(unittest.TestCase):
 
 
 class StageDPoissonIntegrationTests(unittest.TestCase):
-    def _run_constant(self, step: float) -> float:
+    def _run_constant(self, step: float, *, continuous_count: int = 20_000) -> tuple[float, np.ndarray, dict[str, np.ndarray]]:
         edges = stage04.make_offset_roi_edges(2.0, step, 0.0)
         centers = 0.5 * (edges[:-1] + edges[1:])
         xx, yy = np.meshgrid(centers, centers)
@@ -164,7 +164,6 @@ class StageDPoissonIntegrationTests(unittest.TestCase):
         annulus = (rho >= 0.5) & (rho < 1.5) & (rho < 2.0)
         counts = np.zeros((1, centers.size, centers.size), dtype=np.int64)
         counts[0, annulus] = int(round(1000.0 * step * step))
-        continuous_count = 20_000
         cell = stage04.CellSpec(0, 1, "[100,200)", "[2,2.5)", 0, "test", "test")
         manifest = {
             "continuous_annulus_counts": {"1": continuous_count},
@@ -190,14 +189,22 @@ class StageDPoissonIntegrationTests(unittest.TestCase):
             annulus_max_inner_deg=0.5,
         )
         b_on, background, _, _, _, diagnostics = result
-        self.assertTrue(np.all(background[0][rho < 2.0] > 0.0))
+        if continuous_count > 0:
+            self.assertTrue(np.all(background[0][rho < 2.0] > 0.0))
         self.assertGreater(float(diagnostics["positive_minimum"][0]), 0.0)
-        return float(b_on[0])
+        return float(b_on[0]), background, diagnostics
 
     def test_constant_poisson_b_on_is_exactly_rebin_invariant(self) -> None:
-        fine = self._run_constant(0.1)
-        coarse = self._run_constant(0.2)
+        fine, _, _ = self._run_constant(0.1)
+        coarse, _, _ = self._run_constant(0.2)
         self.assertAlmostEqual(fine, coarse, places=10)
+
+    def test_zero_count_non_target_keeps_positive_shape_and_zero_density(self) -> None:
+        b_on, background, diagnostics = self._run_constant(0.1, continuous_count=0)
+        self.assertEqual(b_on, 0.0)
+        self.assertTrue(np.all(background[np.isfinite(background)] == 0.0))
+        self.assertGreater(float(diagnostics["positive_minimum"][0]), 0.0)
+        self.assertEqual(float(diagnostics["density_positive_minimum"][0]), 0.0)
 
 
 if __name__ == "__main__":

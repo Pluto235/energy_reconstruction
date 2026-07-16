@@ -1636,6 +1636,7 @@ def estimate_roi_poisson_pooled_background(
     optimizer_status_json = np.empty(n_cells, dtype="U2048")
     cv_scores_json = np.empty(n_cells, dtype="U16384")
     target_cells = manifest.get("cells", {})
+    target_cell_ids = {int(value) for value in manifest.get("target_cell_ids", [])}
     grid_step = float(np.asarray(x_edges)[1] - np.asarray(x_edges)[0])
     for index, cell_id_raw in enumerate(cell_ids):
         cell_id = int(cell_id_raw)
@@ -1651,7 +1652,7 @@ def estimate_roi_poisson_pooled_background(
         density = normalization * shape
         prediction = (basis_flat @ density).reshape(n_y, n_x)
         prediction[~fiducial_mask] = np.nan
-        if np.any(prediction[fiducial_mask] <= 0.0):
+        if np.any(prediction[fiducial_mask] < 0.0):
             valid_values = prediction[fiducial_mask]
             worst_flat = int(np.nanargmin(valid_values))
             y_index, x_index = np.argwhere(fiducial_mask)[worst_flat]
@@ -1672,8 +1673,10 @@ def estimate_roi_poisson_pooled_background(
         analytic_b_on = integrate_density_disk_via_analytic_baseline(
             density, float(r_opt_deg[index]), grid_step
         )
-        if not np.isfinite(analytic_b_on) or analytic_b_on <= 0.0:
+        if not np.isfinite(analytic_b_on) or analytic_b_on < 0.0:
             raise PoissonSurfaceFitError(f"Cell {cell_id} has non-positive analytic B_on")
+        if cell_id in target_cell_ids and analytic_b_on <= 0.0:
+            raise PoissonSurfaceFitError(f"Target cell {cell_id} has non-positive analytic B_on")
         b_on[index] = analytic_b_on
         b_on_pixel[index] = float(np.nansum(prediction[on_masks[index]]))
         density_coefficients[index] = density
@@ -1681,7 +1684,7 @@ def estimate_roi_poisson_pooled_background(
         surface_order[index] = int(fit.order)
         poisson_deviance[index] = float(fit.poisson_deviance)
         fit_ndof[index] = int(fit.ndof)
-        positive_minimum[index] = normalization * float(fit.positive_minimum)
+        positive_minimum[index] = float(fit.positive_minimum)
         positive_minimum_xy[index] = np.asarray(fit.positive_minimum_xy)
         pool_target_cell_id[index] = int(assignment["pool_target_cell_id"])
         donor_ids_json[index] = json.dumps(list(fit.donor_cell_ids), separators=(",", ":"))
@@ -1732,6 +1735,17 @@ def estimate_roi_poisson_pooled_background(
         "on_effective_pixels": math.pi * np.asarray(r_opt_deg, dtype=np.float64) ** 2 / (grid_step * grid_step),
         "on_aperture_surface_min": positive_minimum,
         "positive_minimum": positive_minimum,
+        "density_positive_minimum": np.asarray(
+            [
+                (float(actual_counts[index]) / integrate_centered_annulus_density(
+                    shape_coefficients[index],
+                    float(annulus_inner[index]),
+                    min(float(annulus_outer[index]), float(roi_fiducial_deg)),
+                )) * positive_minimum[index]
+                for index in range(n_cells)
+            ],
+            dtype=np.float64,
+        ),
         "positive_minimum_xy": positive_minimum_xy,
         "on_aperture_grid_step_deg": np.asarray([grid_step]),
         "analytic_required_mask": np.ones(n_cells, dtype=bool),
@@ -2773,6 +2787,11 @@ def run_crab_roi_local_background(
     total_live_time_days = total_live_time_sec / 86400.0 if total_live_time_sec > 0 else 0.0
 
     rows: List[Dict[str, object]] = []
+    poisson_target_ids = (
+        {int(value) for value in poisson_manifest.get("target_cell_ids", [])}
+        if poisson_manifest is not None
+        else set()
+    )
     for cell in cells:
         idx = cell.index
         selected_events = int(scan.cell_total_events[idx])
@@ -2784,7 +2803,9 @@ def run_crab_roi_local_background(
             warnings.append("no_training_pixels")
         if on_pixels[idx] <= 0:
             warnings.append("no_on_pixels")
-        if b_on[idx] <= 0.0:
+        if b_on[idx] <= 0.0 and (
+            str(args.roi_fit_statistic) != "poisson" or int(cell.cell_id) in poisson_target_ids
+        ):
             warnings.append("non_positive_B_on")
         if scan.cell_fiducial_events[idx] <= 0:
             warnings.append("no_fiducial_events")

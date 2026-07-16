@@ -339,6 +339,12 @@ def fit_profiled_poisson_surface(
         observed_categories += int(counts[cell_id].size)
     ndof = max(0, observed_categories - len(contributors) - int(active.size))
     final_nll, _ = objective_and_gradient(parameters)
+    final_linear_constraint = linear_constraint(extra_points)
+    constrained_values = np.asarray(final_linear_constraint.A @ parameters, dtype=np.float64)
+    constraint_violation = np.maximum(
+        np.asarray(final_linear_constraint.lb, dtype=np.float64) - constrained_values,
+        0.0,
+    )
     status: dict[str, object] = {
         "success": True,
         "method": "SLSQP",
@@ -351,6 +357,8 @@ def fit_profiled_poisson_surface(
         "constraint_count": int(
             point_basis.shape[0] + constraint_pixel_basis.shape[0] + len(extra_points)
         ),
+        "boundary_pixel_integral_constraint_count": int(boundary_pixel_basis.shape[0]),
+        "max_linear_constraint_violation": float(np.max(constraint_violation, initial=0.0)),
         "profiled_nll": float(final_nll * likelihood_scale),
     }
     return SurfaceFit(

@@ -1652,7 +1652,17 @@ def estimate_roi_poisson_pooled_background(
         prediction = (basis_flat @ density).reshape(n_y, n_x)
         prediction[~fiducial_mask] = np.nan
         if np.any(prediction[fiducial_mask] <= 0.0):
-            raise PoissonSurfaceFitError(f"Cell {cell_id} has non-positive fitted pixel expectation")
+            valid_values = prediction[fiducial_mask]
+            worst_flat = int(np.nanargmin(valid_values))
+            y_index, x_index = np.argwhere(fiducial_mask)[worst_flat]
+            raise PoissonSurfaceFitError(
+                f"Cell {cell_id} has non-positive fitted pixel expectation: "
+                f"value={prediction[y_index, x_index]:.17g}, "
+                f"center=({x_centers[x_index]:.17g},{y_centers[y_index]:.17g}), "
+                f"rho={rho_grid[y_index, x_index]:.17g}, "
+                f"shape_integral={float(basis_grid[y_index, x_index] @ shape):.17g}, "
+                f"shape_coefficients={shape.tolist()}, optimizer_status={fit.optimizer_status}"
+            )
         background_map[index] = prediction
         valid = training_mask[index]
         residual_map[index, valid] = (

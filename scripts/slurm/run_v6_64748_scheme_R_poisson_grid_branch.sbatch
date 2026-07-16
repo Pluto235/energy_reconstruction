@@ -8,7 +8,7 @@
 #SBATCH -o /home/server/projects/energy_reconstruction/logs/slurm/%x_%A_%a.out
 #SBATCH -e /home/server/projects/energy_reconstruction/logs/slurm/%x_%A_%a.err
 
-set -euo pipefail
+set -eo pipefail
 source /home/server/anaconda3/etc/profile.d/conda.sh
 conda activate py310
 cd /home/server/projects/energy_reconstruction

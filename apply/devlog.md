@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-16 17:06 · [uncommitted] Add analytic quadratic on-aperture background integration and the isolated Scheme R 1R/2R validation report.
+
 - **energy_reconstruction** · 2026-07-16 16:48 · [uncommitted] Add the implementation plan for positive pooled-Poisson background fitting and 12-branch grid convergence.
 
 - **energy_reconstruction** · 2026-07-16 14:01 · [uncommitted] Add an isolated Scheme R double-Rayleigh fixed-1.58-sigma experiment, validation, and three-branch report.

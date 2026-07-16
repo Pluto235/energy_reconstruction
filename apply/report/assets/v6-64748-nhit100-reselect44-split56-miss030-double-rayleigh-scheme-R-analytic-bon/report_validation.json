@@ -1,0 +1,245 @@
+{
+  "experiment_id": "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979_analytic_bon",
+  "report_path": "apply/report/crab_sed_v6_64748_nhit100_reselect44_scheme_R_double_rayleigh_analytic_bon_report.html",
+  "html_image_validation": {
+    "image_refs": [
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/psf_r_opt_deg_grid.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/psf_effective_events_grid.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_stage_b_raw_theta_profiles.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_stage_b_radial_psf_profiles_fit_shaded.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/v6_64748_reselect44_true_energy_cell_grid.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/roi_counts_grid.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/roi_excess_grid.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/normalized_ra_offset_counts_profiles.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/normalized_ra_offset_excess_profiles.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/normalized_dec_offset_counts_profiles.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/normalized_dec_offset_excess_profiles.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/annulus_residual_grid.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_stage_d_dec_profile_before_after.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/formal_sigma_grid.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/on_background_grid.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/model_counts_vs_excess.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/pull_grid_logpar.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_stage_g_external_overlay.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_stage_g_external_overlay_with_predE.png",
+      "assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-analytic-bon/sed_points_ratio.png"
+    ],
+    "missing_image_refs": [],
+    "image_ref_count": 20
+  },
+  "metadata_contamination": {
+    "status": "passed",
+    "metadata_files": [
+      "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v6_64748_nhit100_highEplus1_split56/response_2d_v6_64748_nhit100_highEplus1_split56_metadata.json",
+      "apply/output/stage_e_v6_64748_nhit100_reselect44_split56_miss030_fixed712979_rayleigh_annnorm/response_v6_64748_nhit100_reselect44_split56_miss030_fixed712979_rayleigh_metadata.json",
+      "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh/runs/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_stage_b_psf/psf_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_metadata.json",
+      "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_c_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_c_halfyear/obs_events_metadata.json",
+      "apply/output/stage_d_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_analytic_bon_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_analytic_bon_stage_d_annnorm/background_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_analytic_bon_annnorm_metadata.json",
+      "apply/output/stage_e_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_analytic_bon_containment1_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_analytic_bon_stage_e_containment1_annnorm/signal_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_analytic_bon_containment1_annnorm_metadata.json",
+      "apply/output/stage_f_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979_analytic_bon/runs/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979_analytic_bon_stage_f/fit_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979_analytic_bon_metadata.json",
+      "apply/output/stage_g_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979_analytic_bon/runs/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979_analytic_bon_stage_g/sed_points_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979_analytic_bon_metadata.json",
+      "apply/config/cell_selector_v6_64748_nhit100_reselect44_split56_miss030_fit_metadata.json"
+    ],
+    "offenders": []
+  },
+  "fixed_containment_contract": {
+    "status": "passed",
+    "expected": 0.7129790300890827,
+    "derived": 0.7129790300890827,
+    "single_application_contract": {
+      "formula": "Aeff_R = 0.7129790300890827 * Aeff_nominal",
+      "application_count": 1,
+      "application_location": "derived fixed712979 response preparation",
+      "downstream_containment": 1.0,
+      "aperture_conditioned_response_used": false
+    }
+  },
+  "selector_summary": {
+    "selector": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v6_64748_nhit100_reselect44_split56_miss030_fit.csv",
+    "prefit_selector_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v6_64748_nhit100_highEplus1_split56_prefit.csv",
+    "candidate_ledger_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_ledger_v6_64748_nhit100_highEplus1_split56_candidate.csv",
+    "stage_b_summary_csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v6_64748_nhit100_reselect44_split56_miss030/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_b_psf/psf_v6_64748_nhit100_reselect44_split56_miss030_summary.csv",
+    "subset_version": "v6_64748_nhit100_reselect44_split56_miss030_fit",
+    "rule": "preserve original MC-ridge fit cells; add at most one adjacent higher predE bin per Nhit; apply explicit include/exclude overrides; never include >=6 tail cells in Stage F/G",
+    "thresholds": {
+      "min_mc_count": 1000,
+      "min_psf_effective_events": 200.0,
+      "min_core_fit_effective_events": 200.0,
+      "max_theta_missing_mass": 0.3,
+      "allow_containment_warning": false,
+      "allow_angle_warning": false
+    },
+    "candidate_cells": 91,
+    "included_cells": 44,
+    "original_ridge_fit_cells": 37,
+    "highEplus1_included_cells": 2,
+    "highEplus1_rejected_cells": 3,
+    "diagnostic_tail_cells": 7,
+    "included_cell_ids": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      86,
+      87,
+      88,
+      89
+    ],
+    "selection_overrides": {
+      "force_include_cell_ids": [
+        5,
+        6,
+        20,
+        21,
+        34,
+        47,
+        48,
+        61,
+        62,
+        75
+      ],
+      "force_exclude_cell_ids": [
+        37,
+        50,
+        51,
+        63,
+        90
+      ],
+      "expected_fit_cells": 44
+    },
+    "highEplus1_included": [
+      {
+        "cell_id": 4,
+        "nhit_bin": "[100,200)",
+        "predE_bin": "[3.25,3.5)"
+      },
+      {
+        "cell_id": 19,
+        "nhit_bin": "[200,300)",
+        "predE_bin": "[3.75,4.0)"
+      }
+    ],
+    "highEplus1_rejected": [
+      {
+        "cell_id": 38,
+        "nhit_bin": "[300,500)",
+        "predE_bin": "[5.5,6)",
+        "reason": "containment_warning"
+      },
+      {
+        "cell_id": 64,
+        "nhit_bin": "[800,1100)",
+        "predE_bin": "[5.5,6)",
+        "reason": "containment_warning"
+      },
+      {
+        "cell_id": 75,
+        "nhit_bin": "[1100,2000)",
+        "predE_bin": "[4.75,5.0)",
+        "reason": ""
+      }
+    ],
+    "tail_policy": ">=6 diagnostic only; no Stage F/G include rows",
+    "decisions": [
+      {
+        "nhit_bin": "[100,200)",
+        "status": "included_highEplus1",
+        "candidate_cell_id": "4",
+        "candidate_predE_bin": "[3.25,3.5)",
+        "mc_count": 54366,
+        "psf_quality_flag": 1,
+        "psf_quality_reasons": "pass"
+      },
+      {
+        "nhit_bin": "[200,300)",
+        "status": "included_highEplus1",
+        "candidate_cell_id": "19",
+        "candidate_predE_bin": "[3.75,4.0)",
+        "mc_count": 17909,
+        "psf_quality_flag": 1,
+        "psf_quality_reasons": "pass"
+      },
+      {
+        "nhit_bin": "[300,500)",
+        "status": "rejected_highEplus1_probe",
+        "candidate_cell_id": "38",
+        "candidate_predE_bin": "[5.5,6)",
+        "mc_count": 13883,
+        "psf_quality_flag": 0,
+        "psf_quality_reasons": "containment_warning"
+      },
+      {
+        "nhit_bin": "[500,800)",
+        "status": "diagnostic_tail_only",
+        "candidate_cell_id": "52",
+        "candidate_predE_bin": ">=6",
+        "mc_count": "158",
+        "psf_quality_flag": 0,
+        "psf_quality_reasons": "tail_ge6_excluded_from_main_fit"
+      },
+      {
+        "nhit_bin": "[800,1100)",
+        "status": "rejected_highEplus1_probe",
+        "candidate_cell_id": "64",
+        "candidate_predE_bin": "[5.5,6)",
+        "mc_count": 3211,
+        "psf_quality_flag": 0,
+        "psf_quality_reasons": "containment_warning"
+      },
+      {
+        "nhit_bin": "[1100,2000)",
+        "status": "rejected_highEplus1_probe",
+        "candidate_cell_id": "75",
+        "candidate_predE_bin": "[4.75,5.0)",
+        "mc_count": 2279,
+        "psf_quality_flag": 0,
+        "psf_quality_reasons": "valid_events_le_0;effective_events_lt_200;core_fit_effective_events_lt_200;theta_missing_mass_gt_0.3;containment_warning;angle_check_warning"
+      },
+      {
+        "nhit_bin": "[2000,3000)",
+        "status": "diagnostic_tail_only",
+        "candidate_cell_id": "91",
+        "candidate_predE_bin": ">=6",
+        "mc_count": "0",
+        "psf_quality_flag": 0,
+        "psf_quality_reasons": "tail_ge6_excluded_from_main_fit"
+      }
+    ]
+  }
+}

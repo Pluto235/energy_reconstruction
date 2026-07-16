@@ -167,29 +167,30 @@ def check_branch(kind: str, selected: list[int], check: Any) -> None:
 
     new_d = load_npz(Path(analytic["d"]))
     old_d = load_npz(Path(legacy["d"]))
+    new_idx = subset_indices(new_d["cell_id"], selected)
     old_idx = subset_indices(old_d["cell_id"], selected)
     ids = np.asarray(new_d["cell_id"], dtype=np.int64).tolist()
-    check(f"{kind}_stage_d_44_cells", ids == selected, ids)
+    check(f"{kind}_stage_d_response_cell_contract", ids == np.asarray(old_d["cell_id"], dtype=np.int64).tolist(), {"cell_count": len(ids)})
     unchanged = [
         "r_opt_deg", "counts_map", "background_map", "surface_coefficients", "annulus_surface_scale",
         "annulus_inner_deg", "annulus_outer_deg", "annulus_counts", "annulus_pixels", "training_mask",
     ]
-    equality = {key: exact_array_equal(np.asarray(new_d[key]), np.asarray(old_d[key])[old_idx]) for key in unchanged}
+    equality = {key: exact_array_equal(np.asarray(new_d[key])[new_idx], np.asarray(old_d[key])[old_idx]) for key in unchanged}
     check(f"{kind}_stage_d_surface_reused", all(equality.values()), equality)
     check(
         f"{kind}_legacy_b_on_reproduced",
-        exact_array_equal(np.asarray(new_d["B_on_pixel_center"]), np.asarray(old_d["B_on"])[old_idx]),
+        exact_array_equal(np.asarray(new_d["B_on_pixel_center"])[new_idx], np.asarray(old_d["B_on"])[old_idx]),
         "B_on_pixel_center exactly equals legacy B_on",
     )
     step = float(np.asarray(new_d["on_aperture_grid_step_deg"], dtype=np.float64)[0])
-    coefficients = np.asarray(new_d["surface_coefficients"], dtype=np.float64)
-    radii = np.asarray(new_d["r_opt_deg"], dtype=np.float64)
-    scales = np.asarray(new_d["annulus_surface_scale"], dtype=np.float64)
+    coefficients = np.asarray(new_d["surface_coefficients"], dtype=np.float64)[new_idx]
+    radii = np.asarray(new_d["r_opt_deg"], dtype=np.float64)[new_idx]
+    scales = np.asarray(new_d["annulus_surface_scale"], dtype=np.float64)[new_idx]
     expected = scales / step**2 * (
         math.pi * radii**2 * coefficients[:, 0]
         + 0.25 * math.pi * radii**4 * (coefficients[:, 3] + coefficients[:, 5])
     )
-    active = np.asarray(new_d["B_on"], dtype=np.float64)
+    active = np.asarray(new_d["B_on"], dtype=np.float64)[new_idx]
     check(
         f"{kind}_analytic_formula",
         bool(np.allclose(active, expected, rtol=5.0e-12, atol=1.0e-8)),
@@ -204,33 +205,35 @@ def check_branch(kind: str, selected: list[int], check: Any) -> None:
         bool(np.allclose(active, quadrature, rtol=1.0e-10, atol=1.0e-8)),
         {"max_relative_diff": float(np.max(np.abs(active - quadrature) / active))},
     )
-    minima = np.asarray(new_d["on_aperture_surface_min"], dtype=np.float64)
+    minima = np.asarray(new_d["on_aperture_surface_min"], dtype=np.float64)[new_idx]
     check(f"{kind}_positive_on_aperture", bool(np.all(minima > 0.0)), {"minimum": float(np.min(minima))})
     d_meta = load_json(Path(analytic["d_meta"]))
     model = d_meta.get("background_model") or {}
     check(
         f"{kind}_analytic_metadata_contract",
         model.get("on_aperture_integration") == "analytic-quadratic"
-        and model.get("analytic_positive_surface_required") is True,
+        and model.get("analytic_positive_surface_required") is True
+        and model.get("analytic_required_cell_ids") == selected
+        and not (set(model.get("excluded_fallback_cell_ids") or []) & set(selected)),
         model,
     )
 
     new_e = load_npz(Path(analytic["e"]))
     old_e = load_npz(Path(legacy["e"]))
-    old_e_idx = subset_indices(old_e["cell_id"], selected)
     check(
         f"{kind}_stage_e_n_on_unchanged",
-        exact_array_equal(np.asarray(new_e["N_on"]), np.asarray(old_e["N_on"])[old_e_idx]),
+        exact_array_equal(np.asarray(new_e["N_on"]), np.asarray(old_e["N_on"])),
         "event-level N_on arrays exactly equal",
     )
+    new_e_idx = subset_indices(new_e["cell_id"], selected)
     check(
         f"{kind}_stage_e_active_b_on",
-        exact_array_equal(np.asarray(new_e["B_on"], dtype=np.float64), active),
+        exact_array_equal(np.asarray(new_e["B_on"], dtype=np.float64)[new_e_idx], active),
         "Stage E B_on exactly equals Stage D analytic B_on",
     )
     check(
         f"{kind}_stage_e_containment_one",
-        bool(np.array_equal(np.asarray(new_e["containment_r_opt"]), np.ones(len(selected), dtype=new_e["containment_r_opt"].dtype))),
+        bool(np.array_equal(np.asarray(new_e["containment_r_opt"]), np.ones(len(new_e["cell_id"]), dtype=new_e["containment_r_opt"].dtype))),
         "containment_r_opt is exactly one",
     )
 

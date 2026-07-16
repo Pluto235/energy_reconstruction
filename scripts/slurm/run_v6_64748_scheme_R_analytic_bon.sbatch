@@ -42,6 +42,8 @@ if [[ "${actual_selector_sha}" != "${EXPECTED_SELECTOR_SHA}" ]]; then
   echo "Selector changed: ${actual_selector_sha}" >&2
   exit 2
 fi
+included=$(python -c 'import csv,sys; print(",".join(r["cell_id"] for r in csv.DictReader(open(sys.argv[1])) if r["include"] == "1"))' "${SELECTOR}")
+excluded=$(python -c 'import csv,sys; print(",".join(r["cell_id"] for r in csv.DictReader(open(sys.argv[1])) if r["include"] != "1"))' "${SELECTOR}")
 
 PSF_DIR=apply/output/stage_b_${PSF_RUN_ID}/runs/${PSF_RUN_ID}_stage_b_psf
 PSF=${PSF_DIR}/psf_${PSF_RUN_ID}.npz
@@ -69,11 +71,12 @@ G_STEM=sed_points_${EXPERIMENT_ID}
 python apply/report/validate_v6_scheme_r_double_rayleigh_analytic_bon.py --preflight-only
 
 python apply/stages/04_background.py \
-  --stage-c-dir "${STAGE_C}" --psf-npz "${PSF}" --cell-selection-csv "${SELECTOR}" --included-only \
+  --stage-c-dir "${STAGE_C}" --psf-npz "${PSF}" --cell-selection-csv "${SELECTOR}" \
   --output-dir "${D_ROOT}" --run-id "${D_RUN}" --no-promote-current --overwrite-run-dir \
   --background-mode crab_roi_local --roi-background-method annulus-quadratic \
   --roi-fiducial-deg 6 --roi-edge-diagnostic-deg 8 --roi-grid-step-deg 0.1 \
   --on-aperture-integration analytic-quadratic \
+  --analytic-required-cell-ids "${included}" \
   --annulus-default-inner-deg 1.5 --annulus-width-deg 2.0 --annulus-max-inner-deg 4.5 \
   --annulus-normalize-surface --roi-surface-order 2 \
   --batch-size 500000 --workers "${SLURM_CPUS_PER_TASK:-32}" --print-every 10 \
@@ -84,7 +87,7 @@ set +e
 python apply/stages/05_signal.py \
   --stage-c-dir "${STAGE_C}" \
   --background-npz "${D_DIR}/${D_STEM}.npz" --background-metadata "${D_DIR}/${D_STEM}_metadata.json" \
-  --cell-selection-csv "${SELECTOR}" --included-only \
+  --cell-selection-csv "${SELECTOR}" \
   --output-dir "${E_ROOT}" --run-id "${E_RUN}" --no-promote-current --overwrite-run-dir \
   --report-html "apply/report/stage_e_${ANALYSIS_ID}_report.html" \
   --source-ra-deg 83.63 --source-dec-deg 22.01 --batch-size 500000 \
@@ -105,9 +108,6 @@ python apply/stages/06_fit.py \
   --exposure-sample-step-sec 60 --pivot-tev 3 --reference-phi0 2.114e-12 --reference-gamma 2.69 \
   --npz-name "${F_STEM}.npz" --metadata-name "${F_STEM}_metadata.json" \
   --summary-csv-name "${F_STEM}_summary.csv" --summary-md-name "${F_STEM}_summary.md"
-
-included=$(python -c 'import csv,sys; print(",".join(r["cell_id"] for r in csv.DictReader(open(sys.argv[1])) if r["include"] == "1"))' "${SELECTOR}")
-excluded=$(python -c 'import csv,sys; print(",".join(r["cell_id"] for r in csv.DictReader(open(sys.argv[1])) if r["include"] != "1"))' "${SELECTOR}")
 
 python apply/stages/07_sed_points.py \
   --response-npz "${RESPONSE}" --response-metadata "${RESPONSE_META}" \

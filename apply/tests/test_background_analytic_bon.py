@@ -82,6 +82,17 @@ class AnalyticBackgroundIntegralTests(unittest.TestCase):
                 cell_id=1,
             )
 
+    def test_nonselected_cell_can_use_explicit_pixel_fallback(self) -> None:
+        selected = stage04.select_on_aperture_background(
+            pixel_center_b_on=90.0,
+            analytic_b_on=95.0,
+            analytic_surface_min=-0.1,
+            method="analytic-quadratic",
+            cell_id=39,
+            analytic_required=False,
+        )
+        self.assertEqual(selected, 90.0)
+
     def test_pixel_center_is_backward_compatible_default(self) -> None:
         selected = stage04.select_on_aperture_background(
             pixel_center_b_on=90.0,

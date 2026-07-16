@@ -141,6 +141,15 @@ def parse_args() -> argparse.Namespace:
             "The analytic mode is available only for annulus-quadratic backgrounds."
         ),
     )
+    parser.add_argument(
+        "--analytic-required-cell-ids",
+        type=str,
+        default="",
+        help=(
+            "Comma-separated cells that must pass analytic surface positivity. "
+            "When omitted, analytic mode requires every loaded cell."
+        ),
+    )
     parser.add_argument("--roi-edge-margin-deg", type=float, default=0.25)
     parser.add_argument("--roi-source-mask-deg", type=float, default=2.0)
     parser.add_argument("--roi-source-mask-r-opt-factor", type=float, default=2.0)
@@ -1083,11 +1092,20 @@ def select_on_aperture_background(
     analytic_surface_min: float,
     method: str,
     cell_id: int,
+    analytic_required: bool = True,
 ) -> float:
     if method == "pixel-center":
         return float(pixel_center_b_on)
     if method != "analytic-quadratic":
         raise ValueError(f"Unsupported on-aperture integration method: {method}")
+    analytic_valid = (
+        math.isfinite(analytic_surface_min)
+        and analytic_surface_min > 0.0
+        and math.isfinite(analytic_b_on)
+        and analytic_b_on > 0.0
+    )
+    if not analytic_valid and not analytic_required:
+        return float(pixel_center_b_on)
     if not math.isfinite(analytic_surface_min) or analytic_surface_min <= 0.0:
         raise ValueError(
             f"Cell {int(cell_id)} has a non-positive fitted background inside the analytic on aperture: "
@@ -1139,6 +1157,7 @@ def estimate_roi_annulus_surface_background(
     r_opt_deg: np.ndarray,
     *,
     cell_ids: Optional[np.ndarray] = None,
+    analytic_required_mask: Optional[np.ndarray] = None,
     roi_fiducial_deg: float,
     annulus_default_inner_deg: float,
     annulus_width_deg: float,
@@ -1175,12 +1194,20 @@ def estimate_roi_annulus_surface_background(
     on_area_deg2 = math.pi * np.asarray(r_opt_deg, dtype=np.float64) ** 2
     on_effective_pixels = np.full(n_cells, np.nan, dtype=np.float64)
     on_aperture_surface_min = np.full(n_cells, np.nan, dtype=np.float64)
+    on_aperture_integration_by_cell = np.full(n_cells, "pixel-center", dtype="U32")
     on_pixels = np.zeros(n_cells, dtype=np.int64)
     if cell_ids is None:
         cell_ids = np.arange(1, n_cells + 1, dtype=np.int64)
     cell_ids = np.asarray(cell_ids, dtype=np.int64)
     if cell_ids.shape != (n_cells,):
         raise ValueError(f"cell_ids shape {cell_ids.shape} does not match {n_cells} background cells")
+    if analytic_required_mask is None:
+        analytic_required_mask = np.ones(n_cells, dtype=bool)
+    analytic_required_mask = np.asarray(analytic_required_mask, dtype=bool)
+    if analytic_required_mask.shape != (n_cells,):
+        raise ValueError(
+            f"analytic_required_mask shape {analytic_required_mask.shape} does not match {n_cells} background cells"
+        )
     center_steps = np.diff(np.asarray(xy_centers, dtype=np.float64))
     if center_steps.size == 0 or not np.allclose(center_steps, center_steps[0], rtol=0.0, atol=1.0e-12):
         raise ValueError("Analytic on-aperture integration requires a uniform ROI grid")
@@ -1326,7 +1353,13 @@ def estimate_roi_annulus_surface_background(
             analytic_surface_min=analytic_minimum,
             method=str(on_aperture_integration),
             cell_id=int(cell_ids[cell_idx]),
+            analytic_required=bool(analytic_required_mask[cell_idx]),
         )
+        if str(on_aperture_integration) == "analytic-quadratic":
+            if analytic_minimum > 0.0 and analytic_value > 0.0:
+                on_aperture_integration_by_cell[cell_idx] = "analytic-quadratic"
+            else:
+                on_aperture_integration_by_cell[cell_idx] = "pixel-center-excluded-fallback"
         if b_on[cell_idx] <= 0.0 or on_pixels[cell_idx] <= 0:
             core_warning[cell_idx] = True
         fit_success[cell_idx] = not bool(core_warning[cell_idx])
@@ -1364,6 +1397,8 @@ def estimate_roi_annulus_surface_background(
         "on_effective_pixels": on_effective_pixels.astype(np.float64),
         "on_aperture_surface_min": on_aperture_surface_min.astype(np.float64),
         "on_aperture_grid_step_deg": np.asarray([grid_step_deg], dtype=np.float64),
+        "analytic_required_mask": analytic_required_mask.astype(bool),
+        "on_aperture_integration_by_cell": on_aperture_integration_by_cell.astype("U32"),
     }
     return b_on, background_map, training_mask, on_masks, source_masks, diagnostics
 
@@ -2003,6 +2038,7 @@ def write_summary_csv(path: Path, rows: Sequence[Dict[str, object]]) -> None:
         "on_effective_pixels",
         "on_aperture_surface_min",
         "on_aperture_integration",
+        "analytic_required",
         "N_off",
         "alpha",
         "max_p_on",
@@ -2207,12 +2243,27 @@ def run_crab_roi_local_background(
     )
     annulus_diagnostics: Dict[str, np.ndarray] = {}
     background_method = str(args.roi_background_method).replace("-", "_")
+    loaded_cell_ids = np.asarray([cell.cell_id for cell in cells], dtype=np.int64)
+    analytic_required_mask = np.ones(n_cells, dtype=bool)
+    if str(args.on_aperture_integration) == "analytic-quadratic" and str(args.analytic_required_cell_ids).strip():
+        required_ids = {
+            int(value.strip())
+            for value in str(args.analytic_required_cell_ids).split(",")
+            if value.strip()
+        }
+        unknown_ids = sorted(required_ids - set(int(value) for value in loaded_cell_ids))
+        if unknown_ids:
+            raise ValueError(f"--analytic-required-cell-ids contains cells not loaded by Stage D: {unknown_ids}")
+        analytic_required_mask = np.isin(loaded_cell_ids, np.asarray(sorted(required_ids), dtype=np.int64))
+        if not np.any(analytic_required_mask):
+            raise ValueError("--analytic-required-cell-ids selected no Stage D cells")
     if str(args.roi_background_method) == "annulus-quadratic":
         b_on, background_map, training_mask, on_masks, source_masks, annulus_diagnostics = estimate_roi_annulus_surface_background(
             counts_map,
             xy_centers,
             r_opt_deg.astype(np.float64),
-            cell_ids=np.asarray([cell.cell_id for cell in cells], dtype=np.int64),
+            cell_ids=loaded_cell_ids,
+            analytic_required_mask=analytic_required_mask,
             roi_fiducial_deg=float(args.roi_fiducial_deg),
             annulus_default_inner_deg=float(args.annulus_default_inner_deg),
             annulus_width_deg=float(args.annulus_width_deg),
@@ -2302,7 +2353,14 @@ def run_crab_roi_local_background(
                 "on_aperture_surface_min": (
                     float(annulus_diagnostics["on_aperture_surface_min"][idx]) if annulus_diagnostics else ""
                 ),
-                "on_aperture_integration": str(args.on_aperture_integration),
+                "on_aperture_integration": (
+                    str(annulus_diagnostics["on_aperture_integration_by_cell"][idx])
+                    if annulus_diagnostics
+                    else str(args.on_aperture_integration)
+                ),
+                "analytic_required": (
+                    bool(annulus_diagnostics["analytic_required_mask"][idx]) if annulus_diagnostics else False
+                ),
                 "N_off": "",
                 "alpha": "",
                 "max_p_on": 0.0,
@@ -2599,6 +2657,20 @@ def run_crab_roi_local_background(
             ),
             "analytic_positive_surface_required": (
                 True if str(args.on_aperture_integration) == "analytic-quadratic" else None
+            ),
+            "analytic_required_cell_ids": (
+                [int(cell.cell_id) for cell, required in zip(cells, analytic_required_mask) if bool(required)]
+                if str(args.on_aperture_integration) == "analytic-quadratic"
+                else []
+            ),
+            "excluded_fallback_cell_ids": (
+                [
+                    int(cell.cell_id)
+                    for cell, method in zip(cells, annulus_diagnostics.get("on_aperture_integration_by_cell", []))
+                    if str(method) == "pixel-center-excluded-fallback"
+                ]
+                if annulus_diagnostics
+                else []
             ),
             "alpha_b": None,
             "N_off_b": None,

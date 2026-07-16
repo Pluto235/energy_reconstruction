@@ -690,27 +690,34 @@ def load_plot_diagnostics(registry: Mapping[str, Any], registry_path: Path) -> d
             "cell_id": cell_id,
             "surface_order": int(row["surface_order"]),
             "donor_cell_ids": [int(value) for value in row["donor_cell_ids"]],
-            "cv_deviance": row.get("cv_scores") or row.get("validation_scores") or row.get("cv_deviance"),
+            "cv_deviance": row.get("cross_validation") or row.get("cv_scores") or row.get("validation_scores") or row.get("cv_deviance"),
         })
     with np.load(bootstrap_path, allow_pickle=False) as handle:
         covariance = np.asarray(handle["B_on_covariance"], dtype=np.float64)
 
-    def sed_arrays(path: Path) -> tuple[np.ndarray, np.ndarray]:
+    def sed_arrays(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         with np.load(path, allow_pickle=False) as handle:
-            energy = np.asarray(_first(handle, ("energy_tev", "energy_center_tev", "e_ref_tev"), str(path)), dtype=np.float64)
-            flux = np.asarray(_first(handle, ("flux", "dnde", "flux_per_tev_cm2_s", "e2_dnde"), str(path)), dtype=np.float64)
-        return energy, flux
+            energy = np.asarray(
+                _first(handle, ("energy_tev", "energy_center_tev", "effective_energy_tev", "e_ref_tev"), str(path)),
+                dtype=np.float64,
+            )
+            flux = np.asarray(
+                _first(handle, ("flux", "dnde", "flux_per_tev_cm2_s", "E2_dnde", "e2_dnde"), str(path)),
+                dtype=np.float64,
+            )
+            grouping = np.asarray(_first(handle, ("grouping",), str(path))).astype(str)
+            labels = np.asarray(_first(handle, ("group_label",), str(path))).astype(str)
+        keys = np.asarray([f"{group}:{label}" for group, label in zip(grouping, labels)], dtype="U128")
+        return keys, energy, flux
 
-    legacy_energy, legacy_flux = sed_arrays(legacy_path)
-    nominal_energy, nominal_flux = sed_arrays(nominal_path)
+    legacy_keys, legacy_energy, legacy_flux = sed_arrays(legacy_path)
+    nominal_keys, nominal_energy, nominal_flux = sed_arrays(nominal_path)
     if nominal_energy.shape != nominal_flux.shape or legacy_energy.shape != legacy_flux.shape:
         raise GridConvergenceError("SED energy and flux arrays have inconsistent shapes")
-    if np.array_equal(nominal_energy, legacy_energy):
-        legacy_at_nominal = legacy_flux
-    else:
-        if np.any(nominal_energy <= 0.0) or np.any(legacy_energy <= 0.0) or np.any(legacy_flux <= 0.0):
-            raise GridConvergenceError("SED interpolation requires positive energies and legacy flux")
-        legacy_at_nominal = np.exp(np.interp(np.log(nominal_energy), np.log(legacy_energy), np.log(legacy_flux)))
+    legacy_index = {key: index for index, key in enumerate(legacy_keys.tolist())}
+    if len(legacy_index) != legacy_keys.size or set(nominal_keys.tolist()) != set(legacy_keys.tolist()):
+        raise GridConvergenceError("Legacy and nominal SED grouping/label contracts differ")
+    legacy_at_nominal = np.asarray([legacy_flux[legacy_index[key]] for key in nominal_keys.tolist()])
     ratio = np.divide(nominal_flux, legacy_at_nominal, out=np.full_like(nominal_flux, np.nan), where=legacy_at_nominal != 0.0)
     if not np.all(np.isfinite(ratio)):
         raise GridConvergenceError("Legacy-versus-new SED ratio contains non-finite values")

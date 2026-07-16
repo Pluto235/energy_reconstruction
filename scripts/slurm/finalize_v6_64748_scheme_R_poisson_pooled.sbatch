@@ -35,6 +35,7 @@ from pathlib import Path
 import sys
 
 registry_path, manifest_path, manifest_job, grid_job, bootstrap_job = sys.argv[1:]
+manifest_path = str(Path(manifest_path).resolve())
 manifest = json.load(open(manifest_path, encoding="ascii"))
 prov = manifest["provenance"]
 response = Path("apply/output/stage_e_v6_64748_nhit100_reselect44_split56_miss030_fixed712979_rayleigh_annnorm/response_v6_64748_nhit100_reselect44_split56_miss030_fixed712979_rayleigh.npz")
@@ -52,11 +53,11 @@ for index, branch in enumerate(branch_ids):
     f = root / "stage_f/runs/stage_f"
     branches.append({
         "branch_id": branch,
-        "stage_d_npz": str(d / f"background_{branch}.npz"),
-        "stage_d_metadata": str(d / f"background_{branch}_metadata.json"),
-        "stage_e_npz": str(e / f"signal_{branch}.npz"),
-        "stage_f_npz": str(f / f"fit_{branch}.npz"),
-        "stage_f_metadata": str(f / f"fit_{branch}_metadata.json"),
+        "stage_d_npz": str((d / f"background_{branch}.npz").resolve()),
+        "stage_d_metadata": str((d / f"background_{branch}_metadata.json").resolve()),
+        "stage_e_npz": str((e / f"signal_{branch}.npz").resolve()),
+        "stage_f_npz": str((f / f"fit_{branch}.npz").resolve()),
+        "stage_f_metadata": str((f / f"fit_{branch}_metadata.json").resolve()),
         "provenance": {
             "pooling_manifest_sha256": manifest["manifest_sha256"],
             "selector_sha256": prov["selector"]["sha256"],
@@ -73,9 +74,9 @@ payload = {
     "branches": branches,
     "diagnostics": {
         "pooling_manifest": manifest_path,
-        "bootstrap_npz": "scheme_R_double_rayleigh_poisson_background_covariance.npz",
-        "legacy_sed_npz": "apply/output/stage_g_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979/runs/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979_stage_g/sed_points_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979.npz",
-        "nominal_sed_npz": str(Path("apply/output") / manifest["experiment_id"] / "branches/h010_x0_y0/stage_g/runs/stage_g/sed_points_h010_x0_y0.npz"),
+        "bootstrap_npz": str(Path("scheme_R_double_rayleigh_poisson_background_covariance.npz").resolve()),
+        "legacy_sed_npz": str(Path("apply/output/stage_g_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979/runs/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979_stage_g/sed_points_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979.npz").resolve()),
+        "nominal_sed_npz": str((Path("apply/output") / manifest["experiment_id"] / "branches/h010_x0_y0/stage_g/runs/stage_g/sed_points_h010_x0_y0.npz").resolve()),
     },
     "slurm_jobs": {
         "manifest": {"job_id": manifest_job, "state": "COMPLETED"},
@@ -101,14 +102,33 @@ set -e
 export V6_REPORT_POISSON_MANIFEST="${MANIFEST}"
 export V6_REPORT_GRID_CONVERGENCE="${CONVERGENCE}"
 export V6_REPORT_BACKGROUND_COVARIANCE="${COV_NPZ}"
+export V6_REPORT_RUN_ID="v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh"
+export V6_REPORT_SOURCE_RUN_ID="v6_64748_nhit100_highEplus1_split56"
+export V6_REPORT_TITLE="Crab SED v6 64748 reselect44 - Scheme R - Double-Rayleigh Poisson-Pooled Background"
+export V6_REPORT_SCHEME=R
+export V6_REPORT_SCHEME_LABEL="Scheme R - Double-Rayleigh PSF with Poisson-Pooled Background"
+export V6_REPORT_SCHEME_CONTRACT="Stage B uses the double-Rayleigh PSF with F(r_opt)=0.7129790300890827. Stage D uses the frozen positive Poisson-pooled surface and analytic circular B_on. Stage E containment is 1; Stage F/G use Aeff_R=0.7129790300890827*Aeff_nominal exactly once."
 export V6_REPORT_PATH="${REPORT}"
 export V6_REPORT_ASSET_DIR="${ASSETS}"
 export V6_REPORT_EXPERIMENT_ID="${EXPERIMENT}"
 export V6_REPORT_INPUT_COMMIT="$(git rev-parse HEAD)"
+export V6_REPORT_TRUE_ENERGY_GRID="apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030/true-energy-cell-grid/v6_64748_reselect44_true_energy_cell_grid.png"
+export V6_REPORT_RESPONSE_META="apply/output/stage_e_v6_64748_nhit100_reselect44_split56_miss030_fixed712979_rayleigh_annnorm/response_v6_64748_nhit100_reselect44_split56_miss030_fixed712979_rayleigh_metadata.json"
+export V6_REPORT_FIT_SELECTOR="apply/config/cell_selector_v6_64748_nhit100_reselect44_split56_miss030_fit.csv"
+export V6_REPORT_SELECTOR_META="apply/config/cell_selector_v6_64748_nhit100_reselect44_split56_miss030_fit_metadata.json"
+export V6_REPORT_PREFIT_SELECTOR="apply/config/cell_selector_v6_64748_nhit100_highEplus1_split56_prefit.csv"
+export V6_REPORT_HIGH_E_DECISIONS="apply/config/cell_selector_v6_64748_nhit100_reselect44_split56_miss030_highEplus1_decisions.csv"
+export V6_REPORT_STAGE_B_UNFILTERED_DIAGNOSTIC="apply/output/stage_b_v6_64748_nhit100_reselect44_split56_miss030/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_b_psf/psf_v6_64748_nhit100_reselect44_split56_miss030_unfiltered_diagnostic.npz"
 export V6_REPORT_STAGE_D_RUN_DIR="${OUTPUT_ROOT}/branches/h010_x0_y0/stage_d/runs/stage_d"
 export V6_REPORT_STAGE_E_RUN_DIR="${OUTPUT_ROOT}/branches/h010_x0_y0/stage_e/runs/stage_e"
 export V6_REPORT_STAGE_F_RUN_DIR="${OUTPUT_ROOT}/branches/h010_x0_y0/stage_f/runs/stage_f"
 export V6_REPORT_STAGE_G_RUN_DIR="${OUTPUT_ROOT}/branches/h010_x0_y0/stage_g/runs/stage_g"
+export V6_REPORT_STAGE_D_STEM="background_h010_x0_y0"
+export V6_REPORT_STAGE_E_STEM="signal_h010_x0_y0"
+export V6_REPORT_STAGE_F_STEM="fit_h010_x0_y0"
+export V6_REPORT_STAGE_G_STEM="sed_points_h010_x0_y0"
+export V6_REPORT_EXPECTED_FIXED_CONTAINMENT=0.7129790300890827
+export V6_REPORT_RATIO_HIDDEN_PREDE_POINTS=2
 export PIPELINE_JOB_IDS="manifest:${MANIFEST_JOB_ID};grid:${GRID_JOB_ID};bootstrap:${BOOTSTRAP_JOB_ID};finalizer:${SLURM_JOB_ID}"
 
 python apply/report/build_v6_64748_nhit100_highEplus1_report.py

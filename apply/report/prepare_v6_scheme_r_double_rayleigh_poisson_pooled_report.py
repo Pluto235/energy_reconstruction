@@ -8,12 +8,15 @@ import json
 import math
 import os
 from pathlib import Path
+import sys
 from typing import Any, Mapping
 
 import numpy as np
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 EXPERIMENT_ID = (
     "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_"
     "scheme_R_fixed712979_poisson_pooled"
@@ -359,16 +362,19 @@ def build_insert(
     b_covariance = np.asarray(covariance["B_on_covariance"], dtype=np.float64)
     excess_covariance = np.asarray(covariance["excess_covariance"], dtype=np.float64)
     samples = np.asarray(covariance["B_on_bootstrap_samples"], dtype=np.float64)
+    n_on = np.asarray(covariance["N_on"], dtype=np.int64)
     eigenvalues = np.linalg.eigvalsh(excess_covariance)
     covariance_rows = [
         ["Replicates requested / completed", f"{esc(covariance_metadata.get('bootstrap_count_requested'))} / {esc(covariance_metadata.get('bootstrap_count_completed'))}"],
         ["Refit failures", esc(covariance_metadata.get("refit_failure_count"))],
         ["Seed", esc(covariance_metadata.get("seed"))],
+        ["Event-level N_on total", f"{int(np.sum(n_on)):,}"],
         ["B_on covariance shape", esc(list(b_covariance.shape))],
         ["Bootstrap sample shape", esc(list(samples.shape))],
         ["Minimum excess-covariance eigenvalue", fmt(np.min(eigenvalues), 8)],
         ["Excess-covariance condition number", fmt(np.linalg.cond(excess_covariance), 8)],
         ["Stage D SHA", f"<code>{esc(covariance_metadata.get('stage_d_sha256'))}</code>"],
+        ["Stage E SHA", f"<code>{esc(covariance_metadata.get('stage_e_sha256'))}</code>"],
         ["Manifest SHA", f"<code>{esc(covariance_metadata.get('manifest_sha256'))}</code>"],
     ]
 
@@ -455,6 +461,7 @@ def build_insert(
             "count_completed": covariance_metadata.get("bootstrap_count_completed"),
             "refit_failure_count": covariance_metadata.get("refit_failure_count"),
             "seed": covariance_metadata.get("seed"),
+            "event_level_N_on_total": int(np.sum(n_on)),
             "minimum_excess_eigenvalue": float(np.min(eigenvalues)),
             "excess_condition_number": float(np.linalg.cond(excess_covariance)),
         },
@@ -521,8 +528,34 @@ def main() -> None:
         }
     )
     COMPARISON_JSON.write_text(json.dumps(comparison, indent=2) + "\n", encoding="utf-8")
+
+    # The base report validates its images before this script adds the Poisson
+    # convergence figures. Refresh the evidence against the final HTML.
+    from apply.report.build_v6_64748_nhit100_highEplus1_report import validate_html_images
+
+    report_validation_path = ASSET_DIR / "report_validation.json"
+    report_validation = (
+        load_json(report_validation_path)
+        if report_validation_path.exists()
+        else {"experiment_id": EXPERIMENT_ID, "report_path": str(REPORT)}
+    )
+    html_validation = validate_html_images(REPORT)
+    report_validation["html_image_validation"] = html_validation
+    report_validation_path.write_text(
+        json.dumps(report_validation, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    if html_validation["missing_image_refs"]:
+        raise FileNotFoundError(
+            f"Final Poisson report has missing image references: "
+            f"{html_validation['missing_image_refs']}"
+        )
     print(f"Prepared Poisson pooled report: {REPORT}")
     print(f"Comparison evidence: {COMPARISON_JSON}")
+    print(
+        f"Final image refs: {html_validation['image_ref_count']}; "
+        f"missing: {len(html_validation['missing_image_refs'])}"
+    )
     print(f"Grid convergence: {'passed' if convergence.get('passed') is True else 'failed (report preserved)'}")
 
 

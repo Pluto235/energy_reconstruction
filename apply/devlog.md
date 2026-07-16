@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-16 20:16 · [uncommitted] Complete the pooled-Poisson 12-branch grid study and 1,000-replicate covariance validation, recording quadratic-cell convergence failures.
+
 - **energy_reconstruction** · 2026-07-16 17:06 · [uncommitted] Add analytic quadratic on-aperture background integration and the isolated Scheme R 1R/2R validation report.
 
 - **energy_reconstruction** · 2026-07-16 16:48 · [uncommitted] Add the implementation plan for positive pooled-Poisson background fitting and 12-branch grid convergence.

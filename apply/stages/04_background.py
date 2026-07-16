@@ -87,6 +87,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stage-c-dir", type=str, default=DEFAULT_STAGE_C_DIR)
     parser.add_argument("--psf-npz", type=str, default=DEFAULT_PSF_NPZ)
     parser.add_argument("--cell-selection-csv", type=str, default=DEFAULT_CELL_SELECTION)
+    parser.add_argument(
+        "--included-only",
+        action="store_true",
+        default=False,
+        help="Load only rows whose selector include column is 1.",
+    )
     parser.add_argument("--output-dir", type=str, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument(
         "--run-id",
@@ -126,6 +132,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--roi-fiducial-deg", type=float, default=6.0)
     parser.add_argument("--roi-edge-diagnostic-deg", type=float, default=8.0)
     parser.add_argument("--roi-grid-step-deg", type=float, default=0.1)
+    parser.add_argument(
+        "--on-aperture-integration",
+        choices=["pixel-center", "analytic-quadratic"],
+        default="pixel-center",
+        help=(
+            "How to integrate the fitted ROI background over the circular on aperture. "
+            "The analytic mode is available only for annulus-quadratic backgrounds."
+        ),
+    )
     parser.add_argument("--roi-edge-margin-deg", type=float, default=0.25)
     parser.add_argument("--roi-source-mask-deg", type=float, default=2.0)
     parser.add_argument("--roi-source-mask-r-opt-factor", type=float, default=2.0)
@@ -202,7 +217,7 @@ def interval_key(label: str) -> float:
     return low
 
 
-def load_cells(selection_csv: Path) -> List[CellSpec]:
+def load_cells(selection_csv: Path, *, included_only: bool = False) -> List[CellSpec]:
     cells: List[CellSpec] = []
     with selection_csv.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
@@ -210,7 +225,11 @@ def load_cells(selection_csv: Path) -> List[CellSpec]:
         missing = required - set(reader.fieldnames or [])
         if missing:
             raise ValueError(f"{selection_csv} is missing required columns: {sorted(missing)}")
+        if included_only and "include" not in set(reader.fieldnames or []):
+            raise ValueError(f"{selection_csv} is missing required include column for --included-only")
         for idx, row in enumerate(reader):
+            if included_only and str(row.get("include", "")).strip() != "1":
+                continue
             cells.append(
                 CellSpec(
                     index=idx,
@@ -984,6 +1003,101 @@ def surface_design_matrix(x: np.ndarray, y: np.ndarray, order: int) -> np.ndarra
     raise ValueError(f"Unsupported surface order: {order}")
 
 
+def polynomial_coefficients6(coefficients: np.ndarray) -> np.ndarray:
+    values = np.asarray(coefficients, dtype=np.float64).reshape(-1)
+    if values.size < 1 or values.size > 6 or not np.all(np.isfinite(values)):
+        raise ValueError("Background polynomial must contain 1 to 6 finite coefficients")
+    out = np.zeros(6, dtype=np.float64)
+    out[: values.size] = values
+    return out
+
+
+def integrate_centered_disk_polynomial(
+    coefficients: np.ndarray,
+    radius_deg: float,
+    grid_step_deg: float,
+    scale: float = 1.0,
+) -> float:
+    """Integrate a per-grid-cell polynomial density over a centered disk."""
+    radius = float(radius_deg)
+    step = float(grid_step_deg)
+    normalization = float(scale)
+    if not math.isfinite(radius) or radius <= 0.0:
+        raise ValueError("Disk radius must be positive and finite")
+    if not math.isfinite(step) or step <= 0.0:
+        raise ValueError("Grid step must be positive and finite")
+    if not math.isfinite(normalization) or normalization <= 0.0:
+        raise ValueError("Surface scale must be positive and finite")
+    c = polynomial_coefficients6(coefficients)
+    disk_integral = math.pi * radius * radius * c[0]
+    disk_integral += 0.25 * math.pi * radius**4 * (c[3] + c[5])
+    return float(normalization * disk_integral / (step * step))
+
+
+def evaluate_quadratic(coefficients: np.ndarray, x: float, y: float) -> float:
+    c = polynomial_coefficients6(coefficients)
+    return float(c[0] + c[1] * x + c[2] * y + c[3] * x * x + c[4] * x * y + c[5] * y * y)
+
+
+def minimum_quadratic_on_centered_disk(coefficients: np.ndarray, radius_deg: float) -> float:
+    """Return the deterministic global minimum of a quadratic on a centered disk."""
+    c = polynomial_coefficients6(coefficients)
+    radius = float(radius_deg)
+    if not math.isfinite(radius) or radius <= 0.0:
+        raise ValueError("Disk radius must be positive and finite")
+
+    candidates = [evaluate_quadratic(c, 0.0, 0.0)]
+    hessian = np.asarray([[2.0 * c[3], c[4]], [c[4], 2.0 * c[5]]], dtype=np.float64)
+    gradient = np.asarray([c[1], c[2]], dtype=np.float64)
+    stationary, _, _, _ = np.linalg.lstsq(hessian, -gradient, rcond=None)
+    if np.linalg.norm(hessian @ stationary + gradient) <= 1.0e-10 * max(1.0, np.linalg.norm(gradient)):
+        if float(np.hypot(stationary[0], stationary[1])) <= radius * (1.0 + 1.0e-12):
+            candidates.append(evaluate_quadratic(c, float(stationary[0]), float(stationary[1])))
+
+    r = radius
+    derivative = np.asarray(
+        [
+            -r * c[2] + r * r * c[4],
+            -2.0 * r * c[1] - 4.0 * r * r * (c[5] - c[3]),
+            -6.0 * r * r * c[4],
+            -2.0 * r * c[1] + 4.0 * r * r * (c[5] - c[3]),
+            r * c[2] + r * r * c[4],
+        ],
+        dtype=np.float64,
+    )
+    nonzero = np.flatnonzero(np.abs(derivative) > 1.0e-14)
+    if nonzero.size:
+        roots = np.roots(derivative[nonzero[0] :])
+        for root in roots:
+            if abs(float(root.imag)) <= 1.0e-9 * max(1.0, abs(float(root.real))):
+                theta = 2.0 * math.atan(float(root.real))
+                candidates.append(evaluate_quadratic(c, r * math.cos(theta), r * math.sin(theta)))
+    candidates.extend([evaluate_quadratic(c, r, 0.0), evaluate_quadratic(c, -r, 0.0)])
+    return float(min(candidates))
+
+
+def select_on_aperture_background(
+    *,
+    pixel_center_b_on: float,
+    analytic_b_on: float,
+    analytic_surface_min: float,
+    method: str,
+    cell_id: int,
+) -> float:
+    if method == "pixel-center":
+        return float(pixel_center_b_on)
+    if method != "analytic-quadratic":
+        raise ValueError(f"Unsupported on-aperture integration method: {method}")
+    if not math.isfinite(analytic_surface_min) or analytic_surface_min <= 0.0:
+        raise ValueError(
+            f"Cell {int(cell_id)} has a non-positive fitted background inside the analytic on aperture: "
+            f"minimum={analytic_surface_min:.12g}"
+        )
+    if not math.isfinite(analytic_b_on) or analytic_b_on <= 0.0:
+        raise ValueError(f"Cell {int(cell_id)} has invalid analytic B_on={analytic_b_on}")
+    return float(analytic_b_on)
+
+
 def padded_coefficients(coeff: np.ndarray, order: int) -> np.ndarray:
     out = np.full(6, np.nan, dtype=np.float64)
     coeff = np.asarray(coeff, dtype=np.float64)
@@ -1024,6 +1138,7 @@ def estimate_roi_annulus_surface_background(
     xy_centers: np.ndarray,
     r_opt_deg: np.ndarray,
     *,
+    cell_ids: Optional[np.ndarray] = None,
     roi_fiducial_deg: float,
     annulus_default_inner_deg: float,
     annulus_width_deg: float,
@@ -1035,6 +1150,7 @@ def estimate_roi_annulus_surface_background(
     condition_max: float,
     min_training_pixels: int,
     annulus_normalize_surface: bool = False,
+    on_aperture_integration: str = "pixel-center",
 ) -> Tuple[
     np.ndarray,
     np.ndarray,
@@ -1054,7 +1170,24 @@ def estimate_roi_annulus_surface_background(
     residual_map = np.full((n_cells, n_y, n_x), np.nan, dtype=np.float32)
     core_background_map = np.full((n_cells, n_y, n_x), np.nan, dtype=np.float32)
     b_on = np.zeros(n_cells, dtype=np.float64)
+    b_on_pixel_center = np.full(n_cells, np.nan, dtype=np.float64)
+    b_on_analytic = np.full(n_cells, np.nan, dtype=np.float64)
+    on_area_deg2 = math.pi * np.asarray(r_opt_deg, dtype=np.float64) ** 2
+    on_effective_pixels = np.full(n_cells, np.nan, dtype=np.float64)
+    on_aperture_surface_min = np.full(n_cells, np.nan, dtype=np.float64)
     on_pixels = np.zeros(n_cells, dtype=np.int64)
+    if cell_ids is None:
+        cell_ids = np.arange(1, n_cells + 1, dtype=np.int64)
+    cell_ids = np.asarray(cell_ids, dtype=np.int64)
+    if cell_ids.shape != (n_cells,):
+        raise ValueError(f"cell_ids shape {cell_ids.shape} does not match {n_cells} background cells")
+    center_steps = np.diff(np.asarray(xy_centers, dtype=np.float64))
+    if center_steps.size == 0 or not np.allclose(center_steps, center_steps[0], rtol=0.0, atol=1.0e-12):
+        raise ValueError("Analytic on-aperture integration requires a uniform ROI grid")
+    grid_step_deg = float(center_steps[0])
+    if grid_step_deg <= 0.0:
+        raise ValueError("ROI grid step must be positive")
+    on_effective_pixels[:] = on_area_deg2 / (grid_step_deg * grid_step_deg)
     source_mask_radius, annulus_inner, annulus_outer, shifted = annulus_placement(
         r_opt_deg,
         default_inner_deg=float(annulus_default_inner_deg),
@@ -1173,7 +1306,27 @@ def estimate_roi_annulus_surface_background(
         residual_rms[cell_idx] = float(np.sqrt(np.nanmean(ann_resid * ann_resid))) if ann_resid.size else np.nan
         coeffs[cell_idx] = padded_coefficients(coeff, int(surface_order))
         covariances[cell_idx] = padded_covariance(cov, int(surface_order))
-        b_on[cell_idx] = float(np.nansum(pred_final[on_mask]))
+        pixel_center_value = float(np.nansum(pred_final[on_mask]))
+        analytic_value = integrate_centered_disk_polynomial(
+            coeff,
+            float(r_opt_deg[cell_idx]),
+            grid_step_deg,
+            scale,
+        )
+        analytic_minimum = scale * minimum_quadratic_on_centered_disk(
+            coeff,
+            float(r_opt_deg[cell_idx]),
+        )
+        b_on_pixel_center[cell_idx] = pixel_center_value
+        b_on_analytic[cell_idx] = analytic_value
+        on_aperture_surface_min[cell_idx] = analytic_minimum
+        b_on[cell_idx] = select_on_aperture_background(
+            pixel_center_b_on=pixel_center_value,
+            analytic_b_on=analytic_value,
+            analytic_surface_min=analytic_minimum,
+            method=str(on_aperture_integration),
+            cell_id=int(cell_ids[cell_idx]),
+        )
         if b_on[cell_idx] <= 0.0 or on_pixels[cell_idx] <= 0:
             core_warning[cell_idx] = True
         fit_success[cell_idx] = not bool(core_warning[cell_idx])
@@ -1205,6 +1358,12 @@ def estimate_roi_annulus_surface_background(
         "core_background_map": core_background_map.astype(np.float32),
         "annulus_off_counts": off_counts.astype(np.float64),
         "annulus_off_pixels": off_pixels.astype(np.int64),
+        "B_on_pixel_center": b_on_pixel_center.astype(np.float64),
+        "B_on_analytic": b_on_analytic.astype(np.float64),
+        "on_area_deg2": on_area_deg2.astype(np.float64),
+        "on_effective_pixels": on_effective_pixels.astype(np.float64),
+        "on_aperture_surface_min": on_aperture_surface_min.astype(np.float64),
+        "on_aperture_grid_step_deg": np.asarray([grid_step_deg], dtype=np.float64),
     }
     return b_on, background_map, training_mask, on_masks, source_masks, diagnostics
 
@@ -1838,6 +1997,12 @@ def write_summary_csv(path: Path, rows: Sequence[Dict[str, object]]) -> None:
         "sigma_deg",
         "containment_r_opt",
         "B_on",
+        "B_on_pixel_center",
+        "B_on_analytic",
+        "on_area_deg2",
+        "on_effective_pixels",
+        "on_aperture_surface_min",
+        "on_aperture_integration",
         "N_off",
         "alpha",
         "max_p_on",
@@ -1991,6 +2156,11 @@ def run_crab_roi_local_background(
         raise ValueError("--roi-coverage-bin-deg must be positive")
     if float(args.roi_coverage_max_deg) <= float(args.roi_edge_diagnostic_deg):
         raise ValueError("--roi-coverage-max-deg must be greater than --roi-edge-diagnostic-deg")
+    if str(args.on_aperture_integration) == "analytic-quadratic":
+        if str(args.roi_background_method) != "annulus-quadratic":
+            raise ValueError("analytic-quadratic on-aperture integration requires --roi-background-method annulus-quadratic")
+        if not bool(args.annulus_normalize_surface):
+            raise ValueError("analytic-quadratic on-aperture integration requires --annulus-normalize-surface")
 
     xy_edges = make_edges(
         -float(args.roi_edge_diagnostic_deg),
@@ -2042,6 +2212,7 @@ def run_crab_roi_local_background(
             counts_map,
             xy_centers,
             r_opt_deg.astype(np.float64),
+            cell_ids=np.asarray([cell.cell_id for cell in cells], dtype=np.int64),
             roi_fiducial_deg=float(args.roi_fiducial_deg),
             annulus_default_inner_deg=float(args.annulus_default_inner_deg),
             annulus_width_deg=float(args.annulus_width_deg),
@@ -2053,6 +2224,7 @@ def run_crab_roi_local_background(
             condition_max=float(args.surface_condition_max),
             min_training_pixels=int(args.surface_min_training_pixels),
             annulus_normalize_surface=bool(args.annulus_normalize_surface),
+            on_aperture_integration=str(args.on_aperture_integration),
         )
         off_counts = np.asarray(annulus_diagnostics["annulus_off_counts"], dtype=np.float64)
         off_pixels = np.asarray(annulus_diagnostics["annulus_off_pixels"], dtype=np.int64)
@@ -2115,6 +2287,22 @@ def run_crab_roi_local_background(
                 "sigma_deg": float(sigma_deg[idx]),
                 "containment_r_opt": float(containment_r_opt[idx]),
                 "B_on": float(b_on[idx]),
+                "B_on_pixel_center": (
+                    float(annulus_diagnostics["B_on_pixel_center"][idx]) if annulus_diagnostics else ""
+                ),
+                "B_on_analytic": (
+                    float(annulus_diagnostics["B_on_analytic"][idx]) if annulus_diagnostics else ""
+                ),
+                "on_area_deg2": (
+                    float(annulus_diagnostics["on_area_deg2"][idx]) if annulus_diagnostics else ""
+                ),
+                "on_effective_pixels": (
+                    float(annulus_diagnostics["on_effective_pixels"][idx]) if annulus_diagnostics else ""
+                ),
+                "on_aperture_surface_min": (
+                    float(annulus_diagnostics["on_aperture_surface_min"][idx]) if annulus_diagnostics else ""
+                ),
+                "on_aperture_integration": str(args.on_aperture_integration),
                 "N_off": "",
                 "alpha": "",
                 "max_p_on": 0.0,
@@ -2197,6 +2385,7 @@ def run_crab_roi_local_background(
         sigma_deg=sigma_deg.astype(np.float32),
         containment_r_opt=containment_r_opt.astype(np.float32),
         B_on=b_on.astype(np.float64),
+        on_aperture_integration=np.asarray([str(args.on_aperture_integration)], dtype="U32"),
         **annulus_diagnostics,
     )
 
@@ -2322,10 +2511,15 @@ def run_crab_roi_local_background(
         promotable = True
         quality_reason = "ROI-local background passed basic positivity and training-pixel checks"
     if annulus_diagnostics:
-        if bool(args.annulus_normalize_surface):
+        if str(args.on_aperture_integration) == "analytic-quadratic":
+            b_on_formula = (
+                "annulus_scale/grid_step_deg^2 * "
+                "(pi*r_opt_deg^2*c0 + pi*r_opt_deg^4*(c_xx+c_yy)/4)"
+            )
+        elif bool(args.annulus_normalize_surface):
             b_on_formula = (
                 "integral of annulus-count-normalized weighted least-squares annulus "
-                "quadratic surface over on aperture"
+                "quadratic surface over pixel-center on-aperture mask"
             )
         else:
             b_on_formula = "integral of weighted least-squares annulus quadratic surface over on aperture"
@@ -2391,6 +2585,21 @@ def run_crab_roi_local_background(
             "method": background_method,
             "background_form": "direct_expectation",
             "B_on_formula": b_on_formula,
+            "on_aperture_integration": str(args.on_aperture_integration),
+            "on_aperture_integration_note": (
+                "B_on is the closed-form integral of the fitted polynomial over the true centered disk; "
+                "background_map and on_mask remain pixelized morphology diagnostics only."
+                if str(args.on_aperture_integration) == "analytic-quadratic"
+                else "B_on is summed over pixels whose centers lie inside r_opt."
+            ),
+            "analytic_on_aperture_formula": (
+                "scale/grid_step_deg^2 * (pi*r^2*c0 + pi*r^4*(c_xx+c_yy)/4)"
+                if str(args.on_aperture_integration) == "analytic-quadratic"
+                else None
+            ),
+            "analytic_positive_surface_required": (
+                True if str(args.on_aperture_integration) == "analytic-quadratic" else None
+            ),
             "alpha_b": None,
             "N_off_b": None,
             "alpha_N_off_note": "ROI-local direct expectation outputs B_on,b; traditional alpha/N_off is not defined.",
@@ -2500,7 +2709,7 @@ def main() -> None:
     run_id = sanitize_run_id(args.run_id or make_default_run_id())
     run_dir = prepare_run_output_dir(output_root, run_id, overwrite_run_dir=bool(args.overwrite_run_dir))
 
-    cells = load_cells(selection_csv)
+    cells = load_cells(selection_csv, included_only=bool(args.included_only))
     sources = default_source_masks()
     psf_by_cell = load_psf_by_cell(psf_npz, cells)
     r_opt_deg = np.asarray([psf_by_cell[cell.cell_id]["r_opt_deg"] for cell in cells], dtype=np.float32)

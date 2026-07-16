@@ -97,6 +97,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--background-npz", type=str, default=DEFAULT_BACKGROUND_NPZ)
     parser.add_argument("--background-metadata", type=str, default=DEFAULT_BACKGROUND_METADATA)
     parser.add_argument("--cell-selection-csv", type=str, default=DEFAULT_CELL_SELECTION)
+    parser.add_argument(
+        "--included-only",
+        action="store_true",
+        default=False,
+        help="Load only rows whose selector include column is 1.",
+    )
     parser.add_argument("--output-dir", type=str, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument(
         "--run-id",
@@ -171,7 +177,7 @@ def finite_float(value: object) -> Optional[float]:
     return number if math.isfinite(number) else None
 
 
-def load_cells(selection_csv: Path) -> List[CellSpec]:
+def load_cells(selection_csv: Path, *, included_only: bool = False) -> List[CellSpec]:
     cells: List[CellSpec] = []
     with selection_csv.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
@@ -179,7 +185,11 @@ def load_cells(selection_csv: Path) -> List[CellSpec]:
         missing = required - set(reader.fieldnames or [])
         if missing:
             raise ValueError(f"{selection_csv} is missing required columns: {sorted(missing)}")
+        if included_only and "include" not in set(reader.fieldnames or []):
+            raise ValueError(f"{selection_csv} is missing required include column for --included-only")
         for idx, row in enumerate(reader):
+            if included_only and str(row.get("include", "")).strip() != "1":
+                continue
             cells.append(
                 CellSpec(
                     index=idx,
@@ -505,6 +515,11 @@ def load_background_contract(
             "background_form": form,
             "method": method or None,
             "stage_d_run_id": background_metadata.get("run_id"),
+            "on_aperture_integration": model.get("on_aperture_integration", "pixel-center"),
+            "B_on_formula": model.get("B_on_formula"),
+            "on_aperture_integration_note": model.get("on_aperture_integration_note"),
+            "analytic_on_aperture_formula": model.get("analytic_on_aperture_formula"),
+            "analytic_positive_surface_required": model.get("analytic_positive_surface_required"),
         },
     )
 
@@ -1096,6 +1111,22 @@ def write_report_html(path: Path, metadata: Dict[str, object], rows: Sequence[Di
         if isinstance(background_summary, dict)
         else None
     ) or contract.get("background_form", "direct_expectation")
+    integration_method = (
+        background_summary.get("on_aperture_integration")
+        if isinstance(background_summary, dict)
+        else None
+    ) or "pixel-center"
+    if integration_method == "analytic-quadratic":
+        aperture_contract_html = (
+            "Stage E 表格中的 <code>B_on</code> 是 Stage D 对已拟合、annulus-normalized 的二次背景曲面"
+            "在真实圆孔径内做闭式积分得到的；下方 <code>background_map</code> 和 <code>on_mask</code> 只保留为"
+            "同一背景曲面的像素化形态诊断，不参与 active <code>B_on</code> 求和。"
+        )
+    else:
+        aperture_contract_html = (
+            "Stage E 表格中的 <code>B_on</code> 是把同一个 Stage D <code>background_map</code> "
+            "按像素中心 mask 积分到每个 cell 的 Crab on-region 后得到的。"
+        )
 
     figure_items = [
         (
@@ -1310,7 +1341,7 @@ footer {{ margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--borde
       <div class="step"><div class="k">Subtract</div><div class="t">扣背景</div><div class="d">读取 Stage D 的 <code>B_on,b</code>，计算 <code>excess_b = N_on,b - B_on,b</code>。</div></div>
       <div class="step"><div class="k">Diagnose</div><div class="t">输出诊断</div><div class="d">给出误差、显著性、表格和二维热图，供 Stage F 和人工检查使用。</div></div>
     </div>
-    <p>本次 Stage D 使用的是 Crab 局部 ROI 背景模型，所以 Stage E 也只在同一套 fiducial ROI 内工作：<code>rho &lt; {format_float(roi_radius, 3)} deg</code>。这保证 <code>N_on</code> 的统计口径和 <code>B_on</code> 的背景口径一致。</p>
+    <p>本次 Stage D 使用的是 Crab 局部 ROI 背景模型，所以 Stage E 也只在同一套 fiducial ROI 内工作：<code>rho &lt; {format_float(roi_radius, 3)} deg</code>。<code>N_on</code> 使用逐事件球面角距离，<code>B_on</code> 使用 <code>{html.escape(str(integration_method))}</code> 背景孔径积分。</p>
   </section>
 
   <section>
@@ -1359,7 +1390,7 @@ footer {{ margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--borde
 	    <p>下面几张图来自 Stage D 正式 ROI-local 背景输出，不再使用此前平滑 skymap 的 sideband 近似。它们直接读取 <code>{html.escape(background_npz_name)}</code> 中的 <code>counts_map</code> 和 <code>background_map</code>：去背景天图是逐像素 <code>counts_map - background_map</code>，residual 天图是同一背景期望下的 Poisson 诊断量。</p>
 	    <div class="callout good">
 	      <strong>这组图和 Stage E 的背景口径一致。</strong>
-	      Stage E 表格中的 <code>B_on</code> 是把同一个 Stage D <code>background_map</code> 积分到每个 cell 的 Crab on-region 后得到的；这里的天图只是把同一个过程摊回 ROI 像素上，方便人眼检查源形态。
+	      {aperture_contract_html}
 	    </div>
 	    <div class="figure-grid">
 	      {''.join(stage_d_map_html) if stage_d_map_html else '<p>本地没有找到 Stage D 正式去背景天图。</p>'}
@@ -1526,7 +1557,7 @@ def main() -> None:
     background_metadata_path = Path(args.background_metadata).resolve()
     background_metadata = load_json(background_metadata_path) if background_metadata_path.exists() else {}
     selection_csv = Path(args.cell_selection_csv).resolve()
-    cells = load_cells(selection_csv)
+    cells = load_cells(selection_csv, included_only=bool(args.included_only))
     contract = load_background_contract(background_npz, background_metadata, cells)
     if str(args.containment_override) == "fixed1":
         contract.arrays["containment_r_opt"] = np.ones(len(cells), dtype=np.float64)

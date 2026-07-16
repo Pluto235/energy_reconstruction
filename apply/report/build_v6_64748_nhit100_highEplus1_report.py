@@ -90,8 +90,10 @@ STAGE_E = REPO_ROOT / f"apply/output/stage_e_{RUN_ID}_containment1_annnorm/runs/
 STAGE_F = REPO_ROOT / f"apply/output/stage_f_{RUN_ID}/runs/{RUN_ID}_stage_f"
 STAGE_G = REPO_ROOT / f"apply/output/stage_g_{RUN_ID}/runs/{RUN_ID}_stage_g"
 STAGE_E = Path(os.environ.get("V6_REPORT_STAGE_E_RUN_DIR", str(STAGE_E)))
+STAGE_D = Path(os.environ.get("V6_REPORT_STAGE_D_RUN_DIR", str(STAGE_D)))
 STAGE_F = Path(os.environ.get("V6_REPORT_STAGE_F_RUN_DIR", str(STAGE_F)))
 STAGE_G = Path(os.environ.get("V6_REPORT_STAGE_G_RUN_DIR", str(STAGE_G)))
+STAGE_D_STEM = os.environ.get("V6_REPORT_STAGE_D_STEM", f"background_{RUN_ID}_annnorm")
 STAGE_E_STEM = os.environ.get("V6_REPORT_STAGE_E_STEM", f"signal_{RUN_ID}_containment1_annnorm")
 STAGE_F_STEM = os.environ.get("V6_REPORT_STAGE_F_STEM", f"fit_{RUN_ID}")
 STAGE_G_STEM = os.environ.get("V6_REPORT_STAGE_G_STEM", f"sed_points_{RUN_ID}")
@@ -639,7 +641,7 @@ def ensure_stage_b_fit_shaded_profile_grid(fit_ids: set[int]) -> None:
 def ensure_stage_d_dec_profile(fit_ids: set[int]) -> None:
     import numpy as np
 
-    stage_d_npz = STAGE_D / f"background_{RUN_ID}_annnorm.npz"
+    stage_d_npz = STAGE_D / f"{STAGE_D_STEM}.npz"
     input_paths = [Path(__file__), stage_d_npz, FIT_SELECTOR]
     existing_inputs = [path for path in input_paths if path.exists()]
     source_mtime = max(path.stat().st_mtime for path in existing_inputs)
@@ -1136,7 +1138,7 @@ def main() -> None:
     response_meta = load_json(RESPONSE_META)
     stage_b_meta = load_json(STAGE_B / f"psf_{RUN_ID}_metadata.json")
     stage_c_meta = load_json(STAGE_C / "obs_events_metadata.json")
-    stage_d_meta = load_json(STAGE_D / f"background_{RUN_ID}_annnorm_metadata.json")
+    stage_d_meta = load_json(STAGE_D / f"{STAGE_D_STEM}_metadata.json")
     stage_e_meta = load_json(STAGE_E / f"{STAGE_E_STEM}_metadata.json")
     stage_f_meta = load_json(STAGE_F / f"{STAGE_F_STEM}_metadata.json")
     stage_g_meta = load_json(STAGE_G / f"{STAGE_G_STEM}_metadata.json")
@@ -1225,7 +1227,7 @@ def main() -> None:
         RESPONSE_META,
         STAGE_B / f"psf_{RUN_ID}_metadata.json",
         STAGE_C / "obs_events_metadata.json",
-        STAGE_D / f"background_{RUN_ID}_annnorm_metadata.json",
+        STAGE_D / f"{STAGE_D_STEM}_metadata.json",
         STAGE_E / f"{STAGE_E_STEM}_metadata.json",
         STAGE_F / f"{STAGE_F_STEM}_metadata.json",
         STAGE_G / f"{STAGE_G_STEM}_metadata.json",

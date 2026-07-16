@@ -27,6 +27,10 @@ COV_NPZ=scheme_R_double_rayleigh_poisson_background_covariance.npz
 COV_META=scheme_R_double_rayleigh_poisson_background_covariance.json
 REPORT=apply/report/crab_sed_v6_64748_nhit100_reselect44_scheme_R_double_rayleigh_poisson_pooled_report.html
 ASSETS=apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-poisson-pooled
+NOMINAL_ROOT=${OUTPUT_ROOT}/branches/h010_x0_y0
+D_RUN=${NOMINAL_ROOT}/stage_d/runs/stage_d
+E_RUN=${NOMINAL_ROOT}/stage_e/runs/stage_e
+F_RUN=${NOMINAL_ROOT}/stage_f/runs/stage_f
 
 python - "${REGISTRY}" "${MANIFEST}" "${MANIFEST_JOB_ID}" "${GRID_JOB_ID}" "${BOOTSTRAP_JOB_ID}" "${SLURM_JOB_ID}" <<'PY'
 import hashlib
@@ -100,6 +104,58 @@ python apply/report/build_v6_poisson_grid_convergence.py \
   --branches-json "${REGISTRY}" --output-json "${CONVERGENCE}" --plot-dir "${ASSETS}"
 convergence_status=$?
 set -e
+
+# Grid branches skip large diagnostic plots. Materialize the nominal report
+# figures from frozen NPZ products without rerunning or rewriting D/E/F data.
+python apply/report/replot_v6_display_cell_ids.py \
+  --stage-d-npz "${D_RUN}/background_h010_x0_y0.npz" \
+  --stage-f-npz "${F_RUN}/fit_h010_x0_y0.npz" \
+  --stage-f-metadata "${F_RUN}/fit_h010_x0_y0_metadata.json" \
+  --stage-d-output-dir "${D_RUN}" --stage-f-output-dir "${F_RUN}" \
+  --asset-dir "${ASSETS}"
+
+python - "${E_RUN}/signal_h010_x0_y0.npz" "${E_RUN}" <<'PY'
+from importlib import import_module
+from pathlib import Path
+import sys
+
+import numpy as np
+
+signal_path, output_dir = map(Path, sys.argv[1:])
+stage_e = import_module("apply.stages.05_signal")
+with np.load(signal_path, allow_pickle=False) as handle:
+    arrays = {name: np.asarray(handle[name]) for name in handle.files}
+cells = [
+    stage_e.CellSpec(
+        index=index,
+        cell_id=int(cell_id),
+        nhit_bin=str(nhit_bin),
+        predE_bin=str(pred_bin),
+        mc_count=0,
+        selection_version="poisson_pooled_report",
+        selection_reason="nominal_report_plot",
+    )
+    for index, (cell_id, nhit_bin, pred_bin) in enumerate(
+        zip(arrays["cell_id"], arrays["nhit_bin"], arrays["predE_bin"])
+    )
+]
+stage_e.plot_heatmap_grid(
+    arrays["formal_sigma"],
+    cells,
+    output_dir / "formal_sigma_grid.png",
+    title="Stage E formal significance",
+    colorbar_label="formal sigma",
+    cmap_name="RdBu_r",
+    symmetric=True,
+)
+stage_e.plot_on_background_grid(
+    arrays["N_on"],
+    arrays["B_on"],
+    cells,
+    output_dir / "on_background_grid.png",
+    title="Stage E Crab on-region counts and background",
+)
+PY
 
 export V6_REPORT_POISSON_MANIFEST="${MANIFEST}"
 export V6_REPORT_GRID_CONVERGENCE="${CONVERGENCE}"

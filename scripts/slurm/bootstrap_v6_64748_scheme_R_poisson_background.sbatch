@@ -36,7 +36,8 @@ COV_NPZ=scheme_R_double_rayleigh_poisson_background_covariance.npz
 COV_META=scheme_R_double_rayleigh_poisson_background_covariance.json
 
 python apply/tools/bootstrap_v6_poisson_background.py \
-  --stage-d-npz "${D_DIR}/${D_STEM}.npz" --pooling-manifest "${MANIFEST}" \
+  --stage-d-npz "${D_DIR}/${D_STEM}.npz" --stage-e-npz "${E_DIR}/${E_STEM}.npz" \
+  --pooling-manifest "${MANIFEST}" \
   --output-npz "${COV_NPZ}" --metadata-json "${COV_META}" \
   --replicates 1000 --seed 64748 --workers "${SLURM_CPUS_PER_TASK:-32}"
 

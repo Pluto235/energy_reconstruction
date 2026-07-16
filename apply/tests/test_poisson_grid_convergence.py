@@ -209,7 +209,7 @@ class RegistryAndValidatorTests(unittest.TestCase):
             excess_covariance=np.diag(n_on.astype(np.float64)) + b_covariance,
         )
         metadata_path.write_text(json.dumps({
-            "inputs": {"stage_d_npz": stage_d.name, "pooling_manifest": manifest_path.name},
+            "inputs": {"stage_d_npz": stage_d.name, "stage_e_npz": stage_e.name, "pooling_manifest": manifest_path.name},
             "bootstrap_count_requested": 1000,
             "bootstrap_count_completed": 1000,
             "refit_failure_count": 0,
@@ -218,6 +218,8 @@ class RegistryAndValidatorTests(unittest.TestCase):
             "manifest_sha256": manifest["manifest_sha256"],
             "manifest_file_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
             "stage_d_sha256": hashlib.sha256(stage_d.read_bytes()).hexdigest(),
+            "stage_e_sha256": hashlib.sha256(stage_e.read_bytes()).hexdigest(),
+            "implementation_commit_sha": manifest["implementation_commit_sha"],
             "cell_id": cell_ids.tolist(),
         }), encoding="utf-8")
         f_metadata = json.loads(stage_f_metadata.read_text(encoding="utf-8"))
@@ -412,11 +414,30 @@ class RegistryAndValidatorTests(unittest.TestCase):
             npz, metadata, registry = self._write_valid_bootstrap_files(root, specs)
             self.assertTrue(all(row["passed"] for row in bootstrap_checks(npz, metadata, registry_path=registry)))
 
-            payload = json.loads(metadata.read_text(encoding="utf-8"))
-            payload["stage_d_sha256"] = "0" * 64
+            original = json.loads(metadata.read_text(encoding="utf-8"))
+            for field in ("stage_d_sha256", "stage_e_sha256", "implementation_commit_sha"):
+                with self.subTest(field=field):
+                    payload = dict(original)
+                    payload[field] = "0" * 40 if field == "implementation_commit_sha" else "0" * 64
+                    metadata.write_text(json.dumps(payload), encoding="utf-8")
+                    checks = bootstrap_checks(npz, metadata, registry_path=registry)
+                    self.assertFalse(next(row for row in checks if row["name"] == "bootstrap_provenance_linked")["passed"])
+            payload = dict(original)
+            payload["inputs"] = dict(original["inputs"])
+            del payload["inputs"]["stage_e_npz"]
             metadata.write_text(json.dumps(payload), encoding="utf-8")
             checks = bootstrap_checks(npz, metadata, registry_path=registry)
             self.assertFalse(next(row for row in checks if row["name"] == "bootstrap_provenance_linked")["passed"])
+            metadata.write_text(json.dumps(original), encoding="utf-8")
+
+            nominal = next(spec for spec in specs if spec["branch_id"] == "h010_x0_y0")
+            stage_e = root / str(nominal["stage_e_npz"])
+            with np.load(stage_e) as handle:
+                stage_e_arrays = {name: handle[name] for name in handle.files}
+            stage_e_arrays["N_on"] = stage_e_arrays["N_on"].astype(np.float64)
+            np.savez(stage_e, **stage_e_arrays)
+            checks = bootstrap_checks(npz, metadata, registry_path=registry)
+            self.assertFalse(next(row for row in checks if row["name"] == "bootstrap_nominal_alignment")["passed"])
 
     def test_bootstrap_rejects_unrelated_excess_covariance_and_wrong_seed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

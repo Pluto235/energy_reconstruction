@@ -11,6 +11,7 @@ import numpy as np
 
 from apply.tools.bootstrap_v6_poisson_background import (
     bootstrap_replicate,
+    prepare_context,
     rectangle_basis_grid,
     rng_for_replicate,
 )
@@ -179,6 +180,65 @@ class CovarianceFitTests(unittest.TestCase):
 
 
 class BootstrapDeterminismTests(unittest.TestCase):
+    @staticmethod
+    def _nominal_context_inputs() -> tuple[dict[str, np.ndarray], dict[str, np.ndarray], dict[str, object]]:
+        donor_ids = np.arange(1, 85, dtype=np.int64)
+        target_ids = donor_ids[:44]
+        b_on = np.linspace(100.0, 183.0, donor_ids.size)
+        counts_map = np.full((donor_ids.size, 2, 2), 250, dtype=np.int64)
+        stage_d = {
+            "cell_id": donor_ids,
+            "counts_map": counts_map,
+            "background_map": np.full(counts_map.shape, 250.0),
+            "training_mask": np.ones(counts_map.shape, dtype=bool),
+            "on_mask": np.ones(counts_map.shape, dtype=bool),
+            "x_edges_deg": np.asarray([-1.0, 0.0, 1.0]),
+            "y_edges_deg": np.asarray([-1.0, 0.0, 1.0]),
+            "r_opt_deg": np.full(donor_ids.size, 0.5),
+            "annulus_inner_deg": np.full(donor_ids.size, 0.6),
+            "annulus_outer_deg": np.full(donor_ids.size, 0.9),
+            "B_on": b_on,
+        }
+        event_n_on = np.arange(10_001, 10_045, dtype=np.int64)
+        stage_e = {
+            "cell_id": target_ids,
+            "N_on": event_n_on,
+            "B_on": b_on[: target_ids.size],
+        }
+        manifest: dict[str, object] = {
+            "target_cell_ids": target_ids.tolist(),
+            "donor_universe_cell_ids": donor_ids.tolist(),
+            "continuous_annulus_counts": {str(cell_id): 1_000 for cell_id in donor_ids},
+            "cells": {
+                str(cell_id): {"donor_cell_ids": [int(cell_id)], "surface_order": 0}
+                for cell_id in target_ids
+            },
+        }
+        return stage_d, stage_e, manifest
+
+    def test_context_uses_event_level_stage_e_n_on_not_pixelized_stage_d_counts(self) -> None:
+        stage_d, stage_e, manifest = self._nominal_context_inputs()
+        pixelized_n_on = np.sum(stage_d["counts_map"], axis=(1, 2))[:44]
+        self.assertFalse(np.array_equal(pixelized_n_on, stage_e["N_on"]))
+
+        context = prepare_context(stage_d, stage_e, manifest)
+
+        np.testing.assert_array_equal(context["N_on"], stage_e["N_on"])
+        self.assertFalse(np.array_equal(context["N_on"], pixelized_n_on))
+
+    def test_context_rejects_non_integer_stage_e_n_on(self) -> None:
+        stage_d, stage_e, manifest = self._nominal_context_inputs()
+        stage_e["N_on"] = stage_e["N_on"].astype(np.float64)
+        with self.assertRaisesRegex(ValueError, "N_on must use an integer dtype"):
+            prepare_context(stage_d, stage_e, manifest)
+
+    def test_context_rejects_stage_e_b_on_not_aligned_to_stage_d(self) -> None:
+        stage_d, stage_e, manifest = self._nominal_context_inputs()
+        stage_e["B_on"] = stage_e["B_on"].copy()
+        stage_e["B_on"][3] += 0.5
+        with self.assertRaisesRegex(ValueError, "B_on must exactly match Stage D"):
+            prepare_context(stage_d, stage_e, manifest)
+
     def test_replicate_index_seed_splitting_is_stable(self) -> None:
         first = rng_for_replicate(64748, 17).poisson(20.0, size=20)
         repeated = rng_for_replicate(64748, 17).poisson(20.0, size=20)

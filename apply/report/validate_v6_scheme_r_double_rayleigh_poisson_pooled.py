@@ -183,7 +183,8 @@ def bootstrap_checks(
                 raise ValueError(f"missing arrays: {missing}")
             cell_ids = np.asarray(handle["cell_id"], dtype=np.int64)
             b_on_nominal = np.asarray(handle["B_on_nominal"], dtype=np.float64)
-            n_on = np.asarray(handle["N_on"], dtype=np.int64)
+            n_on_raw = np.asarray(handle["N_on"])
+            n_on = np.asarray(n_on_raw, dtype=np.int64)
             samples = np.asarray(handle["B_on_bootstrap_samples"], dtype=np.float64)
             b_covariance = np.asarray(handle["B_on_covariance"], dtype=np.float64)
             excess_covariance = np.asarray(handle["excess_covariance"], dtype=np.float64)
@@ -191,7 +192,8 @@ def bootstrap_checks(
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
         shape_ok = cell_ids.shape == (44,) and len(set(cell_ids.tolist())) == 44 and b_on_nominal.shape == (44,) and n_on.shape == (44,) and samples.shape == (1000, 44) and b_covariance.shape == (44, 44) and excess_covariance.shape == (44, 44)
         checks.append(check("bootstrap_registered_shape", shape_ok, {"cell_id": list(cell_ids.shape), "B_on_nominal": list(b_on_nominal.shape), "N_on": list(n_on.shape), "samples": list(samples.shape), "B_on_covariance": list(b_covariance.shape), "excess_covariance": list(excess_covariance.shape)}, {"cell_id": [44], "vectors": [44], "samples": [1000, 44], "covariances": [44, 44]}, {}))
-        finite = all(np.all(np.isfinite(value)) for value in (b_on_nominal, samples, b_covariance, excess_covariance, stored_mean)) and bool(np.all(n_on >= 0))
+        n_on_integer = bool(np.issubdtype(n_on_raw.dtype, np.integer))
+        finite = all(np.all(np.isfinite(value)) for value in (b_on_nominal, samples, b_covariance, excess_covariance, stored_mean)) and n_on_integer and bool(np.all(n_on >= 0))
         symmetric = np.allclose(b_covariance, b_covariance.T, rtol=1e-12, atol=1e-12) and np.allclose(excess_covariance, excess_covariance.T, rtol=1e-12, atol=1e-12)
         recomputed_mean = np.mean(samples, axis=0)
         recomputed_covariance = np.cov(samples, rowvar=False, ddof=1)
@@ -238,29 +240,50 @@ def bootstrap_checks(
                 stage_d_ids = np.asarray(handle["cell_id"], dtype=np.int64)
                 stage_d_b_on = np.asarray(handle["B_on"], dtype=np.float64)
             with np.load(stage_e_path, allow_pickle=False) as handle:
-                stage_e_ids = np.asarray(handle["cell_id"], dtype=np.int64)
-                stage_e_n_on = np.asarray(handle["N_on"], dtype=np.int64)
+                stage_e_ids_raw = np.asarray(handle["cell_id"])
+                stage_e_ids = np.asarray(stage_e_ids_raw, dtype=np.int64)
+                stage_e_n_on_raw = np.asarray(handle["N_on"])
+                stage_e_n_on = np.asarray(stage_e_n_on_raw, dtype=np.int64)
+                stage_e_b_on = np.asarray(handle["B_on"], dtype=np.float64)
             stage_d_index = {int(cell_id): index for index, cell_id in enumerate(stage_d_ids)}
             aligned_stage_d_b_on = np.asarray([stage_d_b_on[stage_d_index[int(cell_id)]] for cell_id in cell_ids])
             alignment_ok = (
                 np.array_equal(cell_ids, manifest_target_ids)
                 and np.array_equal(cell_ids, stage_e_ids)
+                and np.issubdtype(stage_e_ids_raw.dtype, np.integer)
+                and np.issubdtype(stage_e_n_on_raw.dtype, np.integer)
+                and np.all(stage_e_n_on >= 0)
                 and np.array_equal(n_on, stage_e_n_on)
                 and np.allclose(b_on_nominal, aligned_stage_d_b_on, rtol=1e-12, atol=1e-12)
+                and np.allclose(stage_e_b_on, aligned_stage_d_b_on, rtol=1e-12, atol=1e-12)
             )
-            checks.append(check("bootstrap_nominal_alignment", alignment_ok, {"cell_id": cell_ids.tolist(), "manifest_target_cell_id": manifest_target_ids.tolist(), "stage_e_cell_id": stage_e_ids.tolist(), "N_on_matches_stage_e": bool(np.array_equal(n_on, stage_e_n_on)), "B_on_nominal_matches_stage_d": bool(np.allclose(b_on_nominal, aligned_stage_d_b_on, rtol=1e-12, atol=1e-12))}, {"exact_cell_order": True, "N_on_matches_stage_e": True, "B_on_nominal_matches_stage_d": True}, {}))
+            checks.append(check("bootstrap_nominal_alignment", alignment_ok, {"cell_id": cell_ids.tolist(), "manifest_target_cell_id": manifest_target_ids.tolist(), "stage_e_cell_id": stage_e_ids.tolist(), "stage_e_cell_id_integer": bool(np.issubdtype(stage_e_ids_raw.dtype, np.integer)), "stage_e_N_on_non_negative_integer": bool(np.issubdtype(stage_e_n_on_raw.dtype, np.integer) and np.all(stage_e_n_on >= 0)), "N_on_matches_stage_e": bool(np.array_equal(n_on, stage_e_n_on)), "B_on_nominal_matches_stage_d": bool(np.allclose(b_on_nominal, aligned_stage_d_b_on, rtol=1e-12, atol=1e-12)), "stage_e_B_on_matches_stage_d": bool(np.allclose(stage_e_b_on, aligned_stage_d_b_on, rtol=1e-12, atol=1e-12))}, {"exact_cell_order": True, "stage_e_cell_id_integer": True, "stage_e_N_on_non_negative_integer": True, "N_on_matches_stage_e": True, "B_on_nominal_matches_stage_d": True, "stage_e_B_on_matches_stage_d": True}, {}))
 
             metadata_stage_d = metadata_path_for(metadata, "stage_d_npz", metadata_path)
+            metadata_inputs = metadata.get("inputs") or {}
+            metadata_stage_e = (
+                metadata_path_for(metadata, "stage_e_npz", metadata_path)
+                if isinstance(metadata_inputs, Mapping) and metadata_inputs.get("stage_e_npz")
+                else None
+            )
             metadata_manifest = metadata_path_for(metadata, "pooling_manifest", metadata_path)
+            implementation_sha = str(metadata.get("implementation_commit_sha", ""))
+            manifest_implementation_sha = str(manifest.get("implementation_commit_sha", ""))
+            registry_implementation_sha = str((nominal.get("provenance") or {}).get("code_sha", ""))
             provenance_ok = (
                 metadata_stage_d == stage_d_path
+                and metadata_stage_e == stage_e_path
                 and metadata_manifest == manifest_path
                 and metadata.get("stage_d_sha256") == _sha256(stage_d_path)
+                and metadata.get("stage_e_sha256") == _sha256(stage_e_path)
                 and metadata.get("manifest_sha256") == manifest.get("manifest_sha256")
                 and metadata.get("manifest_file_sha256") == _sha256(manifest_path)
                 and metadata.get("cell_id") == cell_ids.tolist()
+                and bool(implementation_sha)
+                and implementation_sha == manifest_implementation_sha
+                and implementation_sha == registry_implementation_sha
             )
-            checks.append(check("bootstrap_provenance_linked", provenance_ok, {"stage_d_path_matches": metadata_stage_d == stage_d_path, "manifest_path_matches": metadata_manifest == manifest_path, "stage_d_sha_matches": metadata.get("stage_d_sha256") == _sha256(stage_d_path), "manifest_self_hash_matches": metadata.get("manifest_sha256") == manifest.get("manifest_sha256"), "manifest_file_sha_matches": metadata.get("manifest_file_sha256") == _sha256(manifest_path), "metadata_cell_id_matches": metadata.get("cell_id") == cell_ids.tolist()}, {"all": True}, {}))
+            checks.append(check("bootstrap_provenance_linked", provenance_ok, {"stage_d_path_matches": metadata_stage_d == stage_d_path, "stage_e_path_matches": metadata_stage_e == stage_e_path, "manifest_path_matches": metadata_manifest == manifest_path, "stage_d_sha_matches": metadata.get("stage_d_sha256") == _sha256(stage_d_path), "stage_e_sha_matches": metadata.get("stage_e_sha256") == _sha256(stage_e_path), "manifest_self_hash_matches": metadata.get("manifest_sha256") == manifest.get("manifest_sha256"), "manifest_file_sha_matches": metadata.get("manifest_file_sha256") == _sha256(manifest_path), "metadata_cell_id_matches": metadata.get("cell_id") == cell_ids.tolist(), "implementation_commit_matches_manifest": implementation_sha == manifest_implementation_sha, "implementation_commit_matches_registry": implementation_sha == registry_implementation_sha}, {"all": True}, {}))
 
             fits = stage_f_metadata.get("fits") or {}
             covariance_fit_names = ("pl_background_covariance", "logpar_background_covariance")

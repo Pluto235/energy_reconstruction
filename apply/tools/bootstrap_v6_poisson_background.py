@@ -8,6 +8,7 @@ import json
 import math
 import os
 from pathlib import Path
+import subprocess
 import sys
 from typing import Dict, Mapping, Optional, Sequence, Tuple
 
@@ -38,6 +39,11 @@ def parse_args() -> argparse.Namespace:
         description="Parametric bootstrap covariance for the nominal v6 pooled-Poisson background."
     )
     parser.add_argument("--stage-d-npz", default=DEFAULT_STAGE_D_NPZ)
+    parser.add_argument(
+        "--stage-e-npz",
+        required=True,
+        help="Nominal Stage E signal NPZ providing event-level N_on in manifest target order.",
+    )
     parser.add_argument("--pooling-manifest", default=DEFAULT_MANIFEST)
     parser.add_argument("--output-npz", required=True)
     parser.add_argument(
@@ -71,6 +77,14 @@ def load_json(path: Path) -> Dict[str, object]:
     if not isinstance(payload, dict):
         raise ValueError(f"Expected a JSON object in {path}")
     return payload
+
+
+def implementation_commit_sha() -> str:
+    return subprocess.check_output(
+        ["git", "rev-parse", "HEAD"],
+        cwd=REPO_ROOT,
+        text=True,
+    ).strip()
 
 
 def write_json(path: Path, payload: Mapping[str, object]) -> None:
@@ -128,9 +142,14 @@ def centered_annulus_polynomial_integral(
     ) - centered_disk_polynomial_integral(coefficients, inner_radius_deg)
 
 
-def _required_array(data: Mapping[str, np.ndarray], name: str) -> np.ndarray:
+def _required_array(
+    data: Mapping[str, np.ndarray],
+    name: str,
+    *,
+    source: str = "Stage D",
+) -> np.ndarray:
     if name not in data:
-        raise ValueError(f"Stage D NPZ is missing required array {name!r}")
+        raise ValueError(f"{source} NPZ is missing required array {name!r}")
     return np.asarray(data[name])
 
 
@@ -145,7 +164,11 @@ def _one_value_by_cell(
     return {int(cell_id): float(value) for cell_id, value in zip(cell_ids, values)}
 
 
-def prepare_context(stage_d: Mapping[str, np.ndarray], manifest: Mapping[str, object]) -> Dict[str, object]:
+def prepare_context(
+    stage_d: Mapping[str, np.ndarray],
+    stage_e: Mapping[str, np.ndarray],
+    manifest: Mapping[str, object],
+) -> Dict[str, object]:
     from apply.stages.poisson_roi_background import fit_profiled_poisson_surface  # noqa: F401
 
     cell_ids = np.asarray(_required_array(stage_d, "cell_id"), dtype=np.int64)
@@ -158,6 +181,20 @@ def prepare_context(stage_d: Mapping[str, np.ndarray], manifest: Mapping[str, ob
     missing_targets = [int(cell_id) for cell_id in target_ids if int(cell_id) not in index_by_cell]
     if missing_targets:
         raise ValueError(f"Stage D NPZ is missing target cells: {missing_targets}")
+
+    stage_e_cell_ids_raw = _required_array(stage_e, "cell_id", source="Stage E")
+    if not np.issubdtype(stage_e_cell_ids_raw.dtype, np.integer):
+        raise ValueError("Stage E cell_id must use an integer dtype")
+    stage_e_cell_ids = np.asarray(stage_e_cell_ids_raw, dtype=np.int64)
+    if not np.array_equal(stage_e_cell_ids, target_ids):
+        raise ValueError("Stage E cell_id must exactly match pooling manifest target_cell_ids order")
+
+    stage_e_n_on_raw = _required_array(stage_e, "N_on", source="Stage E")
+    if not np.issubdtype(stage_e_n_on_raw.dtype, np.integer):
+        raise ValueError("Stage E N_on must use an integer dtype")
+    stage_e_n_on = np.asarray(stage_e_n_on_raw, dtype=np.int64)
+    if stage_e_n_on.shape != target_ids.shape or np.any(stage_e_n_on < 0):
+        raise ValueError("Stage E N_on must contain exactly 44 non-negative integer counts")
 
     cells_manifest = manifest.get("cells")
     if not isinstance(cells_manifest, dict):
@@ -177,12 +214,11 @@ def prepare_context(stage_d: Mapping[str, np.ndarray], manifest: Mapping[str, ob
     counts_map = np.asarray(_required_array(stage_d, "counts_map"), dtype=np.int64)
     expected_map = np.asarray(_required_array(stage_d, "background_map"), dtype=np.float64)
     training_mask = np.asarray(_required_array(stage_d, "training_mask"), dtype=bool)
-    on_mask = np.asarray(_required_array(stage_d, "on_mask"), dtype=bool)
     expected_shape = (cell_ids.size,) + counts_map.shape[1:]
     if counts_map.ndim != 3 or counts_map.shape != expected_shape or expected_map.shape != expected_shape:
         raise ValueError("Stage D counts_map/background_map must both have shape (cell, y, x)")
-    if training_mask.shape != expected_shape or on_mask.shape != expected_shape:
-        raise ValueError("Stage D training_mask/on_mask shape must match counts_map")
+    if training_mask.shape != expected_shape:
+        raise ValueError("Stage D training_mask shape must match counts_map")
     x_edges = np.asarray(_required_array(stage_d, "x_edges_deg"), dtype=np.float64)
     y_edges = np.asarray(_required_array(stage_d, "y_edges_deg"), dtype=np.float64)
     if counts_map.shape[2] != x_edges.size - 1 or counts_map.shape[1] != y_edges.size - 1:
@@ -193,6 +229,18 @@ def prepare_context(stage_d: Mapping[str, np.ndarray], manifest: Mapping[str, ob
     annulus_inner = _one_value_by_cell(stage_d, "annulus_inner_deg", cell_ids)
     annulus_outer = _one_value_by_cell(stage_d, "annulus_outer_deg", cell_ids)
     b_on_nominal = _one_value_by_cell(stage_d, "B_on", cell_ids)
+    aligned_stage_d_b_on = np.asarray(
+        [b_on_nominal[int(cell_id)] for cell_id in target_ids],
+        dtype=np.float64,
+    )
+    stage_e_b_on = np.asarray(
+        _required_array(stage_e, "B_on", source="Stage E"),
+        dtype=np.float64,
+    )
+    if stage_e_b_on.shape != target_ids.shape or not np.all(np.isfinite(stage_e_b_on)):
+        raise ValueError("Stage E B_on must contain exactly 44 finite values")
+    if not np.array_equal(stage_e_b_on, aligned_stage_d_b_on):
+        raise ValueError("Stage E B_on must exactly match Stage D B_on in manifest target order")
 
     target_specs: Dict[int, Dict[str, object]] = {}
     all_needed_cells: set[int] = set()
@@ -244,11 +292,8 @@ def prepare_context(stage_d: Mapping[str, np.ndarray], manifest: Mapping[str, ob
         "r_opt_by_cell": r_opt,
         "annulus_inner_by_cell": annulus_inner,
         "annulus_outer_by_cell": annulus_outer,
-        "B_on_nominal": np.asarray([b_on_nominal[int(cell_id)] for cell_id in target_ids]),
-        "N_on": np.asarray(
-            [counts_map[index_by_cell[int(cell_id)]][on_mask[index_by_cell[int(cell_id)]]].sum() for cell_id in target_ids],
-            dtype=np.int64,
-        ),
+        "B_on_nominal": aligned_stage_d_b_on,
+        "N_on": stage_e_n_on,
     }
 
 
@@ -391,6 +436,7 @@ def main() -> None:
         raise ValueError("--positivity-radius-deg must be positive")
 
     stage_d_path = Path(args.stage_d_npz).resolve()
+    stage_e_path = Path(args.stage_e_npz).resolve()
     manifest_path = Path(args.pooling_manifest).resolve()
     output_path = Path(args.output_npz).resolve()
     metadata_path = (
@@ -400,12 +446,16 @@ def main() -> None:
     )
     if not stage_d_path.exists():
         raise FileNotFoundError(f"Stage D NPZ does not exist: {stage_d_path}")
+    if not stage_e_path.exists():
+        raise FileNotFoundError(f"Stage E NPZ does not exist: {stage_e_path}")
     if not manifest_path.exists():
         raise FileNotFoundError(f"Pooling manifest does not exist: {manifest_path}")
     manifest = load_json(manifest_path)
     with np.load(stage_d_path, allow_pickle=False) as data:
         stage_d = {name: data[name].copy() for name in data.files}
-    context = prepare_context(stage_d, manifest)
+    with np.load(stage_e_path, allow_pickle=False) as data:
+        stage_e = {name: data[name].copy() for name in data.files}
+    context = prepare_context(stage_d, stage_e, manifest)
     context["positivity_radius_deg"] = float(args.positivity_radius_deg)
 
     samples, failures = run_bootstrap(
@@ -439,9 +489,10 @@ def main() -> None:
     )
     manifest_sha = str(manifest.get("manifest_sha256") or sha256_file(manifest_path))
     metadata = {
-        "description": "Nominal pooled-Poisson Stage D parametric bootstrap background covariance.",
+        "description": "Nominal pooled-Poisson Stage D bootstrap background covariance with Stage E event-level N_on.",
         "inputs": {
             "stage_d_npz": str(stage_d_path),
+            "stage_e_npz": str(stage_e_path),
             "pooling_manifest": str(manifest_path),
         },
         "outputs": {"npz": str(output_path), "metadata_json": str(metadata_path)},
@@ -453,6 +504,8 @@ def main() -> None:
         "manifest_sha256": manifest_sha,
         "manifest_file_sha256": sha256_file(manifest_path),
         "stage_d_sha256": sha256_file(stage_d_path),
+        "stage_e_sha256": sha256_file(stage_e_path),
+        "implementation_commit_sha": implementation_commit_sha(),
         "cell_id": np.asarray(context["target_ids"], dtype=np.int64).tolist(),
         "excess_covariance_eigenvalues": eigenvalues.tolist(),
         "excess_covariance_condition_number": float(np.linalg.cond(excess_covariance)),

@@ -35,9 +35,10 @@ export ANALYTIC_R2_JOB_ID=${ANALYTIC_R2_JOB_ID:?ANALYTIC_R2_JOB_ID is required}
 python apply/report/validate_v6_scheme_r_double_rayleigh_analytic_bon.py
 
 python apply/report/replot_v6_display_cell_ids.py \
-  --stage-f-only \
+  --stage-d-npz "${D_DIR}/${D_STEM}.npz" \
   --stage-f-npz "${F_DIR}/${F_STEM}.npz" \
   --stage-f-metadata "${F_DIR}/${F_STEM}_metadata.json" \
+  --stage-d-output-dir "${D_DIR}" \
   --stage-f-output-dir "${F_DIR}" \
   --asset-dir "${ASSET_DIR}"
 

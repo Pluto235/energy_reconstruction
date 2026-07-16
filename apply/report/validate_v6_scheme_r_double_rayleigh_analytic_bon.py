@@ -8,9 +8,14 @@ import math
 import os
 from pathlib import Path
 import subprocess
+import sys
 from typing import Any
 
 import numpy as np
+
+SCRIPT_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(SCRIPT_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_REPO_ROOT))
 
 from apply.report.validate_v6_scheme_r_double_rayleigh import (
     branch_record,

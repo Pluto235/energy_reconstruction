@@ -817,29 +817,48 @@ def apply_cell_subset(
     subset: Dict[str, object],
 ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], Dict[str, object]]:
     included_ids = {int(v) for v in subset["included_cell_ids"]}  # type: ignore[index]
-    cell_ids = np.asarray(signal["cell_id"], dtype=np.int64)
-    mask = np.asarray([int(cell_id) in included_ids for cell_id in cell_ids], dtype=bool)
+    signal_cell_ids = np.asarray(signal["cell_id"], dtype=np.int64)
+    response_cell_ids = np.asarray(response["cell_id"], dtype=np.int64)
+    if len(set(int(value) for value in response_cell_ids)) != response_cell_ids.size:
+        raise ValueError("Stage A response has duplicate cell_id values")
+    mask = np.asarray([int(cell_id) in included_ids for cell_id in signal_cell_ids], dtype=bool)
     if not np.any(mask):
         raise ValueError("Cell subset selected no cells")
 
-    def filter_dict(values: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    selected_cell_ids = signal_cell_ids[mask]
+    response_index = {int(cell_id): index for index, cell_id in enumerate(response_cell_ids)}
+    missing_response = [int(cell_id) for cell_id in selected_cell_ids if int(cell_id) not in response_index]
+    if missing_response:
+        raise ValueError(f"Stage A response is missing selected signal cells: {missing_response}")
+    response_order = np.asarray([response_index[int(cell_id)] for cell_id in selected_cell_ids], dtype=np.int64)
+
+    def filter_dict(
+        values: Dict[str, np.ndarray],
+        *,
+        input_cell_count: int,
+        selection: np.ndarray,
+    ) -> Dict[str, np.ndarray]:
         filtered: Dict[str, np.ndarray] = {}
-        n_cell = int(cell_ids.size)
         for key, value in values.items():
             arr = np.asarray(value)
-            if arr.ndim >= 1 and arr.shape[0] == n_cell:
-                filtered[key] = arr[mask].copy()
+            if arr.ndim >= 1 and arr.shape[0] == input_cell_count:
+                filtered[key] = arr[selection].copy()
             else:
                 filtered[key] = arr.copy()
         return filtered
 
     subset_out = dict(subset)
     subset_out["mask"] = mask.tolist()
-    subset_out["n_input_cells"] = int(cell_ids.size)
+    subset_out["n_input_cells"] = int(signal_cell_ids.size)
+    subset_out["n_input_response_cells"] = int(response_cell_ids.size)
     subset_out["n_included_cells"] = int(np.count_nonzero(mask))
-    subset_out["n_excluded_input_cells"] = int(cell_ids.size - np.count_nonzero(mask))
+    subset_out["n_excluded_input_cells"] = int(signal_cell_ids.size - np.count_nonzero(mask))
     subset_out["n_excluded_cells"] = int(len(subset_out.get("excluded_cell_ids", [])))
-    return filter_dict(response), filter_dict(signal), subset_out
+    return (
+        filter_dict(response, input_cell_count=int(response_cell_ids.size), selection=response_order),
+        filter_dict(signal, input_cell_count=int(signal_cell_ids.size), selection=mask),
+        subset_out,
+    )
 
 
 def validate_inputs(

@@ -24,6 +24,33 @@ sys.modules[SPEC.name] = stage06
 SPEC.loader.exec_module(stage06)
 
 
+class CellSubsetAlignmentTests(unittest.TestCase):
+    def test_response_superset_is_aligned_to_selected_signal_order(self) -> None:
+        response = {
+            "cell_id": np.asarray([1, 2, 3, 4, 5]),
+            "nhit_bin": np.asarray(["a", "b", "c", "d", "e"]),
+            "a_eff": np.arange(10).reshape(5, 2),
+            "energy_edges": np.asarray([0.0, 1.0, 2.0]),
+        }
+        signal = {
+            "cell_id": np.asarray([4, 2]),
+            "nhit_bin": np.asarray(["d", "b"]),
+            "N_on": np.asarray([40.0, 20.0]),
+        }
+        subset = {
+            "included_cell_ids": [4, 2],
+            "excluded_cell_ids": [1, 3, 5],
+        }
+        aligned_response, aligned_signal, metadata = stage06.apply_cell_subset(
+            response, signal, subset
+        )
+        np.testing.assert_array_equal(aligned_response["cell_id"], [4, 2])
+        np.testing.assert_array_equal(aligned_response["a_eff"], [[6, 7], [2, 3]])
+        np.testing.assert_array_equal(aligned_signal["cell_id"], [4, 2])
+        np.testing.assert_array_equal(aligned_response["energy_edges"], [0.0, 1.0, 2.0])
+        self.assertEqual(metadata["n_input_response_cells"], 5)
+
+
 class GeneralizedChi2Tests(unittest.TestCase):
     def test_matches_linear_solve_reference(self) -> None:
         residual = np.asarray([1.25, -0.75, 2.0], dtype=np.float64)

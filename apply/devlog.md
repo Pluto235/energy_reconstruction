@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-16 14:01 · [uncommitted] Add an isolated Scheme R double-Rayleigh fixed-1.58-sigma experiment, validation, and three-branch report.
+
 - **energy_reconstruction** · 2026-07-16 11:35 · [a2ffd6f] Recompute and regenerate v6 Scheme R with the exact 71.297903% containment for a 1.58-sigma Rayleigh aperture.
 
 - **energy_reconstruction** · 2026-07-15 14:02 · [uncommitted] Replace v6 reselect44 Scheme B with an isolated double-Rayleigh aperture chain, validated Slurm rerun, and old-versus-new report.

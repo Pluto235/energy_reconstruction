@@ -1,0 +1,503 @@
+{
+  "experiment_id": "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979",
+  "target_containment": 0.7129790300890827,
+  "selector": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v6_64748_nhit100_reselect44_split56_miss030_fit.csv",
+  "selected_cells": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    86,
+    87,
+    88,
+    89
+  ],
+  "shared_artifacts": {
+    "stage_b_psf": {
+      "path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh/runs/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_stage_b_psf/psf_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh.npz",
+      "sha256": "aba172f327aa324cd1a2edff72d1e179ee9e9e2922b417b345c9244f81c6de24"
+    },
+    "stage_d_background": {
+      "path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_d_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_stage_d_annnorm/background_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_annnorm.npz",
+      "sha256": "9371a37b408fd81612c6ce2ff4add410dd99ab7fbee3e301f6389e0e8c663ac4"
+    },
+    "stage_e_signal": {
+      "path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_containment1_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_stage_e_containment1_annnorm/signal_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_containment1_annnorm.npz",
+      "sha256": "37b0febece1b3dde6f12203f5ec12e4d2789158bc9a6f23a010b350248074f60"
+    },
+    "fixed_response": {
+      "path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v6_64748_nhit100_reselect44_split56_miss030_fixed712979_rayleigh_annnorm/response_v6_64748_nhit100_reselect44_split56_miss030_fixed712979_rayleigh.npz",
+      "sha256": "3793aae2357e8a83d61a9ee907d362cf06e9e379b522cee99599b50a83406c56"
+    }
+  },
+  "comparison": [
+    {
+      "label": "Scheme R single-Rayleigh",
+      "branch_id": "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979",
+      "response_contract": "single-Rayleigh aperture; Aeff_R=0.7129790300890827*Aeff_nominal",
+      "response_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v6_64748_nhit100_reselect44_split56_miss030_fixed712979_rayleigh_annnorm/response_v6_64748_nhit100_reselect44_split56_miss030_fixed712979_rayleigh.npz",
+      "response_sha256": "3793aae2357e8a83d61a9ee907d362cf06e9e379b522cee99599b50a83406c56",
+      "fit_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_f_scheme_R_fixed712979/fit_v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979.npz",
+      "fit_sha256": "43559f0952034b859d58a04f95ed15ccdf595d8261b151601d23ec0ac636ea61",
+      "fit_metadata_sha256": "970414591f2ff06cf7d7071c4c965e9d4092b21df18e9f7ae3754951ac17c1d5",
+      "phi0": 2.522166483794241e-12,
+      "alpha": 2.774427651585234,
+      "beta": 0.10719892340645663,
+      "chi2": 516.2144463309526,
+      "ndof": 41,
+      "chi2_over_ndof": 12.590596251974453,
+      "max_abs_pull": 9.2934849127008,
+      "total_observed_excess": 46500.54390443345,
+      "total_pass5_expected": 38486.414581267374,
+      "total_obs_over_pass5": 1.2082326818530615
+    },
+    {
+      "label": "Scheme B double-Rayleigh",
+      "branch_id": "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh",
+      "response_contract": "double-Rayleigh aperture-conditioned response",
+      "response_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_aperture_conditioned/response_2d_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_aperture_conditioned.npz",
+      "response_sha256": "057a54453bc113d124d22f115a94a233a22abd76040ed6d28a664d97f120fd32",
+      "fit_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh/runs/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_stage_f/fit_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh.npz",
+      "fit_sha256": "5a8cfcb45542cde93c6505e9c9ef10127f71f9953d86280084571971ccb05223",
+      "fit_metadata_sha256": "d212869c6849f97564b8ce0da241b4867fbcb3e76b710f4c5cd3506835bbc192",
+      "phi0": 2.1832157942690234e-12,
+      "alpha": 2.7463888796957456,
+      "beta": 0.05895776446784303,
+      "chi2": 515.7377263077688,
+      "ndof": 41,
+      "chi2_over_ndof": 12.578968934335823,
+      "max_abs_pull": 9.159263842594076,
+      "total_observed_excess": 50600.2031210417,
+      "total_pass5_expected": 40928.11681058112,
+      "total_obs_over_pass5": 1.2363188698669874
+    },
+    {
+      "label": "Scheme R double-Rayleigh",
+      "branch_id": "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979",
+      "response_contract": "double-Rayleigh aperture; Aeff_R=0.7129790300890827*Aeff_nominal",
+      "response_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v6_64748_nhit100_reselect44_split56_miss030_fixed712979_rayleigh_annnorm/response_v6_64748_nhit100_reselect44_split56_miss030_fixed712979_rayleigh.npz",
+      "response_sha256": "3793aae2357e8a83d61a9ee907d362cf06e9e379b522cee99599b50a83406c56",
+      "fit_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979/runs/v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979_stage_f/fit_v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979.npz",
+      "fit_sha256": "ed1f4c528ccc88f7084a2baea75389ab595b287734e052bdd2ba417867b48ffe",
+      "fit_metadata_sha256": "13b5dfe6862074657656b18860b655dae7df053a9d9509389732de28ec78cbcc",
+      "phi0": 2.3121331292743544e-12,
+      "alpha": 2.776107762717021,
+      "beta": 0.059440808671481306,
+      "chi2": 521.4115090958405,
+      "ndof": 41,
+      "chi2_over_ndof": 12.717353880386355,
+      "max_abs_pull": 8.759762977808366,
+      "total_observed_excess": 50600.2031210417,
+      "total_pass5_expected": 38486.414581267374,
+      "total_obs_over_pass5": 1.3147549251228643
+    }
+  ],
+  "cell_pulls": [
+    {
+      "cell_id": 1,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -8.481315347020152,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -3.24682129948817,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -4.183066527261017,
+      "max_abs_pull": 8.481315347020152
+    },
+    {
+      "cell_id": 2,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 4.7502249724322505,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 9.159263842594076,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 7.734255411706764,
+      "max_abs_pull": 9.159263842594076
+    },
+    {
+      "cell_id": 3,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -0.7013596989067356,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 0.7112905623689585,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -0.38938541491434925,
+      "max_abs_pull": 0.7112905623689585
+    },
+    {
+      "cell_id": 4,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -4.2140027047683395,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -2.803468662001754,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -3.6514159514208897,
+      "max_abs_pull": 4.2140027047683395
+    },
+    {
+      "cell_id": 5,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -2.477243431536946,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -2.431606500643426,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -2.9971505618216856,
+      "max_abs_pull": 2.9971505618216856
+    },
+    {
+      "cell_id": 6,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -3.8079980382518093,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -8.407929640696414,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -8.759762977808366,
+      "max_abs_pull": 8.759762977808366
+    },
+    {
+      "cell_id": 15,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 2.309852062203349,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -3.0214921542189423,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -2.613389271858655,
+      "max_abs_pull": 3.0214921542189423
+    },
+    {
+      "cell_id": 16,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 7.408678077413246,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 4.245648086673843,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 4.1403339166898725,
+      "max_abs_pull": 7.408678077413246
+    },
+    {
+      "cell_id": 17,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 2.221463654468195,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 2.6381242168330123,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 2.0636194679246778,
+      "max_abs_pull": 2.6381242168330123
+    },
+    {
+      "cell_id": 18,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -0.5333226023916212,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 1.921763432086717,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 1.5434307348359415,
+      "max_abs_pull": 1.921763432086717
+    },
+    {
+      "cell_id": 19,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -3.9999299126892303,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -2.3885939579992614,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -2.7593342826462908,
+      "max_abs_pull": 3.9999299126892303
+    },
+    {
+      "cell_id": 20,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -3.4040825825130465,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -3.6706863013592486,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -3.91624475639236,
+      "max_abs_pull": 3.91624475639236
+    },
+    {
+      "cell_id": 21,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 1.8314045628743667,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 3.5684999567359252,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 3.4547369353835355,
+      "max_abs_pull": 3.5684999567359252
+    },
+    {
+      "cell_id": 28,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -6.315458649011557,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -7.887617635769781,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -7.311777950735006,
+      "max_abs_pull": 7.887617635769781
+    },
+    {
+      "cell_id": 29,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 1.7558793156536108,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 3.8205574371159945,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 5.20410863224339,
+      "max_abs_pull": 5.20410863224339
+    },
+    {
+      "cell_id": 30,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 3.2658375050459303,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 2.879483547650245,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 3.034527345624642,
+      "max_abs_pull": 3.2658375050459303
+    },
+    {
+      "cell_id": 31,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 1.9870251540401778,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 1.9244997582118932,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 1.237411924642251,
+      "max_abs_pull": 1.9870251540401778
+    },
+    {
+      "cell_id": 32,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 2.7839161235483303,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 3.297976676913164,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 3.1006360575476477,
+      "max_abs_pull": 3.297976676913164
+    },
+    {
+      "cell_id": 33,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -0.9522871010284252,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -1.1623832338111695,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -1.3624921346130958,
+      "max_abs_pull": 1.3624921346130958
+    },
+    {
+      "cell_id": 34,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 0.4686001599681435,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 0.7955830425669703,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 0.6658664757059747,
+      "max_abs_pull": 0.7955830425669703
+    },
+    {
+      "cell_id": 42,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -0.9438213692343728,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -2.858751043155957,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -3.753449225228297,
+      "max_abs_pull": 3.753449225228297
+    },
+    {
+      "cell_id": 43,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -0.7095552383978965,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -0.5042367792392416,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -0.012517099355774969,
+      "max_abs_pull": 0.7095552383978965
+    },
+    {
+      "cell_id": 44,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -1.8941501730087988,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -0.7972976378237364,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -0.7813843115917508,
+      "max_abs_pull": 1.8941501730087988
+    },
+    {
+      "cell_id": 45,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 1.8401211962290334,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 1.5188689294737883,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 1.0792058014533346,
+      "max_abs_pull": 1.8401211962290334
+    },
+    {
+      "cell_id": 46,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 3.443469565283087,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 3.3970457561431675,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 3.590736190539597,
+      "max_abs_pull": 3.590736190539597
+    },
+    {
+      "cell_id": 47,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -0.37615070868106737,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -1.3944609125097658,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -1.3349143316039205,
+      "max_abs_pull": 1.3944609125097658
+    },
+    {
+      "cell_id": 48,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -0.3828674903533943,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -0.8081368304511536,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -0.8707941633775346,
+      "max_abs_pull": 0.8707941633775346
+    },
+    {
+      "cell_id": 56,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -3.3918745281874996,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -2.5863764744337834,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -2.50759109936629,
+      "max_abs_pull": 3.3918745281874996
+    },
+    {
+      "cell_id": 57,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -2.758987351602706,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -1.306811086110149,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -1.5507515817531525,
+      "max_abs_pull": 2.758987351602706
+    },
+    {
+      "cell_id": 58,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 0.32381839559988707,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -0.5028459300085124,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -0.4100174532994994,
+      "max_abs_pull": 0.5028459300085124
+    },
+    {
+      "cell_id": 59,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 2.463407178508876,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 1.6495949496910012,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 1.5506386666542935,
+      "max_abs_pull": 2.463407178508876
+    },
+    {
+      "cell_id": 60,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 4.604895668516835,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 4.2760951832988,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 4.39082174446656,
+      "max_abs_pull": 4.604895668516835
+    },
+    {
+      "cell_id": 61,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 1.1535936944881642,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 1.0337233440484872,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 1.0896505662857974,
+      "max_abs_pull": 1.1535936944881642
+    },
+    {
+      "cell_id": 62,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 0.30591408574879114,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 0.27528917720278356,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 0.2908328281390071,
+      "max_abs_pull": 0.30591408574879114
+    },
+    {
+      "cell_id": 70,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -9.2934849127008,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -8.367441880507178,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -8.414411575523973,
+      "max_abs_pull": 9.2934849127008
+    },
+    {
+      "cell_id": 71,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -2.6156057810483255,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -2.512221790867793,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -2.757341577679444,
+      "max_abs_pull": 2.757341577679444
+    },
+    {
+      "cell_id": 72,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 2.0364797373179204,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 0.7586472939233769,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 1.3167414400316744,
+      "max_abs_pull": 2.0364797373179204
+    },
+    {
+      "cell_id": 73,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 4.719115694821437,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 2.898838321947687,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 3.227441339617911,
+      "max_abs_pull": 4.719115694821437
+    },
+    {
+      "cell_id": 74,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 5.206365385615693,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 4.443996770408435,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 4.405123345487016,
+      "max_abs_pull": 5.206365385615693
+    },
+    {
+      "cell_id": 75,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 1.236821380593363,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 1.1698095538302944,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 1.2136508823762566,
+      "max_abs_pull": 1.236821380593363
+    },
+    {
+      "cell_id": 86,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 0.9099534557668457,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 0.42383114312564524,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 0.6571422145345513,
+      "max_abs_pull": 0.9099534557668457
+    },
+    {
+      "cell_id": 87,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 0.40812036681445985,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -0.575421481104742,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -0.13579323145427893,
+      "max_abs_pull": 0.575421481104742
+    },
+    {
+      "cell_id": 88,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -0.45671899072240024,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -1.1141410060842618,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -0.8989484769848949,
+      "max_abs_pull": 1.1141410060842618
+    },
+    {
+      "cell_id": 89,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 1.4445391137377026,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 0.6803794412634365,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 0.6251843164125084,
+      "max_abs_pull": 1.4445391137377026
+    }
+  ],
+  "large_pull_threshold": 5.0,
+  "large_pull_cells": [
+    {
+      "cell_id": 70,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -9.2934849127008,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -8.367441880507178,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -8.414411575523973,
+      "max_abs_pull": 9.2934849127008
+    },
+    {
+      "cell_id": 2,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 4.7502249724322505,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 9.159263842594076,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 7.734255411706764,
+      "max_abs_pull": 9.159263842594076
+    },
+    {
+      "cell_id": 6,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -3.8079980382518093,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -8.407929640696414,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -8.759762977808366,
+      "max_abs_pull": 8.759762977808366
+    },
+    {
+      "cell_id": 1,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -8.481315347020152,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -3.24682129948817,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -4.183066527261017,
+      "max_abs_pull": 8.481315347020152
+    },
+    {
+      "cell_id": 28,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": -6.315458649011557,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": -7.887617635769781,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": -7.311777950735006,
+      "max_abs_pull": 7.887617635769781
+    },
+    {
+      "cell_id": 16,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 7.408678077413246,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 4.245648086673843,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 4.1403339166898725,
+      "max_abs_pull": 7.408678077413246
+    },
+    {
+      "cell_id": 74,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 5.206365385615693,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 4.443996770408435,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 4.405123345487016,
+      "max_abs_pull": 5.206365385615693
+    },
+    {
+      "cell_id": 29,
+      "v6_64748_nhit100_reselect44_split56_miss030_scheme_R_fixed712979": 1.7558793156536108,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh": 3.8205574371159945,
+      "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979": 5.20410863224339,
+      "max_abs_pull": 5.20410863224339
+    }
+  ],
+  "input_commit": "7cd60d876785aba61dbeb06dd69c0fc3d2630b3b",
+  "report_path": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/crab_sed_v6_64748_nhit100_reselect44_scheme_R_double_rayleigh_report.html",
+  "report_sha256": "a4ca212e41bdf355a3db9294fc40e420aef63d3c6847854ed018eb6a2f31d873"
+}

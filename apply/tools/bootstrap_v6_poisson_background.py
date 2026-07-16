@@ -431,6 +431,7 @@ def main() -> None:
         output_path,
         cell_id=np.asarray(context["target_ids"], dtype=np.int32),
         B_on_nominal=np.asarray(context["B_on_nominal"], dtype=np.float64),
+        N_on=n_on.astype(np.int64),
         B_on_bootstrap_mean=mean.astype(np.float64),
         B_on_bootstrap_samples=samples.astype(np.float64),
         B_on_covariance=background_covariance.astype(np.float64),

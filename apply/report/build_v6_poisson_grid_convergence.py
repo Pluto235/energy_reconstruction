@@ -392,8 +392,16 @@ def verify_artifact_provenance(
     claimed: Mapping[str, Any],
     d_metadata: Mapping[str, Any],
     d_metadata_path: Path,
+    e_metadata: Mapping[str, Any],
+    e_metadata_path: Path,
     f_metadata: Mapping[str, Any],
     f_metadata_path: Path,
+    expected_signal_path: Path,
+    expected_signal_metadata_path: Path,
+    expected_stage_d_path: Path,
+    stage_d_cell_ids: np.ndarray,
+    selected_cell_ids: np.ndarray,
+    stage_e_cell_ids: np.ndarray,
 ) -> dict[str, Any]:
     """Recompute all file-backed provenance and the registered grid phase."""
     manifest_path = _metadata_input_path(d_metadata, "pooling_manifest", d_metadata_path)
@@ -422,6 +430,41 @@ def verify_artifact_provenance(
     selector_path, selector_sha = manifest_artifact("selector")
     psf_path, psf_sha = manifest_artifact("psf_npz")
     stage_c_path, stage_c_sha = manifest_artifact("stage_c_metadata")
+    d_selector_path = _metadata_input_path(d_metadata, "cell_selection_csv", d_metadata_path)
+    d_psf_path = _metadata_input_path(d_metadata, "psf_npz", d_metadata_path)
+    d_stage_c_path = _metadata_input_path(d_metadata, "stage_c_metadata_json", d_metadata_path)
+    e_background_path = _metadata_input_path(e_metadata, "background_npz", e_metadata_path)
+    e_background_metadata_path = _metadata_input_path(e_metadata, "background_metadata_json", e_metadata_path)
+    e_selector_path = _metadata_input_path(e_metadata, "cell_selection_csv", e_metadata_path)
+    e_stage_c_path = _metadata_input_path(e_metadata, "stage_c_metadata_json", e_metadata_path)
+    f_signal_path = _metadata_input_path(f_metadata, "signal_npz", f_metadata_path)
+    f_signal_metadata_path = _metadata_input_path(f_metadata, "signal_metadata_json", f_metadata_path)
+    target_cell_ids = np.asarray(manifest.get("target_cell_ids", []), dtype=np.int64)
+    donor_cell_ids = np.asarray(manifest.get("donor_universe_cell_ids", []), dtype=np.int64)
+    stage_d_cell_ids = np.asarray(stage_d_cell_ids, dtype=np.int64)
+    selected_cell_ids = np.asarray(selected_cell_ids, dtype=np.int64)
+    stage_e_cell_ids = np.asarray(stage_e_cell_ids, dtype=np.int64)
+    target_cells_ok = (
+        target_cell_ids.shape == (44,)
+        and len(set(target_cell_ids.tolist())) == 44
+        and donor_cell_ids.shape == (84,)
+        and len(set(donor_cell_ids.tolist())) == 84
+        and set(target_cell_ids.tolist()).issubset(donor_cell_ids.tolist())
+        and np.array_equal(stage_d_cell_ids, donor_cell_ids)
+        and np.array_equal(selected_cell_ids, target_cell_ids)
+        and np.array_equal(stage_e_cell_ids, target_cell_ids)
+    )
+    input_paths_ok = {
+        "stage_d_selector": d_selector_path.resolve() == selector_path.resolve(),
+        "stage_d_psf": d_psf_path.resolve() == psf_path.resolve(),
+        "stage_d_stage_c": d_stage_c_path.resolve() == stage_c_path.resolve(),
+        "stage_e_background": e_background_path.resolve() == expected_stage_d_path.resolve(),
+        "stage_e_background_metadata": e_background_metadata_path.resolve() == d_metadata_path.resolve(),
+        "stage_e_selector": e_selector_path.resolve() == selector_path.resolve(),
+        "stage_e_stage_c": e_stage_c_path.resolve() == stage_c_path.resolve(),
+        "stage_f_signal": f_signal_path.resolve() == expected_signal_path.resolve(),
+        "stage_f_signal_metadata": f_signal_metadata_path.resolve() == expected_signal_metadata_path.resolve(),
+    }
     model = d_metadata.get("background_model") or {}
     grid = d_metadata.get("grid") or {}
     step, x_fraction, y_fraction = _expected_grid(branch_id)
@@ -449,6 +492,8 @@ def verify_artifact_provenance(
         and model.get("pooling_manifest_sha256") == actual_manifest_sha
         and model.get("fit_statistic") == "poisson"
         and grid_ok
+        and target_cells_ok
+        and all(input_paths_ok.values())
         and not mismatches
     )
     return {
@@ -457,9 +502,17 @@ def verify_artifact_provenance(
         "mismatches": mismatches,
         "manifest_self_hash_matches": declared_manifest_sha == actual_manifest_sha,
         "grid_matches_branch_id": grid_ok,
+        "target_cell_ids_match_manifest_order": target_cells_ok,
+        "stage_d_donor_cell_ids_match_manifest_order": np.array_equal(stage_d_cell_ids, donor_cell_ids),
+        "input_paths_match_registered_provenance": input_paths_ok,
         "paths": {
             "pooling_manifest": str(manifest_path), "selector": str(selector_path), "psf": str(psf_path),
             "stage_c_metadata": str(stage_c_path), "response": str(response_path),
+            "stage_e_background": str(e_background_path),
+            "stage_e_background_metadata": str(e_background_metadata_path),
+            "stage_f_signal": str(f_signal_path), "registered_stage_e": str(expected_signal_path.resolve()),
+            "stage_f_signal_metadata": str(f_signal_metadata_path),
+            "registered_stage_e_metadata": str(expected_signal_metadata_path.resolve()),
         },
     }
 
@@ -496,12 +549,13 @@ def load_branch_record(spec: Mapping[str, Any], base_dir: Path) -> dict[str, Any
         path = Path(str(raw))
         return path if path.is_absolute() else (base_dir / path).resolve()
 
-    d_path, d_meta_path, e_path, f_path, f_meta_path = map(path_for, ("stage_d_npz", "stage_d_metadata", "stage_e_npz", "stage_f_npz", "stage_f_metadata"))
-    for path in (d_path, d_meta_path, e_path, f_path, f_meta_path):
+    d_path, d_meta_path, e_path, e_meta_path, f_path, f_meta_path = map(path_for, ("stage_d_npz", "stage_d_metadata", "stage_e_npz", "stage_e_metadata", "stage_f_npz", "stage_f_metadata"))
+    for path in (d_path, d_meta_path, e_path, e_meta_path, f_path, f_meta_path):
         if not path.exists() or path.stat().st_size == 0:
             raise GridConvergenceError(f"{branch_id}: missing or empty production artifact {path}")
     d, e, f = _load_npz(d_path), _load_npz(e_path), _load_npz(f_path)
     d_meta = json.loads(d_meta_path.read_text(encoding="utf-8"))
+    e_meta = json.loads(e_meta_path.read_text(encoding="utf-8"))
     f_meta = json.loads(f_meta_path.read_text(encoding="utf-8"))
     fit = _fit_payload(f_meta)
     parameters = fit.get("fit_parameters") or {}
@@ -510,6 +564,7 @@ def load_branch_record(spec: Mapping[str, Any], base_dir: Path) -> dict[str, Any
         phi0 = float(physical["phi0"])
         parameters = {"log10_phi0": math.log10(phi0), "alpha": physical["alpha"], "beta": physical["beta"]}
     cell_ids = np.asarray(_first(f, ("cell_id",), f"{branch_id} Stage F"), dtype=np.int64)
+    stage_e_cell_ids = np.asarray(_first(e, ("cell_id",), f"{branch_id} Stage E"), dtype=np.int64)
 
     def aligned_from(data: Mapping[str, Any], names: Sequence[str], context: str) -> np.ndarray:
         source_ids = np.asarray(_first(data, ("cell_id",), context), dtype=np.int64)
@@ -531,7 +586,28 @@ def load_branch_record(spec: Mapping[str, Any], base_dir: Path) -> dict[str, Any
     e_b_on = aligned_from(e, ("B_on",), f"{branch_id} Stage E")
     provenance = dict(spec.get("provenance") or {})
     provenance_verification = verify_artifact_provenance(
-        branch_id, provenance, d_meta, d_meta_path, f_meta, f_meta_path
+        branch_id,
+        provenance,
+        d_meta,
+        d_meta_path,
+        e_meta,
+        e_meta_path,
+        f_meta,
+        f_meta_path,
+        e_path,
+        e_meta_path,
+        d_path,
+        d_cell_ids,
+        cell_ids,
+        stage_e_cell_ids,
+    )
+    fits = f_meta.get("fits") or {}
+    required_conservative_fits = {"pl_conservative", "logpar_conservative"}
+    stage_f_fits_valid = bool(
+        isinstance(fits, Mapping)
+        and required_conservative_fits.issubset(fits)
+        and fits
+        and all(isinstance(value, Mapping) and value.get("valid") is True for value in fits.values())
     )
     return {
         "branch_id": branch_id,
@@ -545,12 +621,12 @@ def load_branch_record(spec: Mapping[str, Any], base_dir: Path) -> dict[str, Any
         "stage_d_cell_ids": d_cell_ids,
         "stage_d_valid": d_valid_raw.astype(bool),
         "stage_d_positive": d_positive_raw.astype(bool),
-        "stage_f_valid": fit.get("valid") is True,
+        "stage_f_valid": stage_f_fits_valid,
         "stage_e_contract_valid": bool(np.array_equal(d_b_on, e_b_on)),
         "provenance": provenance,
         "provenance_verification": provenance_verification,
-        "paths": {"stage_d_npz": str(d_path), "stage_d_metadata": str(d_meta_path), "stage_e_npz": str(e_path), "stage_f_npz": str(f_path), "stage_f_metadata": str(f_meta_path)},
-        "artifact_sha256": {"stage_d_npz": _sha256(d_path), "stage_d_metadata": _sha256(d_meta_path), "stage_e_npz": _sha256(e_path), "stage_f_npz": _sha256(f_path), "stage_f_metadata": _sha256(f_meta_path)},
+        "paths": {"stage_d_npz": str(d_path), "stage_d_metadata": str(d_meta_path), "stage_e_npz": str(e_path), "stage_e_metadata": str(e_meta_path), "stage_f_npz": str(f_path), "stage_f_metadata": str(f_meta_path)},
+        "artifact_sha256": {"stage_d_npz": _sha256(d_path), "stage_d_metadata": _sha256(d_meta_path), "stage_e_npz": _sha256(e_path), "stage_e_metadata": _sha256(e_meta_path), "stage_f_npz": _sha256(f_path), "stage_f_metadata": _sha256(f_meta_path)},
         "model_tier": spec.get("model_tier"),
         "donor_cell_ids": spec.get("donor_cell_ids"),
         "cv_deviance": spec.get("cv_deviance"),

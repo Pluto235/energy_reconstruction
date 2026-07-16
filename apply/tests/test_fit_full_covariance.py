@@ -126,6 +126,17 @@ class CovarianceFitTests(unittest.TestCase):
         self.assertEqual(preferred["error_mode"], "conservative")
         self.assertEqual(preferred["delta_chi2_pl_minus_logpar"], 5.0)
 
+    def test_invalid_covariance_diagnostics_fail_production_quality(self) -> None:
+        fits = {
+            "pl_conservative": SimpleNamespace(valid=True),
+            "logpar_conservative": SimpleNamespace(valid=True),
+            "pl_background_covariance": SimpleNamespace(valid=False),
+            "logpar_background_covariance": SimpleNamespace(valid=False),
+        }
+        quality = stage06.fit_quality(fits, {"status": "passed"})
+        self.assertFalse(quality["stage_f_current_promotable"])
+        self.assertFalse(quality["background_covariance_fits_valid"])
+
     def test_fit_stores_marginal_pulls_and_whitened_residuals(self) -> None:
         n_cells = 6
         a_eff = np.linspace(0.8, 1.3, n_cells, dtype=np.float64)[:, None, None]

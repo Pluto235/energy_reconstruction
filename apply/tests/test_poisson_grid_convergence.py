@@ -126,6 +126,7 @@ class RegistryAndValidatorTests(unittest.TestCase):
         e = root / f"{branch_id}_e.npz"
         f = root / f"{branch_id}_f.npz"
         d_meta = root / f"{branch_id}_d.json"
+        e_meta = root / f"{branch_id}_e.json"
         meta = root / f"{branch_id}_f.json"
         selector = root / "selector.csv"
         psf = root / "psf.npz"
@@ -142,6 +143,7 @@ class RegistryAndValidatorTests(unittest.TestCase):
                 "analytic_bon_baseline_sha": PROVENANCE["analytic_bon_baseline_sha"],
                 "implementation_commit_sha": PROVENANCE["code_sha"],
                 "target_cell_ids": ids.tolist(),
+                "donor_universe_cell_ids": donor_ids.tolist(),
                 "provenance": {
                     "selector": {"path": selector.name, "sha256": hashlib.sha256(selector.read_bytes()).hexdigest()},
                     "psf_npz": {"path": psf.name, "sha256": hashlib.sha256(psf.read_bytes()).hexdigest()},
@@ -171,8 +173,68 @@ class RegistryAndValidatorTests(unittest.TestCase):
             "background_model": {"fit_statistic": "poisson", "pooling_manifest_sha256": provenance["pooling_manifest_sha256"], "analytic_bon_baseline_sha": provenance["analytic_bon_baseline_sha"]},
             "grid": {"grid_step_deg": step, "offset_x_fraction": x_fraction, "offset_y_fraction": y_fraction},
         }), encoding="utf-8")
-        meta.write_text(json.dumps({"inputs": {"response_npz": response.name}, "fits": {"logpar_conservative": {"valid": True, "fit_parameters": {"log10_phi0": -11.7, "alpha": 2.7, "beta": 0.12}, "covariance": np.diag([0.04, 0.04, 0.0004]).tolist()}}}), encoding="utf-8")
-        return {"branch_id": branch_id, "stage_d_npz": d.name, "stage_d_metadata": d_meta.name, "stage_e_npz": e.name, "stage_f_npz": f.name, "stage_f_metadata": meta.name, "provenance": provenance}
+        e_meta.write_text(json.dumps({"inputs": {"background_npz": d.name, "background_metadata_json": d_meta.name, "cell_selection_csv": selector.name, "stage_c_metadata_json": stage_c.name}}), encoding="utf-8")
+        meta.write_text(json.dumps({"inputs": {"response_npz": response.name, "signal_npz": e.name, "signal_metadata_json": e_meta.name}, "fits": {"pl_conservative": {"valid": True}, "logpar_conservative": {"valid": True, "fit_parameters": {"log10_phi0": -11.7, "alpha": 2.7, "beta": 0.12}, "covariance": np.diag([0.04, 0.04, 0.0004]).tolist()}}}), encoding="utf-8")
+        return {"branch_id": branch_id, "stage_d_npz": d.name, "stage_d_metadata": d_meta.name, "stage_e_npz": e.name, "stage_e_metadata": e_meta.name, "stage_f_npz": f.name, "stage_f_metadata": meta.name, "provenance": provenance}
+
+    def _write_valid_bootstrap_files(
+        self,
+        root: Path,
+        specs: list[dict[str, object]],
+    ) -> tuple[Path, Path, Path]:
+        nominal = next(spec for spec in specs if spec["branch_id"] == "h010_x0_y0")
+        stage_d = root / str(nominal["stage_d_npz"])
+        stage_d_metadata = root / str(nominal["stage_d_metadata"])
+        stage_e = root / str(nominal["stage_e_npz"])
+        stage_f_metadata = root / str(nominal["stage_f_metadata"])
+        d_metadata = json.loads(stage_d_metadata.read_text(encoding="utf-8"))
+        manifest_path = root / d_metadata["inputs"]["pooling_manifest"]
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        cell_ids = np.asarray(manifest["target_cell_ids"], dtype=np.int64)
+        with np.load(stage_e) as handle:
+            n_on = np.asarray(handle["N_on"], dtype=np.int64)
+        rng = np.random.default_rng(64748)
+        samples = rng.normal(loc=100.0, scale=1.0, size=(1000, 44))
+        b_covariance = np.cov(samples, rowvar=False, ddof=1)
+        npz = root / "bootstrap.npz"
+        metadata_path = root / "bootstrap.json"
+        np.savez(
+            npz,
+            cell_id=cell_ids,
+            B_on_nominal=np.full(44, 100.0),
+            N_on=n_on,
+            B_on_bootstrap_mean=np.mean(samples, axis=0),
+            B_on_bootstrap_samples=samples,
+            B_on_covariance=b_covariance,
+            excess_covariance=np.diag(n_on.astype(np.float64)) + b_covariance,
+        )
+        metadata_path.write_text(json.dumps({
+            "inputs": {"stage_d_npz": stage_d.name, "pooling_manifest": manifest_path.name},
+            "bootstrap_count_requested": 1000,
+            "bootstrap_count_completed": 1000,
+            "refit_failure_count": 0,
+            "production_complete": True,
+            "seed": 64748,
+            "manifest_sha256": manifest["manifest_sha256"],
+            "manifest_file_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+            "stage_d_sha256": hashlib.sha256(stage_d.read_bytes()).hexdigest(),
+            "cell_id": cell_ids.tolist(),
+        }), encoding="utf-8")
+        f_metadata = json.loads(stage_f_metadata.read_text(encoding="utf-8"))
+        f_metadata["inputs"]["excess_covariance_npz"] = npz.name
+        f_metadata["fits"].update({
+            "pl_background_covariance": {"valid": True},
+            "logpar_background_covariance": {"valid": True},
+        })
+        f_metadata["preferred_fit"] = {"model": "logpar", "error_mode": "conservative"}
+        f_metadata["statistic"] = {"background_covariance_diagnostic": {
+            "path": str(npz.resolve()),
+            "sha256": hashlib.sha256(npz.read_bytes()).hexdigest(),
+        }}
+        stage_f_metadata.write_text(json.dumps(f_metadata), encoding="utf-8")
+        registry = root / "branches.json"
+        registry.write_text(json.dumps({"branches": specs}), encoding="utf-8")
+        return npz, metadata_path, registry
 
     def test_registry_loads_synthetic_stage_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -183,23 +245,137 @@ class RegistryAndValidatorTests(unittest.TestCase):
             records, _ = load_registry(registry)
             self.assertTrue(evaluate_grid_convergence(records)["passed"])
 
+    def test_rejects_stage_d_inputs_not_linked_to_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            specs = [self._write_branch_files(root, branch_id) for branch_id in BRANCH_IDS]
+            wrong_selector = root / "wrong_selector.csv"
+            wrong_selector.write_text("cell_id,include\n999,1\n", encoding="utf-8")
+            metadata_path = root / str(specs[0]["stage_d_metadata"])
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            metadata["inputs"]["cell_selection_csv"] = wrong_selector.name
+            metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+            registry = root / "branches.json"
+            registry.write_text(json.dumps({"branches": specs}), encoding="utf-8")
+            records, _ = load_registry(registry)
+            gate = next(row for row in evaluate_grid_convergence(records)["checks"] if row["name"] == "artifact_provenance_verified")
+            self.assertFalse(gate["passed"])
+
+    def test_rejects_stage_f_signal_not_linked_to_registry_stage_e(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            specs = [self._write_branch_files(root, branch_id) for branch_id in BRANCH_IDS]
+            wrong_signal = root / "wrong_signal.npz"
+            np.savez(wrong_signal, cell_id=np.arange(1, 45))
+            metadata_path = root / str(specs[0]["stage_f_metadata"])
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            metadata["inputs"]["signal_npz"] = wrong_signal.name
+            metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+            registry = root / "branches.json"
+            registry.write_text(json.dumps({"branches": specs}), encoding="utf-8")
+            records, _ = load_registry(registry)
+            gate = next(row for row in evaluate_grid_convergence(records)["checks"] if row["name"] == "artifact_provenance_verified")
+            self.assertFalse(gate["passed"])
+
+    def test_rejects_stage_f_signal_metadata_not_linked_to_registry_stage_e(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            specs = [self._write_branch_files(root, branch_id) for branch_id in BRANCH_IDS]
+            wrong_metadata = root / "wrong_signal_metadata.json"
+            wrong_metadata.write_text("{}\n", encoding="utf-8")
+            metadata_path = root / str(specs[0]["stage_f_metadata"])
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            metadata["inputs"]["signal_metadata_json"] = wrong_metadata.name
+            metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+            registry = root / "branches.json"
+            registry.write_text(json.dumps({"branches": specs}), encoding="utf-8")
+            records, _ = load_registry(registry)
+            gate = next(row for row in evaluate_grid_convergence(records)["checks"] if row["name"] == "artifact_provenance_verified")
+            self.assertFalse(gate["passed"])
+
+    def test_rejects_stage_e_background_not_linked_to_registry_stage_d(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            specs = [self._write_branch_files(root, branch_id) for branch_id in BRANCH_IDS]
+            wrong_background = root / "wrong_background.npz"
+            np.savez(wrong_background, cell_id=np.arange(1, 45))
+            metadata_path = root / str(specs[0]["stage_e_metadata"])
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            metadata["inputs"]["background_npz"] = wrong_background.name
+            metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+            registry = root / "branches.json"
+            registry.write_text(json.dumps({"branches": specs}), encoding="utf-8")
+            records, _ = load_registry(registry)
+            gate = next(row for row in evaluate_grid_convergence(records)["checks"] if row["name"] == "artifact_provenance_verified")
+            self.assertFalse(gate["passed"])
+
+    def test_rejects_target_order_not_matching_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            specs = [self._write_branch_files(root, branch_id) for branch_id in BRANCH_IDS]
+            spec = specs[0]
+            for key in ("stage_e_npz", "stage_f_npz"):
+                path = root / str(spec[key])
+                with np.load(path) as handle:
+                    arrays = {name: handle[name] for name in handle.files}
+                arrays = {
+                    name: value[::-1] if np.asarray(value).ndim >= 1 and np.asarray(value).shape[0] == 44 else value
+                    for name, value in arrays.items()
+                }
+                np.savez(path, **arrays)
+            registry = root / "branches.json"
+            registry.write_text(json.dumps({"branches": specs}), encoding="utf-8")
+            records, _ = load_registry(registry)
+            gate = next(row for row in evaluate_grid_convergence(records)["checks"] if row["name"] == "artifact_provenance_verified")
+            self.assertFalse(gate["passed"])
+
+    def test_rejects_stage_d_donor_order_not_matching_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            specs = [self._write_branch_files(root, branch_id) for branch_id in BRANCH_IDS]
+            path = root / str(specs[0]["stage_d_npz"])
+            with np.load(path) as handle:
+                arrays = {name: handle[name] for name in handle.files}
+            order = np.arange(84)
+            order[:2] = [1, 0]
+            arrays = {
+                name: value[order] if np.asarray(value).ndim >= 1 and np.asarray(value).shape[0] == 84 else value
+                for name, value in arrays.items()
+            }
+            np.savez(path, **arrays)
+            registry = root / "branches.json"
+            registry.write_text(json.dumps({"branches": specs}), encoding="utf-8")
+            records, _ = load_registry(registry)
+            gate = next(row for row in evaluate_grid_convergence(records)["checks"] if row["name"] == "artifact_provenance_verified")
+            self.assertFalse(gate["passed"])
+
     def test_preflight_does_not_read_production_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
-            specs = [{"branch_id": branch_id, "stage_d_npz": "future-d.npz", "stage_d_metadata": "future-d.json", "stage_e_npz": "future-e.npz", "stage_f_npz": "future-f.npz", "stage_f_metadata": "future-f.json", "provenance": dict(PROVENANCE, analytic_bon_baseline_sha=head, code_sha=head)} for branch_id in BRANCH_IDS]
+            specs = [{"branch_id": branch_id, "stage_d_npz": "future-d.npz", "stage_d_metadata": "future-d.json", "stage_e_npz": "future-e.npz", "stage_e_metadata": "future-e.json", "stage_f_npz": "future-f.npz", "stage_f_metadata": "future-f.json", "provenance": dict(PROVENANCE, analytic_bon_baseline_sha=head, code_sha=head)} for branch_id in BRANCH_IDS]
             registry = root / "branches.json"
             registry.write_text(json.dumps({"branches": specs}), encoding="utf-8")
             checks = preflight_checks(registry, Path.cwd(), head)
             self.assertTrue(all(row["passed"] for row in checks))
 
     def test_slurm_contract_requires_completed(self) -> None:
-        completed = {"manifest": {"state": "COMPLETED"}, "bootstrap": {"state": "COMPLETED"}}
+        completed = {"manifest": {"state": "COMPLETED"}, "bootstrap": {"state": "COMPLETED"}, "finalizer": {"state": "COMPLETED"}}
         completed.update({branch_id: {"state": "COMPLETED"} for branch_id in BRANCH_IDS})
         passed = slurm_checks({"slurm_jobs": completed})
         failed = slurm_checks({"slurm_jobs": {**completed, BRANCH_IDS[-1]: {"state": "RUNNING"}}})
         self.assertTrue(passed[0]["passed"])
         self.assertFalse(failed[0]["passed"])
+
+    def test_slurm_contract_only_exempts_current_running_finalizer(self) -> None:
+        jobs = {"manifest": {"state": "COMPLETED"}, "bootstrap": {"state": "COMPLETED"}}
+        jobs.update({branch_id: {"state": "COMPLETED"} for branch_id in BRANCH_IDS})
+        jobs["finalizer"] = {"job_id": "42", "state": "RUNNING"}
+        inside = slurm_checks({"slurm_jobs": jobs}, current_finalizer_job_id="42")
+        external = slurm_checks({"slurm_jobs": jobs})
+        self.assertTrue(inside[0]["passed"])
+        self.assertTrue(inside[0]["evidence"]["current_finalizer_exemption_used"])
+        self.assertFalse(external[0]["passed"])
 
     def test_bootstrap_contract_recomputes_covariance(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -214,12 +390,13 @@ class RegistryAndValidatorTests(unittest.TestCase):
                 npz,
                 cell_id=np.arange(1, 45),
                 B_on_nominal=np.zeros(44),
+                N_on=np.ones(44, dtype=np.int64),
                 B_on_bootstrap_mean=np.mean(samples, axis=0),
                 B_on_bootstrap_samples=samples,
                 B_on_covariance=b_covariance,
                 excess_covariance=excess_covariance,
             )
-            meta.write_text(json.dumps({"bootstrap_count_requested": 1000, "bootstrap_count_completed": 1000, "refit_failure_count": 0, "production_complete": True}), encoding="utf-8")
+            meta.write_text(json.dumps({"bootstrap_count_requested": 1000, "bootstrap_count_completed": 1000, "refit_failure_count": 0, "production_complete": True, "seed": 64748}), encoding="utf-8")
             self.assertTrue(all(row["passed"] for row in bootstrap_checks(npz, meta)))
             with np.load(npz) as handle:
                 arrays = {name: handle[name] for name in handle.files}
@@ -227,6 +404,42 @@ class RegistryAndValidatorTests(unittest.TestCase):
             arrays["B_on_covariance"][0, 0] += 1.0
             np.savez(npz, **arrays)
             self.assertFalse(all(row["passed"] for row in bootstrap_checks(npz, meta)))
+
+    def test_bootstrap_contract_links_nominal_artifacts_and_covariance_fits(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            specs = [self._write_branch_files(root, branch_id) for branch_id in BRANCH_IDS]
+            npz, metadata, registry = self._write_valid_bootstrap_files(root, specs)
+            self.assertTrue(all(row["passed"] for row in bootstrap_checks(npz, metadata, registry_path=registry)))
+
+            payload = json.loads(metadata.read_text(encoding="utf-8"))
+            payload["stage_d_sha256"] = "0" * 64
+            metadata.write_text(json.dumps(payload), encoding="utf-8")
+            checks = bootstrap_checks(npz, metadata, registry_path=registry)
+            self.assertFalse(next(row for row in checks if row["name"] == "bootstrap_provenance_linked")["passed"])
+
+    def test_bootstrap_rejects_unrelated_excess_covariance_and_wrong_seed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            rng = np.random.default_rng(64748)
+            samples = rng.normal(size=(1000, 44))
+            b_covariance = np.cov(samples, rowvar=False, ddof=1)
+            npz = root / "bootstrap.npz"
+            meta = root / "bootstrap.json"
+            np.savez(
+                npz,
+                cell_id=np.arange(1, 45),
+                B_on_nominal=np.ones(44),
+                N_on=np.ones(44, dtype=np.int64),
+                B_on_bootstrap_mean=np.mean(samples, axis=0),
+                B_on_bootstrap_samples=samples,
+                B_on_covariance=b_covariance,
+                excess_covariance=np.eye(44) * 999.0,
+            )
+            meta.write_text(json.dumps({"bootstrap_count_requested": 1000, "bootstrap_count_completed": 1000, "refit_failure_count": 0, "production_complete": True, "seed": 123}), encoding="utf-8")
+            checks = bootstrap_checks(npz, meta)
+            self.assertFalse(next(row for row in checks if row["name"] == "bootstrap_covariance_integrity")["passed"])
+            self.assertFalse(next(row for row in checks if row["name"] == "bootstrap_production_complete")["passed"])
 
     def test_report_contract(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

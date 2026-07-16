@@ -28,13 +28,13 @@ COV_META=scheme_R_double_rayleigh_poisson_background_covariance.json
 REPORT=apply/report/crab_sed_v6_64748_nhit100_reselect44_scheme_R_double_rayleigh_poisson_pooled_report.html
 ASSETS=apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-double-rayleigh-scheme-R-poisson-pooled
 
-python - "${REGISTRY}" "${MANIFEST}" "${MANIFEST_JOB_ID}" "${GRID_JOB_ID}" "${BOOTSTRAP_JOB_ID}" <<'PY'
+python - "${REGISTRY}" "${MANIFEST}" "${MANIFEST_JOB_ID}" "${GRID_JOB_ID}" "${BOOTSTRAP_JOB_ID}" "${SLURM_JOB_ID}" <<'PY'
 import hashlib
 import json
 from pathlib import Path
 import sys
 
-registry_path, manifest_path, manifest_job, grid_job, bootstrap_job = sys.argv[1:]
+registry_path, manifest_path, manifest_job, grid_job, bootstrap_job, finalizer_job = sys.argv[1:]
 manifest_path = str(Path(manifest_path).resolve())
 manifest = json.load(open(manifest_path, encoding="ascii"))
 prov = manifest["provenance"]
@@ -56,6 +56,7 @@ for index, branch in enumerate(branch_ids):
         "stage_d_npz": str((d / f"background_{branch}.npz").resolve()),
         "stage_d_metadata": str((d / f"background_{branch}_metadata.json").resolve()),
         "stage_e_npz": str((e / f"signal_{branch}.npz").resolve()),
+        "stage_e_metadata": str((e / f"signal_{branch}_metadata.json").resolve()),
         "stage_f_npz": str((f / f"fit_{branch}.npz").resolve()),
         "stage_f_metadata": str((f / f"fit_{branch}_metadata.json").resolve()),
         "provenance": {
@@ -81,6 +82,7 @@ payload = {
     "slurm_jobs": {
         "manifest": {"job_id": manifest_job, "state": "COMPLETED"},
         "bootstrap": {"job_id": bootstrap_job, "state": "COMPLETED"},
+        "finalizer": {"job_id": finalizer_job, "state": "COMPLETED"},
         "grid": {"job_id": grid_job, "state": "COMPLETED", "tasks": {
             branch: {"job_id": f"{grid_job}_{index}", "state": "COMPLETED"}
             for index, branch in enumerate(branch_ids)

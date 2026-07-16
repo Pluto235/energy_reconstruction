@@ -5,9 +5,18 @@ from pathlib import Path
 import tempfile
 import unittest
 
+import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
+
 from apply.tools.build_v6_poisson_pooling_manifest import (
     build_pooling_manifest,
+    choose_one_standard_error,
+    cross_validate_orders,
+    make_grid_edges,
     manifest_payload_sha256,
+    rectangle_basis_grid,
+    scan_continuous_annulus_maps,
     write_self_hashed_manifest,
 )
 
@@ -70,6 +79,88 @@ class ManifestHashTests(unittest.TestCase):
             loaded = json.loads(path.read_text(encoding="ascii"))
         self.assertEqual(written, loaded)
         self.assertEqual(loaded["manifest_sha256"], manifest_payload_sha256(loaded))
+
+    def test_non_finite_values_are_rejected_as_non_standard_json(self) -> None:
+        with self.assertRaises(ValueError):
+            manifest_payload_sha256({"score": float("inf")})
+
+
+class CrossValidationTests(unittest.TestCase):
+    def test_uniform_surface_sector_folds_use_disjoint_exposure_masks(self) -> None:
+        edges = make_grid_edges(0.5, radius_deg=2.0)
+        centers = 0.5 * (edges[:-1] + edges[1:])
+        x_grid, y_grid = np.meshgrid(centers, centers)
+        rho = np.hypot(x_grid, y_grid)
+        annulus = (rho >= 0.5) & (rho < 1.5)
+        angle = np.mod(np.arctan2(y_grid, x_grid), 2.0 * np.pi)
+        sector_id = np.minimum((angle * 8 / (2.0 * np.pi)).astype(np.int64), 7)
+        counts = np.zeros_like(x_grid, dtype=np.int64)
+        counts[annulus] = 100
+        sector_maps = np.asarray(
+            [np.where(annulus & (sector_id == value), counts, 0) for value in range(8)]
+        )
+
+        selected, evidence = cross_validate_orders(
+            (1,),
+            {1: counts},
+            {1: sector_maps},
+            rectangle_basis_grid(edges),
+            {1: annulus},
+            {1: True},
+            positivity_radius_deg=2.0,
+        )
+
+        self.assertEqual(selected, 0)
+        constant = evidence["candidates"]["0"]
+        self.assertTrue(constant["valid"])
+        np.testing.assert_allclose(constant["fold_scores"], np.zeros(8), atol=1.0e-10)
+
+    def test_failed_fold_invalidates_candidate_for_one_se_selection(self) -> None:
+        selected, evidence = choose_one_standard_error(
+            {0: [1.0, 1.0], 1: [0.0, float("inf")], 2: [2.0, 2.0]}
+        )
+        self.assertEqual(selected, 0)
+        failed = evidence["candidates"]["1"]
+        self.assertFalse(failed["valid"])
+        self.assertEqual(failed["failed_fold_count"], 1)
+        self.assertEqual(failed["fold_scores"], [0.0, None])
+        self.assertIsNone(failed["mean"])
+
+    def test_all_failed_candidates_are_fatal(self) -> None:
+        with self.assertRaisesRegex(ValueError, "All candidate surface orders"):
+            choose_one_standard_error({0: [float("inf")], 1: [float("inf")]})
+
+
+class ContinuousCountAndMapContractTests(unittest.TestCase):
+    def test_maps_keep_full_pixels_while_threshold_count_uses_exact_radius(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            table = pa.table(
+                {
+                    "ra_mean_deg": [0.48, 0.52, 0.90],
+                    "dec_mean_deg": [0.10, 0.10, 0.10],
+                    "cell_id": [1, 1, 1],
+                }
+            )
+            pq.write_table(table, root / "events.parquet")
+            continuous, maps, sector_maps, edges = scan_continuous_annulus_maps(
+                root,
+                (1,),
+                {1: 0.5},
+                {1: 1.5},
+                grid_step_deg=1.0,
+                source_ra_deg=0.0,
+                source_dec_deg=0.0,
+                print_every=0,
+            )
+
+        self.assertEqual(continuous[1], 2)
+        self.assertEqual(int(maps[1].sum()), 3)
+        x_index = int(np.searchsorted(edges, 0.5, side="right") - 1)
+        y_index = int(np.searchsorted(edges, 0.5, side="right") - 1)
+        self.assertEqual(int(maps[1][y_index, x_index]), 3)
+        self.assertEqual(int(sector_maps[1][:, y_index, x_index].sum()), 3)
+        self.assertEqual(int(sector_maps[1][1, y_index, x_index]), 3)
 
 
 if __name__ == "__main__":

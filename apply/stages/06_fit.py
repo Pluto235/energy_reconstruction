@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import csv
 from dataclasses import dataclass
+import hashlib
 import html
 import json
 import math
@@ -543,6 +544,7 @@ def load_excess_covariance(path: Path, expected_cell_ids: np.ndarray) -> Tuple[n
     eigenvalues = np.linalg.eigvalsh(covariance)
     return covariance, {
         "path": str(path),
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
         "n_cells": 44,
         "cell_id": actual.tolist(),
         "minimum_eigenvalue": float(eigenvalues[0]),
@@ -1027,10 +1029,20 @@ def reference_preflight(
 
 
 def fit_quality(fits: Dict[str, FitResult], reference: Dict[str, object]) -> Dict[str, object]:
-    main_valid = bool(fits["pl_conservative"].valid and fits["logpar_conservative"].valid)
+    conservative_valid = bool(fits["pl_conservative"].valid and fits["logpar_conservative"].valid)
+    covariance_keys = {"pl_background_covariance", "logpar_background_covariance"}
+    covariance_required = bool(covariance_keys & set(fits))
+    covariance_valid = bool(
+        not covariance_required
+        or (covariance_keys.issubset(fits) and all(fits[key].valid for key in covariance_keys))
+    )
+    main_valid = conservative_valid and covariance_valid
     physical_status = str(reference.get("status") or "")
     return {
         "fit_status": "passed" if main_valid else "failed_fit",
+        "conservative_fits_valid": conservative_valid,
+        "background_covariance_fits_required": covariance_required,
+        "background_covariance_fits_valid": covariance_valid,
         "stage_f_current_promotable": main_valid,
         "stage_g_physical_promotable": bool(main_valid and physical_status == "passed"),
         "physical_flux_status": "ok" if physical_status == "passed" else physical_status,

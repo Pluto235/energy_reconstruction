@@ -19,6 +19,7 @@ if str(SCRIPT_REPO_ROOT) not in sys.path:
 
 from apply.report.build_v6_poisson_grid_convergence import (
     BRANCH_IDS,
+    NOMINAL_BRANCH_ID,
     PROVENANCE_KEYS,
     GridConvergenceError,
     evaluate_grid_convergence,
@@ -82,7 +83,7 @@ def preflight_checks(registry_path: Path, repo_root: Path, baseline_sha: str | N
     recorded_code = {str((spec.get("provenance") or {}).get("code_sha", "")) for spec in specs}
     checks.append(check("code_sha_matches_head", bool(head) and recorded_code == {head}, sorted(recorded_code), [head] if head else {"valid_git_head": True}, {"git_stderr": head_result.stderr.strip()}))
 
-    required_paths = ("stage_d_npz", "stage_d_metadata", "stage_e_npz", "stage_f_npz", "stage_f_metadata")
+    required_paths = ("stage_d_npz", "stage_d_metadata", "stage_e_npz", "stage_e_metadata", "stage_f_npz", "stage_f_metadata")
     absent = {branch_id: [key for key in required_paths if not by_id[branch_id].get(key)] for branch_id in BRANCH_IDS}
     absent = {branch_id: keys for branch_id, keys in absent.items() if keys}
     checks.append(check("branch_artifact_paths_declared", not absent, absent, {"missing": {}}, {"required_path_keys": list(required_paths)}))
@@ -104,7 +105,12 @@ def _sacct_state(job_id: str) -> tuple[str, str]:
     return (unique[0] if len(unique) == 1 else ",".join(unique), result.stderr.strip())
 
 
-def slurm_checks(registry: Mapping[str, Any], *, query_sacct: bool = False) -> list[dict[str, Any]]:
+def slurm_checks(
+    registry: Mapping[str, Any],
+    *,
+    query_sacct: bool = False,
+    current_finalizer_job_id: str | None = None,
+) -> list[dict[str, Any]]:
     jobs = registry.get("slurm_jobs")
     if isinstance(jobs, Mapping):
         rows = [{"role": role, **(value if isinstance(value, Mapping) else {"state": value})} for role, value in jobs.items()]
@@ -135,13 +141,27 @@ def slurm_checks(registry: Mapping[str, Any], *, query_sacct: bool = False) -> l
                 query_errors[role] = error
         states[role] = state
         job_ids[role] = job_id or None
-    required_roles = {"manifest", "bootstrap", *BRANCH_IDS}
+    required_roles = {"manifest", "bootstrap", "finalizer", *BRANCH_IDS}
     missing_roles = sorted(required_roles - set(states))
-    incomplete = {name: state for name, state in states.items() if state != "COMPLETED"}
-    return [check("all_slurm_jobs_completed", not missing_roles and not incomplete and not query_errors, states, {"every_state": "COMPLETED", "required_roles": sorted(required_roles)}, {"job_ids": job_ids, "missing_roles": missing_roles, "incomplete": incomplete, "query_errors": query_errors})]
+    current_finalizer_allowed = bool(
+        current_finalizer_job_id
+        and job_ids.get("finalizer") == str(current_finalizer_job_id)
+        and states.get("finalizer") in {"RUNNING", "COMPLETING"}
+    )
+    incomplete = {
+        name: state
+        for name, state in states.items()
+        if state != "COMPLETED" and not (name == "finalizer" and current_finalizer_allowed)
+    }
+    return [check("all_slurm_jobs_completed", not missing_roles and not incomplete and not query_errors, states, {"every_state": "COMPLETED", "required_roles": sorted(required_roles), "current_finalizer_may_be_running_inside_itself": True}, {"job_ids": job_ids, "missing_roles": missing_roles, "incomplete": incomplete, "query_errors": query_errors, "current_finalizer_exemption_used": current_finalizer_allowed})]
 
 
-def bootstrap_checks(npz_path: Path | None, metadata_path: Path | None) -> list[dict[str, Any]]:
+def bootstrap_checks(
+    npz_path: Path | None,
+    metadata_path: Path | None,
+    *,
+    registry_path: Path | None = None,
+) -> list[dict[str, Any]]:
     """Validate the registered nominal-only 1,000-replicate covariance artifact."""
     checks: list[dict[str, Any]] = []
     paths_exist = bool(
@@ -157,28 +177,106 @@ def bootstrap_checks(npz_path: Path | None, metadata_path: Path | None) -> list[
         return checks
     try:
         with np.load(npz_path, allow_pickle=False) as handle:
-            required = {"cell_id", "B_on_nominal", "B_on_bootstrap_mean", "B_on_bootstrap_samples", "B_on_covariance", "excess_covariance"}
+            required = {"cell_id", "B_on_nominal", "N_on", "B_on_bootstrap_mean", "B_on_bootstrap_samples", "B_on_covariance", "excess_covariance"}
             missing = sorted(required - set(handle.files))
             if missing:
                 raise ValueError(f"missing arrays: {missing}")
             cell_ids = np.asarray(handle["cell_id"], dtype=np.int64)
+            b_on_nominal = np.asarray(handle["B_on_nominal"], dtype=np.float64)
+            n_on = np.asarray(handle["N_on"], dtype=np.int64)
             samples = np.asarray(handle["B_on_bootstrap_samples"], dtype=np.float64)
             b_covariance = np.asarray(handle["B_on_covariance"], dtype=np.float64)
             excess_covariance = np.asarray(handle["excess_covariance"], dtype=np.float64)
             stored_mean = np.asarray(handle["B_on_bootstrap_mean"], dtype=np.float64)
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-        shape_ok = cell_ids.shape == (44,) and len(set(cell_ids.tolist())) == 44 and samples.shape == (1000, 44) and b_covariance.shape == (44, 44) and excess_covariance.shape == (44, 44)
-        checks.append(check("bootstrap_registered_shape", shape_ok, {"cell_id": list(cell_ids.shape), "samples": list(samples.shape), "B_on_covariance": list(b_covariance.shape), "excess_covariance": list(excess_covariance.shape)}, {"cell_id": [44], "samples": [1000, 44], "covariances": [44, 44]}, {}))
-        finite = all(np.all(np.isfinite(value)) for value in (samples, b_covariance, excess_covariance, stored_mean))
+        shape_ok = cell_ids.shape == (44,) and len(set(cell_ids.tolist())) == 44 and b_on_nominal.shape == (44,) and n_on.shape == (44,) and samples.shape == (1000, 44) and b_covariance.shape == (44, 44) and excess_covariance.shape == (44, 44)
+        checks.append(check("bootstrap_registered_shape", shape_ok, {"cell_id": list(cell_ids.shape), "B_on_nominal": list(b_on_nominal.shape), "N_on": list(n_on.shape), "samples": list(samples.shape), "B_on_covariance": list(b_covariance.shape), "excess_covariance": list(excess_covariance.shape)}, {"cell_id": [44], "vectors": [44], "samples": [1000, 44], "covariances": [44, 44]}, {}))
+        finite = all(np.all(np.isfinite(value)) for value in (b_on_nominal, samples, b_covariance, excess_covariance, stored_mean)) and bool(np.all(n_on >= 0))
         symmetric = np.allclose(b_covariance, b_covariance.T, rtol=1e-12, atol=1e-12) and np.allclose(excess_covariance, excess_covariance.T, rtol=1e-12, atol=1e-12)
         recomputed_mean = np.mean(samples, axis=0)
         recomputed_covariance = np.cov(samples, rowvar=False, ddof=1)
         reproduction = np.allclose(stored_mean, recomputed_mean, rtol=1e-12, atol=1e-12) and np.allclose(b_covariance, recomputed_covariance, rtol=1e-10, atol=1e-10)
+        expected_excess_covariance = np.diag(n_on.astype(np.float64)) + b_covariance if shape_ok else np.empty((0, 0))
+        excess_reproduction = shape_ok and np.allclose(excess_covariance, expected_excess_covariance, rtol=1e-12, atol=1e-12)
         eigenvalues = np.linalg.eigvalsh(excess_covariance) if excess_covariance.shape == (44, 44) and finite and symmetric else np.asarray([float("nan")])
-        checks.append(check("bootstrap_covariance_integrity", finite and symmetric and reproduction and bool(np.all(eigenvalues > 0.0)), {"finite": finite, "symmetric": symmetric, "reproduced": reproduction, "minimum_excess_eigenvalue": float(np.min(eigenvalues))}, {"finite": True, "symmetric": True, "sample_reproduction": True, "minimum_eigenvalue_operator": "> 0"}, {"npz_sha256": _sha256(npz_path)}))
-        production = metadata.get("bootstrap_count_requested") == 1000 and metadata.get("bootstrap_count_completed") == 1000 and metadata.get("refit_failure_count") == 0 and metadata.get("production_complete") is True
-        checks.append(check("bootstrap_production_complete", production, {key: metadata.get(key) for key in ("bootstrap_count_requested", "bootstrap_count_completed", "refit_failure_count", "production_complete")}, {"bootstrap_count_requested": 1000, "bootstrap_count_completed": 1000, "refit_failure_count": 0, "production_complete": True}, {"metadata_sha256": _sha256(metadata_path)}))
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        checks.append(check("bootstrap_covariance_integrity", finite and symmetric and reproduction and excess_reproduction and bool(np.all(eigenvalues > 0.0)), {"finite": finite, "symmetric": symmetric, "sample_reproduced": reproduction, "excess_formula_reproduced": excess_reproduction, "minimum_excess_eigenvalue": float(np.min(eigenvalues))}, {"finite": True, "symmetric": True, "sample_reproduction": True, "excess_covariance_formula": "diag(N_on) + B_on_covariance", "minimum_eigenvalue_operator": "> 0"}, {"npz_sha256": _sha256(npz_path)}))
+        production = metadata.get("bootstrap_count_requested") == 1000 and metadata.get("bootstrap_count_completed") == 1000 and metadata.get("refit_failure_count") == 0 and metadata.get("production_complete") is True and metadata.get("seed") == 64748
+        checks.append(check("bootstrap_production_complete", production, {key: metadata.get(key) for key in ("bootstrap_count_requested", "bootstrap_count_completed", "refit_failure_count", "production_complete", "seed")}, {"bootstrap_count_requested": 1000, "bootstrap_count_completed": 1000, "refit_failure_count": 0, "production_complete": True, "seed": 64748}, {"metadata_sha256": _sha256(metadata_path)}))
+
+        if registry_path is not None:
+            registry_path = registry_path.resolve()
+            registry = json.loads(registry_path.read_text(encoding="utf-8"))
+            specs = strict_branch_records(registry.get("branches") or [])
+            nominal = specs[NOMINAL_BRANCH_ID]
+
+            def registry_path_for(key: str) -> Path:
+                raw = nominal.get(key)
+                if not raw:
+                    raise ValueError(f"Nominal registry branch lacks {key}")
+                path = Path(str(raw))
+                return (path if path.is_absolute() else registry_path.parent / path).resolve()
+
+            stage_d_path = registry_path_for("stage_d_npz")
+            stage_d_metadata_path = registry_path_for("stage_d_metadata")
+            stage_e_path = registry_path_for("stage_e_npz")
+            stage_f_metadata_path = registry_path_for("stage_f_metadata")
+            stage_d_metadata = json.loads(stage_d_metadata_path.read_text(encoding="utf-8"))
+            stage_f_metadata = json.loads(stage_f_metadata_path.read_text(encoding="utf-8"))
+
+            def metadata_path_for(payload: Mapping[str, Any], key: str, anchor: Path) -> Path:
+                inputs = payload.get("inputs") or {}
+                raw = inputs.get(key) if isinstance(inputs, Mapping) else None
+                if not raw:
+                    raise ValueError(f"{anchor} lacks inputs.{key}")
+                path = Path(str(raw))
+                return (path if path.is_absolute() else anchor.parent / path).resolve()
+
+            manifest_path = metadata_path_for(stage_d_metadata, "pooling_manifest", stage_d_metadata_path)
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest_target_ids = np.asarray(manifest.get("target_cell_ids", []), dtype=np.int64)
+            with np.load(stage_d_path, allow_pickle=False) as handle:
+                stage_d_ids = np.asarray(handle["cell_id"], dtype=np.int64)
+                stage_d_b_on = np.asarray(handle["B_on"], dtype=np.float64)
+            with np.load(stage_e_path, allow_pickle=False) as handle:
+                stage_e_ids = np.asarray(handle["cell_id"], dtype=np.int64)
+                stage_e_n_on = np.asarray(handle["N_on"], dtype=np.int64)
+            stage_d_index = {int(cell_id): index for index, cell_id in enumerate(stage_d_ids)}
+            aligned_stage_d_b_on = np.asarray([stage_d_b_on[stage_d_index[int(cell_id)]] for cell_id in cell_ids])
+            alignment_ok = (
+                np.array_equal(cell_ids, manifest_target_ids)
+                and np.array_equal(cell_ids, stage_e_ids)
+                and np.array_equal(n_on, stage_e_n_on)
+                and np.allclose(b_on_nominal, aligned_stage_d_b_on, rtol=1e-12, atol=1e-12)
+            )
+            checks.append(check("bootstrap_nominal_alignment", alignment_ok, {"cell_id": cell_ids.tolist(), "manifest_target_cell_id": manifest_target_ids.tolist(), "stage_e_cell_id": stage_e_ids.tolist(), "N_on_matches_stage_e": bool(np.array_equal(n_on, stage_e_n_on)), "B_on_nominal_matches_stage_d": bool(np.allclose(b_on_nominal, aligned_stage_d_b_on, rtol=1e-12, atol=1e-12))}, {"exact_cell_order": True, "N_on_matches_stage_e": True, "B_on_nominal_matches_stage_d": True}, {}))
+
+            metadata_stage_d = metadata_path_for(metadata, "stage_d_npz", metadata_path)
+            metadata_manifest = metadata_path_for(metadata, "pooling_manifest", metadata_path)
+            provenance_ok = (
+                metadata_stage_d == stage_d_path
+                and metadata_manifest == manifest_path
+                and metadata.get("stage_d_sha256") == _sha256(stage_d_path)
+                and metadata.get("manifest_sha256") == manifest.get("manifest_sha256")
+                and metadata.get("manifest_file_sha256") == _sha256(manifest_path)
+                and metadata.get("cell_id") == cell_ids.tolist()
+            )
+            checks.append(check("bootstrap_provenance_linked", provenance_ok, {"stage_d_path_matches": metadata_stage_d == stage_d_path, "manifest_path_matches": metadata_manifest == manifest_path, "stage_d_sha_matches": metadata.get("stage_d_sha256") == _sha256(stage_d_path), "manifest_self_hash_matches": metadata.get("manifest_sha256") == manifest.get("manifest_sha256"), "manifest_file_sha_matches": metadata.get("manifest_file_sha256") == _sha256(manifest_path), "metadata_cell_id_matches": metadata.get("cell_id") == cell_ids.tolist()}, {"all": True}, {}))
+
+            fits = stage_f_metadata.get("fits") or {}
+            covariance_fit_names = ("pl_background_covariance", "logpar_background_covariance")
+            covariance_fits_valid = isinstance(fits, Mapping) and all(isinstance(fits.get(name), Mapping) and fits[name].get("valid") is True for name in covariance_fit_names)
+            preferred = stage_f_metadata.get("preferred_fit") or {}
+            diagnostic = ((stage_f_metadata.get("statistic") or {}).get("background_covariance_diagnostic") or {})
+            covariance_input_path = metadata_path_for(stage_f_metadata, "excess_covariance_npz", stage_f_metadata_path)
+            stage_f_linked = (
+                covariance_input_path == npz_path.resolve()
+                and diagnostic.get("path") == str(npz_path.resolve())
+                and diagnostic.get("sha256") == _sha256(npz_path)
+                and covariance_fits_valid
+                and preferred.get("error_mode") == "conservative"
+            )
+            checks.append(check("bootstrap_stage_f_covariance_diagnostic", stage_f_linked, {"covariance_input_path_matches": covariance_input_path == npz_path.resolve(), "covariance_sha_matches": diagnostic.get("sha256") == _sha256(npz_path), "covariance_fits_valid": covariance_fits_valid, "preferred_error_mode": preferred.get("error_mode")}, {"covariance_input_and_sha_match": True, "covariance_fits_valid": True, "preferred_error_mode": "conservative"}, {}))
+    except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
         checks.append(check("bootstrap_covariance_integrity", False, None, {"valid": True}, {"error": str(exc)}))
     return checks
 
@@ -237,9 +335,15 @@ def main() -> None:
         except (OSError, KeyError, ValueError, GridConvergenceError) as exc:
             checks.append(check("grid_convergence_computation", False, None, {"passed": True}, {"error": str(exc)}))
     if phase in ("slurm", "all"):
-        checks.extend(slurm_checks(registry, query_sacct=True))
+        checks.extend(
+            slurm_checks(
+                registry,
+                query_sacct=True,
+                current_finalizer_job_id=os.environ.get("SLURM_JOB_ID"),
+            )
+        )
     if phase in ("bootstrap", "all"):
-        checks.extend(bootstrap_checks(args.bootstrap_npz, args.bootstrap_metadata))
+        checks.extend(bootstrap_checks(args.bootstrap_npz, args.bootstrap_metadata, registry_path=registry_path))
     if phase == "report" or args.require_report or phase == "all":
         checks.extend(report_checks(args.report, args.convergence_json))
 

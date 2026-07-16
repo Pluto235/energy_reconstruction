@@ -36,7 +36,13 @@ N_AZIMUTH_SECTORS = 8
 
 
 def canonical_json_bytes(payload: Mapping[str, Any]) -> bytes:
-    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    return json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    ).encode("ascii")
 
 
 def manifest_payload_sha256(payload: Mapping[str, Any]) -> str:
@@ -49,7 +55,10 @@ def write_self_hashed_manifest(path: Path, payload: Mapping[str, Any]) -> dict[s
     output = dict(payload)
     output["manifest_sha256"] = manifest_payload_sha256(output)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(output, indent=2, sort_keys=True) + "\n", encoding="ascii")
+    path.write_text(
+        json.dumps(output, indent=2, sort_keys=True, allow_nan=False) + "\n",
+        encoding="ascii",
+    )
     reloaded = json.loads(path.read_text(encoding="ascii"))
     actual = manifest_payload_sha256(reloaded)
     if actual != reloaded.get("manifest_sha256"):
@@ -200,6 +209,20 @@ def rectangle_basis_grid(edges: np.ndarray) -> np.ndarray:
     return basis
 
 
+def pixel_center_sector_masks(pixel_basis_grid: np.ndarray) -> np.ndarray:
+    basis = np.asarray(pixel_basis_grid, dtype=np.float64)
+    if basis.ndim != 3 or basis.shape[2] != 6 or np.any(basis[:, :, 0] <= 0.0):
+        raise ValueError("pixel_basis_grid must have shape (y, x, 6) with positive pixel areas")
+    center_x = basis[:, :, 1] / basis[:, :, 0]
+    center_y = basis[:, :, 2] / basis[:, :, 0]
+    angle = np.mod(np.arctan2(center_y, center_x), 2.0 * math.pi)
+    sector_id = np.minimum(
+        (angle * N_AZIMUTH_SECTORS / (2.0 * math.pi)).astype(np.int64),
+        N_AZIMUTH_SECTORS - 1,
+    )
+    return np.asarray([sector_id == value for value in range(N_AZIMUTH_SECTORS)], dtype=bool)
+
+
 def scan_continuous_annulus_maps(
     obs_events_dir: Path,
     donor_cell_ids: Sequence[int],
@@ -232,24 +255,22 @@ def scan_continuous_annulus_maps(
             if cid not in donor_set:
                 continue
             selected = finite & (cell == cid)
-            selected &= rho >= float(annulus_inner_by_cell[cid])
-            selected &= rho < float(annulus_outer_by_cell[cid])
-            selected &= rho < 6.0
-            continuous_counts[cid] += int(np.count_nonzero(selected))
+            continuous_annulus = (
+                selected
+                & (rho >= float(annulus_inner_by_cell[cid]))
+                & (rho < float(annulus_outer_by_cell[cid]))
+                & (rho < 6.0)
+            )
+            continuous_counts[cid] += int(np.count_nonzero(continuous_annulus))
             if not np.any(selected):
                 continue
             hist = np.histogram2d(y[selected], x[selected], bins=(edges, edges))[0].astype(np.int64)
             maps[cid] += hist
-            angle = np.mod(np.arctan2(y[selected], x[selected]), 2.0 * math.pi)
-            sector = np.minimum((angle * N_AZIMUTH_SECTORS / (2.0 * math.pi)).astype(np.int64), 7)
-            for sector_id in range(N_AZIMUTH_SECTORS):
-                in_sector = sector == sector_id
-                if np.any(in_sector):
-                    sector_maps[cid][sector_id] += np.histogram2d(
-                        y[selected][in_sector], x[selected][in_sector], bins=(edges, edges)
-                    )[0].astype(np.int64)
         if print_every > 0 and batch_index % int(print_every) == 0:
             print(f"[manifest batch {batch_index}] annulus events={sum(continuous_counts.values()):,}", flush=True)
+    sector_masks = pixel_center_sector_masks(rectangle_basis_grid(edges))
+    for cell_id in donor_ids:
+        sector_maps[cell_id] = np.where(sector_masks, maps[cell_id][None, :, :], 0)
     return continuous_counts, maps, sector_maps, edges
 
 
@@ -271,15 +292,36 @@ def poisson_deviance_score(counts: np.ndarray, expected_probability: np.ndarray)
 
 def choose_one_standard_error(candidate_scores: Mapping[int, Sequence[float]]) -> tuple[int, dict[str, Any]]:
     summary: dict[str, Any] = {}
+    valid_orders: list[int] = []
     for order in sorted(candidate_scores):
         scores = np.asarray(candidate_scores[order], dtype=np.float64)
-        finite = scores[np.isfinite(scores)]
-        mean = float(np.mean(finite)) if finite.size else float("inf")
-        se = float(np.std(finite, ddof=1) / math.sqrt(finite.size)) if finite.size > 1 else 0.0
-        summary[str(order)] = {"fold_scores": scores.tolist(), "mean": mean, "standard_error": se}
-    best_order = min(candidate_scores, key=lambda order: summary[str(order)]["mean"])
+        finite_mask = np.isfinite(scores)
+        valid = bool(scores.size > 0 and np.all(finite_mask))
+        if valid:
+            mean: float | None = float(np.mean(scores))
+            se: float | None = (
+                float(np.std(scores, ddof=1) / math.sqrt(scores.size)) if scores.size > 1 else 0.0
+            )
+            valid_orders.append(int(order))
+        else:
+            mean = None
+            se = None
+        summary[str(order)] = {
+            "fold_scores": [float(value) if math.isfinite(float(value)) else None for value in scores],
+            "mean": mean,
+            "standard_error": se,
+            "valid": valid,
+            "failed_fold_count": int(np.count_nonzero(~finite_mask)),
+        }
+    if not valid_orders:
+        raise ValueError("All candidate surface orders have at least one failed cross-validation fold")
+    best_order = min(valid_orders, key=lambda order: float(summary[str(order)]["mean"]))
     threshold = float(summary[str(best_order)]["mean"] + summary[str(best_order)]["standard_error"])
-    eligible = [order for order in sorted(candidate_scores) if summary[str(order)]["mean"] <= threshold]
+    eligible = [
+        order
+        for order in valid_orders
+        if float(summary[str(order)]["mean"]) <= threshold
+    ]
     selected = int(min(eligible)) if eligible else int(best_order)
     return selected, {"candidates": summary, "best_order": int(best_order), "one_se_threshold": threshold}
 
@@ -308,19 +350,28 @@ def cross_validate_orders(
     donors = tuple(int(cell_id) for cell_id in donor_cell_ids)
     basis = {cell_id: pixel_basis_grid.reshape(-1, 6) for cell_id in donors}
     masks = {cell_id: np.asarray(annulus_mask_by_cell[cell_id], dtype=bool).reshape(-1) for cell_id in donors}
+    sector_masks = pixel_center_sector_masks(pixel_basis_grid).reshape(N_AZIMUTH_SECTORS, -1)
     candidate_scores: dict[int, list[float]] = {0: [], 1: [], 2: []}
     failures: dict[str, list[str]] = {"0": [], "1": [], "2": []}
     for order in (0, 1, 2):
         for sector_id in range(N_AZIMUTH_SECTORS):
             training_counts = {
-                cell_id: (np.asarray(counts_map_by_cell[cell_id]) - np.asarray(sector_maps_by_cell[cell_id])[sector_id]).reshape(-1)
+                cell_id: np.asarray(counts_map_by_cell[cell_id]).reshape(-1)
+                for cell_id in donors
+            }
+            training_masks = {
+                cell_id: masks[cell_id] & ~sector_masks[sector_id]
+                for cell_id in donors
+            }
+            validation_masks = {
+                cell_id: masks[cell_id] & sector_masks[sector_id]
                 for cell_id in donors
             }
             try:
                 fit = fit_profiled_poisson_surface(
                     training_counts,
                     basis,
-                    masks,
+                    training_masks,
                     donors,
                     order,
                     positivity_radius_deg,
@@ -330,7 +381,7 @@ def cross_validate_orders(
                     _score_fit(
                         fit.shape_coefficients,
                         basis[cell_id],
-                        masks[cell_id],
+                        validation_masks[cell_id],
                         np.asarray(sector_maps_by_cell[cell_id])[sector_id].reshape(-1),
                     )
                     for cell_id in donors

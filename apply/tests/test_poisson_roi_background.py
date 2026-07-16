@@ -124,6 +124,9 @@ class ProfiledPoissonSurfaceTests(unittest.TestCase):
         # This training region ends at rho=3, so its unconstrained continuation is negative by rho=6.
         truth = np.asarray([1.0, 0.0, 0.0, -0.055, 0.0, -0.045])
         counts, bases, masks = synthetic_fit_inputs(np.asarray([1.0, 0.0, 0.0, 0.0, 0.0, 0.0]), total_per_cell=(700_000,))
+        boundary_pixel = quadratic_rectangle_basis_integrals(5.8999, 6.0999, -0.1, 0.1)
+        bases[1] = np.vstack([bases[1], boundary_pixel])
+        counts[1] = np.append(counts[1], 0.0)
         centers = np.column_stack([bases[1][:, 1] / bases[1][:, 0], bases[1][:, 2] / bases[1][:, 0]])
         masks[1] = np.hypot(centers[:, 0], centers[:, 1]) < 3.0
         training_shape = bases[1][masks[1]] @ truth
@@ -135,7 +138,8 @@ class ProfiledPoissonSurfaceTests(unittest.TestCase):
         counts[1] = generated
         result = fit_profiled_poisson_surface(counts, bases, masks, (1,), 2, 6.0, {1: True})
         self.assertGreater(result.positive_minimum, 0.0)
-        self.assertGreaterEqual(result.optimizer_status["cutting_plane_constraints_added"], 1)
+        self.assertGreater(float(boundary_pixel @ result.shape_coefficients), 0.0)
+        self.assertTrue(result.optimizer_status["success"])
 
     def test_impossible_input_raises_typed_error(self) -> None:
         basis = np.asarray([quadratic_rectangle_basis_integrals(0.0, 0.1, 0.0, 0.1)])

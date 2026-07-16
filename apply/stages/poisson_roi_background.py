@@ -10,7 +10,7 @@ from scipy.optimize import LinearConstraint, minimize
 
 _COEFFICIENT_COUNT = 6
 _POSITIVITY_FLOOR = 1.0e-12
-_CONSTRAINT_POSITIVITY_FLOOR = 1.0e-10
+_CONSTRAINT_POSITIVITY_FLOOR = 1.0e-8
 _SUPPORT_GRID_STEP_DEG = 0.25
 _MAX_CUTTING_PLANE_ITERATIONS = 8
 
@@ -113,7 +113,10 @@ def _fixed_disk_support(radius: float) -> np.ndarray:
     coordinates = np.arange(-limit, limit + 1, dtype=np.float64) * _SUPPORT_GRID_STEP_DEG
     xx, yy = np.meshgrid(coordinates, coordinates, indexing="xy")
     points = np.column_stack([xx.ravel(), yy.ravel()])
-    return points[np.sum(points * points, axis=1) <= radius * radius * (1.0 + 1.0e-14)]
+    interior = points[np.sum(points * points, axis=1) <= radius * radius * (1.0 + 1.0e-14)]
+    angles = np.linspace(0.0, 2.0 * math.pi, 4096, endpoint=False)
+    boundary = radius * np.column_stack([np.cos(angles), np.sin(angles)])
+    return np.vstack([interior, boundary])
 
 
 def _evaluate(coefficients: np.ndarray, x: float, y: float) -> float:
@@ -168,6 +171,7 @@ def _validated_fit_inputs(
     tuple[int, ...],
     dict[int, np.ndarray],
     dict[int, np.ndarray],
+    dict[int, np.ndarray],
     dict[int, float],
 ]:
     donors = tuple(int(cell_id) for cell_id in donor_cell_ids)
@@ -175,6 +179,7 @@ def _validated_fit_inputs(
         raise PoissonSurfaceFitError("donor_cell_ids must be non-empty and unique")
     masked_counts: dict[int, np.ndarray] = {}
     masked_basis: dict[int, np.ndarray] = {}
+    full_basis: dict[int, np.ndarray] = {}
     normalizations: dict[int, float] = {}
     for cell_id in donors:
         try:
@@ -194,8 +199,9 @@ def _validated_fit_inputs(
             raise PoissonSurfaceFitError(f"Pixel basis must be finite with positive areas for donor cell {cell_id}")
         masked_counts[cell_id] = counts[mask]
         masked_basis[cell_id] = basis[mask]
+        full_basis[cell_id] = basis
         normalizations[cell_id] = float(np.sum(counts[mask]))
-    return donors, masked_counts, masked_basis, normalizations
+    return donors, masked_counts, masked_basis, full_basis, normalizations
 
 
 def fit_profiled_poisson_surface(
@@ -212,7 +218,7 @@ def fit_profiled_poisson_surface(
     if not math.isfinite(radius) or radius <= 0.0:
         raise PoissonSurfaceFitError("positivity_radius_deg must be positive and finite")
     active = _active_coefficient_indices(int(order))
-    donors, counts, basis, normalizations = _validated_fit_inputs(
+    donors, counts, basis, full_basis, normalizations = _validated_fit_inputs(
         counts_by_cell,
         pixel_basis_by_cell,
         annulus_mask_by_cell,
@@ -228,8 +234,22 @@ def fit_profiled_poisson_surface(
     likelihood_scale = max(1.0, sum(normalizations[cell_id] for cell_id in contributors))
 
     training_basis = np.vstack([basis[cell_id] for cell_id in donors])
-    constraint_pixel_basis = np.unique(training_basis, axis=0)
-    training_corners = _rectangle_corners(constraint_pixel_basis)
+    unique_full_basis = np.unique(np.vstack([full_basis[cell_id] for cell_id in donors]), axis=0)
+    full_centers = np.column_stack(
+        [
+            unique_full_basis[:, 1] / unique_full_basis[:, 0],
+            unique_full_basis[:, 2] / unique_full_basis[:, 0],
+        ]
+    )
+    full_corners = _rectangle_corners(unique_full_basis).reshape(-1, 4, 2)
+    centered_in_disk = np.sum(full_centers * full_centers, axis=1) <= radius * radius * (1.0 + 1.0e-14)
+    crosses_disk_boundary = np.max(np.sum(full_corners * full_corners, axis=2), axis=1) > radius * radius
+    boundary_pixel_basis = unique_full_basis[centered_in_disk & crosses_disk_boundary]
+    point_constraint_pixel_basis = np.unique(training_basis, axis=0)
+    constraint_pixel_basis = np.unique(
+        np.vstack([training_basis, boundary_pixel_basis]), axis=0
+    )
+    training_corners = _rectangle_corners(point_constraint_pixel_basis)
     constraint_points = np.unique(
         np.vstack([training_corners, _fixed_disk_support(radius)]), axis=0
     )
@@ -294,7 +314,8 @@ def fit_profiled_poisson_surface(
                 break
             if cutting_iteration >= _MAX_CUTTING_PLANE_ITERATIONS:
                 raise PoissonSurfaceFitError(
-                    "Positive surface cutting-plane loop failed after eight iterations"
+                    "Positive surface cutting-plane loop failed after eight iterations: "
+                    f"minimum={minimum:.17g} at {minimum_xy}, parameters={parameters.tolist()}"
                 )
             extra_points.append(minimum_xy)
         else:  # pragma: no cover - loop is explicitly bounded above

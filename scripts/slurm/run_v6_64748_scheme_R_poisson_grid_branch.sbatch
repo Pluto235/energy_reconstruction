@@ -2,8 +2,8 @@
 #SBATCH -J v6_64748_poisson_grid
 #SBATCH -p main
 #SBATCH --array=0-11%4
-#SBATCH --cpus-per-task=32
-#SBATCH --mem=128G
+#SBATCH --cpus-per-task=20
+#SBATCH --mem=40G
 #SBATCH -t 08:00:00
 #SBATCH -o /home/server/projects/energy_reconstruction/logs/slurm/%x_%A_%a.out
 #SBATCH -e /home/server/projects/energy_reconstruction/logs/slurm/%x_%A_%a.err

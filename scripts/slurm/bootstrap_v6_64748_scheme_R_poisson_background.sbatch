@@ -2,7 +2,7 @@
 #SBATCH -J v6_64748_poisson_bootstrap
 #SBATCH -p main
 #SBATCH --cpus-per-task=32
-#SBATCH --mem=128G
+#SBATCH --mem=96G
 #SBATCH -t 12:00:00
 #SBATCH -o /home/server/projects/energy_reconstruction/logs/slurm/%x_%j.out
 #SBATCH -e /home/server/projects/energy_reconstruction/logs/slurm/%x_%j.err

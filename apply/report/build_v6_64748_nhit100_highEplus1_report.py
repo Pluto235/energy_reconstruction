@@ -17,6 +17,7 @@ from typing import Any, Iterable, List
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RUN_ID = "v6_64748_nhit100_highEplus1_split56"
 RUN_ID = os.environ.get("V6_REPORT_RUN_ID", DEFAULT_RUN_ID)
+EXPERIMENT_ID = os.environ.get("V6_REPORT_EXPERIMENT_ID", RUN_ID)
 SOURCE_RUN_ID = os.environ.get("V6_REPORT_SOURCE_RUN_ID", RUN_ID)
 REPORT_TITLE = os.environ.get("V6_REPORT_TITLE", "Crab SED v6 64748 nhit100 highEplus1 Stage A-G")
 REPORT_DIR = REPO_ROOT / "apply" / "report"
@@ -1384,7 +1385,7 @@ def main() -> None:
 <main>
   <header>
     <h1>{esc(REPORT_TITLE)}</h1>
-    <p class="lede"><strong>{esc(SCHEME_LABEL)}</strong>. v6 chain for <code>{RUN_ID}</code>, reusing the <code>{SOURCE_RUN_ID}</code> nominal inputs and Stage C event reduction. The first Nhit bin is <code>[100,200)</code>; <code>&gt;=6</code> remains a diagnostic tail outside Stage F/G.</p>
+    <p class="lede"><strong>{esc(SCHEME_LABEL)}</strong>. v6 chain for <code>{esc(EXPERIMENT_ID)}</code>, reusing the <code>{SOURCE_RUN_ID}</code> nominal inputs and Stage C event reduction. The first Nhit bin is <code>[100,200)</code>; <code>&gt;=6</code> remains a diagnostic tail outside Stage F/G.</p>
     <div class="okbox"><strong>Response contract:</strong> {esc(SCHEME_CONTRACT)}</div>
   </header>
 
@@ -1413,7 +1414,7 @@ def main() -> None:
     <h2>Inputs And Outputs</h2>
     <p>The main chain uses the 64748 observation eval root and its recovered-time tree. The response, PSF, aperture response, fit, and SED products are all under the new run namespace.</p>
     {table(["Field", "Value"], [
-        ["Run id", f"<code>{RUN_ID}</code>"],
+        ["Experiment id", f"<code>{esc(EXPERIMENT_ID)}</code>"],
         ["Scheme", f"<code>{esc(SCHEME)}</code> - {esc(SCHEME_LABEL)}"],
         ["Input commit SHA", f"<code>{esc(input_commit)}</code>"],
         ["Analysis response", f"<code>{esc(response_path)}</code>"],
@@ -1507,6 +1508,7 @@ def main() -> None:
     REPORT_PATH.write_text(html_doc, encoding="utf-8")
     html_validation = validate_html_images(REPORT_PATH)
     validation_payload = {
+        "experiment_id": EXPERIMENT_ID,
         "report_path": str(REPORT_PATH),
         "html_image_validation": html_validation,
         "metadata_contamination": contamination,

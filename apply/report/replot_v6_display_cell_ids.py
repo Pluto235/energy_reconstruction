@@ -22,13 +22,18 @@ import numpy as np
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--stage-d-npz", type=Path, required=True)
+    parser.add_argument("--stage-d-npz", type=Path)
     parser.add_argument("--stage-f-npz", type=Path, required=True)
     parser.add_argument("--stage-f-metadata", type=Path, required=True)
-    parser.add_argument("--stage-d-output-dir", type=Path, required=True)
+    parser.add_argument("--stage-d-output-dir", type=Path)
     parser.add_argument("--stage-f-output-dir", type=Path, required=True)
     parser.add_argument("--asset-dir", type=Path, required=True)
     parser.add_argument("--profile-half-width-deg", type=float, default=1.0)
+    parser.add_argument(
+        "--stage-f-only",
+        action="store_true",
+        help="Redraw only the Stage F model-count figure without touching shared Stage D outputs.",
+    )
     return parser.parse_args()
 
 
@@ -354,14 +359,23 @@ def copy_to_assets(paths: list[Path], asset_dir: Path) -> None:
 
 def main() -> None:
     args = parse_args()
-    args.stage_d_output_dir.mkdir(parents=True, exist_ok=True)
     args.stage_f_output_dir.mkdir(parents=True, exist_ok=True)
-    with np.load(args.stage_d_npz, allow_pickle=False) as data:
-        stage_d = {key: np.asarray(data[key]) for key in data.files}
     with np.load(args.stage_f_npz, allow_pickle=False) as data:
         stage_f = {key: np.asarray(data[key]) for key in data.files}
     metadata = json.loads(args.stage_f_metadata.read_text(encoding="utf-8"))
     preferred_model = str((metadata.get("preferred_fit") or {}).get("model", "unknown"))
+    model_counts = args.stage_f_output_dir / "model_counts_vs_excess.png"
+    plot_model_counts(stage_f, preferred_model, model_counts)
+    if args.stage_f_only:
+        copy_to_assets([model_counts], args.asset_dir)
+        print("Redrew Stage F display-only cell labels: 1-84; predE >= 6 tail unnumbered")
+        return
+
+    if args.stage_d_npz is None or args.stage_d_output_dir is None:
+        raise ValueError("--stage-d-npz and --stage-d-output-dir are required unless --stage-f-only is set")
+    args.stage_d_output_dir.mkdir(parents=True, exist_ok=True)
+    with np.load(args.stage_d_npz, allow_pickle=False) as data:
+        stage_d = {key: np.asarray(data[key]) for key in data.files}
     roi_fiducial_deg = float(np.max(np.abs(stage_d["x_edges_deg"])))
 
     roi_counts = args.stage_d_output_dir / "roi_counts_grid.png"
@@ -371,7 +385,6 @@ def main() -> None:
     ra_excess_profile = args.stage_d_output_dir / "normalized_ra_offset_excess_profiles.png"
     dec_excess_profile = args.stage_d_output_dir / "normalized_dec_offset_excess_profiles.png"
     annulus_residual = args.stage_d_output_dir / "annulus_residual_grid.png"
-    model_counts = args.stage_f_output_dir / "model_counts_vs_excess.png"
     common = (
         stage_d["cell_id"],
         stage_d["nhit_bin"].astype(str),
@@ -481,7 +494,6 @@ def main() -> None:
         colorbar_label="annulus residual sigma",
         roi_fiducial_deg=roi_fiducial_deg,
     )
-    plot_model_counts(stage_f, preferred_model, model_counts)
     copy_to_assets(
         [
             roi_counts,

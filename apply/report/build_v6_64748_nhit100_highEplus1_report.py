@@ -103,6 +103,14 @@ SCHEME_CONTRACT = os.environ.get(
 )
 RATIO_HIDDEN_PREDE_POINTS = max(0, int(os.environ.get("V6_REPORT_RATIO_HIDDEN_PREDE_POINTS", "0")))
 EXPECTED_FIXED_CONTAINMENT = os.environ.get("V6_REPORT_EXPECTED_FIXED_CONTAINMENT")
+POISSON_REPORT_INPUTS = tuple(
+    os.environ.get(name, "").strip()
+    for name in (
+        "V6_REPORT_POISSON_MANIFEST",
+        "V6_REPORT_GRID_CONVERGENCE",
+        "V6_REPORT_BACKGROUND_COVARIANCE",
+    )
+)
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -1133,6 +1141,158 @@ def status_class(value: str) -> str:
     return "fail"
 
 
+def _poisson_slurm_rows(value: Any) -> list[list[str]]:
+    rows: list[list[str]] = []
+    if isinstance(value, dict):
+        items = value.items()
+    elif isinstance(value, list):
+        items = ((str(index), item) for index, item in enumerate(value))
+    else:
+        return rows
+    for role, raw in items:
+        item = raw if isinstance(raw, dict) else {"state": raw}
+        tasks = item.get("tasks")
+        if isinstance(tasks, dict):
+            for branch_id, task_raw in tasks.items():
+                task = task_raw if isinstance(task_raw, dict) else {"state": task_raw}
+                rows.append([
+                    esc(branch_id),
+                    esc(task.get("job_id") or item.get("job_id") or "n/a"),
+                    esc(task.get("state") or item.get("state") or "unknown"),
+                ])
+        else:
+            rows.append([
+                esc(item.get("role") or item.get("branch_id") or role),
+                esc(item.get("job_id") or "n/a"),
+                esc(item.get("state") or "unknown"),
+            ])
+    return rows
+
+
+def build_poisson_optional_sections(stage_d_meta: dict[str, Any]) -> str:
+    """Render Poisson evidence only for the complete three-file contract."""
+    if not all(POISSON_REPORT_INPUTS):
+        return ""
+
+    import numpy as np
+
+    manifest_path, convergence_path, covariance_path = map(Path, POISSON_REPORT_INPUTS)
+    for label, path in (
+        ("Poisson pooling manifest", manifest_path),
+        ("grid convergence JSON", convergence_path),
+        ("background covariance NPZ", covariance_path),
+    ):
+        if not path.exists() or path.stat().st_size == 0:
+            raise FileNotFoundError(f"Missing {label}: {path}")
+
+    manifest = load_json(manifest_path)
+    convergence = load_json(convergence_path)
+    target_ids = [int(value) for value in manifest.get("target_cell_ids", [])]
+    donor_ids = [int(value) for value in manifest.get("donor_universe_cell_ids", [])]
+    cells = manifest.get("cells") or {}
+    modes: dict[str, int] = {}
+    orders: dict[int, int] = {}
+    for cell_id in target_ids:
+        row = cells.get(str(cell_id), {}) if isinstance(cells, dict) else {}
+        mode = str(row.get("mode") or "unknown")
+        order = int(row.get("surface_order", -1))
+        modes[mode] = modes.get(mode, 0) + 1
+        orders[order] = orders.get(order, 0) + 1
+
+    continuous = manifest.get("continuous_annulus_counts") or {}
+    continuous_values = [finite_float(value) for value in continuous.values()] if isinstance(continuous, dict) else []
+    continuous_values = [value for value in continuous_values if value is not None]
+    manifest_rows = [
+        ["Manifest self hash", f"<code>{esc(manifest.get('manifest_sha256'))}</code>"],
+        ["Analytic B_on baseline SHA", f"<code>{esc(manifest.get('analytic_bon_baseline_sha'))}</code>"],
+        ["Implementation SHA", f"<code>{esc(manifest.get('implementation_commit_sha'))}</code>"],
+        ["Target / donor cells", f"{len(target_ids)} / {len(donor_ids)}"],
+        ["Model tiers", esc(", ".join(f"{name}: {count}" for name, count in sorted(modes.items())))],
+        ["Polynomial orders", esc(", ".join(f"order {order}: {count}" for order, count in sorted(orders.items())))],
+        [
+            "Continuous annulus counts",
+            (
+                f"min {fmt_int(min(continuous_values))}; max {fmt_int(max(continuous_values))}"
+                if continuous_values else "n/a"
+            ),
+        ],
+    ]
+    provenance = manifest.get("provenance") or {}
+    provenance_rows = []
+    if isinstance(provenance, dict):
+        for name, raw in sorted(provenance.items()):
+            item = raw if isinstance(raw, dict) else {}
+            provenance_rows.append([
+                esc(name),
+                f"<code>{esc(item.get('sha256') or 'n/a')}</code>",
+                f"<code>{esc(item.get('path') or 'n/a')}</code>",
+            ])
+
+    checks = convergence.get("checks") or []
+    check_rows = []
+    for item in checks:
+        if not isinstance(item, dict):
+            continue
+        passed = item.get("passed") is True
+        observed = json.dumps(item.get("observed"), sort_keys=True, separators=(",", ":"))
+        limit = json.dumps(item.get("limit"), sort_keys=True, separators=(",", ":"))
+        check_rows.append([
+            esc(item.get("name")),
+            f'<span class="status-{"pass" if passed else "fail"}">{"PASSED" if passed else "FAILED"}</span>',
+            f"<code>{esc(observed)}</code>",
+            f"<code>{esc(limit)}</code>",
+        ])
+
+    with np.load(covariance_path, allow_pickle=False) as handle:
+        background_covariance = np.asarray(handle["B_on_covariance"], dtype=np.float64)
+        excess_covariance = np.asarray(handle["excess_covariance"], dtype=np.float64)
+        samples = np.asarray(handle["B_on_bootstrap_samples"], dtype=np.float64)
+    excess_eigenvalues = np.linalg.eigvalsh(excess_covariance)
+    covariance_metadata_path = Path(
+        os.environ.get("V6_REPORT_BACKGROUND_COVARIANCE_METADATA", str(covariance_path.with_suffix(".json")))
+    )
+    covariance_metadata = load_json(covariance_metadata_path) if covariance_metadata_path.exists() else {}
+    covariance_rows = [
+        ["Bootstrap samples", fmt_int(samples.shape[0] if samples.ndim == 2 else None)],
+        ["B_on covariance shape", esc(list(background_covariance.shape))],
+        ["Excess covariance shape", esc(list(excess_covariance.shape))],
+        ["Minimum excess eigenvalue", fmt(np.min(excess_eigenvalues) if excess_eigenvalues.size else None, 7)],
+        ["Condition number", fmt(np.linalg.cond(excess_covariance), 7)],
+        ["Completed / failures", f"{fmt_int(covariance_metadata.get('bootstrap_count_completed'))} / {fmt_int(covariance_metadata.get('refit_failure_count'))}"],
+    ]
+    slurm_rows = _poisson_slurm_rows(convergence.get("slurm_jobs"))
+    convergence_status = "PASSED" if convergence.get("passed") is True else "FAILED"
+    status_css = "pass" if convergence.get("passed") is True else "fail"
+    summary_csv = Path(str((stage_d_meta.get("outputs") or {}).get("summary_csv") or ""))
+    minima: list[float] = []
+    if summary_csv.is_file():
+        for row in load_csv(summary_csv):
+            value = finite_float(row.get("positive_minimum"))
+            if value is not None:
+                minima.append(value)
+
+    return f"""<section id="poisson-pooling-provenance">
+    <h2>Poisson Pooling Provenance</h2>
+    <p>The nominal background is a positive profiled-Poisson intensity fit with frozen same-Nhit pooling. The nominal map sampling remains <code>0.1 deg</code>; continuous event cuts and analytic annulus/disk integrals define the physical counts.</p>
+    {table(["Contract", "Evidence"], manifest_rows)}
+    {table(["Input", "SHA256", "Path"], provenance_rows, "pathlist") if provenance_rows else '<div class="callout">No manifest artifact provenance rows were recorded.</div>'}
+    <p>Smallest recorded fitted-surface minimum: <strong>{fmt(min(minima), 7) if minima else 'see all_stage_d_surfaces_positive gate'}</strong>. No clipping is part of this contract.</p>
+  </section>
+
+  <section id="poisson-grid-convergence">
+    <h2>Poisson Grid Convergence</h2>
+    <div class="{'okbox' if convergence.get('passed') is True else 'callout'}"><strong>Registered 12-branch result:</strong> <span class="status-{status_css}">{convergence_status}</span>. A failed gate is preserved as evidence and does not prevent report generation or select a more favorable branch.</div>
+    {table(["Gate", "Status", "Observed", "Limit"], check_rows)}
+    {table(["Role / branch", "Slurm job", "State"], slurm_rows) if slurm_rows else '<div class="callout">No Slurm provenance was embedded in the convergence artifact.</div>'}
+  </section>
+
+  <section id="poisson-background-covariance">
+    <h2>Poisson Background Covariance</h2>
+    <p>The legacy conservative-error LogPar fit remains the primary result. The full bootstrap background covariance is a separately named diagnostic and cannot change <code>preferred_fit</code>.</p>
+    {table(["Diagnostic", "Value"], covariance_rows)}
+  </section>"""
+
+
 def main() -> None:
     stage_a_meta = load_json(STAGE_A / f"response_2d_{SOURCE_RUN_ID}_metadata.json")
     response_meta = load_json(RESPONSE_META)
@@ -1506,6 +1666,13 @@ def main() -> None:
 </body>
 </html>
 """
+
+    poisson_sections = build_poisson_optional_sections(stage_d_meta)
+    if poisson_sections:
+        marker = "<section>\n    <h2>Stage C Time Audit</h2>"
+        if marker not in html_doc:
+            raise ValueError("Could not find Poisson report insertion marker")
+        html_doc = html_doc.replace(marker, poisson_sections + "\n\n  " + marker, 1)
 
     REPORT_PATH.write_text(html_doc, encoding="utf-8")
     html_validation = validate_html_images(REPORT_PATH)

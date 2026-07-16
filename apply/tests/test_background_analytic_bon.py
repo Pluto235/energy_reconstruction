@@ -103,7 +103,32 @@ class AnalyticBackgroundIntegralTests(unittest.TestCase):
         )
         self.assertEqual(selected, 90.0)
         with mock.patch("sys.argv", ["04_background.py"]):
-            self.assertEqual(stage04.parse_args().on_aperture_integration, "pixel-center")
+            args = stage04.parse_args()
+        self.assertEqual(args.on_aperture_integration, "pixel-center")
+        self.assertEqual(args.roi_fit_statistic, "weighted-ls")
+        self.assertEqual(args.roi_grid_offset_x_fraction, 0.0)
+        self.assertEqual(args.roi_grid_offset_y_fraction, 0.0)
+        self.assertIsNone(args.pooling_manifest)
+
+    def test_poisson_mode_requires_full_explicit_contract(self) -> None:
+        with mock.patch("sys.argv", ["04_background.py", "--roi-fit-statistic", "poisson"]):
+            args = stage04.parse_args()
+        with self.assertRaisesRegex(ValueError, "pooling-manifest"):
+            stage04.validate_roi_poisson_args(args)
+
+    def test_offset_grid_preserves_physical_disk_coverage(self) -> None:
+        for step in (0.05, 0.1, 0.2):
+            for fraction in (0.0, 0.5):
+                edges = stage04.make_offset_roi_edges(8.0, step, fraction)
+                self.assertLessEqual(edges[0], -8.0)
+                self.assertGreaterEqual(edges[-1], 8.0)
+                np.testing.assert_allclose(np.diff(edges), step, rtol=0.0, atol=1.0e-12)
+
+    def test_density_adapter_is_grid_step_invariant(self) -> None:
+        coefficients = np.asarray([7.5, 0.2, -0.1, 0.04, 0.03, 0.02])
+        fine = stage04.integrate_density_disk_via_analytic_baseline(coefficients, 0.8, 0.1)
+        coarse = stage04.integrate_density_disk_via_analytic_baseline(coefficients, 0.8, 0.2)
+        self.assertAlmostEqual(fine, coarse, places=12)
 
     def test_load_cells_can_filter_to_included_selector_rows(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

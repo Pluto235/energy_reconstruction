@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import importlib.util
+from pathlib import Path
+import sys
 import unittest
 
 import numpy as np
@@ -9,6 +12,14 @@ from apply.stages.poisson_roi_background import (
     fit_profiled_poisson_surface,
     quadratic_rectangle_basis_integrals,
 )
+
+
+STAGE04_PATH = Path(__file__).resolve().parents[1] / "stages/04_background.py"
+STAGE04_SPEC = importlib.util.spec_from_file_location("stage04_poisson_test", STAGE04_PATH)
+assert STAGE04_SPEC is not None and STAGE04_SPEC.loader is not None
+stage04 = importlib.util.module_from_spec(STAGE04_SPEC)
+sys.modules[STAGE04_SPEC.name] = stage04
+STAGE04_SPEC.loader.exec_module(stage04)
 
 
 class ExactPixelIntegralTests(unittest.TestCase):
@@ -138,6 +149,51 @@ class ProfiledPoissonSurfaceTests(unittest.TestCase):
                 6.0,
                 {1: False},
             )
+
+
+class StageDPoissonIntegrationTests(unittest.TestCase):
+    def _run_constant(self, step: float) -> float:
+        edges = stage04.make_offset_roi_edges(2.0, step, 0.0)
+        centers = 0.5 * (edges[:-1] + edges[1:])
+        xx, yy = np.meshgrid(centers, centers)
+        rho = np.hypot(xx, yy)
+        annulus = (rho >= 0.5) & (rho < 1.5) & (rho < 2.0)
+        counts = np.zeros((1, centers.size, centers.size), dtype=np.int64)
+        counts[0, annulus] = int(round(1000.0 * step * step))
+        continuous_count = 20_000
+        cell = stage04.CellSpec(0, 1, "[100,200)", "[2,2.5)", 0, "test", "test")
+        manifest = {
+            "continuous_annulus_counts": {"1": continuous_count},
+            "execution_cell_assignments": {
+                "1": {"pool_target_cell_id": 1, "donor_cell_ids": [1], "surface_order": 0}
+            },
+            "cells": {"1": {"cross_validation": {}}},
+        }
+        result = stage04.estimate_roi_poisson_pooled_background(
+            counts,
+            edges,
+            edges,
+            [cell],
+            np.asarray([0.25]),
+            np.asarray([continuous_count]),
+            manifest,
+            roi_fiducial_deg=2.0,
+            annulus_default_inner_deg=0.5,
+            annulus_width_deg=1.0,
+            annulus_source_mask_min_deg=0.2,
+            annulus_source_mask_r_opt_factor=1.0,
+            annulus_source_mask_margin_deg=0.0,
+            annulus_max_inner_deg=0.5,
+        )
+        b_on, background, _, _, _, diagnostics = result
+        self.assertTrue(np.all(background[0][rho < 2.0] > 0.0))
+        self.assertGreater(float(diagnostics["positive_minimum"][0]), 0.0)
+        return float(b_on[0])
+
+    def test_constant_poisson_b_on_is_exactly_rebin_invariant(self) -> None:
+        fine = self._run_constant(0.1)
+        coarse = self._run_constant(0.2)
+        self.assertAlmostEqual(fine, coarse, places=10)
 
 
 if __name__ == "__main__":

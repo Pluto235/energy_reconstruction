@@ -4,12 +4,14 @@ from __future__ import annotations
 import argparse
 import csv
 from dataclasses import dataclass
+import hashlib
 import json
 import math
 import os
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import sys
 import time
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
@@ -21,6 +23,12 @@ import pyarrow.dataset as ds
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+
+from apply.stages.poisson_roi_background import (
+    PoissonSurfaceFitError,
+    fit_profiled_poisson_surface,
+    quadratic_rectangle_basis_integrals,
+)
 
 
 DEFAULT_STAGE_C_DIR = "apply/output/stage_c/current"
@@ -78,6 +86,7 @@ class RoiScanResult:
     cell_edge_diagnostic_events: np.ndarray
     rho_hist_total: np.ndarray
     rho_hist_by_cell: np.ndarray
+    continuous_annulus_counts: np.ndarray
     input_rows: int
     processed_batches: int
 
@@ -132,6 +141,30 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--roi-fiducial-deg", type=float, default=6.0)
     parser.add_argument("--roi-edge-diagnostic-deg", type=float, default=8.0)
     parser.add_argument("--roi-grid-step-deg", type=float, default=0.1)
+    parser.add_argument(
+        "--roi-fit-statistic",
+        choices=["weighted-ls", "poisson"],
+        default="weighted-ls",
+        help="Surface-fit statistic for annulus-quadratic ROI backgrounds.",
+    )
+    parser.add_argument(
+        "--pooling-manifest",
+        type=str,
+        default=None,
+        help="Frozen pooling manifest required by --roi-fit-statistic poisson.",
+    )
+    parser.add_argument(
+        "--roi-grid-offset-x-fraction",
+        type=float,
+        choices=[0.0, 0.5],
+        default=0.0,
+    )
+    parser.add_argument(
+        "--roi-grid-offset-y-fraction",
+        type=float,
+        choices=[0.0, 0.5],
+        default=0.0,
+    )
     parser.add_argument(
         "--on-aperture-integration",
         choices=["pixel-center", "analytic-quadratic"],
@@ -361,6 +394,25 @@ def make_edges(start: float, stop: float, step: float) -> np.ndarray:
     edges = start + step * np.arange(n_steps + 1, dtype=np.float64)
     if not np.isclose(edges[-1], stop):
         raise ValueError(f"Step does not land on stop: start={start}, stop={stop}, step={step}")
+    return edges
+
+
+def make_offset_roi_edges(radius_deg: float, step_deg: float, offset_fraction: float) -> np.ndarray:
+    """Build a phased grid with exterior padding that fully covers the physical disk."""
+    radius = float(radius_deg)
+    step = float(step_deg)
+    fraction = float(offset_fraction)
+    if radius <= 0.0 or step <= 0.0:
+        raise ValueError("ROI radius and grid step must be positive")
+    if fraction not in {0.0, 0.5}:
+        raise ValueError("ROI grid offset fraction must be 0 or 0.5")
+    start = -radius + fraction * step
+    if start > -radius:
+        start -= step
+    n_steps = int(math.ceil((radius - start) / step))
+    edges = start + step * np.arange(n_steps + 1, dtype=np.float64)
+    if edges[-1] < radius - 1.0e-12:
+        edges = np.append(edges, edges[-1] + step)
     return edges
 
 
@@ -836,10 +888,13 @@ def scan_stage_c_roi_events(
     *,
     source_ra_deg: float,
     source_dec_deg: float,
-    xy_edges_deg: np.ndarray,
+    x_edges_deg: np.ndarray,
+    y_edges_deg: np.ndarray,
     rho_hist_edges_deg: np.ndarray,
     roi_fiducial_deg: float,
     roi_edge_diagnostic_deg: float,
+    annulus_inner_deg: Optional[np.ndarray] = None,
+    annulus_outer_deg: Optional[np.ndarray] = None,
     batch_size: int,
     max_batches: Optional[int],
     print_every: int,
@@ -850,8 +905,9 @@ def scan_stage_c_roi_events(
     columns = ["mjd", "ra_mean_deg", "dec_mean_deg", "cell_id"]
     scanner = dataset.scanner(columns=columns, batch_size=int(batch_size), use_threads=True)
     n_cells = len(cells)
-    n_xy = xy_edges_deg.size - 1
-    n_map = n_xy * n_xy
+    n_x = x_edges_deg.size - 1
+    n_y = y_edges_deg.size - 1
+    n_map = n_x * n_y
     flat_size = n_cells * n_map
     cell_index_by_id = make_cell_index_by_id(cells)
 
@@ -863,9 +919,20 @@ def scan_stage_c_roi_events(
     cell_edge_diagnostic_events = np.zeros(n_cells, dtype=np.int64)
     rho_hist_total = np.zeros(rho_hist_edges_deg.size - 1, dtype=np.int64)
     rho_hist_by_cell = np.zeros((n_cells, rho_hist_edges_deg.size - 1), dtype=np.int64)
+    continuous_annulus_counts = np.zeros(n_cells, dtype=np.int64)
 
-    xy_min = float(xy_edges_deg[0])
-    xy_step = float(xy_edges_deg[1] - xy_edges_deg[0])
+    if (annulus_inner_deg is None) != (annulus_outer_deg is None):
+        raise ValueError("Both annulus_inner_deg and annulus_outer_deg are required together")
+    if annulus_inner_deg is not None:
+        annulus_inner_deg = np.asarray(annulus_inner_deg, dtype=np.float64)
+        annulus_outer_deg = np.asarray(annulus_outer_deg, dtype=np.float64)
+        if annulus_inner_deg.shape != (n_cells,) or annulus_outer_deg.shape != (n_cells,):
+            raise ValueError("Continuous annulus boundaries must match the loaded cells")
+
+    x_min = float(x_edges_deg[0])
+    y_min = float(y_edges_deg[0])
+    x_step = float(x_edges_deg[1] - x_edges_deg[0])
+    y_step = float(y_edges_deg[1] - y_edges_deg[0])
     input_rows = 0
     processed_batches = 0
 
@@ -910,11 +977,20 @@ def scan_stage_c_roi_events(
         if np.any(edge_diag):
             update_bincount(cell_edge_diagnostic_events, cell_v[edge_diag], n_cells)
 
-        x_idx = np.floor((x - xy_min) / xy_step).astype(np.int64)
-        y_idx = np.floor((y - xy_min) / xy_step).astype(np.int64)
-        valid_map = (x_idx >= 0) & (x_idx < n_xy) & (y_idx >= 0) & (y_idx < n_xy)
+        if annulus_inner_deg is not None and annulus_outer_deg is not None:
+            continuous_annulus = (
+                (rho >= annulus_inner_deg[cell_v])
+                & (rho < annulus_outer_deg[cell_v])
+                & (rho < float(roi_fiducial_deg))
+            )
+            if np.any(continuous_annulus):
+                update_bincount(continuous_annulus_counts, cell_v[continuous_annulus], n_cells)
+
+        x_idx = np.floor((x - x_min) / x_step).astype(np.int64)
+        y_idx = np.floor((y - y_min) / y_step).astype(np.int64)
+        valid_map = (x_idx >= 0) & (x_idx < n_x) & (y_idx >= 0) & (y_idx < n_y)
         if np.any(valid_map):
-            map_idx = y_idx[valid_map] * n_xy + x_idx[valid_map]
+            map_idx = y_idx[valid_map] * n_x + x_idx[valid_map]
             linear_map = cell_v[valid_map] * n_map + map_idx
             update_bincount(counts_flat, linear_map, flat_size)
             update_bincount(cell_map_events, cell_v[valid_map], n_cells)
@@ -937,26 +1013,30 @@ def scan_stage_c_roi_events(
         cell_edge_diagnostic_events=cell_edge_diagnostic_events,
         rho_hist_total=rho_hist_total,
         rho_hist_by_cell=rho_hist_by_cell,
+        continuous_annulus_counts=continuous_annulus_counts,
         input_rows=input_rows,
         processed_batches=processed_batches,
     )
 
 
 def build_roi_masks(
-    xy_centers: np.ndarray,
+    x_centers: np.ndarray,
     r_opt_deg: np.ndarray,
     *,
+    y_centers: Optional[np.ndarray] = None,
     roi_fiducial_deg: float,
     roi_edge_margin_deg: float,
     roi_source_mask_deg: float,
     source_mask_r_opt_factor: float,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    x_grid, y_grid = np.meshgrid(xy_centers, xy_centers)
+    if y_centers is None:
+        y_centers = x_centers
+    x_grid, y_grid = np.meshgrid(x_centers, y_centers)
     rho_grid = np.hypot(x_grid, y_grid)
     fiducial_mask = rho_grid < float(roi_fiducial_deg)
     training_edge_limit = max(0.0, float(roi_fiducial_deg) - float(roi_edge_margin_deg))
     edge_safe_mask = rho_grid < training_edge_limit
-    on_masks = np.zeros((r_opt_deg.size, xy_centers.size, xy_centers.size), dtype=bool)
+    on_masks = np.zeros((r_opt_deg.size, y_centers.size, x_centers.size), dtype=bool)
     source_masks = np.zeros_like(on_masks)
     for idx, r_opt in enumerate(r_opt_deg):
         on_masks[idx] = rho_grid <= float(r_opt)
@@ -1403,6 +1483,258 @@ def estimate_roi_annulus_surface_background(
     return b_on, background_map, training_mask, on_masks, source_masks, diagnostics
 
 
+def rectangle_basis_grid(x_edges: np.ndarray, y_edges: np.ndarray) -> np.ndarray:
+    x0, y0 = np.meshgrid(x_edges[:-1], y_edges[:-1])
+    x1, y1 = np.meshgrid(x_edges[1:], y_edges[1:])
+    dx = x1 - x0
+    dy = y1 - y0
+    return np.stack(
+        [
+            dx * dy,
+            0.5 * (x1 * x1 - x0 * x0) * dy,
+            dx * 0.5 * (y1 * y1 - y0 * y0),
+            (x1**3 - x0**3) * dy / 3.0,
+            0.25 * (x1 * x1 - x0 * x0) * (y1 * y1 - y0 * y0),
+            dx * (y1**3 - y0**3) / 3.0,
+        ],
+        axis=-1,
+    ).astype(np.float64)
+
+
+def integrate_centered_annulus_density(coefficients: np.ndarray, inner_deg: float, outer_deg: float) -> float:
+    coeff = polynomial_coefficients6(coefficients)
+    inner = float(inner_deg)
+    outer = float(outer_deg)
+    if inner < 0.0 or outer <= inner:
+        raise ValueError("Annulus radii must satisfy 0 <= inner < outer")
+    return float(
+        math.pi * (outer * outer - inner * inner) * coeff[0]
+        + math.pi * (outer**4 - inner**4) * (coeff[3] + coeff[5]) / 4.0
+    )
+
+
+def integrate_density_disk_via_analytic_baseline(
+    coefficients: np.ndarray, radius_deg: float, grid_step_deg: float
+) -> float:
+    """Adapt per-deg2 density coefficients to the prerequisite per-pixel analytic API."""
+    step = float(grid_step_deg)
+    return integrate_centered_disk_polynomial(
+        np.asarray(coefficients, dtype=np.float64) * step * step,
+        float(radius_deg),
+        step,
+    )
+
+
+def estimate_roi_poisson_pooled_background(
+    counts_map: np.ndarray,
+    x_edges: np.ndarray,
+    y_edges: np.ndarray,
+    cells: Sequence[CellSpec],
+    r_opt_deg: np.ndarray,
+    continuous_annulus_counts: np.ndarray,
+    manifest: Dict[str, object],
+    *,
+    roi_fiducial_deg: float,
+    annulus_default_inner_deg: float,
+    annulus_width_deg: float,
+    annulus_source_mask_min_deg: float,
+    annulus_source_mask_r_opt_factor: float,
+    annulus_source_mask_margin_deg: float,
+    annulus_max_inner_deg: float,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, Dict[str, np.ndarray]]:
+    n_cells, n_y, n_x = counts_map.shape
+    if len(cells) != n_cells:
+        raise ValueError("Poisson background cell axis does not match loaded cells")
+    cell_ids = np.asarray([cell.cell_id for cell in cells], dtype=np.int64)
+    index_by_id = {int(cell_id): index for index, cell_id in enumerate(cell_ids)}
+    basis_grid = rectangle_basis_grid(np.asarray(x_edges), np.asarray(y_edges))
+    basis_flat = basis_grid.reshape(-1, 6)
+    x_centers = 0.5 * (np.asarray(x_edges[:-1]) + np.asarray(x_edges[1:]))
+    y_centers = 0.5 * (np.asarray(y_edges[:-1]) + np.asarray(y_edges[1:]))
+    x_grid, y_grid = np.meshgrid(x_centers, y_centers)
+    rho_grid = np.hypot(x_grid, y_grid)
+    fiducial_mask = rho_grid < float(roi_fiducial_deg)
+    source_radius, annulus_inner, annulus_outer, shifted = annulus_placement(
+        np.asarray(r_opt_deg, dtype=np.float64),
+        default_inner_deg=annulus_default_inner_deg,
+        width_deg=annulus_width_deg,
+        source_mask_min_deg=annulus_source_mask_min_deg,
+        source_mask_r_opt_factor=annulus_source_mask_r_opt_factor,
+        source_mask_margin_deg=annulus_source_mask_margin_deg,
+        max_inner_deg=annulus_max_inner_deg,
+    )
+    training_mask = np.zeros((n_cells, n_y, n_x), dtype=bool)
+    on_masks = np.zeros_like(training_mask)
+    source_masks = np.zeros_like(training_mask)
+    for index in range(n_cells):
+        training_mask[index] = (
+            (rho_grid >= annulus_inner[index])
+            & (rho_grid < annulus_outer[index])
+            & fiducial_mask
+        )
+        on_masks[index] = (rho_grid <= float(r_opt_deg[index])) & fiducial_mask
+        source_masks[index] = (rho_grid <= source_radius[index]) & fiducial_mask
+
+    expected_counts_raw = manifest.get("continuous_annulus_counts")
+    if not isinstance(expected_counts_raw, dict):
+        raise ValueError("Pooling manifest is missing continuous_annulus_counts for all donor cells")
+    expected_counts = np.asarray([int(expected_counts_raw[str(cell_id)]) for cell_id in cell_ids], dtype=np.int64)
+    actual_counts = np.asarray(continuous_annulus_counts, dtype=np.int64)
+    if not np.array_equal(actual_counts, expected_counts):
+        mismatches = [
+            {"cell_id": int(cell_ids[index]), "manifest": int(expected_counts[index]), "stage_d": int(actual_counts[index])}
+            for index in np.flatnonzero(actual_counts != expected_counts)[:10]
+        ]
+        raise ValueError(f"Continuous annulus counts do not match the frozen manifest: {mismatches}")
+
+    assignments = manifest["execution_cell_assignments"]
+    if not isinstance(assignments, dict):
+        raise ValueError("Pooling manifest execution assignments are invalid")
+    fit_by_pool: Dict[Tuple[Tuple[int, ...], int], object] = {}
+    pool_key_by_cell: Dict[int, Tuple[Tuple[int, ...], int]] = {}
+    for cell_id in cell_ids:
+        assignment = assignments[str(int(cell_id))]
+        donors = tuple(int(value) for value in assignment["donor_cell_ids"])
+        order = int(assignment["surface_order"])
+        key = (donors, order)
+        pool_key_by_cell[int(cell_id)] = key
+        if key in fit_by_pool:
+            continue
+        missing = sorted(set(donors) - set(index_by_id))
+        if missing:
+            raise ValueError(f"Frozen pool {donors} references unloaded cells: {missing}")
+        donor_counts = {cell: counts_map[index_by_id[cell]].reshape(-1) for cell in donors}
+        donor_basis = {cell: basis_flat for cell in donors}
+        donor_masks = {cell: training_mask[index_by_id[cell]].reshape(-1) for cell in donors}
+        shape_contributors = {
+            cell: int(expected_counts_raw[str(cell)]) >= 100 for cell in donors
+        }
+        fit_by_pool[key] = fit_profiled_poisson_surface(
+            donor_counts,
+            donor_basis,
+            donor_masks,
+            donors,
+            order,
+            float(roi_fiducial_deg),
+            shape_contributors,
+        )
+
+    background_map = np.full((n_cells, n_y, n_x), np.nan, dtype=np.float64)
+    residual_map = np.full_like(background_map, np.nan)
+    core_background_map = np.full_like(background_map, np.nan)
+    b_on = np.full(n_cells, np.nan, dtype=np.float64)
+    b_on_pixel = np.full(n_cells, np.nan, dtype=np.float64)
+    density_coefficients = np.full((n_cells, 6), np.nan, dtype=np.float64)
+    shape_coefficients = np.full((n_cells, 6), np.nan, dtype=np.float64)
+    surface_order = np.full(n_cells, -1, dtype=np.int16)
+    poisson_deviance = np.full(n_cells, np.nan, dtype=np.float64)
+    fit_ndof = np.zeros(n_cells, dtype=np.int64)
+    positive_minimum = np.full(n_cells, np.nan, dtype=np.float64)
+    positive_minimum_xy = np.full((n_cells, 2), np.nan, dtype=np.float64)
+    pool_target_cell_id = np.zeros(n_cells, dtype=np.int64)
+    donor_ids_json = np.empty(n_cells, dtype="U256")
+    optimizer_status_json = np.empty(n_cells, dtype="U2048")
+    cv_scores_json = np.empty(n_cells, dtype="U16384")
+    target_cells = manifest.get("cells", {})
+    grid_step = float(np.asarray(x_edges)[1] - np.asarray(x_edges)[0])
+    for index, cell_id_raw in enumerate(cell_ids):
+        cell_id = int(cell_id_raw)
+        assignment = assignments[str(cell_id)]
+        fit = fit_by_pool[pool_key_by_cell[cell_id]]
+        shape = np.asarray(fit.shape_coefficients, dtype=np.float64)
+        annulus_integral = integrate_centered_annulus_density(
+            shape, float(annulus_inner[index]), min(float(annulus_outer[index]), float(roi_fiducial_deg))
+        )
+        if not np.isfinite(annulus_integral) or annulus_integral <= 0.0:
+            raise PoissonSurfaceFitError(f"Cell {cell_id} has non-positive analytic annulus integral")
+        normalization = float(actual_counts[index]) / annulus_integral
+        density = normalization * shape
+        prediction = (basis_flat @ density).reshape(n_y, n_x)
+        prediction[~fiducial_mask] = np.nan
+        if np.any(prediction[fiducial_mask] <= 0.0):
+            raise PoissonSurfaceFitError(f"Cell {cell_id} has non-positive fitted pixel expectation")
+        background_map[index] = prediction
+        valid = training_mask[index]
+        residual_map[index, valid] = (
+            counts_map[index, valid] - prediction[valid]
+        ) / np.sqrt(np.maximum(prediction[valid], 1.0))
+        core_background_map[index, on_masks[index]] = prediction[on_masks[index]]
+        analytic_b_on = integrate_density_disk_via_analytic_baseline(
+            density, float(r_opt_deg[index]), grid_step
+        )
+        if not np.isfinite(analytic_b_on) or analytic_b_on <= 0.0:
+            raise PoissonSurfaceFitError(f"Cell {cell_id} has non-positive analytic B_on")
+        b_on[index] = analytic_b_on
+        b_on_pixel[index] = float(np.nansum(prediction[on_masks[index]]))
+        density_coefficients[index] = density
+        shape_coefficients[index] = shape
+        surface_order[index] = int(fit.order)
+        poisson_deviance[index] = float(fit.poisson_deviance)
+        fit_ndof[index] = int(fit.ndof)
+        positive_minimum[index] = normalization * float(fit.positive_minimum)
+        positive_minimum_xy[index] = np.asarray(fit.positive_minimum_xy)
+        pool_target_cell_id[index] = int(assignment["pool_target_cell_id"])
+        donor_ids_json[index] = json.dumps(list(fit.donor_cell_ids), separators=(",", ":"))
+        optimizer_status_json[index] = json.dumps(fit.optimizer_status, sort_keys=True, separators=(",", ":"))
+        pool_target = str(int(assignment["pool_target_cell_id"]))
+        cv = target_cells.get(pool_target, {}).get("cross_validation", {}) if isinstance(target_cells, dict) else {}
+        cv_scores_json[index] = json.dumps(cv, sort_keys=True, separators=(",", ":"))
+
+    annulus_pixels = np.count_nonzero(training_mask, axis=(1, 2)).astype(np.int64)
+    annulus_model = np.asarray(
+        [float(np.nansum(background_map[index][training_mask[index]])) for index in range(n_cells)]
+    )
+    diagnostics = {
+        "annulus_inner_deg": annulus_inner.astype(np.float64),
+        "annulus_outer_deg": annulus_outer.astype(np.float64),
+        "source_mask_radius_deg": source_radius.astype(np.float64),
+        "annulus_shifted_flag": shifted.astype(bool),
+        "surface_coefficients": density_coefficients,
+        "surface_shape_coefficients": shape_coefficients,
+        "surface_density_coefficients": density_coefficients,
+        "surface_covariance": np.full((n_cells, 6, 6), np.nan),
+        "surface_order": surface_order,
+        "fit_chi2": poisson_deviance.copy(),
+        "poisson_deviance": poisson_deviance,
+        "fit_ndof": fit_ndof,
+        "fit_rank": np.asarray([1 if value == 0 else 3 if value == 1 else 6 for value in surface_order]),
+        "fit_condition_number": np.full(n_cells, np.nan),
+        "annulus_counts": actual_counts.astype(np.float64),
+        "continuous_annulus_counts": actual_counts,
+        "annulus_pixels": annulus_pixels,
+        "annulus_residual_mean": np.nanmean(residual_map, axis=(1, 2)),
+        "annulus_residual_rms": np.sqrt(np.nanmean(residual_map * residual_map, axis=(1, 2))),
+        "annulus_surface_scale": np.ones(n_cells, dtype=np.float64),
+        "annulus_model_counts_raw": annulus_model,
+        "annulus_model_counts_final": annulus_model,
+        "annulus_count_residual_raw": actual_counts - annulus_model,
+        "annulus_count_residual_final": actual_counts - annulus_model,
+        "core_extrapolation_warning": np.zeros(n_cells, dtype=bool),
+        "negative_background_pixels": np.zeros(n_cells, dtype=np.int64),
+        "surface_fit_success": np.ones(n_cells, dtype=bool),
+        "annulus_residual_map": residual_map.astype(np.float32),
+        "core_background_map": core_background_map.astype(np.float32),
+        "annulus_off_counts": actual_counts.astype(np.float64),
+        "annulus_off_pixels": annulus_pixels,
+        "B_on_pixel_center": b_on_pixel,
+        "B_on_analytic": b_on.copy(),
+        "on_area_deg2": math.pi * np.asarray(r_opt_deg, dtype=np.float64) ** 2,
+        "on_effective_pixels": math.pi * np.asarray(r_opt_deg, dtype=np.float64) ** 2 / (grid_step * grid_step),
+        "on_aperture_surface_min": positive_minimum,
+        "positive_minimum": positive_minimum,
+        "positive_minimum_xy": positive_minimum_xy,
+        "on_aperture_grid_step_deg": np.asarray([grid_step]),
+        "analytic_required_mask": np.ones(n_cells, dtype=bool),
+        "on_aperture_integration_by_cell": np.full(n_cells, "analytic-quadratic", dtype="U32"),
+        "pool_target_cell_id": pool_target_cell_id,
+        "pool_donor_cell_ids_json": donor_ids_json,
+        "optimizer_status_json": optimizer_status_json,
+        "cv_scores_json": cv_scores_json,
+        "roi_fit_statistic": np.full(n_cells, "poisson", dtype="U16"),
+    }
+    return b_on, background_map.astype(np.float32), training_mask, on_masks, source_masks, diagnostics
+
+
 def build_weighted_mask_exposure(
     cell_time_counts: np.ndarray,
     time_centers_mjd: np.ndarray,
@@ -1597,6 +1929,7 @@ def plot_acceptance_grid(
     source_dec_deg: float = DEFAULT_SOURCE_DEC_DEG,
     theta_max_deg: float = DEFAULT_THETA_MAX_DEG,
 ) -> None:
+    validate_roi_poisson_args(args)
     plt = setup_matplotlib()
     nhit_bins, pred_bins, by_key = prepare_grid(cells)
     fig, axes = plt.subplots(
@@ -2056,6 +2389,13 @@ def write_summary_csv(path: Path, rows: Sequence[Dict[str, object]]) -> None:
         "annulus_outer_deg",
         "surface_fit_chi2",
         "surface_fit_ndof",
+        "roi_fit_statistic",
+        "surface_order",
+        "continuous_annulus_count",
+        "pool_target_cell_id",
+        "pool_donor_cell_ids",
+        "poisson_deviance",
+        "positive_minimum",
         "surface_condition_number",
         "annulus_residual_rms",
         "annulus_surface_scale",
@@ -2146,6 +2486,83 @@ def write_json(path: Path, payload: Dict[str, object]) -> None:
         json.dump(json_ready(payload), f, indent=2)
 
 
+def canonical_manifest_sha256(payload: Dict[str, object]) -> str:
+    unsigned = dict(payload)
+    unsigned.pop("manifest_sha256", None)
+    encoded = json.dumps(unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def load_and_validate_poisson_manifest(path: Path) -> Dict[str, object]:
+    payload = load_json(path)
+    expected_sha = str(payload.get("manifest_sha256", ""))
+    actual_sha = canonical_manifest_sha256(payload)
+    if not expected_sha or expected_sha != actual_sha:
+        raise ValueError(f"Pooling manifest self-hash mismatch: expected={expected_sha!r}, actual={actual_sha}")
+    baseline_sha = str(payload.get("analytic_bon_baseline_sha", "")).strip()
+    required_sha = os.environ.get("ANALYTIC_BON_BASELINE_SHA", "").strip()
+    if not required_sha:
+        raise ValueError("ANALYTIC_BON_BASELINE_SHA is required in Poisson mode")
+    if baseline_sha != required_sha:
+        raise ValueError(
+            f"Pooling manifest analytic baseline {baseline_sha!r} does not match required {required_sha!r}"
+        )
+    ancestor = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", baseline_sha, "HEAD"],
+        cwd=REPO_ROOT,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    if ancestor.returncode != 0:
+        raise ValueError(f"Analytic B_on baseline {baseline_sha} is not an ancestor of HEAD")
+    donor_ids = [int(value) for value in payload.get("donor_universe_cell_ids", [])]
+    target_ids = [int(value) for value in payload.get("target_cell_ids", [])]
+    if len(donor_ids) != 84 or len(set(donor_ids)) != 84:
+        raise ValueError("Pooling manifest must contain exactly 84 unique donor-universe cells")
+    if len(target_ids) != 44 or len(set(target_ids)) != 44:
+        raise ValueError("Pooling manifest must contain exactly 44 unique target cells")
+    assignments = payload.get("execution_cell_assignments")
+    if not isinstance(assignments, dict) or {int(value) for value in assignments} != set(donor_ids):
+        raise ValueError("Pooling manifest must freeze one execution assignment for every donor cell")
+    return payload
+
+
+def validate_roi_poisson_args(args: argparse.Namespace) -> None:
+    if str(args.roi_fit_statistic) != "poisson":
+        return
+    if not args.pooling_manifest:
+        raise ValueError("--roi-fit-statistic poisson requires --pooling-manifest")
+    if str(args.roi_background_method) != "annulus-quadratic":
+        raise ValueError("Poisson fitting requires --roi-background-method annulus-quadratic")
+    if not bool(args.annulus_normalize_surface):
+        raise ValueError("Poisson fitting requires --annulus-normalize-surface")
+    if str(args.on_aperture_integration) != "analytic-quadratic":
+        raise ValueError("Poisson fitting requires --on-aperture-integration analytic-quadratic")
+
+
+def filter_cells_to_manifest(cells: Sequence[CellSpec], manifest: Dict[str, object]) -> List[CellSpec]:
+    donor_ids = [int(value) for value in manifest["donor_universe_cell_ids"]]  # type: ignore[index]
+    by_id = {int(cell.cell_id): cell for cell in cells}
+    missing = sorted(set(donor_ids) - set(by_id))
+    if missing:
+        raise ValueError(f"Cell selection is missing pooling-manifest donor cells: {missing}")
+    filtered: List[CellSpec] = []
+    for index, cell_id in enumerate(donor_ids):
+        cell = by_id[cell_id]
+        filtered.append(
+            CellSpec(
+                index=index,
+                cell_id=cell.cell_id,
+                nhit_bin=cell.nhit_bin,
+                predE_bin=cell.predE_bin,
+                mc_count=cell.mc_count,
+                selection_version=cell.selection_version,
+                selection_reason=cell.selection_reason,
+            )
+        )
+    return filtered
+
+
 def total_live_time_seconds_from_stage_c(metadata: Dict[str, object], source_files_csv: Path) -> float:
     live = metadata.get("live_time_basis") if isinstance(metadata, dict) else None
     if isinstance(live, dict):
@@ -2198,17 +2615,38 @@ def run_crab_roi_local_background(
         if not bool(args.annulus_normalize_surface):
             raise ValueError("analytic-quadratic on-aperture integration requires --annulus-normalize-surface")
 
-    xy_edges = make_edges(
-        -float(args.roi_edge_diagnostic_deg),
+    x_edges = make_offset_roi_edges(
         float(args.roi_edge_diagnostic_deg),
         float(args.roi_grid_step_deg),
+        float(args.roi_grid_offset_x_fraction),
     )
-    xy_centers = 0.5 * (xy_edges[:-1] + xy_edges[1:])
+    y_edges = make_offset_roi_edges(
+        float(args.roi_edge_diagnostic_deg),
+        float(args.roi_grid_step_deg),
+        float(args.roi_grid_offset_y_fraction),
+    )
+    x_centers = 0.5 * (x_edges[:-1] + x_edges[1:])
+    y_centers = 0.5 * (y_edges[:-1] + y_edges[1:])
     rho_hist_edges = make_edges(0.0, float(args.roi_coverage_max_deg), float(args.roi_coverage_bin_deg))
+
+    continuous_inner = None
+    continuous_outer = None
+    poisson_manifest: Optional[Dict[str, object]] = None
+    if str(args.roi_fit_statistic) == "poisson":
+        poisson_manifest = load_and_validate_poisson_manifest(Path(args.pooling_manifest).resolve())
+        _, continuous_inner, continuous_outer, _ = annulus_placement(
+            np.asarray(r_opt_deg, dtype=np.float64),
+            default_inner_deg=float(args.annulus_default_inner_deg),
+            width_deg=float(args.annulus_width_deg),
+            source_mask_min_deg=float(args.annulus_source_mask_min_deg),
+            source_mask_r_opt_factor=float(args.annulus_source_mask_r_opt_factor),
+            source_mask_margin_deg=float(args.annulus_source_mask_margin_deg),
+            max_inner_deg=float(args.annulus_max_inner_deg),
+        )
 
     print("Stage D background mode: crab_roi_local", flush=True)
     print(
-        f"ROI grid: {xy_edges.size - 1} x {xy_edges.size - 1}, "
+        f"ROI grid: {x_edges.size - 1} x {y_edges.size - 1}, "
         f"fiducial rho<{float(args.roi_fiducial_deg):g} deg",
         flush=True,
     )
@@ -2218,10 +2656,13 @@ def run_crab_roi_local_background(
         cells,
         source_ra_deg=float(args.source_ra_deg),
         source_dec_deg=float(args.source_dec_deg),
-        xy_edges_deg=xy_edges,
+        x_edges_deg=x_edges,
+        y_edges_deg=y_edges,
         rho_hist_edges_deg=rho_hist_edges,
         roi_fiducial_deg=float(args.roi_fiducial_deg),
         roi_edge_diagnostic_deg=float(args.roi_edge_diagnostic_deg),
+        annulus_inner_deg=continuous_inner,
+        annulus_outer_deg=continuous_outer,
         batch_size=int(args.batch_size),
         max_batches=args.max_batches,
         print_every=int(args.print_every),
@@ -2231,11 +2672,13 @@ def run_crab_roi_local_background(
     print(f"Scanned rows: {scan.input_rows:,}", flush=True)
 
     n_cells = len(cells)
-    n_xy = xy_edges.size - 1
-    counts_map = scan.counts_flat.reshape(n_cells, n_xy, n_xy)
+    n_x = x_edges.size - 1
+    n_y = y_edges.size - 1
+    counts_map = scan.counts_flat.reshape(n_cells, n_y, n_x)
     rho_grid, fiducial_mask, edge_safe_mask, on_masks, source_masks = build_roi_masks(
-        xy_centers,
+        x_centers,
         r_opt_deg.astype(np.float64),
+        y_centers=y_centers,
         roi_fiducial_deg=float(args.roi_fiducial_deg),
         roi_edge_margin_deg=float(args.roi_edge_margin_deg),
         roi_source_mask_deg=float(args.roi_source_mask_deg),
@@ -2258,25 +2701,47 @@ def run_crab_roi_local_background(
         if not np.any(analytic_required_mask):
             raise ValueError("--analytic-required-cell-ids selected no Stage D cells")
     if str(args.roi_background_method) == "annulus-quadratic":
-        b_on, background_map, training_mask, on_masks, source_masks, annulus_diagnostics = estimate_roi_annulus_surface_background(
-            counts_map,
-            xy_centers,
-            r_opt_deg.astype(np.float64),
-            cell_ids=loaded_cell_ids,
-            analytic_required_mask=analytic_required_mask,
-            roi_fiducial_deg=float(args.roi_fiducial_deg),
-            annulus_default_inner_deg=float(args.annulus_default_inner_deg),
-            annulus_width_deg=float(args.annulus_width_deg),
-            annulus_source_mask_min_deg=float(args.annulus_source_mask_min_deg),
-            annulus_source_mask_r_opt_factor=float(args.annulus_source_mask_r_opt_factor),
-            annulus_source_mask_margin_deg=float(args.annulus_source_mask_margin_deg),
-            annulus_max_inner_deg=float(args.annulus_max_inner_deg),
-            surface_order=int(args.roi_surface_order),
-            condition_max=float(args.surface_condition_max),
-            min_training_pixels=int(args.surface_min_training_pixels),
-            annulus_normalize_surface=bool(args.annulus_normalize_surface),
-            on_aperture_integration=str(args.on_aperture_integration),
-        )
+        if str(args.roi_fit_statistic) == "poisson":
+            if poisson_manifest is None:
+                raise RuntimeError("Validated pooling manifest was not loaded")
+            b_on, background_map, training_mask, on_masks, source_masks, annulus_diagnostics = estimate_roi_poisson_pooled_background(
+                counts_map,
+                x_edges,
+                y_edges,
+                cells,
+                r_opt_deg.astype(np.float64),
+                scan.continuous_annulus_counts,
+                poisson_manifest,
+                roi_fiducial_deg=float(args.roi_fiducial_deg),
+                annulus_default_inner_deg=float(args.annulus_default_inner_deg),
+                annulus_width_deg=float(args.annulus_width_deg),
+                annulus_source_mask_min_deg=float(args.annulus_source_mask_min_deg),
+                annulus_source_mask_r_opt_factor=float(args.annulus_source_mask_r_opt_factor),
+                annulus_source_mask_margin_deg=float(args.annulus_source_mask_margin_deg),
+                annulus_max_inner_deg=float(args.annulus_max_inner_deg),
+            )
+        else:
+            if not np.array_equal(x_edges, y_edges):
+                raise ValueError("Independent x/y grid phases are available only in Poisson mode")
+            b_on, background_map, training_mask, on_masks, source_masks, annulus_diagnostics = estimate_roi_annulus_surface_background(
+                counts_map,
+                x_centers,
+                r_opt_deg.astype(np.float64),
+                cell_ids=loaded_cell_ids,
+                analytic_required_mask=analytic_required_mask,
+                roi_fiducial_deg=float(args.roi_fiducial_deg),
+                annulus_default_inner_deg=float(args.annulus_default_inner_deg),
+                annulus_width_deg=float(args.annulus_width_deg),
+                annulus_source_mask_min_deg=float(args.annulus_source_mask_min_deg),
+                annulus_source_mask_r_opt_factor=float(args.annulus_source_mask_r_opt_factor),
+                annulus_source_mask_margin_deg=float(args.annulus_source_mask_margin_deg),
+                annulus_max_inner_deg=float(args.annulus_max_inner_deg),
+                surface_order=int(args.roi_surface_order),
+                condition_max=float(args.surface_condition_max),
+                min_training_pixels=int(args.surface_min_training_pixels),
+                annulus_normalize_surface=bool(args.annulus_normalize_surface),
+                on_aperture_integration=str(args.on_aperture_integration),
+            )
         off_counts = np.asarray(annulus_diagnostics["annulus_off_counts"], dtype=np.float64)
         off_pixels = np.asarray(annulus_diagnostics["annulus_off_pixels"], dtype=np.int64)
         on_pixels = np.asarray([int(np.count_nonzero(mask)) for mask in on_masks], dtype=np.int64)
@@ -2380,6 +2845,37 @@ def run_crab_roi_local_background(
                 ),
                 "surface_fit_chi2": float(annulus_diagnostics["fit_chi2"][idx]) if annulus_diagnostics else "",
                 "surface_fit_ndof": int(annulus_diagnostics["fit_ndof"][idx]) if annulus_diagnostics else "",
+                "roi_fit_statistic": str(args.roi_fit_statistic),
+                "surface_order": (
+                    int(annulus_diagnostics["surface_order"][idx])
+                    if annulus_diagnostics and "surface_order" in annulus_diagnostics
+                    else int(args.roi_surface_order)
+                ),
+                "continuous_annulus_count": (
+                    int(annulus_diagnostics["continuous_annulus_counts"][idx])
+                    if annulus_diagnostics and "continuous_annulus_counts" in annulus_diagnostics
+                    else ""
+                ),
+                "pool_target_cell_id": (
+                    int(annulus_diagnostics["pool_target_cell_id"][idx])
+                    if annulus_diagnostics and "pool_target_cell_id" in annulus_diagnostics
+                    else ""
+                ),
+                "pool_donor_cell_ids": (
+                    str(annulus_diagnostics["pool_donor_cell_ids_json"][idx])
+                    if annulus_diagnostics and "pool_donor_cell_ids_json" in annulus_diagnostics
+                    else ""
+                ),
+                "poisson_deviance": (
+                    float(annulus_diagnostics["poisson_deviance"][idx])
+                    if annulus_diagnostics and "poisson_deviance" in annulus_diagnostics
+                    else ""
+                ),
+                "positive_minimum": (
+                    float(annulus_diagnostics["positive_minimum"][idx])
+                    if annulus_diagnostics and "positive_minimum" in annulus_diagnostics
+                    else ""
+                ),
                 "surface_condition_number": (
                     float(annulus_diagnostics["fit_condition_number"][idx]) if annulus_diagnostics else ""
                 ),
@@ -2410,10 +2906,10 @@ def run_crab_roi_local_background(
         cell_id=np.asarray([cell.cell_id for cell in cells], dtype=np.int32),
         nhit_bin=np.asarray([cell.nhit_bin for cell in cells], dtype="U32"),
         predE_bin=np.asarray([cell.predE_bin for cell in cells], dtype="U32"),
-        x_edges_deg=xy_edges.astype(np.float32),
-        y_edges_deg=xy_edges.astype(np.float32),
-        x_centers_deg=xy_centers.astype(np.float32),
-        y_centers_deg=xy_centers.astype(np.float32),
+        x_edges_deg=x_edges.astype(np.float32),
+        y_edges_deg=y_edges.astype(np.float32),
+        x_centers_deg=x_centers.astype(np.float32),
+        y_centers_deg=y_centers.astype(np.float32),
         rho_grid_deg=rho_grid.astype(np.float32),
         fiducial_mask=fiducial_mask.astype(bool),
         edge_safe_mask=edge_safe_mask.astype(bool),
@@ -2481,7 +2977,7 @@ def run_crab_roi_local_background(
         plot_roi_counts_grid(
             counts_map,
             cells,
-            xy_edges,
+            x_edges,
             Path(plot_outputs["roi_counts_grid_png"]),
             title="Stage D ROI-local counts",
             roi_fiducial_deg=float(args.roi_fiducial_deg),
@@ -2489,7 +2985,7 @@ def run_crab_roi_local_background(
         plot_roi_counts_grid(
             background_map,
             cells,
-            xy_edges,
+            x_edges,
             Path(plot_outputs["roi_background_grid_png"]),
             title=background_title,
             roi_fiducial_deg=float(args.roi_fiducial_deg),
@@ -2497,7 +2993,7 @@ def run_crab_roi_local_background(
         plot_roi_signed_grid(
             excess_map,
             cells,
-            xy_edges,
+            x_edges,
             Path(plot_outputs["roi_excess_grid_png"]),
             title=excess_title,
             colorbar_label="counts - background",
@@ -2507,7 +3003,7 @@ def run_crab_roi_local_background(
         plot_roi_signed_grid(
             known_b_sigma_grid,
             cells,
-            xy_edges,
+            x_edges,
             Path(plot_outputs["roi_known_b_sigma_grid_png"]),
             title="Stage D ROI-local known-background residual",
             colorbar_label="known-B sigma",
@@ -2518,7 +3014,7 @@ def run_crab_roi_local_background(
             fiducial_mask,
             training_mask,
             on_masks,
-            xy_edges,
+            x_edges,
             Path(plot_outputs["roi_mask_summary_png"]),
             cell_index=0,
         )
@@ -2526,7 +3022,7 @@ def run_crab_roi_local_background(
             training_mask,
             source_masks,
             on_masks,
-            xy_edges,
+            x_edges,
             cells,
             Path(plot_outputs["annulus_training_mask_grid_png"]),
         )
@@ -2534,7 +3030,7 @@ def run_crab_roi_local_background(
             plot_roi_signed_grid(
                 annulus_diagnostics["annulus_residual_map"],
                 cells,
-                xy_edges,
+                x_edges,
                 Path(plot_outputs["annulus_residual_grid_png"]),
                 title="Stage D annulus fit residuals",
                 colorbar_label="annulus residual sigma",
@@ -2544,7 +3040,7 @@ def run_crab_roi_local_background(
             plot_roi_counts_grid(
                 annulus_diagnostics["core_background_map"],
                 cells,
-                xy_edges,
+                x_edges,
                 Path(plot_outputs["core_background_grid_png"]),
                 title="Stage D core extrapolated background",
                 roi_fiducial_deg=float(args.roi_fiducial_deg),
@@ -2569,7 +3065,12 @@ def run_crab_roi_local_background(
         promotable = True
         quality_reason = "ROI-local background passed basic positivity and training-pixel checks"
     if annulus_diagnostics:
-        if str(args.on_aperture_integration) == "analytic-quadratic":
+        if str(args.roi_fit_statistic) == "poisson":
+            b_on_formula = (
+                "continuous_N_annulus * analytic_disk_integral(q,r_opt) / "
+                "analytic_annulus_integral(q,r_inner,r_outer_clipped_to_fiducial)"
+            )
+        elif str(args.on_aperture_integration) == "analytic-quadratic":
             b_on_formula = (
                 "annulus_scale/grid_step_deg^2 * "
                 "(pi*r_opt_deg^2*c0 + pi*r_opt_deg^4*(c_xx+c_yy)/4)"
@@ -2594,6 +3095,7 @@ def run_crab_roi_local_background(
             "source_files_csv": str(source_files_csv),
             "psf_npz": str(psf_npz),
             "cell_selection_csv": str(selection_csv),
+            "pooling_manifest": str(Path(args.pooling_manifest).resolve()) if args.pooling_manifest else None,
         },
         "output_root": str(output_root),
         "output_dir": str(run_dir),
@@ -2633,14 +3135,26 @@ def run_crab_roi_local_background(
         ],
         "grid": {
             "coordinate_system": "crab_tangent_plane",
-            "x_edges_deg": [float(xy_edges[0]), float(xy_edges[-1])],
-            "y_edges_deg": [float(xy_edges[0]), float(xy_edges[-1])],
+            "x_edges_deg": [float(x_edges[0]), float(x_edges[-1])],
+            "y_edges_deg": [float(y_edges[0]), float(y_edges[-1])],
             "grid_step_deg": float(args.roi_grid_step_deg),
-            "shape": [int(n_xy), int(n_xy)],
+            "offset_x_fraction": float(args.roi_grid_offset_x_fraction),
+            "offset_y_fraction": float(args.roi_grid_offset_y_fraction),
+            "offset_x_deg": float(args.roi_grid_offset_x_fraction) * float(args.roi_grid_step_deg),
+            "offset_y_deg": float(args.roi_grid_offset_y_fraction) * float(args.roi_grid_step_deg),
+            "physical_coverage_radius_deg": float(args.roi_edge_diagnostic_deg),
+            "shape": [int(n_y), int(n_x)],
         },
         "background_model": {
             "background_mode": "crab_roi_local",
             "method": background_method,
+            "fit_statistic": str(args.roi_fit_statistic),
+            "pooling_manifest_sha256": (
+                str(poisson_manifest.get("manifest_sha256")) if poisson_manifest is not None else None
+            ),
+            "analytic_bon_baseline_sha": (
+                str(poisson_manifest.get("analytic_bon_baseline_sha")) if poisson_manifest is not None else None
+            ),
             "background_form": "direct_expectation",
             "B_on_formula": b_on_formula,
             "on_aperture_integration": str(args.on_aperture_integration),
@@ -2680,7 +3194,9 @@ def run_crab_roi_local_background(
             "surface_basis": ["1", "x", "y", "x^2", "x*y", "y^2"] if int(args.roi_surface_order) == 2 else ["1", "x", "y"],
             "annulus_normalize_surface": bool(args.annulus_normalize_surface) if annulus_diagnostics else None,
             "surface_normalization_formula": (
-                "scale_b=sum_annulus(counts_b)/sum_annulus(max(B_raw_b,0)); B_final_b=scale_b*max(B_raw_b,0)"
+                "N_annulus_b / analytic_annulus_integral(q_b); no clipping and no second scale"
+                if annulus_diagnostics and str(args.roi_fit_statistic) == "poisson"
+                else "scale_b=sum_annulus(counts_b)/sum_annulus(max(B_raw_b,0)); B_final_b=scale_b*max(B_raw_b,0)"
                 if annulus_diagnostics and bool(args.annulus_normalize_surface)
                 else None
             ),
@@ -2760,6 +3276,7 @@ def run_crab_roi_local_background(
 
 def main() -> None:
     args = parse_args()
+    validate_roi_poisson_args(args)
     start = time.perf_counter()
     if args.batch_size <= 0:
         raise ValueError("--batch-size must be positive")
@@ -2782,6 +3299,11 @@ def main() -> None:
     run_dir = prepare_run_output_dir(output_root, run_id, overwrite_run_dir=bool(args.overwrite_run_dir))
 
     cells = load_cells(selection_csv, included_only=bool(args.included_only))
+    if str(args.roi_fit_statistic) == "poisson":
+        cells = filter_cells_to_manifest(
+            cells,
+            load_and_validate_poisson_manifest(Path(args.pooling_manifest).resolve()),
+        )
     sources = default_source_masks()
     psf_by_cell = load_psf_by_cell(psf_npz, cells)
     r_opt_deg = np.asarray([psf_by_cell[cell.cell_id]["r_opt_deg"] for cell in cells], dtype=np.float32)

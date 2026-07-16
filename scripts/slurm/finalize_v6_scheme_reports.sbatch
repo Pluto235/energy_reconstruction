@@ -41,7 +41,10 @@ export V6_REPORT_STAGE_G_STEM="sed_points_${RUN_ID}_scheme_R_fixed712979"
 export V6_REPORT_RATIO_HIDDEN_PREDE_POINTS=2
 export V6_REPORT_EXPECTED_FIXED_CONTAINMENT=0.7129790300890827
 export V6_REPORT_INPUT_COMMIT="$(git rev-parse HEAD)"
-export PIPELINE_JOB_IDS="scheme_R_stage_e_f_g:${SCHEME_R_JOB_ID:?SCHEME_R_JOB_ID is required};scheme_R_report:${SLURM_JOB_ID:?SLURM_JOB_ID is required}"
+export PIPELINE_JOB_IDS="scheme_R_stage_e_f_g:${SCHEME_R_JOB_ID:?SCHEME_R_JOB_ID is required}"
+if [[ -n "${SCHEME_R_REPORT_JOB_ID:-}" ]]; then
+  export PIPELINE_JOB_IDS="${PIPELINE_JOB_IDS};scheme_R_report:${SCHEME_R_REPORT_JOB_ID}"
+fi
 if [[ -n "${SCHEME_R_RATIO_JOB_ID:-}" ]]; then
   export PIPELINE_JOB_IDS="${PIPELINE_JOB_IDS};scheme_R_ratio_redraw:${SCHEME_R_RATIO_JOB_ID}"
 fi

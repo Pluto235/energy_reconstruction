@@ -99,6 +99,7 @@ SCHEME_CONTRACT = os.environ.get(
     "Uses the MC aperture-conditioned response; downstream containment is 1 and no additional 0.715 factor is applied.",
 )
 RATIO_HIDDEN_PREDE_POINTS = max(0, int(os.environ.get("V6_REPORT_RATIO_HIDDEN_PREDE_POINTS", "0")))
+EXPECTED_FIXED_CONTAINMENT = os.environ.get("V6_REPORT_EXPECTED_FIXED_CONTAINMENT")
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -1230,6 +1231,19 @@ def main() -> None:
         SELECTOR_META,
     ]
     contamination = contamination_audit(metadata_files)
+    expected_containment = finite_float(EXPECTED_FIXED_CONTAINMENT)
+    derived_containment = finite_float((response_meta.get("derived_response") or {}).get("containment"))
+    application_contract = response_meta.get("single_application_contract") or {}
+    containment_contract_ok = (
+        expected_containment is None
+        or (
+            derived_containment is not None
+            and math.isclose(derived_containment, expected_containment, rel_tol=0.0, abs_tol=1.0e-15)
+            and int(application_contract.get("application_count", 0)) == 1
+            and finite_float(application_contract.get("downstream_containment")) == 1.0
+            and application_contract.get("aperture_conditioned_response_used") is False
+        )
+    )
 
     validation_rows = [
         ("run id", "pass" if SOURCE_RUN_ID in str(stage_a_meta.get("npz_path")) else "warning", RUN_ID),
@@ -1249,6 +1263,17 @@ def main() -> None:
         ("Stage E signal", "pass" if (stage_e_meta.get("quality_gate") or {}).get("status") == "passed" else "warning", f"formal sigma {fmt(e_totals.get('formal_sigma'), 5)}"),
         ("Stage F fit", "pass" if f_quality.get("fit_status") == "passed" else "warning", f"preferred {f_pref.get('model')}"),
         ("Stage G points", "pass" if g_nhit_rows and g_pred_rows else "warning", f"{len(g_nhit_rows)} Nhit points, {len(g_pred_rows)} predE points"),
+        (
+            "fixed containment contract",
+            "pass" if containment_contract_ok else "fail",
+            (
+                f"derived={derived_containment}; expected={expected_containment}; "
+                f"applications={application_contract.get('application_count')}; "
+                f"downstream={application_contract.get('downstream_containment')}"
+                if expected_containment is not None
+                else "not requested for this report"
+            ),
+        ),
         ("metadata pollution", contamination["status"], f"{len(contamination['offenders'])} legacy main-input path/token offenders"),
     ]
 
@@ -1485,6 +1510,12 @@ def main() -> None:
         "report_path": str(REPORT_PATH),
         "html_image_validation": html_validation,
         "metadata_contamination": contamination,
+        "fixed_containment_contract": {
+            "status": "passed" if containment_contract_ok else "failed",
+            "expected": expected_containment,
+            "derived": derived_containment,
+            "single_application_contract": application_contract,
+        },
         "selector_summary": selector_meta,
     }
     ASSET_DIR.mkdir(parents=True, exist_ok=True)
@@ -1493,6 +1524,8 @@ def main() -> None:
         raise SystemExit(f"Report has missing image references: {html_validation['missing_image_refs']}")
     if contamination["offenders"]:
         raise SystemExit("Metadata contamination audit failed; see report and validation JSON")
+    if not containment_contract_ok:
+        raise SystemExit("Fixed-containment response contract failed; see report and validation JSON")
 
     print(f"Wrote {REPORT_PATH}")
     print(f"Wrote {VALIDATION_JSON}")

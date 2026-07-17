@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-17 23:47 · [uncommitted] Add a Claude handoff for EOS recovery and the common-GTI Pass5-versus-v6 covariance comparison.
+
 - **energy_reconstruction** · 2026-07-17 13:27 · [uncommitted] Add a Claude review handoff for the pooled-Poisson background implementation, evidence, and next scientific checks.
 
 - **energy_reconstruction** · 2026-07-16 20:16 · [uncommitted] Complete the pooled-Poisson 12-branch grid study and 1,000-replicate covariance validation, recording quadratic-cell convergence failures.

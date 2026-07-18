@@ -1,0 +1,10 @@
+{
+  "selection": "one Stage F exposure row per sorted v6 recovered-time GTI",
+  "source_files": "apply/output/stage_c_v6_64748_nhit100_highEplus1_split56/runs/v6_64748_nhit100_highEplus1_split56_stage_c_halfyear/source_files.csv",
+  "gti_tsv": "apply/tools/pass5_covariance/v6_gti_output/v6_sorted_gti.tsv",
+  "source_hour_count": 3969,
+  "output_interval_count": 8641,
+  "total_live_seconds": 12881368.60617536,
+  "total_live_days": 149.08991442332592,
+  "output_csv": "apply/tools/pass5_covariance/v6_gti_output/v6_sorted_gti_source_files.csv"
+}

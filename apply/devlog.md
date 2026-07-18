@@ -6,7 +6,7 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
-- **energy_reconstruction** · 2026-07-18 12:27 · [uncommitted] Expand the Scheme R double-Rayleigh Poisson-unbinned prototype into a complete Stage A-G report with PSF, background, pull, bootstrap, time-split, and final SED figures.
+- **energy_reconstruction** · 2026-07-18 12:27 · [9e3f2eb] Expand the Scheme R double-Rayleigh Poisson-unbinned prototype into a complete Stage A-G report with PSF, background, pull, bootstrap, time-split, and final SED figures.
 
 - **energy_reconstruction** · 2026-07-18 01:20 · [uncommitted] Add a grid-free (unbinned) continuous-Poisson curvature fit for the 7 order-2 background cells and stand up the parallel `poisson_unbinned` experiment. New `fit_profiled_poisson_surface_unbinned` (point-evaluated likelihood + analytic annulus normalization, reusing the cutting-plane positivity); Stage-D plumbing `--poisson-quadratic-fit {binned,unbinned}` (default binned), `--allow-annulus-count-mismatch`, `--dump-off-events-npz`; new `bootstrap_v6_poisson_background_unbinned.py` (event resample + unbinned refit for order-2, analytic Poisson for order<=1) and `time_split_shape_consistency.py` (median-MJD g(τ)=B_on/N_ann gate); `compare_unbinned_quadratic_bon.py` and `test_unbinned_poisson_surface.py`; 3 `poisson_unbinned` sbatch. Production run (grid 65261, bootstrap 65262): 12-branch B_on envelope = 0 (was the pooled 0.786σ failure), time-split gate PASS (7/7, max 0.834σ), bootstrap 1000/1000 (min excess eigenvalue 12.86, PD). SED unchanged: conservative LogPar chi2/ndof 14.20 ≈ pooled 14.11. New report `crab_sed_v6_64748_nhit100_reselect44_scheme_R_double_rayleigh_poisson_unbinned_report.html`.
 

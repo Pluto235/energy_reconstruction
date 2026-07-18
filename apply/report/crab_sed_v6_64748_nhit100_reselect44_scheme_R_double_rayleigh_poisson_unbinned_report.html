@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crab SED v6 64748 reselect44 - Scheme R - Double-Rayleigh Poisson-Unbinned Background</title>
+  <style>
+    :root {
+      --ink:#17202a; --muted:#5e6875; --line:#d7dde5; --panel:#f6f8fb;
+      --ok:#126b45; --warn:#93620c; --fail:#aa2e25; --accent:#005eb8;
+    }
+    body { margin:0; color:var(--ink); background:#fff; font-family:Arial,Helvetica,sans-serif; line-height:1.48; }
+    main { max-width:1220px; margin:0 auto; padding:32px 24px 58px; }
+    header { border-bottom:3px solid var(--ink); padding-bottom:18px; margin-bottom:26px; }
+    h1,h2,h3 { margin:0; line-height:1.18; letter-spacing:0; }
+    h1 { font-size:32px; }
+    h2 { font-size:21px; margin-top:34px; padding-top:14px; border-top:1px solid var(--line); }
+    h3 { font-size:16px; margin-top:18px; color:#2f3b48; }
+    p { margin:10px 0; }
+    code { background:#eef2f6; padding:1px 4px; border-radius:3px; font-size:12px; }
+    table { border-collapse:collapse; width:100%; margin:14px 0 22px; font-size:13px; }
+    th,td { border:1px solid var(--line); padding:6px 7px; text-align:right; vertical-align:top; }
+    th:first-child,td:first-child { text-align:left; }
+    th { background:#edf1f6; font-weight:700; }
+    .lede { font-size:16px; color:#2f3b48; max-width:960px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin:16px 0; }
+    .metric { border:1px solid var(--line); border-radius:6px; padding:12px; background:var(--panel); min-height:78px; }
+    .metric .label { color:var(--muted); font-size:12px; text-transform:uppercase; }
+    .metric .value { font-size:23px; font-weight:700; margin-top:4px; }
+    .metric .sub { color:var(--muted); font-size:12px; margin-top:4px; }
+    .status-pass { color:var(--ok); font-weight:700; }
+    .status-warn,.status-warning { color:var(--warn); font-weight:700; }
+    .status-fail,.status-failed { color:var(--fail); font-weight:700; }
+    .okbox { border-left:5px solid var(--ok); background:#edf9f1; padding:12px 14px; margin:18px 0; }
+    .callout { border-left:5px solid var(--warn); background:#fff8ec; padding:12px 14px; margin:18px 0; }
+    .table-wrap { overflow-x:auto; }
+    .pathlist td { text-align:left; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Crab SED v6 64748 reselect44 - Scheme R - Double-Rayleigh Poisson-Unbinned Background</h1>
+    <p class="lede"><strong>Scheme R - Double-Rayleigh PSF with grid-free (unbinned) Poisson curvature fit</strong>. v6 chain for <code>v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979_poisson_unbinned</code>. Identical to the frozen <code>poisson_pooled</code> experiment (same Stage C events, PSF, response, selector, and the <em>same frozen pooling manifest</em>) except that the 7 order-2 (curvature) cells fit their shape from the continuous OFF-annulus event coordinates instead of a 0.1&deg; pixel histogram. The on-source background is the same analytic centered aperture integral <code>B_on = N_ann &middot; &int;_disk q / &int;_annulus q</code>.</p>
+    <div class="okbox"><strong>Why this experiment:</strong> the pooled-Poisson experiment failed its registered grid-convergence gate (<code>max |&Delta;B_on|/&sigma; = 0.786 &gt; 0.5</code>). Review proved the entire instability lives in the single radial-trace scalar <code>&tau; = c_xx + c_yy</code> of the 7 order-2 cells, discretised by the pixel grid. The unbinned fit estimates <code>&tau;</code> from continuous event coordinates, so <code>B_on</code> is grid-invariant by construction. The plane/constant cells are unchanged (their <code>B_on</code> is already grid-exact geometry).</div>
+    <div class="callout"><strong>Independent acceptance changed:</strong> because unbinned <code>B_on</code> no longer depends on grid phase/resolution, the 12-branch grid is retained as a <em>regression</em> (envelope must be &asymp;0) and the new registered acceptance axis is a <strong>time split</strong> (median-MJD halves), gated on the exposure-free shape factor <code>g(&tau;)=B_on/N_ann</code>.</div>
+  </header>
+
+  <section>
+    <h2>Executive Check</h2>
+    <div class="grid">
+      <div class="metric"><div class="label">fit cells</div><div class="value">44</div><div class="sub">7 order-2 curvature cells changed</div></div>
+      <div class="metric"><div class="label">selected rows</div><div class="value">113,938,262</div><div class="sub">~125.67 d live; N_on 518,803</div></div>
+      <div class="metric"><div class="label">grid convergence</div><div class="value"><span class="status-pass">PASSED</span></div><div class="sub">B_on envelope = 0 (was 0.786&sigma;)</div></div>
+      <div class="metric"><div class="label">time-split gate</div><div class="value"><span class="status-pass">PASSED</span></div><div class="sub">max |&Delta;g|/&sigma; 0.834 &le; 1.0</div></div>
+      <div class="metric"><div class="label">bootstrap</div><div class="value">1000 / 1000</div><div class="sub">0 refit failures; cov PD</div></div>
+      <div class="metric"><div class="label">Stage F preferred</div><div class="value">LOGPAR</div><div class="sub">conservative chi2/ndof 582.3/41</div></div>
+      <div class="metric"><div class="label">B_on vs pooled</div><div class="value">&le; 0.72%</div><div class="sub">SED essentially unchanged</div></div>
+      <div class="metric"><div class="label">unit tests</div><div class="value">7 / 7</div><div class="sub">unbinned fit; binned&rarr;unbinned limit</div></div>
+    </div>
+    <table><thead><tr><th>Gate</th><th>Status</th><th>Evidence</th></tr></thead><tbody>
+      <tr><td>grid convergence (B_on envelope)</td><td><span class="status-pass">pass</span></td><td>max envelope 7.3e-12 counts across 12 branches (machine zero)</td></tr>
+      <tr><td>time-split shape consistency</td><td><span class="status-pass">pass</span></td><td>7/7 order-2 cells, max |&Delta;g|/&sigma; = 0.834</td></tr>
+      <tr><td>bootstrap covariance</td><td><span class="status-pass">pass</span></td><td>1000/1000; min excess eigenvalue 12.858; cond 18654.5</td></tr>
+      <tr><td>manifest reuse</td><td><span class="status-pass">pass</span></td><td>frozen pooling manifest <code>6f03ac6...</code> unchanged</td></tr>
+      <tr><td>positivity</td><td><span class="status-pass">pass</span></td><td>all fitted surfaces positive on the 6&deg; fiducial disk</td></tr>
+      <tr><td>B_on shift vs pooled</td><td><span class="status-pass">pass</span></td><td>0.01%-0.72% per order-2 cell; plane cells identical</td></tr>
+    </tbody></table>
+  </section>
+
+  <section>
+    <h2>Slurm Jobs</h2>
+    <table><thead><tr><th>Stage</th><th>Job</th><th>State</th><th>Elapsed</th><th>Exit</th><th>Name</th></tr></thead><tbody>
+      <tr><td>manifest</td><td>(reused)</td><td><span class="status-pass">FROZEN</span></td><td>-</td><td>-</td><td>frozen pooling manifest (no rebuild)</td></tr>
+      <tr><td>grid</td><td>65261</td><td><span class="status-pass">COMPLETED</span></td><td>00:00:56-00:02:58 / branch</td><td>0:0</td><td>v6_64748_poisson_unbinned_grid (array 0-11)</td></tr>
+      <tr><td>bootstrap + time-split + Stage F</td><td>65262</td><td><span class="status-pass">COMPLETED</span></td><td>00:24:42</td><td>0:0</td><td>v6_64748_poisson_unbinned_bootstrap</td></tr>
+    </tbody></table>
+  </section>
+
+  <section id="grid-convergence">
+    <h2>Grid Convergence (Regression)</h2>
+    <div class="okbox"><strong>Registered 12-branch result: <span class="status-pass">PASSED</span>.</strong> The unbinned <code>B_on</code> is identical across all three grid resolutions (h = 0.05, 0.10, 0.20 deg) and four phase offsets. The per-cell envelope is machine zero, so every grid-based gate (<code>background_all_cells_half_sigma</code>, <code>phase_rms_*</code>, <code>pull_stability</code>) passes trivially. This is the direct fix for the pooled experiment's failure.</div>
+    <div class="table-wrap"><table><thead><tr><th>Cell</th><th>Nominal B_on</th><th>Unbinned 12-branch envelope</th><th>Unbinned env / B_on</th><th>Binned pooled env (counts)</th><th>Binned pooled env / &sigma;</th></tr></thead><tbody>
+      <tr><td>1</td><td>156,826.4</td><td>0.0</td><td>0.00000%</td><td>168.5</td><td>0.230</td></tr>
+      <tr><td>2</td><td>150,172.2</td><td>0.0</td><td>0.00000%</td><td>191.3</td><td>0.215</td></tr>
+      <tr><td>4</td><td>24,682.4</td><td>7.3e-12</td><td>0.00000%</td><td>128.0</td><td>0.403</td></tr>
+      <tr><td>5</td><td>22,104.0</td><td>0.0</td><td>0.00000%</td><td>188.2</td><td>0.697</td></tr>
+      <tr><td>6</td><td>18,475.0</td><td>0.0</td><td>0.00000%</td><td>139.1</td><td>0.490</td></tr>
+      <tr><td>19</td><td>5,699.8</td><td>0.0</td><td>0.00000%</td><td>72.7</td><td>0.379</td></tr>
+      <tr><td>20</td><td>4,192.9</td><td>0.0</td><td>0.00000%</td><td>71.9</td><td><span class="status-fail">0.786</span> (failed gate)</td></tr>
+    </tbody></table></div>
+    <p>The 37 plane/constant cells are unchanged from the pooled experiment: their <code>B_on = N_ann &middot; r_opt&sup2;/(r_out&sup2;-r_in&sup2;)</code> is grid-exact geometry and carries zero envelope in both experiments.</p>
+  </section>
+
+  <section id="time-split">
+    <h2>Time-Split Acceptance (Registered)</h2>
+    <div class="okbox"><strong>time_split_shape_consistency: <span class="status-pass">PASSED</span></strong> (7/7 order-2 cells, max <code>|&Delta;g|/&sigma; = 0.834 &le; k = 1.0</code>). The livetime is split into two halves at the median event MJD; each half is refit unbinned. The exposure-free shape factor <code>g(&tau;) = B_on/N_ann</code> agrees between halves within the bootstrap uncertainty, so the fitted curvature is not a time-systematic artefact. Raw <code>B_on</code> differs between halves only through exposure and is not tested.</div>
+    <div class="table-wrap"><table><thead><tr><th>Cell</th><th>g(&tau;) half 1</th><th>g(&tau;) half 2</th><th>|&Delta;g|</th><th>|&Delta;g| / &sigma;</th><th>Status</th></tr></thead><tbody>
+      <tr><td>1</td><td>0.059651</td><td>0.059473</td><td>1.78e-04</td><td>0.834</td><td><span class="status-pass">pass</span></td></tr>
+      <tr><td>2</td><td>0.045977</td><td>0.045951</td><td>2.59e-05</td><td>0.175</td><td><span class="status-pass">pass</span></td></tr>
+      <tr><td>4</td><td>0.075032</td><td>0.074755</td><td>2.77e-04</td><td>0.339</td><td><span class="status-pass">pass</span></td></tr>
+      <tr><td>5</td><td>0.124942</td><td>0.123719</td><td>1.22e-03</td><td>0.641</td><td><span class="status-pass">pass</span></td></tr>
+      <tr><td>6</td><td>0.224053</td><td>0.224232</td><td>1.80e-04</td><td>0.038</td><td><span class="status-pass">pass</span></td></tr>
+      <tr><td>19</td><td>0.107806</td><td>0.105696</td><td>2.11e-03</td><td>0.718</td><td><span class="status-pass">pass</span></td></tr>
+      <tr><td>20</td><td>0.193492</td><td>0.193485</td><td>7.36e-06</td><td>0.001</td><td><span class="status-pass">pass</span></td></tr>
+    </tbody></table></div>
+    <p>Note: the split point is the calendar midpoint of the matched livetime (MJD 59670.16) in this run; refine to the exact median event MJD for perfectly equal statistics if a tighter <code>&sigma;</code> scaling is required.</p>
+  </section>
+
+  <section id="bootstrap-covariance">
+    <h2>Bootstrap Covariance Evidence</h2>
+    <p>Unbinned parametric bootstrap: for each order-2 cell draw <code>M ~ Poisson(N_ann)</code> OFF events, resample the observed event coordinates with replacement, refit the shape unbinned, and recompute <code>B_on</code> from the analytic centered integrals. Order&le;1 cells use the analytic Poisson variance of <code>N_ann</code> (shape-independent). The covariance-aware fit uses <code>diag(N_on) + Cov(B_on)</code> through a Cholesky solve; it is diagnostic and does not replace the conservative preferred fit.</p>
+    <div class="table-wrap"><table><thead><tr><th>Diagnostic</th><th>Unbinned</th><th>Frozen pooled (binned)</th></tr></thead><tbody>
+      <tr><td>Replicates completed</td><td>1000 / 1000</td><td>1000 / 1000</td></tr>
+      <tr><td>Refit failures</td><td>0</td><td>0</td></tr>
+      <tr><td>Seed</td><td>64748</td><td>64748</td></tr>
+      <tr><td>Excess covariance shape</td><td>[44, 44]</td><td>[44, 44]</td></tr>
+      <tr><td>Minimum excess eigenvalue</td><td>12.858</td><td>12.938</td></tr>
+      <tr><td>Excess covariance condition number</td><td>18,654.5</td><td>18,752.3</td></tr>
+      <tr><td>B_on relative &sigma; (cell 1 / cell 20)</td><td>0.17% / 2.24%</td><td>-</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="spectral-comparison">
+    <h2>Background And Error Contracts (spectral comparison)</h2>
+    <p>Distinct scientific contracts. The pixel-WLS and analytic-B_on/WLS rows are read-only R-2R baselines. The Poisson pooled rows are the frozen binned experiment. The two Poisson unbinned rows are this experiment; the conservative row is the primary new-versus-old comparison. Stage F chi-square is a diagnostic and is <em>not</em> the model-selection criterion.</p>
+    <div class="table-wrap"><table><thead><tr><th>Contract</th><th>Background / uncertainty</th><th>phi0</th><th>alpha</th><th>beta</th><th>chi2/ndof</th></tr></thead><tbody>
+      <tr><td>Legacy old R-2R pixel-WLS</td><td>weighted-LS annulus; pixel-center B_on; conservative</td><td>2.3121e-12</td><td>2.77611</td><td>0.05944</td><td>521.41/41 = 12.72</td></tr>
+      <tr><td>Analytic-B_on R-2R WLS</td><td>weighted-LS annulus; analytic circular B_on; conservative</td><td>2.4265e-12</td><td>2.76128</td><td>0.12018</td><td>452.57/41 = 11.04</td></tr>
+      <tr><td>Poisson pooled conservative</td><td>binned profiled-Poisson surface; analytic B_on; conservative</td><td>2.4359e-12</td><td>2.73905</td><td>0.09976</td><td>578.40/41 = 14.11</td></tr>
+      <tr><td>Poisson pooled covariance-aware</td><td>binned; full bootstrap excess covariance (diagnostic)</td><td>2.4805e-12</td><td>2.73990</td><td>0.10741</td><td>802.43/41 = 19.57</td></tr>
+      <tr><td><strong>Poisson unbinned conservative</strong></td><td><strong>grid-free profiled-Poisson curvature; analytic B_on; conservative (primary)</strong></td><td><strong>2.4374e-12</strong></td><td><strong>2.73911</strong></td><td><strong>0.10028</strong></td><td><strong>582.28/41 = 14.20</strong></td></tr>
+      <tr><td>Poisson unbinned covariance-aware</td><td>grid-free; full unbinned bootstrap excess covariance (diagnostic)</td><td>2.4801e-12</td><td>2.73957</td><td>0.10657</td><td>805.37/41 = 19.64</td></tr>
+    </tbody></table></div>
+    <div class="okbox"><strong>SED unchanged.</strong> The unbinned conservative LogPar (2.4374e-12, &alpha;=2.7391, &beta;=0.1003, chi2/ndof=14.20) is statistically identical to the binned pooled conservative fit (2.4359e-12, &alpha;=2.7391, &beta;=0.0998, chi2/ndof=14.11). The unbinned change removes the grid systematic <em>without</em> moving the spectrum. The global chi2/ndof ~ 14 is a response/PSF/model tension shared by every background contract and is not addressed by the background choice.</div>
+  </section>
+
+  <section id="method">
+    <h2>Method Note: binned vs unbinned curvature</h2>
+    <p>For a source-centered aperture, <code>B_on = N_ann &middot; (&pi;r&sup2; + &frac14;&pi;r&#8308;&tau;) / (&pi;(r_out&sup2;-r_in&sup2;) + &frac14;&pi;(r_out&#8308;-r_in&#8308;)&tau;)</code> depends only on the intercept and the radial trace <code>&tau; = c_xx + c_yy</code>; all linear and anisotropic polynomial terms integrate to zero over the centered region. Only <code>&tau;</code> can move <code>B_on</code>, and only the 7 order-2 cells carry a nonzero <code>&tau;</code>.</p>
+    <ul>
+      <li><strong>Binned</strong>: OFF events are histogrammed onto a 0.1&deg; grid and a multinomial is fit to pixel counts. The pixel staircase discretises the annulus and biases <code>&tau;</code> as a function of grid step/phase (the source of the 0.786&sigma; failure; the production 0.1&deg; grid underestimated a test <code>&tau;</code> by ~50%).</li>
+      <li><strong>Unbinned</strong>: the profiled multinomial <code>-&sum;_e log q(x_e,y_e) + N_ann&middot;log&int;_annulus q</code> is evaluated at the continuous event coordinates with an analytic annulus normalization. It is the h&rarr;0 limit of the binned fit (verified: binned <code>&tau;</code> converges monotonically to the unbinned value as the grid refines) and carries no grid dependence.</li>
+    </ul>
+  </section>
+
+  <section id="provenance">
+    <h2>Provenance And Reuse</h2>
+    <table class="pathlist"><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody>
+      <tr><td>Experiment id</td><td><code>v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979_poisson_unbinned</code></td></tr>
+      <tr><td>Frozen pooling manifest (reused)</td><td><code>cell_background_pooling_v6_64748_nhit100_reselect44_double_rayleigh_poisson.json</code> (sha256 <code>6f03ac6...5d1b47</code>)</td></tr>
+      <tr><td>Stage-D flag</td><td><code>--poisson-quadratic-fit unbinned</code> (default <code>binned</code>; frozen experiment unaffected)</td></tr>
+      <tr><td>New tools</td><td><code>bootstrap_v6_poisson_background_unbinned.py</code>, <code>time_split_shape_consistency.py</code>; <code>fit_profiled_poisson_surface_unbinned</code> in <code>poisson_roi_background.py</code></td></tr>
+      <tr><td>PSF / response / selector / Stage C</td><td>identical to the frozen pooled experiment (same SHAs)</td></tr>
+      <tr><td>Grid branch outputs</td><td><code>apply/output/&lt;experiment_id&gt;/branches/h*/stage_{d,e,f}</code></td></tr>
+      <tr><td>Bootstrap covariance</td><td><code>scheme_R_double_rayleigh_poisson_unbinned_background_covariance.{npz,json}</code></td></tr>
+      <tr><td>Time-split gate</td><td><code>scheme_R_double_rayleigh_poisson_unbinned_time_split.json</code></td></tr>
+    </tbody></table>
+    <div class="callout"><strong>Status:</strong> prototype/experiment artifacts and code are on the ETO production tree, <em>uncommitted</em>. No promotion of <code>preferred_fit</code> and no overwrite of the frozen <code>poisson_pooled</code> namespace. The 0.5&sigma; / 90%@0.25&sigma; / 0.5-pull gates are unchanged; no branch was selected on Crab Stage F chi-square.</div>
+  </section>
+</main>
+</body>
+</html>

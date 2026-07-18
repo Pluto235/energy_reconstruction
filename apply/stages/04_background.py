@@ -27,6 +27,7 @@ if str(REPO_ROOT) not in sys.path:
 from apply.stages.poisson_roi_background import (
     PoissonSurfaceFitError,
     fit_profiled_poisson_surface,
+    fit_profiled_poisson_surface_unbinned,
     quadratic_rectangle_basis_integrals,
 )
 
@@ -89,6 +90,7 @@ class RoiScanResult:
     continuous_annulus_counts: np.ndarray
     input_rows: int
     processed_batches: int
+    annulus_event_xy_by_cell_index: Optional[Dict[int, np.ndarray]] = None
 
 
 def parse_args() -> argparse.Namespace:
@@ -195,6 +197,34 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--annulus-source-mask-margin-deg", type=float, default=0.2)
     parser.add_argument("--annulus-max-inner-deg", type=float, default=3.0)
     parser.add_argument("--roi-surface-order", type=int, choices=[1, 2], default=2)
+    parser.add_argument(
+        "--poisson-quadratic-fit",
+        choices=["binned", "unbinned"],
+        default="binned",
+        help=(
+            "Curvature fit for order-2 Poisson pools. 'binned' uses the pixel-multinomial "
+            "surface; 'unbinned' fits a continuous point-process over the OFF annulus "
+            "(grid-free radial trace). Requires --roi-fit-statistic poisson."
+        ),
+    )
+    parser.add_argument(
+        "--allow-annulus-count-mismatch",
+        action="store_true",
+        help=(
+            "Allow Stage-D continuous annulus counts to differ from the frozen manifest "
+            "(needed for MJD time-split / subset prototype runs). Normalization still uses "
+            "this scan's own counts; the manifest counts are only used for the guard."
+        ),
+    )
+    parser.add_argument(
+        "--dump-off-events-npz",
+        default=None,
+        help=(
+            "When set (unbinned mode), also write the retained per-order-2-cell OFF-annulus "
+            "event coordinates to this NPZ (keys 'events_<cell_id>' + 'cell_ids') for the "
+            "unbinned bootstrap."
+        ),
+    )
     parser.add_argument("--surface-condition-max", type=float, default=1.0e8)
     parser.add_argument("--surface-min-training-pixels", type=int, default=80)
     parser.add_argument(
@@ -900,6 +930,7 @@ def scan_stage_c_roi_events(
     print_every: int,
     mjd_min: Optional[float] = None,
     mjd_max: Optional[float] = None,
+    retain_event_xy_cell_indices: Optional[set] = None,
 ) -> RoiScanResult:
     dataset = ds.dataset(obs_events_dir, format="parquet", partitioning="hive")
     columns = ["mjd", "ra_mean_deg", "dec_mean_deg", "cell_id"]
@@ -920,6 +951,12 @@ def scan_stage_c_roi_events(
     rho_hist_total = np.zeros(rho_hist_edges_deg.size - 1, dtype=np.int64)
     rho_hist_by_cell = np.zeros((n_cells, rho_hist_edges_deg.size - 1), dtype=np.int64)
     continuous_annulus_counts = np.zeros(n_cells, dtype=np.int64)
+
+    retained_chunks: Dict[int, list] = {}
+    retained_idx_array = None
+    if retain_event_xy_cell_indices:
+        retained_idx_array = np.asarray(sorted(int(i) for i in retain_event_xy_cell_indices), dtype=np.int64)
+        retained_chunks = {int(i): [] for i in retained_idx_array}
 
     if (annulus_inner_deg is None) != (annulus_outer_deg is None):
         raise ValueError("Both annulus_inner_deg and annulus_outer_deg are required together")
@@ -985,6 +1022,15 @@ def scan_stage_c_roi_events(
             )
             if np.any(continuous_annulus):
                 update_bincount(continuous_annulus_counts, cell_v[continuous_annulus], n_cells)
+            if retained_idx_array is not None:
+                keep = continuous_annulus & np.isin(cell_v, retained_idx_array)
+                if np.any(keep):
+                    ck = cell_v[keep]
+                    xk = x[keep]
+                    yk = y[keep]
+                    for ci in np.unique(ck):
+                        sel = ck == ci
+                        retained_chunks[int(ci)].append(np.column_stack([xk[sel], yk[sel]]))
 
         x_idx = np.floor((x - x_min) / x_step).astype(np.int64)
         y_idx = np.floor((y - y_min) / y_step).astype(np.int64)
@@ -1016,6 +1062,14 @@ def scan_stage_c_roi_events(
         continuous_annulus_counts=continuous_annulus_counts,
         input_rows=input_rows,
         processed_batches=processed_batches,
+        annulus_event_xy_by_cell_index=(
+            {
+                int(ci): (np.vstack(chunks) if chunks else np.empty((0, 2), dtype=np.float64))
+                for ci, chunks in retained_chunks.items()
+            }
+            if retain_event_xy_cell_indices
+            else None
+        ),
     )
 
 
@@ -1541,6 +1595,9 @@ def estimate_roi_poisson_pooled_background(
     annulus_source_mask_r_opt_factor: float,
     annulus_source_mask_margin_deg: float,
     annulus_max_inner_deg: float,
+    quadratic_fit_mode: str = "binned",
+    event_xy_by_cell_index: Optional[Dict[int, np.ndarray]] = None,
+    allow_annulus_count_mismatch: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, Dict[str, np.ndarray]]:
     n_cells, n_y, n_x = counts_map.shape
     if len(cells) != n_cells:
@@ -1585,7 +1642,14 @@ def estimate_roi_poisson_pooled_background(
             {"cell_id": int(cell_ids[index]), "manifest": int(expected_counts[index]), "stage_d": int(actual_counts[index])}
             for index in np.flatnonzero(actual_counts != expected_counts)[:10]
         ]
-        raise ValueError(f"Continuous annulus counts do not match the frozen manifest: {mismatches}")
+        if not allow_annulus_count_mismatch:
+            raise ValueError(f"Continuous annulus counts do not match the frozen manifest: {mismatches}")
+        print(
+            "[warn] Continuous annulus counts differ from the frozen manifest; "
+            "allowed for time-split/subset prototype runs (normalization uses this scan's "
+            f"own counts): {mismatches}",
+            flush=True,
+        )
 
     assignments = manifest["execution_cell_assignments"]
     if not isinstance(assignments, dict):
@@ -1609,15 +1673,38 @@ def estimate_roi_poisson_pooled_background(
         shape_contributors = {
             cell: int(expected_counts_raw[str(cell)]) >= 100 for cell in donors
         }
-        fit_by_pool[key] = fit_profiled_poisson_surface(
-            donor_counts,
-            donor_basis,
-            donor_masks,
-            donors,
-            order,
-            float(roi_fiducial_deg),
-            shape_contributors,
-        )
+        if int(order) == 2 and str(quadratic_fit_mode) == "unbinned":
+            if event_xy_by_cell_index is None:
+                raise ValueError("Unbinned quadratic fit requires retained OFF-annulus event coordinates")
+            donor_xy: Dict[int, np.ndarray] = {}
+            donor_bounds: Dict[int, Tuple[float, float]] = {}
+            for cell in donors:
+                idx = index_by_id[cell]
+                if idx not in event_xy_by_cell_index:
+                    raise ValueError(f"Missing retained OFF events for donor cell {cell}")
+                donor_xy[cell] = event_xy_by_cell_index[idx]
+                donor_bounds[cell] = (
+                    float(annulus_inner[idx]),
+                    min(float(annulus_outer[idx]), float(roi_fiducial_deg)),
+                )
+            fit_by_pool[key] = fit_profiled_poisson_surface_unbinned(
+                donor_xy,
+                donor_bounds,
+                donors,
+                order,
+                float(roi_fiducial_deg),
+                shape_contributors,
+            )
+        else:
+            fit_by_pool[key] = fit_profiled_poisson_surface(
+                donor_counts,
+                donor_basis,
+                donor_masks,
+                donors,
+                order,
+                float(roi_fiducial_deg),
+                shape_contributors,
+            )
 
     background_map = np.full((n_cells, n_y, n_x), np.nan, dtype=np.float64)
     residual_map = np.full_like(background_map, np.nan)
@@ -2675,6 +2762,20 @@ def run_crab_roi_local_background(
         flush=True,
     )
 
+    retain_indices = None
+    if str(args.poisson_quadratic_fit) == "unbinned":
+        if str(args.roi_fit_statistic) != "poisson":
+            raise ValueError("--poisson-quadratic-fit unbinned requires --roi-fit-statistic poisson")
+        if poisson_manifest is None:
+            raise RuntimeError("Unbinned quadratic fit requires a loaded pooling manifest")
+        id_to_index = {int(cell.cell_id): idx for idx, cell in enumerate(cells)}
+        retain_indices = set()
+        for spec in poisson_manifest.get("execution_cell_assignments", {}).values():
+            if int(spec.get("surface_order", -1)) == 2:
+                for donor in spec.get("donor_cell_ids", []):
+                    if int(donor) in id_to_index:
+                        retain_indices.add(id_to_index[int(donor)])
+
     scan = scan_stage_c_roi_events(
         obs_events_dir,
         cells,
@@ -2692,6 +2793,7 @@ def run_crab_roi_local_background(
         print_every=int(args.print_every),
         mjd_min=args.mjd_min,
         mjd_max=args.mjd_max,
+        retain_event_xy_cell_indices=retain_indices,
     )
     print(f"Scanned rows: {scan.input_rows:,}", flush=True)
 
@@ -2743,7 +2845,23 @@ def run_crab_roi_local_background(
                 annulus_source_mask_r_opt_factor=float(args.annulus_source_mask_r_opt_factor),
                 annulus_source_mask_margin_deg=float(args.annulus_source_mask_margin_deg),
                 annulus_max_inner_deg=float(args.annulus_max_inner_deg),
+                quadratic_fit_mode=str(args.poisson_quadratic_fit),
+                event_xy_by_cell_index=scan.annulus_event_xy_by_cell_index,
+                allow_annulus_count_mismatch=bool(args.allow_annulus_count_mismatch),
             )
+            if getattr(args, "dump_off_events_npz", None) and scan.annulus_event_xy_by_cell_index:
+                _id_by_index = {index: int(cell.cell_id) for index, cell in enumerate(cells)}
+                _off_dump = {
+                    ("events_%d" % _id_by_index[int(cell_index)]): np.asarray(xy, dtype=np.float64)
+                    for cell_index, xy in scan.annulus_event_xy_by_cell_index.items()
+                }
+                _off_dump["cell_ids"] = np.asarray(
+                    sorted(_id_by_index[int(cell_index)] for cell_index in scan.annulus_event_xy_by_cell_index),
+                    dtype=np.int64,
+                )
+                Path(args.dump_off_events_npz).parent.mkdir(parents=True, exist_ok=True)
+                np.savez_compressed(args.dump_off_events_npz, **_off_dump)
+                print("Wrote OFF-event dump: %s" % args.dump_off_events_npz, flush=True)
         else:
             if not np.array_equal(x_edges, y_edges):
                 raise ValueError("Independent x/y grid phases are available only in Poisson mode")

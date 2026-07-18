@@ -372,3 +372,219 @@ def fit_profiled_poisson_surface(
         positive_minimum_xy=(float(minimum_xy[0]), float(minimum_xy[1])),
         optimizer_status=status,
     )
+
+
+_UNBINNED_CONSTRAINT_POINT_CAP = 30000
+
+
+def _centered_annulus_integral(coefficients: np.ndarray, inner: float, outer: float) -> float:
+    """Analytic integral of the polynomial density over a centered annulus [inner, outer].
+
+    Mirrors ``integrate_centered_annulus_density`` in ``04_background.py``. Only the
+    intercept and the radial trace survive; linear and anisotropic terms integrate to
+    zero over a centered region.
+    """
+    c = np.asarray(coefficients, dtype=np.float64)
+    return float(
+        math.pi * (outer * outer - inner * inner) * c[0]
+        + math.pi * (outer**4 - inner**4) * (c[3] + c[5]) / 4.0
+    )
+
+
+def _validated_unbinned_fit_inputs(
+    event_xy_by_cell: dict[int, np.ndarray],
+    annulus_bounds_by_cell: dict[int, tuple[float, float]],
+    donor_cell_ids: Sequence[int],
+    shape_contributor_by_cell: dict[int, bool],
+) -> tuple[tuple[int, ...], dict[int, np.ndarray], dict[int, tuple[float, float]], dict[int, float]]:
+    donors = tuple(int(cell_id) for cell_id in donor_cell_ids)
+    if not donors or len(set(donors)) != len(donors):
+        raise PoissonSurfaceFitError("donor_cell_ids must be non-empty and unique")
+    events: dict[int, np.ndarray] = {}
+    bounds: dict[int, tuple[float, float]] = {}
+    normalizations: dict[int, float] = {}
+    for cell_id in donors:
+        try:
+            xy = np.asarray(event_xy_by_cell[cell_id], dtype=np.float64)
+            inner, outer = annulus_bounds_by_cell[cell_id]
+            bool(shape_contributor_by_cell[cell_id])
+        except KeyError as exc:
+            raise PoissonSurfaceFitError(f"Missing unbinned fit input for donor cell {cell_id}") from exc
+        if xy.ndim != 2 or xy.shape[1] != 2:
+            raise PoissonSurfaceFitError(f"Event coordinates for donor cell {cell_id} must have shape (M, 2)")
+        if xy.size and not np.all(np.isfinite(xy)):
+            raise PoissonSurfaceFitError(f"Event coordinates must be finite for donor cell {cell_id}")
+        inner = float(inner)
+        outer = float(outer)
+        if not (math.isfinite(inner) and math.isfinite(outer)) or inner < 0.0 or outer <= inner:
+            raise PoissonSurfaceFitError(f"Annulus bounds must satisfy 0 <= inner < outer for donor cell {cell_id}")
+        events[cell_id] = xy
+        bounds[cell_id] = (inner, outer)
+        normalizations[cell_id] = float(xy.shape[0])
+    return donors, events, bounds, normalizations
+
+
+def fit_profiled_poisson_surface_unbinned(
+    event_xy_by_cell: dict[int, np.ndarray],
+    annulus_bounds_by_cell: dict[int, tuple[float, float]],
+    donor_cell_ids: Sequence[int],
+    order: int,
+    positivity_radius_deg: float,
+    shape_contributor_by_cell: dict[int, bool],
+    *,
+    constraint_point_cap: int = _UNBINNED_CONSTRAINT_POINT_CAP,
+) -> SurfaceFit:
+    """Fit a shared positive polynomial shape to continuous OFF-annulus events (unbinned).
+
+    Grid-free analogue of :func:`fit_profiled_poisson_surface`. The profiled multinomial
+    negative log-likelihood for donor cell ``b`` is
+
+        -log L_b = -sum_e log q(x_e, y_e) + N_ann,b * log(integral_annulus_b(q))
+
+    where the numerator is evaluated at the exact continuous event coordinates (no pixels)
+    and the denominator is the analytic centered-annulus integral. The per-cell
+    normalization ``N_ann,b`` (the OFF event count) is profiled out; the shape is shared
+    across pooled donors. B_on downstream uses the same analytic centered integrals, so it
+    is independent of any grid.
+    """
+    radius = float(positivity_radius_deg)
+    if not math.isfinite(radius) or radius <= 0.0:
+        raise PoissonSurfaceFitError("positivity_radius_deg must be positive and finite")
+    active = _active_coefficient_indices(int(order))
+    donors, events, bounds, normalizations = _validated_unbinned_fit_inputs(
+        event_xy_by_cell,
+        annulus_bounds_by_cell,
+        donor_cell_ids,
+        shape_contributor_by_cell,
+    )
+    contributors = tuple(cell_id for cell_id in donors if bool(shape_contributor_by_cell[cell_id]))
+    if active.size and not contributors:
+        raise PoissonSurfaceFitError("At least one donor must contribute shape information")
+    for cell_id in contributors:
+        if normalizations[cell_id] <= 0.0:
+            raise PoissonSurfaceFitError(f"Shape contributor {cell_id} has zero annulus events")
+    likelihood_scale = max(1.0, sum(normalizations[cell_id] for cell_id in contributors))
+
+    event_basis = {cell_id: _basis_at_points(events[cell_id]) for cell_id in contributors}
+    annulus_const: dict[int, tuple[float, float]] = {}
+    for cell_id in contributors:
+        inner, outer = bounds[cell_id]
+        annulus_const[cell_id] = (
+            math.pi * (outer * outer - inner * inner),
+            math.pi * (outer**4 - inner**4) / 4.0,
+        )
+
+    def objective_and_gradient(parameters: np.ndarray) -> tuple[float, np.ndarray]:
+        coefficients = _coefficients_from_parameters(parameters, active)
+        nll = 0.0
+        gradient = np.zeros(active.size, dtype=np.float64)
+        for cell_id in contributors:
+            phi = event_basis[cell_id]
+            shape_at_events = phi @ coefficients
+            k1, k2 = annulus_const[cell_id]
+            annulus_integral = coefficients[0] * k1 + (coefficients[3] + coefficients[5]) * k2
+            total = normalizations[cell_id]
+            if np.any(shape_at_events <= 0.0) or not math.isfinite(annulus_integral) or annulus_integral <= 0.0:
+                return 1.0e100, np.zeros(active.size, dtype=np.float64)
+            nll += -float(np.sum(np.log(shape_at_events))) + total * math.log(annulus_integral)
+            gradient_full = -(phi.T @ (1.0 / shape_at_events))
+            annulus_gradient = np.zeros(_COEFFICIENT_COUNT, dtype=np.float64)
+            annulus_gradient[0] = k1
+            annulus_gradient[3] = k2
+            annulus_gradient[5] = k2
+            gradient_full += (total / annulus_integral) * annulus_gradient
+            gradient += gradient_full[active]
+        return nll / likelihood_scale, gradient / likelihood_scale
+
+    support_points = _fixed_disk_support(radius)
+    if contributors:
+        all_events = np.vstack([events[cell_id] for cell_id in contributors])
+        event_points = np.unique(all_events, axis=0)
+        if event_points.shape[0] > int(constraint_point_cap):
+            stride = int(math.ceil(event_points.shape[0] / float(constraint_point_cap)))
+            event_points = event_points[::stride]
+        base_constraint_points = np.unique(np.vstack([support_points, event_points]), axis=0)
+    else:
+        base_constraint_points = support_points
+    base_point_basis = _basis_at_points(base_constraint_points)
+
+    def linear_constraint(extra_points: list[tuple[float, float]]) -> LinearConstraint:
+        point_basis = base_point_basis
+        if extra_points:
+            point_basis = np.vstack([point_basis, _basis_at_points(np.asarray(extra_points))])
+        matrix = point_basis[:, active]
+        lower = _CONSTRAINT_POSITIVITY_FLOOR - point_basis[:, 0]
+        return LinearConstraint(matrix, lower, np.full(lower.shape[0], np.inf))
+
+    parameters = np.zeros(active.size, dtype=np.float64)
+    result = None
+    extra_points: list[tuple[float, float]] = []
+    minimum = 1.0
+    minimum_xy = (0.0, 0.0)
+    if active.size:
+        for cutting_iteration in range(_MAX_CUTTING_PLANE_ITERATIONS + 1):
+            result = minimize(
+                lambda value: objective_and_gradient(value)[0],
+                parameters,
+                jac=lambda value: objective_and_gradient(value)[1],
+                constraints=[linear_constraint(extra_points)],
+                method="SLSQP",
+                options={"ftol": 1.0e-11, "maxiter": 2000, "disp": False},
+            )
+            if not bool(result.success) or not np.all(np.isfinite(result.x)):
+                message = str(getattr(result, "message", "unknown optimizer failure"))
+                raise PoissonSurfaceFitError(f"Profiled-Poisson unbinned optimization failed: {message}")
+            parameters = np.asarray(result.x, dtype=np.float64)
+            coefficients = _coefficients_from_parameters(parameters, active)
+            minimum, minimum_xy = _minimum_quadratic_on_centered_disk(coefficients, radius)
+            if minimum >= _POSITIVITY_FLOOR * coefficients[0]:
+                break
+            if cutting_iteration >= _MAX_CUTTING_PLANE_ITERATIONS:
+                raise PoissonSurfaceFitError(
+                    "Unbinned positive surface cutting-plane loop failed after eight iterations: "
+                    f"minimum={minimum:.17g} at {minimum_xy}, parameters={parameters.tolist()}"
+                )
+            extra_points.append(minimum_xy)
+        else:  # pragma: no cover - loop is explicitly bounded above
+            raise PoissonSurfaceFitError("Unbinned positive surface cutting-plane loop did not terminate")
+    else:
+        coefficients = _coefficients_from_parameters(parameters, active)
+
+    if not math.isfinite(minimum) or minimum <= 0.0:
+        raise PoissonSurfaceFitError(f"Fitted unbinned surface is not positive on the disk: minimum={minimum}")
+
+    observed_events = int(sum(int(normalizations[cell_id]) for cell_id in contributors))
+    ndof = max(0, observed_events - len(contributors) - int(active.size))
+    final_nll, _ = objective_and_gradient(parameters)
+    final_linear_constraint = linear_constraint(extra_points)
+    constrained_values = np.asarray(final_linear_constraint.A @ parameters, dtype=np.float64)
+    constraint_violation = np.maximum(
+        np.asarray(final_linear_constraint.lb, dtype=np.float64) - constrained_values,
+        0.0,
+    )
+    status: dict[str, object] = {
+        "success": True,
+        "method": "SLSQP",
+        "fit_kind": "unbinned",
+        "message": "constant surface has no free shape parameters" if result is None else str(result.message),
+        "status": 0 if result is None else int(result.status),
+        "iterations": 0 if result is None else int(result.nit),
+        "function_evaluations": 1 if result is None else int(result.nfev),
+        "gradient_evaluations": 1 if result is None else int(result.njev),
+        "cutting_plane_constraints_added": len(extra_points),
+        "constraint_count": int(base_point_basis.shape[0] + len(extra_points)),
+        "event_count": observed_events,
+        "max_linear_constraint_violation": float(np.max(constraint_violation, initial=0.0)),
+        "profiled_nll": float(final_nll * likelihood_scale),
+    }
+    return SurfaceFit(
+        order=int(order),
+        shape_coefficients=coefficients,
+        donor_cell_ids=donors,
+        annulus_normalizations=normalizations,
+        poisson_deviance=float("nan"),
+        ndof=int(ndof),
+        positive_minimum=float(minimum),
+        positive_minimum_xy=(float(minimum_xy[0]), float(minimum_xy[1])),
+        optimizer_status=status,
+    )

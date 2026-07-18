@@ -103,6 +103,10 @@ SCHEME_CONTRACT = os.environ.get(
 )
 RATIO_HIDDEN_PREDE_POINTS = max(0, int(os.environ.get("V6_REPORT_RATIO_HIDDEN_PREDE_POINTS", "0")))
 EXPECTED_FIXED_CONTAINMENT = os.environ.get("V6_REPORT_EXPECTED_FIXED_CONTAINMENT")
+SED_OVERLAY_TITLE = os.environ.get(
+    "V6_REPORT_SED_OVERLAY_TITLE",
+    f"Stage G {RUN_ID} SED overlay",
+)
 POISSON_REPORT_INPUTS = tuple(
     os.environ.get(name, "").strip()
     for name in (
@@ -1014,7 +1018,7 @@ def ensure_stage_g_external_overlay(
     ax.set_xlabel("Effective true energy [TeV]")
     ax.set_ylabel(r"$E^2 dN/dE$ [TeV cm$^{-2}$ s$^{-1}$]")
     grouping_label = "Nhit + predE grouped points" if include_predE else "Nhit grouped points"
-    ax.set_title(f"Stage G {RUN_ID} SED overlay: {grouping_label}")
+    ax.set_title(f"{SED_OVERLAY_TITLE}: {grouping_label}")
     ax.grid(True, which="both", alpha=0.24, lw=0.45)
     ax.set_xlim(emin, emax)
     ax.legend(fontsize=7.0, ncol=2, frameon=True)

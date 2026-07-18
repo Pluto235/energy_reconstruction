@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "experiment_id": "v6_64748_nhit100_reselect44_split56_miss030_double_rayleigh_scheme_R_fixed712979_poisson_unbinned",
+  "report": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/crab_sed_v6_64748_nhit100_reselect44_scheme_R_double_rayleigh_poisson_unbinned_report.html",
+  "report_sha256": "d0f7fedc12acab4e57e315cc7ecd1b9da22b4c16df41f6286ee1a7dd4c057e86",
+  "image_validation": {
+    "image_ref_count": 26,
+    "unique_image_ref_count": 26,
+    "missing_image_refs": [],
+    "empty_image_refs": [],
+    "passed": true
+  },
+  "order2_cells": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    19,
+    20
+  ],
+  "maximum_abs_B_on_shift_percent": 0.7185075778428196,
+  "time_split_gate": {
+    "limit": {
+      "operator": "<=",
+      "value": 1.0
+    },
+    "median_mjd_note": "halves are split at the median OFF-event MJD (equal statistics)",
+    "n_order2_cells": 7,
+    "name": "time_split_shape_consistency",
+    "observed_max_delta_over_sigma": 0.8343594478737881,
+    "passed": true
+  },
+  "bootstrap_completed": 1000,
+  "bootstrap_failures": 0,
+  "implementation_sha": "018d5568994c6406299b74a945df0f6dca9f7f15"
+}

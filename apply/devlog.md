@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-18 21:08 · [715437d] Add untruncated raw-MC survival diagnostics for cells 1-3, exposing 17.9-29.5% weighted probability beyond 5 degrees.
+
 - **energy_reconstruction** · 2026-07-18 19:12 · [a50b205] Add Fermi-style double-King Stage B profile fitting and regenerate the 91-cell PSF grid with unchanged diagnostic and final-SED selectors.
 
 - **energy_reconstruction** · 2026-07-18 12:27 · [9e3f2eb] Expand the Scheme R double-Rayleigh Poisson-unbinned prototype into a complete Stage A-G report with PSF, background, pull, bootstrap, time-split, and final SED figures.

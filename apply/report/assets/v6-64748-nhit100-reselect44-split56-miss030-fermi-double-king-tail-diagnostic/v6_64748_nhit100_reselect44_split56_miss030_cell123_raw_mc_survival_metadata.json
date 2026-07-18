@@ -1,0 +1,239 @@
+{
+  "description": "Raw-MC angular-error survival without angular truncation or 5-degree renormalization",
+  "git_sha": "715437d3760b2d96976dd10f7bf299b53aeaf3be",
+  "selection": {
+    "cell_ids": [
+      1,
+      2,
+      3
+    ],
+    "logE_true_min_inclusive": 2.0,
+    "logE_true_max_exclusive": 6.0,
+    "angular_cut": null,
+    "baseline_weight": "mc_weight * crab_declination_theta_reweight",
+    "survival_denominator": "all positive-weight formal selected events",
+    "survival_definition": "sum(w_i * I(delta_theta_i > r)) / sum(w_i)"
+  },
+  "inputs": {
+    "binned_root": "/mnt/mydisk/WCDA_simulation_binned_response_v6_64748_nhit100_highEplus1_split56_candidate",
+    "cell_ledger": "/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_ledger_v6_64748_nhit100_highEplus1_split56_candidate.csv",
+    "cell_ledger_sha256": "80e77541c41962bf09ab8e6ea777def5960144547dc937cb6d68d06a1b0e8709",
+    "source_psf": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v6_64748_nhit100_reselect44_split56_miss030/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_b_psf/psf_v6_64748_nhit100_reselect44_split56_miss030.npz",
+    "source_psf_sha256": "f5a4aaca2f3506e7f8e4dd493e4c689a1aa8fb16f22fab50d06ba84f96cd73c3",
+    "source_metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v6_64748_nhit100_reselect44_split56_miss030/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_b_psf/psf_v6_64748_nhit100_reselect44_split56_miss030_metadata.json",
+    "source_metadata_sha256": "44bdfea931ea89768efab3be24cc4a7362b60b6bc5b2e191c33539b59634b91d",
+    "double_king_npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_b_v6_64748_nhit100_reselect44_split56_miss030_fermi_double_king/runs/v6_64748_nhit100_reselect44_split56_miss030_fermi_double_king/psf_v6_64748_nhit100_reselect44_split56_miss030_fermi_double_king.npz",
+    "double_king_npz_sha256": "bdf592d7038ae6903b5dc2f8c91e98d0e020619ce6a1c89079f914fe9f3a6bac"
+  },
+  "quantile_probabilities": [
+    0.5,
+    0.68,
+    0.7129790300890827,
+    0.9,
+    0.95,
+    0.99
+  ],
+  "survival_thresholds_deg": [
+    1.0,
+    3.0,
+    5.0,
+    10.0,
+    20.0,
+    45.0,
+    90.0
+  ],
+  "cells": [
+    {
+      "cell_id": 1,
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[2,2.5)",
+      "cell_dir": "/mnt/mydisk/WCDA_simulation_binned_response_v6_64748_nhit100_highEplus1_split56_candidate/nhit_100_200/predE_2_2p5",
+      "input_files": 10000,
+      "raw_events": 355123,
+      "selected_events": 318520,
+      "positive_baseline_weight_events": 278820,
+      "sum_baseline_weight": 130014327.14392208,
+      "effective_events": 36849.065208978915,
+      "missing_crab_probability_mass": 0.0,
+      "angle_check_max_absdiff_rad": 3.120514914176087e-13,
+      "max_radius_deg": 85.19041230373051,
+      "weighted_quantiles_deg": [
+        0.7636000045157826,
+        1.9953029107063112,
+        6.418721052532143,
+        44.85886368360327,
+        53.96689027909757,
+        67.86275737705128
+      ],
+      "unweighted_quantiles_deg": [
+        0.5524344037880842,
+        0.7663622501751219,
+        0.8216096434573996,
+        2.61390802810736,
+        20.00351353461913,
+        44.60017182419678
+      ],
+      "weighted_survival_at_thresholds": [
+        0.4103662505421039,
+        0.30762582641701824,
+        0.29521665219530424,
+        0.2681851757493956,
+        0.2239290302096771,
+        0.09919754879961518,
+        0.0
+      ],
+      "unweighted_survival_at_thresholds": [
+        0.21075913600401858,
+        0.09663129473816401,
+        0.08721901293482356,
+        0.0725134999372096,
+        0.0500125580811252,
+        0.009641466783875424,
+        0.0
+      ],
+      "weighted_survival_at_5deg": 0.29521665219530424,
+      "unweighted_survival_at_5deg": 0.08721901293482356,
+      "weighted_r712979_deg": 6.418721052532143,
+      "unweighted_r712979_deg": 0.8216096434573996
+    },
+    {
+      "cell_id": 2,
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[2.5,3)",
+      "cell_dir": "/mnt/mydisk/WCDA_simulation_binned_response_v6_64748_nhit100_highEplus1_split56_candidate/nhit_100_200/predE_2p5_3",
+      "input_files": 10000,
+      "raw_events": 570475,
+      "selected_events": 533990,
+      "positive_baseline_weight_events": 495234,
+      "sum_baseline_weight": 225588590.40473148,
+      "effective_events": 134003.32553337765,
+      "missing_crab_probability_mass": 0.0,
+      "angle_check_max_absdiff_rad": 9.063264190794368e-13,
+      "max_radius_deg": 92.32809435314189,
+      "weighted_quantiles_deg": [
+        0.581949995695308,
+        0.9145214008270448,
+        1.0513425563452783,
+        29.11772476954395,
+        45.059267525887236,
+        66.34172749199126
+      ],
+      "unweighted_quantiles_deg": [
+        0.49897813805853247,
+        0.6942990918440446,
+        0.7461981162841611,
+        6.685012063049107,
+        26.303870788494315,
+        49.990827134199954
+      ],
+      "weighted_survival_at_thresholds": [
+        0.2977203729559227,
+        0.2169890033861068,
+        0.20424892068366768,
+        0.17608647574739766,
+        0.13469057439848486,
+        0.05026689288499559,
+        1.759049039532493e-05
+      ],
+      "unweighted_survival_at_thresholds": [
+        0.1891365006835334,
+        0.11167063053615237,
+        0.1045094477424671,
+        0.091365006835334,
+        0.06561733365793367,
+        0.015524635292795744,
+        1.8726942452105845e-06
+      ],
+      "weighted_survival_at_5deg": 0.20424892068366768,
+      "unweighted_survival_at_5deg": 0.1045094477424671,
+      "weighted_r712979_deg": 1.0513425563452783,
+      "unweighted_r712979_deg": 0.7461981162841611
+    },
+    {
+      "cell_id": 3,
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[3,3.25)",
+      "cell_dir": "/mnt/mydisk/WCDA_simulation_binned_response_v6_64748_nhit100_highEplus1_split56_candidate/nhit_100_200/predE_3_3p25",
+      "input_files": 10000,
+      "raw_events": 119345,
+      "selected_events": 109712,
+      "positive_baseline_weight_events": 106536,
+      "sum_baseline_weight": 43210422.74230038,
+      "effective_events": 46860.288314268306,
+      "missing_crab_probability_mass": 0.0,
+      "angle_check_max_absdiff_rad": 7.395655810850388e-13,
+      "max_radius_deg": 95.51844818880843,
+      "weighted_quantiles_deg": [
+        0.5808584194524977,
+        0.9106093533467994,
+        1.0348208952095133,
+        24.680614460502603,
+        38.82752120898221,
+        62.713950976166494
+      ],
+      "unweighted_quantiles_deg": [
+        0.5331942057998402,
+        0.7700624235230823,
+        0.8396813886781859,
+        17.202410788484706,
+        34.46444642294642,
+        57.26239852684984
+      ],
+      "weighted_survival_at_thresholds": [
+        0.2948888262167337,
+        0.1939309830929737,
+        0.17930385034194574,
+        0.15505792236530058,
+        0.1187061784678243,
+        0.0342804608312135,
+        0.00019483569782294185
+      ],
+      "unweighted_survival_at_thresholds": [
+        0.2359085605950124,
+        0.14407722035875747,
+        0.13479838121627533,
+        0.12071605658451218,
+        0.09177665159690827,
+        0.026706285547615574,
+        2.7344319673326528e-05
+      ],
+      "weighted_survival_at_5deg": 0.17930385034194574,
+      "unweighted_survival_at_5deg": 0.13479838121627533,
+      "weighted_r712979_deg": 1.0348208952095133,
+      "unweighted_r712979_deg": 0.8396813886781859
+    }
+  ],
+  "double_king_models": {
+    "1": {
+      "physical_core_fraction": 0.6644850969314575,
+      "sigma_core_deg": 0.3611013889312744,
+      "gamma_core": 3.94789719581604,
+      "sigma_tail_deg": 1.698923110961914,
+      "gamma_tail": 1.0499999523162842,
+      "conditional_r_target_deg": 0.7706419229507446
+    },
+    "2": {
+      "physical_core_fraction": 0.698052167892456,
+      "sigma_core_deg": 0.3220355212688446,
+      "gamma_core": 4.246955394744873,
+      "sigma_tail_deg": 1.303594708442688,
+      "gamma_tail": 1.0499999523162842,
+      "conditional_r_target_deg": 0.6739951372146606
+    },
+    "3": {
+      "physical_core_fraction": 0.670425534248352,
+      "sigma_core_deg": 0.3093870282173157,
+      "gamma_core": 3.3111751079559326,
+      "sigma_tail_deg": 1.6753443479537964,
+      "gamma_tail": 1.0499999523162842,
+      "conditional_r_target_deg": 0.7064473032951355
+    }
+  },
+  "outputs": {
+    "png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-fermi-double-king-tail-diagnostic/v6_64748_nhit100_reselect44_split56_miss030_cell123_raw_mc_survival.png",
+    "pdf": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-fermi-double-king-tail-diagnostic/v6_64748_nhit100_reselect44_split56_miss030_cell123_raw_mc_survival.pdf",
+    "npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-fermi-double-king-tail-diagnostic/v6_64748_nhit100_reselect44_split56_miss030_cell123_raw_mc_survival.npz",
+    "csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-fermi-double-king-tail-diagnostic/v6_64748_nhit100_reselect44_split56_miss030_cell123_raw_mc_survival_summary.csv",
+    "metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-fermi-double-king-tail-diagnostic/v6_64748_nhit100_reselect44_split56_miss030_cell123_raw_mc_survival_metadata.json"
+  }
+}

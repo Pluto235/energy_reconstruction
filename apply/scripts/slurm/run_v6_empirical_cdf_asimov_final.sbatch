@@ -74,6 +74,7 @@ python apply/stages/01_build_response.py \
   --binned-root "${BINNED_ROOT}" --cell-selection-csv "${SOURCE_TABLE}" \
   --run-dir "${RUN_DIR}" --primary-denominator-npz "${PRIMARY_DENOM}" \
   --output-dir "${RESPONSE_DIR}" --aperture-psf-npz "${PSF}" \
+  --allow-missing-cell-dirs \
   --numerator-workers "${SLURM_CPUS_PER_TASK:-32}" --numerator-files-per-task 250 \
   --npz-name "$(basename "${RESPONSE}")" --metadata-name "$(basename "${RESPONSE_META}")"
 

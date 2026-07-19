@@ -10,6 +10,7 @@ from apply.stages.psf_full_sphere_mixtures import (
     fit_double_rayleigh_counts,
     fit_double_spherical_king_counts,
 )
+from apply.stages.psf_rayleigh_king import spherical_king_bin_probabilities
 
 
 def full_sphere_edges() -> np.ndarray:
@@ -71,3 +72,13 @@ def test_full_sphere_survival_functions_are_normalized_and_monotonic() -> None:
         assert survival[-1] == 0.0
         assert np.all(np.diff(cdf) >= -1.0e-14)
         assert np.all(np.diff(survival) <= 1.0e-14)
+
+
+def test_weighted_double_king_components_sum_to_total() -> None:
+    edges = full_sphere_edges()
+    core_fraction = 0.73
+    core = spherical_king_bin_probabilities(edges, 0.31, 3.2)
+    tail = spherical_king_bin_probabilities(edges, 16.0, 4.5)
+    components = core_fraction * core + (1.0 - core_fraction) * tail
+    total = double_spherical_king_bin_probabilities(edges, core_fraction, 0.31, 3.2, 16.0, 4.5)
+    assert np.allclose(components, total, rtol=0.0, atol=1.0e-13)

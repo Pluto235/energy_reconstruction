@@ -10,8 +10,9 @@
 set -euo pipefail
 source /home/server/anaconda3/etc/profile.d/conda.sh
 conda activate py310
-cd /home/server/projects/energy_reconstruction
-export PYTHONPATH=/home/server/projects/energy_reconstruction:${PYTHONPATH:-}
+PROJECT_ROOT=${PROJECT_ROOT:-/home/server/projects/energy_reconstruction}
+cd "${PROJECT_ROOT}"
+export PYTHONPATH=${PROJECT_ROOT}:${PYTHONPATH:-}
 export ANALYTIC_BON_BASELINE_SHA=${ANALYTIC_BON_BASELINE_SHA:-527af0380b1cf44de4a0c20d642174e210ca9485}
 
 BASE=v6_64748_nhit100_reselect44_split56_miss030_empirical_cdf_asimov_ropt
@@ -204,4 +205,3 @@ python apply/report/prepare_v6_empirical_cdf_asimov_ropt_report.py \
 
 echo "Final report: ${REPORT}"
 echo "Final Stage G overlay: ${OVERLAY}"
-

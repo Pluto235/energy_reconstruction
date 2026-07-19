@@ -10,8 +10,9 @@
 set -euo pipefail
 source /home/server/anaconda3/etc/profile.d/conda.sh
 conda activate py310
-cd /home/server/projects/energy_reconstruction
-export PYTHONPATH=/home/server/projects/energy_reconstruction:${PYTHONPATH:-}
+PROJECT_ROOT=${PROJECT_ROOT:-/home/server/projects/energy_reconstruction}
+cd "${PROJECT_ROOT}"
+export PYTHONPATH=${PROJECT_ROOT}:${PYTHONPATH:-}
 
 BASE=v6_64748_nhit100_reselect44_split56_miss030_empirical_cdf_asimov_ropt
 SOURCE=v6_64748_nhit100_highEplus1_split56
@@ -52,4 +53,3 @@ python apply/stages/02e_optimize_empirical_cdf_asimov.py \
   --near-max-fraction 0.99 --workers "${SLURM_CPUS_PER_TASK:-24}"
 
 echo "Iteration-0 aperture optimization: ${PSF_DIR}"
-

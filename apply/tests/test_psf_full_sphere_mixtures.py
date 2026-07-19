@@ -9,6 +9,7 @@ from apply.stages.psf_full_sphere_mixtures import (
     double_spherical_king_cdf,
     fit_double_rayleigh_counts,
     fit_double_spherical_king_counts,
+    fit_single_spherical_king_counts,
 )
 from apply.stages.psf_rayleigh_king import spherical_king_bin_probabilities
 
@@ -82,3 +83,18 @@ def test_weighted_double_king_components_sum_to_total() -> None:
     components = core_fraction * core + (1.0 - core_fraction) * tail
     total = double_spherical_king_bin_probabilities(edges, core_fraction, 0.31, 3.2, 16.0, 4.5)
     assert np.allclose(components, total, rtol=0.0, atol=1.0e-13)
+
+
+def test_synthetic_single_spherical_king_fit_recovers_shape() -> None:
+    edges = full_sphere_edges()
+    target = spherical_king_bin_probabilities(edges, 0.42, 3.6)
+    fit, model = fit_single_spherical_king_counts(
+        target * 1.0e6,
+        edges,
+        random_seed=53,
+        random_starts=4,
+    )
+    assert fit.kl_divergence < 1.0e-9
+    assert np.max(np.abs(model - target)) < 1.0e-5
+    assert np.isclose(fit.sigma_deg, 0.42, rtol=2.0e-2)
+    assert np.isclose(fit.gamma, 3.6, rtol=3.0e-2)

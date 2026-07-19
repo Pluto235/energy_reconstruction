@@ -51,6 +51,19 @@ class DoubleSphericalKingFit:
         return asdict(self)
 
 
+@dataclass(frozen=True)
+class SingleSphericalKingFit:
+    sigma_deg: float
+    gamma: float
+    kl_divergence: float
+    optimizer_success: bool
+    optimizer_message: str
+    boundary_flags: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, object]:
+        return asdict(self)
+
+
 def _validate_edges(edges_deg: np.ndarray) -> np.ndarray:
     edges = np.asarray(edges_deg, dtype=np.float64)
     if edges.ndim != 1 or edges.size < 2 or not np.all(np.diff(edges) > 0.0):
@@ -235,6 +248,90 @@ def _boundary_flags(
         if upper - value < 1.0e-4 * scale:
             flags.append(f"{name}:upper")
     return tuple(flags)
+
+
+def fit_single_spherical_king_counts(
+    weighted_counts: np.ndarray,
+    edges_deg: np.ndarray,
+    *,
+    random_seed: int = 0,
+    random_starts: int = 20,
+    quadrature_order: int = 20,
+) -> tuple[SingleSphericalKingFit, np.ndarray]:
+    edges = _validate_edges(edges_deg)
+    counts = np.asarray(weighted_counts, dtype=np.float64)
+    if counts.shape != (edges.size - 1,):
+        raise ValueError("weighted_counts and edges_deg have incompatible shapes")
+    data_probability = profile_probability(counts)
+    nodes_rad, integration_weights = _gauss_legendre_sphere_bins(edges, quadrature_order)
+
+    def unpack(parameters: np.ndarray) -> tuple[float, float]:
+        sigma_deg = float(np.exp(parameters[0]))
+        gamma = float(1.0 + np.exp(parameters[1]))
+        return sigma_deg, gamma
+
+    def model(parameters: np.ndarray) -> np.ndarray:
+        return _spherical_king_probability(
+            nodes_rad,
+            integration_weights,
+            *unpack(parameters),
+        )
+
+    def objective(parameters: np.ndarray) -> float:
+        probability = model(parameters)
+        return float(-np.sum(data_probability * np.log(np.clip(probability, EPSILON, None))))
+
+    starts: list[np.ndarray] = []
+    for sigma_deg, gamma in (
+        (0.15, 1.05),
+        (0.25, 1.2),
+        (0.40, 2.0),
+        (0.75, 5.0),
+        (2.0, 20.0),
+        (10.0, 100.0),
+        (30.0, 500.0),
+    ):
+        starts.append(
+            np.asarray(
+                [math.log(sigma_deg), math.log(gamma - 1.0)],
+                dtype=np.float64,
+            )
+        )
+    rng = np.random.default_rng(random_seed)
+    for _ in range(max(0, int(random_starts))):
+        starts.append(
+            np.asarray(
+                [
+                    rng.uniform(math.log(0.02), math.log(120.0)),
+                    rng.uniform(math.log(1.0e-3), math.log(999.0)),
+                ],
+                dtype=np.float64,
+            )
+        )
+
+    sigma_bounds = (0.005, 180.0)
+    gamma_excess_bounds = (1.0e-3, 999.0)
+    bounds = [
+        tuple(math.log(value) for value in sigma_bounds),
+        tuple(math.log(value) for value in gamma_excess_bounds),
+    ]
+    result = _best_minimize(objective, starts, bounds)
+    sigma_deg, gamma = unpack(result.x)
+    model_probability = model(result.x)
+    fit = SingleSphericalKingFit(
+        sigma_deg=sigma_deg,
+        gamma=gamma,
+        kl_divergence=kl_divergence(data_probability, model_probability),
+        optimizer_success=bool(result.success),
+        optimizer_message=str(result.message),
+        boundary_flags=_boundary_flags(
+            (
+                ("sigma_deg", sigma_deg, *sigma_bounds),
+                ("gamma_excess", gamma - 1.0, *gamma_excess_bounds),
+            )
+        ),
+    )
+    return fit, model_probability
 
 
 def fit_double_rayleigh_counts(

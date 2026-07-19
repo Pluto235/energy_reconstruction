@@ -1,0 +1,352 @@
+{
+  "description": "Fair full-sphere comparison of Rayleigh+King, double-Rayleigh, and double spherical-King for cells 1-3",
+  "created_utc": "2026-07-19T02:45:04.858173+00:00",
+  "git_sha": "7e675d5dcc4fc4963528bd02f74c2e7eac949c2c",
+  "comparison_support_deg": [
+    0.0,
+    180.0
+  ],
+  "common_data": "Stage-B weighted raw-MC angular distances with no angular truncation or 5-degree renormalization",
+  "model_parameter_counts": {
+    "rayleigh_king": 4,
+    "double_rayleigh": 3,
+    "double_spherical_king": 5
+  },
+  "selection_criteria": {
+    "kl_divergence": "binned distribution KL; lower is better",
+    "aic_relative_saturated": "2*k + 2*N_eff*KL; common saturated-likelihood constant omitted",
+    "bic_relative_saturated": "k*ln(N_eff) + 2*N_eff*KL; common saturated-likelihood constant omitted",
+    "survival_log_rmse": "RMSE of log10(model survival)-log10(empirical survival) where empirical survival >= 1/N_eff"
+  },
+  "quadrature": "Gauss-Legendre order 20 per spherical-King radial bin",
+  "inputs": {
+    "npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-spherical-rayleigh-king-fit/v6_64748_nhit100_reselect44_split56_miss030_cell123_spherical_rayleigh_king_fit.npz",
+    "npz_sha256": "7293e8a66f0b4c2a4991dcc0577a81cd0a675b49c974e372ed6923c50e5b9d2e",
+    "metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-spherical-rayleigh-king-fit/v6_64748_nhit100_reselect44_split56_miss030_cell123_spherical_rayleigh_king_fit_metadata.json",
+    "metadata_sha256": "aba46a030429a04d9c3f20e957058b11663885657995682b462ddddbabdb8d2f"
+  },
+  "cells": [
+    {
+      "cell_id": 1,
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[2,2.5)",
+      "effective_events": 36849.065208978915,
+      "best_kl_model": "double_spherical_king",
+      "best_aic_model": "double_spherical_king",
+      "best_bic_model": "double_spherical_king",
+      "best_survival_model": "double_rayleigh",
+      "models": {
+        "rayleigh_king": {
+          "survival_at_thresholds": [
+            0.4098895445785109,
+            0.3176007280566383,
+            0.31417738695815023,
+            0.2986187494996415,
+            0.2437548112188429,
+            0.08151169541652603,
+            0.0014324875576327
+          ],
+          "fit": {
+            "core_fraction": 0.6804571902247819,
+            "sigma_core_deg": 0.49792326793510505,
+            "gamma_core": null,
+            "sigma_tail_deg": 28.155780148782572,
+            "gamma_tail": 99.99999999999999,
+            "optimizer_success": true,
+            "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+            "boundary_flags": [
+              "gamma_excess:upper"
+            ]
+          },
+          "kl_divergence": 0.07355890464760366,
+          "parameter_count": 4,
+          "aic_relative_saturated": 5429.153748121219,
+          "bic_relative_saturated": 5463.212090240549,
+          "survival_log_rmse": 0.08331604248965321,
+          "delta_kl_divergence": 0.046117747490858646,
+          "delta_aic_relative_saturated": 3396.791769163748,
+          "delta_bic_relative_saturated": 3388.2771836339152,
+          "delta_survival_log_rmse": 0.0012404857187440638
+        },
+        "double_rayleigh": {
+          "survival_at_thresholds": [
+            0.40990559973740015,
+            0.31759188958508333,
+            0.3141835451178373,
+            0.2986881691282165,
+            0.24398119872438584,
+            0.08155282982706136,
+            0.0013559397349546254
+          ],
+          "fit": {
+            "core_fraction": 0.6804747077114259,
+            "sigma_core_deg": 0.4979645243755773,
+            "sigma_tail_deg": 27.22940070632649,
+            "kl_divergence": 0.07344509696421138,
+            "optimizer_success": true,
+            "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+            "boundary_flags": []
+          },
+          "kl_divergence": 0.07344509696421138,
+          "parameter_count": 3,
+          "aic_relative_saturated": 5418.766334628009,
+          "bic_relative_saturated": 5444.310091217506,
+          "survival_log_rmse": 0.08207555677090915,
+          "delta_kl_divergence": 0.046003939807466365,
+          "delta_aic_relative_saturated": 3386.404355670538,
+          "delta_bic_relative_saturated": 3369.3751846108726,
+          "delta_survival_log_rmse": 0.0
+        },
+        "double_spherical_king": {
+          "survival_at_thresholds": [
+            0.42013969206150503,
+            0.3039432958584757,
+            0.2968907702907506,
+            0.28237540626239965,
+            0.23343401923989382,
+            0.08324655872714537,
+            0.0017179367961432934
+          ],
+          "fit": {
+            "core_fraction": 0.6992361059888983,
+            "sigma_core_deg": 0.32533131644410285,
+            "gamma_core": 2.777401743539599,
+            "sigma_tail_deg": 29.324828792860785,
+            "gamma_tail": 1000.0000000000003,
+            "kl_divergence": 0.027441157156745014,
+            "optimizer_success": true,
+            "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+            "boundary_flags": [
+              "gamma_tail_excess:upper"
+            ]
+          },
+          "kl_divergence": 0.027441157156745014,
+          "parameter_count": 5,
+          "aic_relative_saturated": 2032.361978957471,
+          "bic_relative_saturated": 2074.9349066066334,
+          "survival_log_rmse": 0.08493698731561,
+          "delta_kl_divergence": 0.0,
+          "delta_aic_relative_saturated": 0.0,
+          "delta_bic_relative_saturated": 0.0,
+          "delta_survival_log_rmse": 0.002861430544700852
+        }
+      }
+    },
+    {
+      "cell_id": 2,
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[2.5,3)",
+      "effective_events": 134003.32553337765,
+      "best_kl_model": "double_spherical_king",
+      "best_aic_model": "double_spherical_king",
+      "best_bic_model": "double_spherical_king",
+      "best_survival_model": "double_rayleigh",
+      "models": {
+        "rayleigh_king": {
+          "survival_at_thresholds": [
+            0.2851673897087612,
+            0.22432595591544668,
+            0.20075251447072118,
+            0.15841046173888185,
+            0.11120898520735223,
+            0.056439104961997444,
+            0.017058137039924315
+          ],
+          "fit": {
+            "core_fraction": 0.7492121808198836,
+            "sigma_core_deg": 0.41038034850320076,
+            "gamma_core": null,
+            "sigma_tail_deg": 2.0374074684790036,
+            "gamma_tail": 1.001,
+            "optimizer_success": true,
+            "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+            "boundary_flags": [
+              "gamma_excess:lower"
+            ]
+          },
+          "kl_divergence": 0.057111618540911915,
+          "parameter_count": 4,
+          "aic_relative_saturated": 15314.293622151812,
+          "bic_relative_saturated": 15353.516101735966,
+          "survival_log_rmse": 0.23627983367268784,
+          "delta_kl_divergence": 0.03593895490170683,
+          "delta_aic_relative_saturated": 9629.878946045597,
+          "delta_bic_relative_saturated": 9620.073326149559,
+          "delta_survival_log_rmse": 0.149547727927675
+        },
+        "double_rayleigh": {
+          "survival_at_thresholds": [
+            0.2862154784917401,
+            0.22935307761133117,
+            0.22626717956583176,
+            0.21234642810237736,
+            0.1647170466679998,
+            0.04161457613364705,
+            0.00024296326100559096
+          ],
+          "fit": {
+            "core_fraction": 0.7688926464146707,
+            "sigma_core_deg": 0.4358457996820829,
+            "sigma_tail_deg": 24.301741879792324,
+            "kl_divergence": 0.07670429169278743,
+            "optimizer_success": true,
+            "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+            "boundary_flags": []
+          },
+          "kl_divergence": 0.07670429169278743,
+          "parameter_count": 3,
+          "aic_relative_saturated": 20563.260339031498,
+          "bic_relative_saturated": 20592.67719871961,
+          "survival_log_rmse": 0.08673210574501282,
+          "delta_kl_divergence": 0.055531628053582346,
+          "delta_aic_relative_saturated": 14878.845662925283,
+          "delta_bic_relative_saturated": 14859.234423133206,
+          "delta_survival_log_rmse": 0.0
+        },
+        "double_spherical_king": {
+          "survival_at_thresholds": [
+            0.307193163534737,
+            0.21427871429539203,
+            0.20840430507110141,
+            0.19225089819828034,
+            0.14290536234353146,
+            0.0409819010905208,
+            0.002757878696382332
+          ],
+          "fit": {
+            "core_fraction": 0.7863564346444897,
+            "sigma_core_deg": 0.29064455050725196,
+            "gamma_core": 2.9196946812394704,
+            "sigma_tail_deg": 19.007607800447904,
+            "gamma_tail": 3.5496352320969056,
+            "kl_divergence": 0.021172663639205086,
+            "optimizer_success": true,
+            "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+            "boundary_flags": []
+          },
+          "kl_divergence": 0.021172663639205086,
+          "parameter_count": 5,
+          "aic_relative_saturated": 5684.414676106215,
+          "bic_relative_saturated": 5733.442775586406,
+          "survival_log_rmse": 0.14561499774979986,
+          "delta_kl_divergence": 0.0,
+          "delta_aic_relative_saturated": 0.0,
+          "delta_bic_relative_saturated": 0.0,
+          "delta_survival_log_rmse": 0.05888289200478704
+        }
+      }
+    },
+    {
+      "cell_id": 3,
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[3,3.25)",
+      "effective_events": 46860.288314268306,
+      "best_kl_model": "double_spherical_king",
+      "best_aic_model": "double_spherical_king",
+      "best_bic_model": "double_spherical_king",
+      "best_survival_model": "double_rayleigh",
+      "models": {
+        "rayleigh_king": {
+          "survival_at_thresholds": [
+            0.2846103466694001,
+            0.19891797167044611,
+            0.1698580353013618,
+            0.12995911425672013,
+            0.09024067586791285,
+            0.045612935934185916,
+            0.01377099216559352
+          ],
+          "fit": {
+            "core_fraction": 0.7024521354223491,
+            "sigma_core_deg": 0.3953958137842701,
+            "gamma_core": null,
+            "sigma_tail_deg": 0.3973958137842701,
+            "gamma_tail": 1.001,
+            "optimizer_success": true,
+            "optimizer_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+            "boundary_flags": [
+              "sigma_separation_deg:lower",
+              "gamma_excess:lower"
+            ]
+          },
+          "kl_divergence": 0.05828771401460944,
+          "parameter_count": 4,
+          "aic_relative_saturated": 5470.758167808432,
+          "bic_relative_saturated": 5505.777871267296,
+          "survival_log_rmse": 0.2297599039852888,
+          "delta_kl_divergence": 0.04135471407874332,
+          "delta_aic_relative_saturated": 3873.787649768085,
+          "delta_bic_relative_saturated": 3865.032723903369,
+          "delta_survival_log_rmse": 0.13589902697652095
+        },
+        "double_rayleigh": {
+          "survival_at_thresholds": [
+            0.28548884473721714,
+            0.20822950580998045,
+            0.20502300046009025,
+            0.19063837363881275,
+            0.1425086682422293,
+            0.029467432676261507,
+            8.135217792015759e-05
+          ],
+          "fit": {
+            "core_fraction": 0.7899448476691305,
+            "sigma_core_deg": 0.4616573749359093,
+            "sigma_tail_deg": 22.7047872769375,
+            "kl_divergence": 0.10133132800699224,
+            "optimizer_success": true,
+            "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+            "boundary_flags": []
+          },
+          "kl_divergence": 0.10133132800699224,
+          "parameter_count": 3,
+          "aic_relative_saturated": 9502.830491350695,
+          "bic_relative_saturated": 9529.095268944842,
+          "survival_log_rmse": 0.09386087700876784,
+          "delta_kl_divergence": 0.08439832807112611,
+          "delta_aic_relative_saturated": 7905.859973310347,
+          "delta_bic_relative_saturated": 7888.350121580916,
+          "delta_survival_log_rmse": 0.0
+        },
+        "double_spherical_king": {
+          "survival_at_thresholds": [
+            0.3061973634104729,
+            0.18909090004273488,
+            0.1804718864045215,
+            0.16546563566222794,
+            0.12216284102044084,
+            0.03144587591672332,
+            0.0012957788415176585
+          ],
+          "fit": {
+            "core_fraction": 0.8163381481153313,
+            "sigma_core_deg": 0.27897077736666054,
+            "gamma_core": 2.483257733367249,
+            "sigma_tail_deg": 19.887758195075346,
+            "gamma_tail": 4.77792652130032,
+            "kl_divergence": 0.016932999935866125,
+            "optimizer_success": true,
+            "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+            "boundary_flags": []
+          },
+          "kl_divergence": 0.016932999935866125,
+          "parameter_count": 5,
+          "aic_relative_saturated": 1596.9705180403466,
+          "bic_relative_saturated": 1640.7451473639271,
+          "survival_log_rmse": 0.09486345702769142,
+          "delta_kl_divergence": 0.0,
+          "delta_aic_relative_saturated": 0.0,
+          "delta_bic_relative_saturated": 0.0,
+          "delta_survival_log_rmse": 0.001002580018923574
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-full-sphere-model-comparison/v6_64748_nhit100_reselect44_split56_miss030_cell123_full_sphere_psf_model_comparison.png",
+    "pdf": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-full-sphere-model-comparison/v6_64748_nhit100_reselect44_split56_miss030_cell123_full_sphere_psf_model_comparison.pdf",
+    "npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-full-sphere-model-comparison/v6_64748_nhit100_reselect44_split56_miss030_cell123_full_sphere_psf_model_comparison.npz",
+    "csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-full-sphere-model-comparison/v6_64748_nhit100_reselect44_split56_miss030_cell123_full_sphere_psf_model_comparison_summary.csv",
+    "metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-full-sphere-model-comparison/v6_64748_nhit100_reselect44_split56_miss030_cell123_full_sphere_psf_model_comparison_metadata.json"
+  }
+}

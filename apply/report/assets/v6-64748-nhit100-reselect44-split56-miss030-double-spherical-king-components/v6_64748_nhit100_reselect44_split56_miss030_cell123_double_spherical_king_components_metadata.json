@@ -1,0 +1,79 @@
+{
+  "description": "Cells 1-3 full-sphere double spherical-King fits with weighted core and tail component decomposition",
+  "created_utc": "2026-07-19T03:13:22.162452+00:00",
+  "git_sha": "409ed6d3ed604c803379de0e31535433875dcd5d",
+  "component_definition": {
+    "density": "p_total = f_core * K_core + (1-f_core) * K_tail",
+    "survival": "S_total = f_core * S_core + (1-f_core) * S_tail",
+    "normalization_support_deg": [
+      0.0,
+      180.0
+    ]
+  },
+  "quadrature": "Gauss-Legendre order 20 per radial bin",
+  "inputs": {
+    "npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-full-sphere-model-comparison/v6_64748_nhit100_reselect44_split56_miss030_cell123_full_sphere_psf_model_comparison.npz",
+    "npz_sha256": "0eb835dc93bd5682fdd5a9d2435964592c7fe4a1379c99d104c680cfd4abdefa",
+    "metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-full-sphere-model-comparison/v6_64748_nhit100_reselect44_split56_miss030_cell123_full_sphere_psf_model_comparison_metadata.json",
+    "metadata_sha256": "65df945bfcc3714ac7f05fc64e89653bac94e177deaae893ab36867273948142"
+  },
+  "cells": [
+    {
+      "cell_id": 1,
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[2,2.5)",
+      "core_fraction": 0.6992361059888983,
+      "sigma_core_deg": 0.32533131644410285,
+      "gamma_core": 2.777401743539599,
+      "sigma_tail_deg": 29.324828792860785,
+      "gamma_tail": 1000.0000000000003,
+      "kl_divergence": 0.027441157156745014,
+      "boundary_flags": [
+        "gamma_tail_excess:upper"
+      ],
+      "density_crossover_deg": 4.0375,
+      "survival_crossover_deg": 0.597642117547581,
+      "empirical_survival_90deg": 0.0,
+      "model_survival_90deg": 0.001718078985696701
+    },
+    {
+      "cell_id": 2,
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[2.5,3)",
+      "core_fraction": 0.7863564346444897,
+      "sigma_core_deg": 0.29064455050725196,
+      "gamma_core": 2.9196946812394704,
+      "sigma_tail_deg": 19.007607800447904,
+      "gamma_tail": 3.5496352320969056,
+      "kl_divergence": 0.021172663639205086,
+      "boundary_flags": [],
+      "density_crossover_deg": 3.5125,
+      "survival_crossover_deg": 0.692300814445766,
+      "empirical_survival_90deg": 1.759049039532493e-05,
+      "model_survival_90deg": 0.0027579476764510043
+    },
+    {
+      "cell_id": 3,
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[3,3.25)",
+      "core_fraction": 0.8163381481153313,
+      "sigma_core_deg": 0.27897077736666054,
+      "gamma_core": 2.483257733367249,
+      "sigma_tail_deg": 19.887758195075346,
+      "gamma_tail": 4.77792652130032,
+      "kl_divergence": 0.016932999935866125,
+      "boundary_flags": [],
+      "density_crossover_deg": 4.3375,
+      "survival_crossover_deg": 0.8200000000000001,
+      "empirical_survival_90deg": 0.00019483569782294185,
+      "model_survival_90deg": 0.0012958259135872796
+    }
+  ],
+  "outputs": {
+    "png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-double-spherical-king-components/v6_64748_nhit100_reselect44_split56_miss030_cell123_double_spherical_king_components.png",
+    "pdf": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-double-spherical-king-components/v6_64748_nhit100_reselect44_split56_miss030_cell123_double_spherical_king_components.pdf",
+    "npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-double-spherical-king-components/v6_64748_nhit100_reselect44_split56_miss030_cell123_double_spherical_king_components.npz",
+    "csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-double-spherical-king-components/v6_64748_nhit100_reselect44_split56_miss030_cell123_double_spherical_king_components_summary.csv",
+    "metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-double-spherical-king-components/v6_64748_nhit100_reselect44_split56_miss030_cell123_double_spherical_king_components_metadata.json"
+  }
+}

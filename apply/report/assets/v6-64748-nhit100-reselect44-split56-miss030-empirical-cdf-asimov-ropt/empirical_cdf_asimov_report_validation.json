@@ -1,0 +1,130 @@
+{
+  "description": "Empirical-CDF Asimov r_opt final report validation",
+  "implementation_sha": "086a906439251a28b3ba439d5f95bb475fecc349",
+  "passed": true,
+  "checks": [
+    {
+      "name": "44-cell selector frozen",
+      "passed": true,
+      "detail": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        86,
+        87,
+        88,
+        89
+      ]
+    },
+    {
+      "name": "aperture response matches final Stage B",
+      "passed": true,
+      "detail": "selected-cell radii"
+    },
+    {
+      "name": "Stage D aperture matches final Stage B",
+      "passed": true,
+      "detail": "selected-cell radii"
+    },
+    {
+      "name": "Stage E containment applied exactly zero extra times",
+      "passed": true,
+      "detail": "all containment_r_opt == 1"
+    },
+    {
+      "name": "99% smallest-radius rule",
+      "passed": true,
+      "detail": "all adopted Z/max(Z) >= 0.99"
+    },
+    {
+      "name": "no upper scan-boundary optimum",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "Stage G contains both groupings",
+      "passed": true,
+      "detail": [
+        "nhit",
+        "predE"
+      ]
+    },
+    {
+      "name": "final LogPar fit valid",
+      "passed": true,
+      "detail": {
+        "phi0": 2.2229581840400047e-12,
+        "alpha": 2.6824699537473795,
+        "beta": 0.0980961131395305
+      }
+    },
+    {
+      "name": "required Stage G overlay exists",
+      "passed": true,
+      "detail": "apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-empirical-cdf-asimov-ropt/v6_64748_nhit100_reselect44_split56_miss030_empirical_cdf_asimov_ropt_stage_g_external_overlay_with_predE.png"
+    }
+  ],
+  "iteration_stability": {
+    "max_abs_delta_r_deg": 0.040000000000000036,
+    "median_abs_delta_r_deg": 0.0,
+    "max_abs_delta_containment": 0.038658186014064955,
+    "median_abs_delta_containment": 0.0018054827458734712
+  },
+  "final_radius_summary_deg": {
+    "min": 0.2,
+    "median": 0.335,
+    "max": 1.76
+  },
+  "final_containment_summary": {
+    "min": 0.3267089563046849,
+    "median": 0.6360911580852053,
+    "max": 0.8772758488415631
+  },
+  "lower_boundary_cells": [
+    86,
+    87,
+    88
+  ],
+  "upper_boundary_cells": [],
+  "image_count": 24,
+  "missing_images": [],
+  "report": "/mnt/mydisk/server/projects/energy_reconstruction_empirical_run5/apply/report/crab_sed_v6_64748_nhit100_reselect44_scheme_R_empirical_cdf_asimov_ropt_poisson_unbinned_report.html",
+  "stage_g_overlay": "/mnt/mydisk/server/projects/energy_reconstruction_empirical_run5/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-empirical-cdf-asimov-ropt/v6_64748_nhit100_reselect44_split56_miss030_empirical_cdf_asimov_ropt_stage_g_external_overlay_with_predE.png"
+}

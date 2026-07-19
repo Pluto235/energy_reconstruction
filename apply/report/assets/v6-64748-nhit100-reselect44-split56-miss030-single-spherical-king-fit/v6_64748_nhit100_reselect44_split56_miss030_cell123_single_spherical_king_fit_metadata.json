@@ -1,0 +1,219 @@
+{
+  "description": "Cells 1-3 full-sphere single spherical-King fits compared with double spherical-King",
+  "created_utc": "2026-07-19T14:57:22.896267+00:00",
+  "git_sha": "b4a316ad5648f10317aaa624324c162177213e4c",
+  "single_king_parameter_count": 2,
+  "double_king_parameter_count": 5,
+  "normalization_support_deg": [
+    0.0,
+    180.0
+  ],
+  "information_criteria": {
+    "aic_relative_saturated": "2*k + 2*N_eff*KL",
+    "bic_relative_saturated": "k*ln(N_eff) + 2*N_eff*KL"
+  },
+  "quadrature": "Gauss-Legendre order 20 per radial bin",
+  "inputs": {
+    "npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-full-sphere-model-comparison/v6_64748_nhit100_reselect44_split56_miss030_cell123_full_sphere_psf_model_comparison.npz",
+    "npz_sha256": "0eb835dc93bd5682fdd5a9d2435964592c7fe4a1379c99d104c680cfd4abdefa",
+    "metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-full-sphere-model-comparison/v6_64748_nhit100_reselect44_split56_miss030_cell123_full_sphere_psf_model_comparison_metadata.json",
+    "metadata_sha256": "65df945bfcc3714ac7f05fc64e89653bac94e177deaae893ab36867273948142"
+  },
+  "cells": [
+    {
+      "cell_id": 1,
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[2,2.5)",
+      "effective_events": 36849.065208978915,
+      "empirical_survival_at_thresholds": [
+        0.4103662505421039,
+        0.30762582641701824,
+        0.29521665219530424,
+        0.2681851757493956,
+        0.2239290302096771,
+        0.09919754879961518,
+        0.0
+      ],
+      "single_survival_at_thresholds": [
+        0.5595308002551456,
+        0.35180441210103863,
+        0.27440598958462636,
+        0.18627788702137915,
+        0.11490390244910331,
+        0.05045593553563599,
+        0.013423923433493523
+      ],
+      "double_survival_at_thresholds": [
+        0.4201396920615049,
+        0.3039432958584761,
+        0.2968907702907517,
+        0.28237540626240054,
+        0.2334340192398957,
+        0.0832470387510276,
+        0.0017180789856966608
+      ],
+      "single_fit": {
+        "sigma_deg": 0.14382442372607862,
+        "gamma": 1.1469320897676893,
+        "kl_divergence": 0.30391066628742364,
+        "optimizer_success": true,
+        "optimizer_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+        "boundary_flags": []
+      },
+      "double_fit": {
+        "core_fraction": 0.6992361059888983,
+        "sigma_core_deg": 0.32533131644410285,
+        "gamma_core": 2.777401743539599,
+        "sigma_tail_deg": 29.324828792860785,
+        "gamma_tail": 1000.0000000000003,
+        "kl_divergence": 0.027441157156745014,
+        "optimizer_success": true,
+        "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "boundary_flags": [
+          "gamma_tail_excess:upper"
+        ]
+      },
+      "single_kl_divergence": 0.30391066628742364,
+      "double_kl_divergence": 0.027441157156745014,
+      "single_aic_relative_saturated": 22401.647919459007,
+      "double_aic_relative_saturated": 2032.361978957471,
+      "delta_aic_single_minus_double": 20369.285940501537,
+      "single_bic_relative_saturated": 22418.67709051867,
+      "double_bic_relative_saturated": 2074.9349066066334,
+      "delta_bic_single_minus_double": 20343.742183912036,
+      "single_survival_log_rmse": 0.213789664625661,
+      "double_survival_log_rmse": 0.08493698731561
+    },
+    {
+      "cell_id": 2,
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[2.5,3)",
+      "effective_events": 134003.32553337765,
+      "empirical_survival_at_thresholds": [
+        0.2977203729559227,
+        0.2169890033861068,
+        0.20424892068366768,
+        0.17608647574739766,
+        0.13469057439848486,
+        0.05026689288499559,
+        1.759049039532493e-05
+      ],
+      "single_survival_at_thresholds": [
+        0.4396116548712833,
+        0.2325938822007606,
+        0.1678061594753577,
+        0.10283728678722959,
+        0.05747861014292377,
+        0.022547871554346566,
+        0.0054421951816657765
+      ],
+      "double_survival_at_thresholds": [
+        0.3071931635347367,
+        0.21427871429539114,
+        0.2084043050711003,
+        0.19225089819827934,
+        0.14290536234353046,
+        0.040982257058220534,
+        0.0027579476764509054
+      ],
+      "single_fit": {
+        "sigma_deg": 0.1450586619271718,
+        "gamma": 1.2542670295019909,
+        "kl_divergence": 0.22611582727459448,
+        "optimizer_success": true,
+        "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "boundary_flags": []
+      },
+      "double_fit": {
+        "core_fraction": 0.7863564346444897,
+        "sigma_core_deg": 0.29064455050725196,
+        "gamma_core": 2.9196946812394704,
+        "sigma_tail_deg": 19.007607800447904,
+        "gamma_tail": 3.5496352320969056,
+        "kl_divergence": 0.021172663639205086,
+        "optimizer_success": true,
+        "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "boundary_flags": []
+      },
+      "single_kl_divergence": 0.22611582727459448,
+      "double_kl_divergence": 0.021172663639205086,
+      "single_aic_relative_saturated": 60604.54562105295,
+      "double_aic_relative_saturated": 5684.414676106215,
+      "delta_aic_single_minus_double": 54920.13094494674,
+      "single_bic_relative_saturated": 60624.156860845025,
+      "double_bic_relative_saturated": 5733.442775586406,
+      "delta_bic_single_minus_double": 54890.714085258616,
+      "single_survival_log_rmse": 0.2721154114956326,
+      "double_survival_log_rmse": 0.14561499774979986
+    },
+    {
+      "cell_id": 3,
+      "nhit_bin": "[100,200)",
+      "predE_bin": "[3,3.25)",
+      "effective_events": 46860.288314268306,
+      "empirical_survival_at_thresholds": [
+        0.2948888262167337,
+        0.1939309830929737,
+        0.17930385034194574,
+        0.15505792236530058,
+        0.1187061784678243,
+        0.0342804608312135,
+        0.00019483569782294185
+      ],
+      "single_survival_at_thresholds": [
+        0.42016765990875793,
+        0.21000545933380832,
+        0.1475732680027958,
+        0.08737776243254824,
+        0.04725987811794541,
+        0.017866416108044514,
+        0.004179231001875783
+      ],
+      "double_survival_at_thresholds": [
+        0.306197363410472,
+        0.1890909000427341,
+        0.1804718864045196,
+        0.16546563566222539,
+        0.12216284102043751,
+        0.03144621152627357,
+        0.001295825913587257
+      ],
+      "single_fit": {
+        "sigma_deg": 0.15454155517244147,
+        "gamma": 1.2879808192072453,
+        "kl_divergence": 0.19277635413840863,
+        "optimizer_success": true,
+        "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "boundary_flags": []
+      },
+      "double_fit": {
+        "core_fraction": 0.8163381481153313,
+        "sigma_core_deg": 0.27897077736666054,
+        "gamma_core": 2.483257733367249,
+        "sigma_tail_deg": 19.887758195075346,
+        "gamma_tail": 4.77792652130032,
+        "kl_divergence": 0.016932999935866125,
+        "optimizer_success": true,
+        "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "boundary_flags": []
+      },
+      "single_kl_divergence": 0.19277635413840863,
+      "double_kl_divergence": 0.016932999935866125,
+      "single_aic_relative_saturated": 18071.111070198636,
+      "double_aic_relative_saturated": 1596.9705180403466,
+      "delta_aic_single_minus_double": 16474.14055215829,
+      "single_bic_relative_saturated": 18088.620921928068,
+      "double_bic_relative_saturated": 1640.7451473639271,
+      "delta_bic_single_minus_double": 16447.87577456414,
+      "single_survival_log_rmse": 0.26669623912199514,
+      "double_survival_log_rmse": 0.09486345702769142
+    }
+  ],
+  "outputs": {
+    "png": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-single-spherical-king-fit/v6_64748_nhit100_reselect44_split56_miss030_cell123_single_spherical_king_fit.png",
+    "pdf": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-single-spherical-king-fit/v6_64748_nhit100_reselect44_split56_miss030_cell123_single_spherical_king_fit.pdf",
+    "npz": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-single-spherical-king-fit/v6_64748_nhit100_reselect44_split56_miss030_cell123_single_spherical_king_fit.npz",
+    "csv": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-single-spherical-king-fit/v6_64748_nhit100_reselect44_split56_miss030_cell123_single_spherical_king_fit_summary.csv",
+    "metadata": "/mnt/mydisk/server/projects/energy_reconstruction/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-single-spherical-king-fit/v6_64748_nhit100_reselect44_split56_miss030_cell123_single_spherical_king_fit_metadata.json"
+  }
+}

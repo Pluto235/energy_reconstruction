@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-19 10:47 · [b4b05c2] Compare full-sphere Rayleigh+King, double-Rayleigh, and double spherical-King fits for cells 1-3, finding 2K best overall and 2R best in the extreme survival tail.
+
 - **energy_reconstruction** · 2026-07-19 00:07 · [fde0419] Fit full-sphere raw-MC cells 1-3 with Rayleigh cores plus spherical-King tails, improving KL 1.4-3.5x while exposing boundary-limited far tails.
 
 - **energy_reconstruction** · 2026-07-18 21:08 · [715437d] Add untruncated raw-MC survival diagnostics for cells 1-3, exposing 17.9-29.5% weighted probability beyond 5 degrees.

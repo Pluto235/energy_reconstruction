@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-19 11:15 · [f6f5d86] Plot cells 1-3 double spherical-King fits with weighted core and tail density/survival components, exposing their crossover radii.
+
 - **energy_reconstruction** · 2026-07-19 10:47 · [b4b05c2] Compare full-sphere Rayleigh+King, double-Rayleigh, and double spherical-King fits for cells 1-3, finding 2K best overall and 2R best in the extreme survival tail.
 
 - **energy_reconstruction** · 2026-07-19 00:07 · [fde0419] Fit full-sphere raw-MC cells 1-3 with Rayleigh cores plus spherical-King tails, improving KL 1.4-3.5x while exposing boundary-limited far tails.

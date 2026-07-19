@@ -2,7 +2,7 @@
 #SBATCH -J v6_empirical_pipe_i0
 #SBATCH -p main
 #SBATCH --cpus-per-task=32
-#SBATCH --mem=112G
+#SBATCH --mem=96G
 #SBATCH -t 24:00:00
 #SBATCH -o /home/server/projects/energy_reconstruction/logs/slurm/%x_%j.out
 #SBATCH -e /home/server/projects/energy_reconstruction/logs/slurm/%x_%j.err

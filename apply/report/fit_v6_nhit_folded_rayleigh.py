@@ -420,7 +420,7 @@ def write_csv(rows: list[dict[str, object]], path: Path) -> None:
         "boundary_flag",
     ]
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         for row in rows:
             writer.writerow({field: row[field] for field in fields})

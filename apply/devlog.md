@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-20 20:15 · [24f465f] Collapse 91 Stage-B cells over predE into seven sumw-weighted Nhit profiles with exact-bin Rayleigh diagnostics.
+
 - **energy_reconstruction** · 2026-07-19 22:59 · [e207416] Fit cells 1-3 with one spherical King and reject it: KL is 10.7-11.4x double-King and Delta AIC is 1.65e4-5.49e4 worse.
 
 - **energy_reconstruction** · 2026-07-19 13:08 · [88879d8] Add a two-iteration empirical-CDF Asimov aperture workflow with aperture-conditioned response rebuilding, Stage G overlay, and validated v6 report.

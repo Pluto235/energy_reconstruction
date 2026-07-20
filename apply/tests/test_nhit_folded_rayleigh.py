@@ -15,9 +15,18 @@ def test_conditional_rayleigh_fit_recovers_synthetic_sigma() -> None:
     fit, model = fit_rayleigh_profile(target, edges, effective_events=2.0e5)
     assert np.isclose(fit.sigma_deg, 0.43, rtol=0.0, atol=1.0e-7)
     assert fit.kl_divergence < 1.0e-12
+    assert fit.multinomial_deviance < 1.0e-6
     assert np.max(np.abs(model - target)) < 1.0e-10
     assert fit.optimizer_success
     assert not fit.boundary_flag
+
+
+def test_conditional_rayleigh_tail_probabilities_do_not_cancel_to_zero() -> None:
+    edges = np.linspace(0.0, 5.0, 101)
+    probability = conditional_rayleigh_probability(edges, sigma_deg=0.2)
+    assert np.all(probability > 0.0)
+    assert probability[-1] < 1.0e-130
+    assert np.isclose(np.sum(probability), 1.0, rtol=0.0, atol=1.0e-14)
 
 
 def test_fold_uses_unequal_baseline_weights_and_excludes_empty_profiles() -> None:

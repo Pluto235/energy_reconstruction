@@ -19,7 +19,7 @@ export PYTHONPATH="${CODE_ROOT}:${PYTHONPATH:-}"
 
 BASE_RUN_ID=v6_64748_nhit100_reselect44_split56_miss030
 INPUT_DIR=${DATA_ROOT}/apply/output/stage_b_${BASE_RUN_ID}/runs/${BASE_RUN_ID}_stage_b_psf
-OUTPUT_DIR=${DATA_ROOT}/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-nhit-folded-rayleigh
+OUTPUT_DIR=${DATA_ROOT}/apply/report/assets/v6-64748-nhit100-reselect44-split56-miss030-nhit-folded-rayleigh-exact
 
 python apply/report/fit_v6_nhit_folded_rayleigh.py \
   --input-npz "${INPUT_DIR}/psf_${BASE_RUN_ID}.npz" \

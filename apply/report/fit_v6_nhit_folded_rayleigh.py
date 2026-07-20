@@ -58,8 +58,8 @@ class RayleighFit:
     kl_divergence: float
     total_variation: float
     max_cdf_difference: float
-    pearson_chi2: float
-    pearson_ndof: int
+    multinomial_deviance: float
+    multinomial_ndof: int
     optimizer_success: bool
     boundary_flag: bool
 
@@ -107,8 +107,10 @@ def conditional_rayleigh_probability(edges_deg: np.ndarray, sigma_deg: float) ->
         raise ValueError("edges_deg must be a strictly increasing one-dimensional array")
     if not np.isfinite(sigma_deg) or sigma_deg <= 0.0:
         raise ValueError("sigma_deg must be finite and positive")
-    cdf = -np.expm1(-0.5 * (edges / sigma_deg) ** 2)
-    probability = np.diff(cdf)
+    exponent = 0.5 * (edges / sigma_deg) ** 2
+    survival_left = np.exp(-exponent[:-1])
+    exponent_step = np.diff(exponent)
+    probability = survival_left * (-np.expm1(-exponent_step))
     total = float(np.sum(probability))
     if total <= 0.0:
         raise ValueError("Rayleigh distribution has no mass in the profile window")
@@ -225,12 +227,12 @@ def fit_rayleigh_profile(
     total_variation = 0.5 * float(np.sum(np.abs(data - model)))
     max_cdf_difference = float(np.max(np.abs(np.cumsum(data) - np.cumsum(model))))
     if np.isfinite(effective_events) and effective_events > 0.0:
-        pearson_chi2 = float(effective_events * np.sum((data - model) ** 2 / np.clip(model, 1.0e-300, None)))
+        multinomial_deviance = 2.0 * effective_events * kl
         h = 1.0e-3
         curvature = (objective(result.x + h) - 2.0 * objective(result.x) + objective(result.x - h)) / h**2
         sigma_error = sigma / math.sqrt(effective_events * curvature) if curvature > 0.0 else math.nan
     else:
-        pearson_chi2 = math.nan
+        multinomial_deviance = math.nan
         sigma_error = math.nan
     tolerance = 1.0e-4 * (log_bounds[1] - log_bounds[0])
     fit = RayleighFit(
@@ -241,8 +243,8 @@ def fit_rayleigh_profile(
         kl_divergence=kl,
         total_variation=total_variation,
         max_cdf_difference=max_cdf_difference,
-        pearson_chi2=pearson_chi2,
-        pearson_ndof=max(0, data.size - 2),
+        multinomial_deviance=multinomial_deviance,
+        multinomial_ndof=max(0, data.size - 2),
         optimizer_success=bool(result.success),
         boundary_flag=bool(result.x - log_bounds[0] < tolerance or log_bounds[1] - result.x < tolerance),
     )
@@ -411,9 +413,9 @@ def write_csv(rows: list[dict[str, object]], path: Path) -> None:
         "kl_divergence",
         "total_variation",
         "max_cdf_difference",
-        "pearson_chi2",
-        "pearson_ndof",
-        "pearson_chi2_per_ndof",
+        "multinomial_deviance",
+        "multinomial_ndof",
+        "multinomial_deviance_per_ndof",
         "optimizer_success",
         "boundary_flag",
     ]
@@ -456,8 +458,8 @@ def main() -> None:
             "model_probability": model,
             **fit_values,
         }
-        row["pearson_chi2_per_ndof"] = (
-            fit.pearson_chi2 / fit.pearson_ndof if fit.pearson_ndof > 0 else math.nan
+        row["multinomial_deviance_per_ndof"] = (
+            fit.multinomial_deviance / fit.multinomial_ndof if fit.multinomial_ndof > 0 else math.nan
         )
         rows.append(row)
 
@@ -500,7 +502,7 @@ def main() -> None:
             "fit_model": "conditional finite-window Rayleigh radial distribution",
             "fit_objective": "exact-bin multinomial cross-entropy (equivalently KL minimization)",
             "effective_events": "(sum_i sumw_i)^2 / sum_i(sumw_i^2 / Neff_i)",
-            "pearson_note": "diagnostic only; uses aggregate effective-events approximation",
+            "deviance": "2 * aggregate_effective_events * KL; diagnostic effective-events approximation",
         },
         "inputs": {
             "stage_b_npz": str(args.input_npz.resolve()),

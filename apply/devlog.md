@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-21 17:12 · [uncommitted] Refit Pass5 seven-bin double-Rayleigh PSFs from 10,000 official WCDA MC files and expose full-sample overflow containment.
+
 - **energy_reconstruction** · 2026-07-21 14:20 · [d55cc9e] Fit seven predE-folded Nhit profiles with conditional double Rayleigh, improving KL by 10.5-80.3x over single Rayleigh.
 
 - **energy_reconstruction** · 2026-07-20 20:15 · [24f465f] Collapse 91 Stage-B cells over predE into seven sumw-weighted Nhit profiles with exact-bin Rayleigh diagnostics.

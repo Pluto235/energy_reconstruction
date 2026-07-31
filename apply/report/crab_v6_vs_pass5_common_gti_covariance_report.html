@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>v6 vs Pass5 Crab covariance comparison</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;color:#111827;background:#fff;line-height:1.6}
+main{max-width:1180px;margin:0 auto;padding:36px 28px 64px} h1{font-size:30px;margin:0 0 8px} h2{margin-top:42px;border-bottom:1px solid #e5e7eb;padding-bottom:8px}
+.meta{color:#4b5563} .callout{border-left:5px solid #0072B2;padding:12px 16px;background:#eff6ff;margin:22px 0}
+img{display:block;width:100%;height:auto;margin:18px 0 28px} table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:9px 10px;border:1px solid #d1d5db;text-align:right} th:first-child,td:first-child{text-align:left} th{background:#1f2937;color:#fff}
+code{background:#f3f4f6;padding:2px 5px} .warn{border-left-color:#D55E00;background:#fff7ed}
+</style></head><body><main>
+<h1>v6 与 official Pass5：Crab LogPar covariance 对比</h1>
+<p class="meta">最终 common-GTI 选择：3401 accepted hours、4763 intervals、928 个 Pass5 J2000 maps。v6 GTI = 130.645626460 d；Pass5 merged-map header = 130.592212689 d。</p>
+<div class="callout"><strong>样本审计通过：</strong>strict recovery 为 1078 total / 928 accepted / 150 rejected / 0 remaining；<code>accepted_maps.list</code> 为 928 行且 928 个唯一 URI，与 EOS 上 928 个非空 J2000 ROOT 完全一致，merge 终态日志也记录 928 个输入。<code>common_gti.tsv</code> 的 4763 行 duration sum 与 manifest 一致。</div>
+<div class="callout warn"><strong>“相同时间样本”的限定：</strong>两套管线共享相同 accepted-hour/common-GTI 选择，但有效 live time 并非逐秒相同。差值为 4614.950 s（v6 的 0.04088%）。928 个 chunk 中 898 个在 ±0.2 s 内一致；14 个异常 chunk 贡献 99.69% 的总差值。Pass5 以官方事件流经 GTI mask 后的 DI 时间占用计算 <code>EffLtime</code>，v6 则累加 recovered-time GTI 连续端点；20 个 accepted hours 的 Pass5 mask histogram 为零。故可称“common-GTI 选择样本”，不可称严格相同有效曝光。</div>
+<div class="callout"><strong>共同参数空间：</strong>两套最终 covariance 均独立核验为 3×3、原矩阵对称、正定，且对角线平方根与各自参数误差一致；共同参数顺序为 <code>log10_phi0 / alpha / beta</code>，pivot 均为 3 TeV。</div>
+<h2>参数误差</h2><img src="assets/v6-vs-pass5-common-gti-covariance/v6_vs_pass5_parameter_uncertainty_table.png" alt="LogPar parameter uncertainty table">
+<table><thead><tr><th>参数</th><th>v6 值</th><th>v6 σ raw</th><th>v6 σ Birge/PDG</th><th>Pass5 值</th><th>Pass5 σ</th><th>v6 reduction raw</th><th>v6 reduction Birge/PDG</th></tr></thead><tbody><tr><td>phi0_at_3tev</td><td>2.0137784439390827e-12</td><td>2.903868308346598e-14</td><td>1.328923026699336e-13</td><td>2.6534909999999988e-12</td><td>3.87014093452818e-14</td><td>+25.0%</td><td>-243.4%</td></tr><tr><td>alpha_at_3tev</td><td>2.6849522884309387</td><td>0.016310736104079536</td><td>0.07464426926257277</td><td>2.6866</td><td>0.015071858104715476</td><td>-8.2%</td><td>-395.3%</td></tr><tr><td>beta</td><td>0.07494615683668662</td><td>0.011121518562605622</td><td>0.05089639246803837</td><td>0.2284</td><td>0.025601356374789927</td><td>+56.6%</td><td>-98.8%</td></tr></tbody></table>
+<p>v6 的 χ²/ndof = 20.943334，Birge/PDG 因子为 4.576389。联合误差体积比 <code>sqrt(det C_v6 / det C_Pass5)</code>：raw HESSE = <strong>0.528</strong>；按该因子膨胀 v6 三维误差体积后 = <strong>50.617</strong>。raw 数值 0.528 不能作为 v6 精度优于 Pass5 的证据。</p>
+<h2>能谱相对不确定度</h2><img src="assets/v6-vs-pass5-common-gti-covariance/v6_vs_pass5_spectral_relative_uncertainty.png" alt="Spectral relative uncertainty comparison">
+<p>使用 <code>Var[ln φ(E)] = g(E)^T C g(E)</code> 传播完整 covariance。raw 曲线仅复现形式 HESSE；虚线为 Birge/PDG 膨胀，二者都不包含系统误差。</p>
+<h2>最佳拟合能谱</h2><img src="assets/v6-vs-pass5-common-gti-covariance/v6_vs_pass5_logpar_spectrum.png" alt="Best-fit LogPar spectra">
+<h2>参数相关性</h2><img src="assets/v6-vs-pass5-common-gti-covariance/v6_vs_pass5_correlation_matrices.png" alt="Correlation matrices">
+<h2>能区、binning 与 objective 审计</h2>
+<table><thead><tr><th>项目</th><th>v6 2D</th><th>official Pass5</th></tr></thead><tbody>
+<tr><td>Nhit</td><td>100≤Nhit&lt;3000；7 个 Nhit 带，44 个选中 Nhit×predE cells</td><td>30≤Nhit&lt;2000；edges = 30/60/100/200/300/500/800/2000</td></tr>
+<tr><td>能量坐标</td><td>predE 选中包络 0.1–316.23 TeV；响应 true-E 0.1–1000 TeV；本报告传播 1–100 TeV</td><td>Nhit-only，无 event-level reconstructed-energy cut；7 个代表能量约 0.562–15.849 TeV</td></tr>
+<tr><td>目标函数</td><td>44 个 Stage-E excess cells 上的 conservative χ²，σ=√(N_on+B_on)，ndof=41</td><td>7-bin spatial cube 的 Poisson likelihood；HESSE 中共 7 个 free parameters（Crab 3 + nuisance norms）</td></tr>
+</tbody></table>
+<div class="callout warn"><strong>科学解释限制：</strong>这是完整管线比较，不是 predE 独立增益实验。除 predE 外，两侧的 Nhit 覆盖/edges、cell selection、背景、PSF/IRF、objective 与 nuisance 处理均不同。要隔离 predE 增益，必须在同一 v6 管线内固定这些选择，只切换 predE 维度。当前结果不能支持“v6 总精度已证明优于 Pass5”，也不能把 covariance 差异归因于 predE。</div>
+<div class="callout warn"><strong>Pass5 provenance 限定：</strong>merged map → data config → data.root → covariance YAML 的 SHA256、live time 与时间戳顺序已记录；但 <code>data_config.yaml</code> 和 <code>covariance_fit.yaml</code> 仍内嵌已不存在的 <code>common_gti_fit_interactive/</code> 路径，实际文件位于 <code>common_gti_fit/</code>。因此文件级 provenance 可审计，但路径元数据不是完全自洽闭环，原始 YAML 未被改写。</div>
+</main></body></html>

@@ -1,0 +1,16 @@
+{
+  "model": "LP",
+  "old_pivot_tev": 10.0,
+  "new_pivot_tev": 3.0,
+  "old_parameters": {
+    "physical_norm": 9.354100000000001e-14,
+    "alpha": 2.8619,
+    "beta": 0.1848
+  },
+  "new_parameters": {
+    "physical_norm": 2.2443532558575637e-12,
+    "alpha": 2.4169116515211337,
+    "beta": 0.1848
+  },
+  "transformation": "natural-log LogPar exact pivot change"
+}

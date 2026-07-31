@@ -1,0 +1,10 @@
+time_array_run:
+- - '2022-01-01'
+  - '2022-06-30'
+zenith_max: 50
+cut_std: 95
+live_time:
+- 130.592212689228
+data_save_path: /home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit_interactive/data.root
+data_read_path:
+- /home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/pass5_v6_common_gti_map.root

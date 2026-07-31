@@ -1,0 +1,86 @@
+{
+  "description": "File-level provenance audit for the final common-GTI official Pass5 fit.",
+  "files": {
+    "strict_recovery_manifest": {
+      "path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/strict_recovery/strict_recovery_manifest.json",
+      "bytes": 926841,
+      "mtime": "2026-07-19T06:38:29.850445+08:00",
+      "sha256": "1d112ec2f75b91053d27ef0675a6c12058a90d3ee12416959954ab10a1c1ce84"
+    },
+    "accepted_maps_list": {
+      "path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/strict_recovery/accepted_maps.list",
+      "bytes": 123424,
+      "mtime": "2026-07-19T06:38:29.706605+08:00",
+      "sha256": "0f420c6cd2ffdd13891f3c991d33f2e8c3ef72d1327baeb2da57982d33129643"
+    },
+    "merged_map": {
+      "path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/pass5_v6_common_gti_map.root",
+      "bytes": 776863034,
+      "mtime": "2026-07-20T10:33:06.983911+08:00",
+      "sha256": "e4434142ebfcc1a7d6257d8b11d01d47fe30f324047d37d6e17be8da2d00bbea"
+    },
+    "strict_live_days": {
+      "path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit/strict_pass5_live_days.txt",
+      "bytes": 17,
+      "mtime": "2026-07-21T11:33:50.485768+08:00",
+      "sha256": "40eace7c82d7f593b4c3aeb2028e8935e3cd643f0e0d0765eb77bd16627283c3"
+    },
+    "data_config": {
+      "path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit/data_config.yaml",
+      "bytes": 327,
+      "mtime": "2026-07-21T11:33:50.671597+08:00",
+      "sha256": "cf9c792b293a73fb94dfd0619c5368dc8b4ffc95e499cb9949c866ab23bea656"
+    },
+    "data_root": {
+      "path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit/data.root",
+      "bytes": 216358261,
+      "mtime": "2026-07-21T11:34:17.628055+08:00",
+      "sha256": "b4bb90f7e8d167251030a71c9dcf493b31ee97abdd1d2df9e024599001b83849"
+    },
+    "covariance_fit": {
+      "path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit/covariance_fit.yaml",
+      "bytes": 10068,
+      "mtime": "2026-07-21T11:35:05.781449+08:00",
+      "sha256": "cdf81114bdecf63cefe8a5939c4bf51b19adf170ddd32b71595841b7cf2b225f"
+    }
+  },
+  "merge": {
+    "log_path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/merge_strict_map.sh.out.87689726.0",
+    "terminal_line": "STRICT_MAP_MERGE_COMPLETE maps=928 output=/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/pass5_v6_common_gti_map.root",
+    "expected_terminal_line": "STRICT_MAP_MERGE_COMPLETE maps=928 output=/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/pass5_v6_common_gti_map.root",
+    "terminal_line_matches": true,
+    "input_map_line_count": 928,
+    "input_map_unique_count": 928
+  },
+  "eos_map_set": {
+    "root": "/eos/user/l/liushijie/pass5_crab_v6_sorted_gti/pass5_crab_v6_sorted_gti_map_chunks",
+    "nonempty_j2000_count": 928,
+    "accepted_map_unique_count": 928,
+    "matches_accepted_maps_list": true,
+    "only_eos": [],
+    "only_accepted_maps_list": []
+  },
+  "data_config": {
+    "data_read_path": [
+      "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/pass5_v6_common_gti_map.root"
+    ],
+    "data_read_path_matches_merged_map": true,
+    "live_time_days": 130.592212689228,
+    "live_time_matches_header": true,
+    "embedded_data_save_path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit_interactive/data.root",
+    "embedded_data_save_path_exists": false,
+    "actual_data_root": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit/data.root"
+  },
+  "covariance_fit": {
+    "embedded_all_sky_map": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit_interactive/data.root",
+    "embedded_all_sky_map_exists": false,
+    "actual_data_root": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit/data.root",
+    "covariance_status": 3,
+    "pivot_tev": 3.0
+  },
+  "chronology": {
+    "merged_map_then_data_config_then_data_root_then_covariance_fit": true
+  },
+  "path_provenance_status": "relocated_with_stale_embedded_paths",
+  "path_provenance_note": "data_config.yaml and covariance_fit.yaml retain common_gti_fit_interactive output paths that no longer exist. The products are present under common_gti_fit with a monotonic generation chronology, but the embedded path chain is not self-contained and must not be described as fully path-clean provenance."
+}

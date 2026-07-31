@@ -41,18 +41,57 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pass5-live-days", type=float, required=True)
     parser.add_argument("--v6-live-days", type=float, required=True)
     parser.add_argument("--gti-manifest", type=Path, required=True)
+    parser.add_argument("--audit-json", type=Path, required=True)
     return parser.parse_args()
 
 
-def require_covariance(matrix: object, label: str) -> np.ndarray:
+def require_covariance(
+    matrix: object,
+    label: str,
+    reported_errors: list[float] | None = None,
+    error_relative_tolerance: float = 1e-4,
+) -> tuple[np.ndarray, dict[str, object]]:
     covariance = np.asarray(matrix, dtype=np.float64)
     if covariance.shape != (3, 3) or not np.all(np.isfinite(covariance)):
         raise ValueError(f"{label} covariance is not a finite 3x3 matrix")
-    covariance = 0.5 * (covariance + covariance.T)
+    asymmetry = float(np.max(np.abs(covariance - covariance.T)))
+    symmetry_tolerance = max(1.0, float(np.max(np.abs(covariance)))) * 1e-12
+    if asymmetry > symmetry_tolerance:
+        raise ValueError(
+            f"{label} covariance is not symmetric: max |C-C.T|={asymmetry}"
+        )
     eigenvalues = np.linalg.eigvalsh(covariance)
     if np.any(eigenvalues <= 0.0):
         raise ValueError(f"{label} covariance is not positive definite: {eigenvalues}")
-    return covariance
+    diagonal_errors = np.sqrt(np.diag(covariance))
+    audit: dict[str, object] = {
+        "shape": list(covariance.shape),
+        "finite": True,
+        "symmetric": True,
+        "max_abs_asymmetry": asymmetry,
+        "positive_definite": True,
+        "eigenvalues": eigenvalues.tolist(),
+        "diagonal_errors": diagonal_errors.tolist(),
+    }
+    if reported_errors is not None:
+        reported = np.asarray(reported_errors, dtype=np.float64)
+        if reported.shape != (3,) or np.any(reported <= 0.0):
+            raise ValueError(f"{label} reported errors are invalid: {reported}")
+        relative_difference = np.abs(diagonal_errors - reported) / reported
+        if np.any(relative_difference > error_relative_tolerance):
+            raise ValueError(
+                f"{label} covariance diagonal disagrees with reported errors: "
+                f"relative differences={relative_difference}"
+            )
+        audit.update(
+            {
+                "reported_errors": reported.tolist(),
+                "diagonal_errors_match_reported": True,
+                "max_relative_error_difference": float(np.max(relative_difference)),
+                "error_relative_tolerance": error_relative_tolerance,
+            }
+        )
+    return covariance, audit
 
 
 def load_v6(path: Path) -> tuple[np.ndarray, np.ndarray, dict[str, object]]:
@@ -63,13 +102,24 @@ def load_v6(path: Path) -> tuple[np.ndarray, np.ndarray, dict[str, object]]:
         raise ValueError(f"v6 parameter order is {names}, expected {FIT_PARAMETER_NAMES}")
     parameters = fit.get("fit_parameters") or {}
     values = np.asarray([parameters[name] for name in FIT_PARAMETER_NAMES], dtype=np.float64)
-    covariance = require_covariance(fit.get("covariance"), "v6")
+    reported_errors = fit.get("fit_parameter_errors") or {}
+    covariance, covariance_audit = require_covariance(
+        fit.get("covariance"),
+        "v6",
+        [float(reported_errors[name]) for name in FIT_PARAMETER_NAMES],
+    )
+    pivot = float((payload.get("forward_folding") or {}).get("pivot_tev", math.nan))
+    if pivot != 3.0:
+        raise ValueError(f"v6 pivot is {pivot}, expected 3 TeV")
     diagnostics = {
         "chi2": float(fit.get("chi2", math.nan)),
         "ndof": int(fit.get("ndof", 0)),
         "chi2_over_ndof": float(fit.get("chi2_over_ndof", math.nan)),
         "p_value": float(fit.get("p_value", math.nan)),
         "minuit_status": fit.get("minuit_status") or {},
+        "parameter_order": names,
+        "pivot_tev": pivot,
+        "covariance_audit": covariance_audit,
     }
     return values, covariance, diagnostics
 
@@ -93,8 +143,18 @@ def load_pass5(path: Path) -> tuple[np.ndarray, np.ndarray, dict[str, object]]:
     alpha_native = float(source["index1"][0])
     beta = float(source["index2"][0])
     native_pivot = float(source["E_0"])
-    if native_pivot <= 0.0:
-        raise ValueError(f"Pass5 pivot must be positive, got {native_pivot}")
+    if native_pivot != 3.0:
+        raise ValueError(f"Pass5 pivot is {native_pivot}, expected 3 TeV")
+    native_covariance, native_covariance_audit = require_covariance(
+        native_covariance,
+        "Pass5 native",
+        [
+            float(source["norm"][1]),
+            float(source["index1"][1]),
+            float(source["index2"][1]),
+        ],
+        error_relative_tolerance=3e-3,
+    )
 
     log_pivot_ratio = math.log(3.0 / native_pivot)
     log10_phi0_3 = math.log10(norm * norm_scale) - (
@@ -115,7 +175,16 @@ def load_pass5(path: Path) -> tuple[np.ndarray, np.ndarray, dict[str, object]]:
         ],
         dtype=np.float64,
     )
-    covariance = require_covariance(jacobian @ native_covariance @ jacobian.T, "Pass5")
+    covariance, covariance_audit = require_covariance(
+        jacobian @ native_covariance @ jacobian.T,
+        "Pass5 transformed",
+        [
+            float(source["norm"][1]) / (norm * math.log(10.0)),
+            float(source["index1"][1]),
+            float(source["index2"][1]),
+        ],
+        error_relative_tolerance=3e-3,
+    )
     diagnostics = {
         "covariance_status": status,
         "edm": float(output["edm"]),
@@ -127,8 +196,18 @@ def load_pass5(path: Path) -> tuple[np.ndarray, np.ndarray, dict[str, object]]:
         "native_covariance": native_covariance.tolist(),
         "jacobian_native_to_3_tev": jacobian.tolist(),
         "all_free_parameter_names": names,
+        "parameter_order": FIT_PARAMETER_NAMES,
+        "pivot_tev": 3.0,
+        "native_covariance_audit": native_covariance_audit,
+        "covariance_audit": covariance_audit,
     }
     return values, covariance, diagnostics
+
+
+def pdg_scale_factor(chi2_over_ndof: float) -> float:
+    if not math.isfinite(chi2_over_ndof) or chi2_over_ndof <= 1.0:
+        return 1.0
+    return math.sqrt(chi2_over_ndof)
 
 
 def correlation(covariance: np.ndarray) -> np.ndarray:
@@ -187,51 +266,68 @@ def plot_parameter_table(
     output_dir: Path,
     v6_rows: list[tuple[float, float]],
     pass5_rows: list[tuple[float, float]],
+    v6_scale_factor: float,
 ) -> None:
     rows = []
     labels = [r"$\phi_0$  [$10^{-12}\,\mathrm{TeV}^{-1}\,\mathrm{cm}^{-2}\,\mathrm{s}^{-1}$]", r"$\alpha$", r"$\beta$"]
     for index, ((v6_value, v6_sigma), (p5_value, p5_sigma)) in enumerate(zip(v6_rows, pass5_rows)):
         scale = 1e12 if index == 0 else 1.0
         ratio = v6_sigma / p5_sigma
+        v6_sigma_inflated = v6_sigma * v6_scale_factor
+        ratio_inflated = v6_sigma_inflated / p5_sigma
         rows.append(
             [
                 labels[index],
                 f"{v6_value * scale:.5g}",
                 f"{v6_sigma * scale:.4g}",
+                f"{v6_sigma_inflated * scale:.4g}",
                 f"{p5_value * scale:.5g}",
                 f"{p5_sigma * scale:.4g}",
                 f"{ratio:.3f}",
-                f"{100.0 * (1.0 - ratio):+.1f}%",
+                f"{ratio_inflated:.3f}",
+                f"{100.0 * (1.0 - ratio_inflated):+.1f}%",
             ]
         )
 
-    fig, ax = plt.subplots(figsize=(12.0, 3.25))
+    fig, ax = plt.subplots(figsize=(15.0, 3.5))
     ax.axis("off")
-    fig.suptitle("Crab LogPar precision on identical recovered-time GTIs", fontsize=17, fontweight="bold", y=0.98)
-    columns = ["Parameter at 3 TeV", "v6 best fit", r"v6 $1\sigma$", "Pass5 best fit", r"Pass5 $1\sigma$", r"$\sigma_{v6}/\sigma_{P5}$", "v6 reduction"]
-    table = ax.table(cellText=rows, colLabels=columns, cellLoc="center", colLoc="center", loc="center", bbox=[0.0, 0.16, 1.0, 0.66])
+    fig.suptitle("Crab LogPar covariance on the common-GTI selection", fontsize=17, fontweight="bold", y=0.98)
+    columns = [
+        "Parameter\nat 3 TeV",
+        "v6\nbest fit",
+        "v6 $1\\sigma$\n(raw HESSE)",
+        f"v6 $1\\sigma$\n(inflated x{v6_scale_factor:.2f})",
+        "Pass5\nbest fit",
+        "Pass5\n$1\\sigma$",
+        "$\\sigma_{v6}/\\sigma_{P5}$\n(raw)",
+        "$\\sigma_{v6}/\\sigma_{P5}$\n(inflated)",
+        "v6 reduction\n(inflated)",
+    ]
+    table = ax.table(cellText=rows, colLabels=columns, cellLoc="center", colLoc="center", loc="center", bbox=[0.0, 0.16, 1.0, 0.72])
     table.auto_set_font_size(False)
-    table.set_fontsize(10.2)
-    widths = [0.25, 0.115, 0.105, 0.115, 0.105, 0.13, 0.13]
+    table.set_fontsize(9.6)
+    widths = [0.16, 0.09, 0.115, 0.15, 0.09, 0.09, 0.105, 0.11, 0.115]
     for (row, column), cell in table.get_celld().items():
         cell.set_width(widths[column])
         cell.set_edgecolor("#D1D5DB")
         cell.set_linewidth(0.8)
         if row == 0:
+            cell.set_height(cell.get_height() * 2.1)
             cell.set_facecolor("#1F2937")
             cell.set_text_props(color="white", fontweight="bold")
         else:
             cell.set_facecolor("#F8FAFC" if row % 2 else "white")
-            if column == 6:
-                value = float(rows[row - 1][6].rstrip("%"))
+            if column == 8:
+                value = float(rows[row - 1][8].rstrip("%"))
                 cell.set_text_props(color=GAIN_COLOR if value >= 0.0 else LOSS_COLOR, fontweight="bold")
     fig.text(
         0.5,
         0.055,
-        "Positive reduction means v6 has a smaller formal statistical error; systematic uncertainties are not included.",
+        rf"Raw HESSE is shown for audit only. Inflated errors apply $S=\sqrt{{\chi^2/\mathrm{{ndof}}}}={v6_scale_factor:.3f}$; "
+        "neither column proves smaller total uncertainty.",
         ha="center",
         color="#4B5563",
-        fontsize=9.4,
+        fontsize=9.0,
     )
     save_figure(fig, output_dir / "v6_vs_pass5_parameter_uncertainty_table")
 
@@ -262,10 +358,14 @@ def plot_spectral_precision(
     output_dir: Path,
     energies: np.ndarray,
     v6_relative: np.ndarray,
+    v6_relative_inflated: np.ndarray,
     pass5_relative: np.ndarray,
     volume_ratio: float,
+    volume_ratio_inflated: float,
+    v6_scale_factor: float,
 ) -> None:
     gain = 100.0 * (1.0 - v6_relative / pass5_relative)
+    gain_inflated = 100.0 * (1.0 - v6_relative_inflated / pass5_relative)
     fig, (ax_main, ax_gain) = plt.subplots(
         2,
         1,
@@ -274,11 +374,19 @@ def plot_spectral_precision(
         constrained_layout=True,
         gridspec_kw={"height_ratios": [3.1, 1.15]},
     )
-    fig.suptitle("Crab spectral precision: v6 2D versus official Pass5", fontsize=17, fontweight="bold")
+    fig.suptitle("Crab formal covariance propagation: v6 2D versus official Pass5", fontsize=17, fontweight="bold")
     ax_main.plot(energies, 100.0 * pass5_relative, color=PASS5_COLOR, linewidth=2.2, label="Pass5 Nhit-only")
-    ax_main.plot(energies, 100.0 * v6_relative, color=V6_COLOR, linewidth=2.4, label="v6 2D Nhit x predE")
-    lower = np.minimum(v6_relative, pass5_relative) * 100.0
-    upper = np.maximum(v6_relative, pass5_relative) * 100.0
+    ax_main.plot(energies, 100.0 * v6_relative, color=V6_COLOR, linewidth=2.4, label="v6 2D Nhit x predE (raw HESSE)")
+    ax_main.plot(
+        energies,
+        100.0 * v6_relative_inflated,
+        color=V6_COLOR,
+        linewidth=2.0,
+        linestyle="--",
+        label=rf"v6 Birge/PDG inflated (x{v6_scale_factor:.3f})",
+    )
+    lower = np.minimum(v6_relative_inflated, pass5_relative) * 100.0
+    upper = np.maximum(v6_relative_inflated, pass5_relative) * 100.0
     ax_main.fill_between(energies, lower, upper, color="#D1FAE5", alpha=0.45)
     ax_main.set_xscale("log")
     ax_main.set_yscale("log")
@@ -288,7 +396,8 @@ def plot_spectral_precision(
     ax_main.text(
         0.98,
         0.05,
-        rf"Joint error-volume ratio: $\sqrt{{\det C_{{v6}}/\det C_{{P5}}}}={volume_ratio:.3f}$",
+        "Joint error-volume ratio\n"
+        rf"raw={volume_ratio:.3f}; Birge/PDG={volume_ratio_inflated:.3f}",
         transform=ax_main.transAxes,
         ha="right",
         va="bottom",
@@ -297,18 +406,37 @@ def plot_spectral_precision(
     )
 
     ax_gain.axhline(0.0, color="#6B7280", linewidth=0.9)
-    ax_gain.plot(energies, gain, color=GAIN_COLOR, linewidth=2.0)
-    ax_gain.fill_between(energies, 0.0, gain, where=gain >= 0.0, color="#A7F3D0", alpha=0.65)
-    ax_gain.fill_between(energies, 0.0, gain, where=gain < 0.0, color="#FED7AA", alpha=0.75)
+    ax_gain.plot(energies, gain, color=GAIN_COLOR, linewidth=1.6, linestyle=":", label="raw HESSE")
+    ax_gain.plot(energies, gain_inflated, color=GAIN_COLOR, linewidth=2.0, label="Birge/PDG inflated")
+    ax_gain.fill_between(energies, 0.0, gain_inflated, where=gain_inflated >= 0.0, color="#A7F3D0", alpha=0.65)
+    ax_gain.fill_between(energies, 0.0, gain_inflated, where=gain_inflated < 0.0, color="#FED7AA", alpha=0.75)
     ax_gain.set_xscale("log")
     ax_gain.set_xlabel("Energy [TeV]")
     ax_gain.set_ylabel("v6 reduction [%]")
     ax_gain.grid(True, axis="x", which="both", color=GRID_COLOR, alpha=0.5, linewidth=0.65)
     ax_gain.set_xticks(REFERENCE_ENERGIES_TEV, ["1", "3", "10", "30", "100"])
+    ax_gain.legend(frameon=False, loc="best", fontsize=8.4)
     for energy in REFERENCE_ENERGIES_TEV:
         index = int(np.argmin(np.abs(energies - energy)))
-        ax_gain.annotate(f"{gain[index]:+.1f}%", (energies[index], gain[index]), xytext=(0, 7 if gain[index] >= 0 else -13), textcoords="offset points", ha="center", color=GAIN_COLOR if gain[index] >= 0 else LOSS_COLOR, fontsize=8.8, fontweight="bold")
-    fig.text(0.5, -0.015, r"Propagation: $\sigma^2_{\ln\phi(E)}=g(E)^T C g(E)$ with the full 3-parameter covariance.", ha="center", fontsize=9.3, color="#4B5563")
+        ax_gain.annotate(
+            f"{gain_inflated[index]:+.1f}%",
+            (energies[index], gain_inflated[index]),
+            xytext=(0, 7 if gain_inflated[index] >= 0 else -13),
+            textcoords="offset points",
+            ha="center",
+            color=GAIN_COLOR if gain_inflated[index] >= 0 else LOSS_COLOR,
+            fontsize=8.8,
+            fontweight="bold",
+        )
+    fig.text(
+        0.5,
+        -0.015,
+        r"Full-covariance propagation. Inflated v6 errors scale by sqrt(chi2/ndof); "
+        r"the raw curve is not evidence of superior precision.",
+        ha="center",
+        fontsize=9.1,
+        color="#4B5563",
+    )
     save_figure(fig, output_dir / "v6_vs_pass5_spectral_relative_uncertainty")
 
 
@@ -330,7 +458,7 @@ def plot_spectrum(
         constrained_layout=True,
         gridspec_kw={"height_ratios": [3.1, 1.0]},
     )
-    fig.suptitle("Crab LogPar fits on identical recovered-time GTIs", fontsize=17, fontweight="bold")
+    fig.suptitle("Crab LogPar fits on the common-GTI selection", fontsize=17, fontweight="bold")
     for values, rel, color, label in [
         (v6_flux, v6_relative, V6_COLOR, "v6 2D Nhit x predE"),
         (pass5_flux, pass5_relative, PASS5_COLOR, "Pass5 Nhit-only"),
@@ -365,23 +493,73 @@ def write_tables(
     v6_cov: np.ndarray,
     pass5_values: np.ndarray,
     pass5_cov: np.ndarray,
+    v6_scale_factor: float,
 ) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
     v6_rows = physical_parameter_rows(v6_values, v6_cov)
     pass5_rows = physical_parameter_rows(pass5_values, pass5_cov)
     with (output_dir / "v6_vs_pass5_logpar_parameters.csv").open("w", encoding="utf-8", newline="") as handle:
         writer = csv.writer(handle, lineterminator="\n")
-        writer.writerow(["parameter", "v6_value", "v6_sigma", "pass5_value", "pass5_sigma", "sigma_v6_over_pass5", "v6_uncertainty_reduction_percent"])
+        writer.writerow(
+            [
+                "parameter",
+                "v6_value",
+                "v6_sigma_raw",
+                "v6_sigma_birge_pdg",
+                "pass5_value",
+                "pass5_sigma",
+                "sigma_v6_over_pass5_raw",
+                "sigma_v6_over_pass5_birge_pdg",
+                "v6_uncertainty_reduction_percent_raw",
+                "v6_uncertainty_reduction_percent_birge_pdg",
+            ]
+        )
         for name, (v6_value, v6_sigma), (p5_value, p5_sigma) in zip(["phi0_at_3tev", "alpha_at_3tev", "beta"], v6_rows, pass5_rows):
+            v6_sigma_inflated = v6_sigma * v6_scale_factor
             ratio = v6_sigma / p5_sigma
-            writer.writerow([name, f"{v6_value:.12g}", f"{v6_sigma:.12g}", f"{p5_value:.12g}", f"{p5_sigma:.12g}", f"{ratio:.12g}", f"{100.0 * (1.0 - ratio):.12g}"])
+            ratio_inflated = v6_sigma_inflated / p5_sigma
+            writer.writerow(
+                [
+                    name,
+                    f"{v6_value:.12g}",
+                    f"{v6_sigma:.12g}",
+                    f"{v6_sigma_inflated:.12g}",
+                    f"{p5_value:.12g}",
+                    f"{p5_sigma:.12g}",
+                    f"{ratio:.12g}",
+                    f"{ratio_inflated:.12g}",
+                    f"{100.0 * (1.0 - ratio):.12g}",
+                    f"{100.0 * (1.0 - ratio_inflated):.12g}",
+                ]
+            )
 
     v6_relative = relative_uncertainty(v6_cov, energies)
+    v6_relative_inflated = v6_relative * v6_scale_factor
     pass5_relative = relative_uncertainty(pass5_cov, energies)
     with (output_dir / "v6_vs_pass5_spectral_relative_uncertainty.csv").open("w", encoding="utf-8", newline="") as handle:
         writer = csv.writer(handle, lineterminator="\n")
-        writer.writerow(["energy_tev", "v6_relative_uncertainty_percent", "pass5_relative_uncertainty_percent", "v6_uncertainty_reduction_percent"])
-        for energy, v6_rel, p5_rel in zip(energies, v6_relative, pass5_relative):
-            writer.writerow([f"{energy:.10g}", f"{100.0 * v6_rel:.10g}", f"{100.0 * p5_rel:.10g}", f"{100.0 * (1.0 - v6_rel / p5_rel):.10g}"])
+        writer.writerow(
+            [
+                "energy_tev",
+                "v6_relative_uncertainty_percent_raw",
+                "v6_relative_uncertainty_percent_birge_pdg",
+                "pass5_relative_uncertainty_percent",
+                "v6_uncertainty_reduction_percent_raw",
+                "v6_uncertainty_reduction_percent_birge_pdg",
+            ]
+        )
+        for energy, v6_rel, v6_rel_inflated, p5_rel in zip(
+            energies, v6_relative, v6_relative_inflated, pass5_relative
+        ):
+            writer.writerow(
+                [
+                    f"{energy:.10g}",
+                    f"{100.0 * v6_rel:.10g}",
+                    f"{100.0 * v6_rel_inflated:.10g}",
+                    f"{100.0 * p5_rel:.10g}",
+                    f"{100.0 * (1.0 - v6_rel / p5_rel):.10g}",
+                    f"{100.0 * (1.0 - v6_rel_inflated / p5_rel):.10g}",
+                ]
+            )
     return v6_rows, pass5_rows
 
 
@@ -393,12 +571,20 @@ def write_html_report(output_dir: Path, report_path: Path, summary: dict[str, ob
         return html.escape(f"{asset_prefix}/{name}", quote=True)
 
     p = summary["parameter_comparison"]
+    audit = summary["scientific_audit"]
+    sample = audit["sample_contract"]
+    live = audit["live_time_comparison"]
+    scope = audit["analysis_scope"]
+    provenance = audit["pass5_provenance"]
+    scale_factor = summary["v6_birge_pdg_scale_factor"]
     rows = "".join(
         "<tr>"
         f"<td>{html.escape(str(row['parameter']))}</td>"
         f"<td>{row['v6_value']}</td><td>{row['v6_sigma']}</td>"
+        f"<td>{row['v6_sigma_birge_pdg']}</td>"
         f"<td>{row['pass5_value']}</td><td>{row['pass5_sigma']}</td>"
         f"<td>{row['v6_reduction_percent']:+.1f}%</td>"
+        f"<td>{row['v6_reduction_percent_birge_pdg']:+.1f}%</td>"
         "</tr>"
         for row in p
     )
@@ -414,15 +600,25 @@ th,td{{padding:9px 10px;border:1px solid #d1d5db;text-align:right}} th:first-chi
 code{{background:#f3f4f6;padding:2px 5px}} .warn{{border-left-color:{LOSS_COLOR};background:#fff7ed}}
 </style></head><body><main>
 <h1>v6 与 official Pass5：Crab LogPar covariance 对比</h1>
-<p class="meta">同一组排序后的 recovered-time GTI；3969 个小时文件、{summary['gti_interval_count']} 个 GTI。v6 GTI = {summary['v6_live_days']:.6f} d，Pass5 DI map header live time = {summary['pass5_live_days']:.6f} d。</p>
-<div class="callout"><strong>比较口径：</strong>Pass5 的 10 TeV 参数和完整 HESSE covariance 已通过解析 Jacobian 变换到 v6 的 3 TeV 参数空间，再比较误差与能谱不确定度。</div>
+<p class="meta">最终 common-GTI 选择：{summary['selected_hour_count']} accepted hours、{summary['gti_interval_count']} intervals、928 个 Pass5 J2000 maps。v6 GTI = {summary['v6_live_days']:.9f} d；Pass5 merged-map header = {summary['pass5_live_days']:.9f} d。</p>
+<div class="callout"><strong>样本审计通过：</strong>strict recovery 为 1078 total / 928 accepted / 150 rejected / 0 remaining；<code>accepted_maps.list</code> 为 928 行且 928 个唯一 URI，与 EOS 上 928 个非空 J2000 ROOT 完全一致，merge 终态日志也记录 928 个输入。<code>common_gti.tsv</code> 的 4763 行 duration sum 与 manifest 一致。</div>
+<div class="callout warn"><strong>“相同时间样本”的限定：</strong>两套管线共享相同 accepted-hour/common-GTI 选择，但有效 live time 并非逐秒相同。差值为 {live['v6_minus_pass5_seconds']:.3f} s（v6 的 {live['relative_difference_percent_of_v6']:.5f}%）。928 个 chunk 中 898 个在 ±0.2 s 内一致；14 个异常 chunk 贡献 {live['large_delta_share_percent']:.2f}% 的总差值。Pass5 以官方事件流经 GTI mask 后的 DI 时间占用计算 <code>EffLtime</code>，v6 则累加 recovered-time GTI 连续端点；20 个 accepted hours 的 Pass5 mask histogram 为零。故可称“common-GTI 选择样本”，不可称严格相同有效曝光。</div>
+<div class="callout"><strong>共同参数空间：</strong>两套最终 covariance 均独立核验为 3×3、原矩阵对称、正定，且对角线平方根与各自参数误差一致；共同参数顺序为 <code>log10_phi0 / alpha / beta</code>，pivot 均为 3 TeV。</div>
 <h2>参数误差</h2><img src="{asset('v6_vs_pass5_parameter_uncertainty_table.png')}" alt="LogPar parameter uncertainty table">
-<table><thead><tr><th>参数</th><th>v6 值</th><th>v6 σ</th><th>Pass5 值</th><th>Pass5 σ</th><th>v6 误差减小</th></tr></thead><tbody>{rows}</tbody></table>
+<table><thead><tr><th>参数</th><th>v6 值</th><th>v6 σ raw</th><th>v6 σ Birge/PDG</th><th>Pass5 值</th><th>Pass5 σ</th><th>v6 reduction raw</th><th>v6 reduction Birge/PDG</th></tr></thead><tbody>{rows}</tbody></table>
+<p>v6 的 χ²/ndof = {summary['v6_diagnostics']['chi2_over_ndof']:.6f}，Birge/PDG 因子为 {scale_factor:.6f}。联合误差体积比 <code>sqrt(det C_v6 / det C_Pass5)</code>：raw HESSE = <strong>{summary['joint_error_volume_ratio_v6_over_pass5']:.3f}</strong>；按该因子膨胀 v6 三维误差体积后 = <strong>{summary['joint_error_volume_ratio_v6_over_pass5_birge_pdg']:.3f}</strong>。raw 数值 0.528 不能作为 v6 精度优于 Pass5 的证据。</p>
 <h2>能谱相对不确定度</h2><img src="{asset('v6_vs_pass5_spectral_relative_uncertainty.png')}" alt="Spectral relative uncertainty comparison">
-<p>使用 <code>Var[ln φ(E)] = g(E)^T C g(E)</code> 传播完整 covariance。正的 v6 reduction 表示 v6 的形式统计误差更小。</p>
+<p>使用 <code>Var[ln φ(E)] = g(E)^T C g(E)</code> 传播完整 covariance。raw 曲线仅复现形式 HESSE；虚线为 Birge/PDG 膨胀，二者都不包含系统误差。</p>
 <h2>最佳拟合能谱</h2><img src="{asset('v6_vs_pass5_logpar_spectrum.png')}" alt="Best-fit LogPar spectra">
 <h2>参数相关性</h2><img src="{asset('v6_vs_pass5_correlation_matrices.png')}" alt="Correlation matrices">
-<div class="callout warn"><strong>解释限制：</strong>这些是 HESSE 的形式统计误差，不含系统误差。v6 使用 conservative χ²，Pass5 使用 Poisson likelihood，目标函数并不完全相同；official Pass5 使用 30≤Nhit&lt;2000，而当前 v6 使用 100≤Nhit&lt;3000，分 bin 也不同。因此本图比较的是两条完整分析管线，不能把差异完全归因于 predE。v6 当前 Stage F 的 χ²/ndof = {summary['v6_diagnostics']['chi2_over_ndof']:.3f}，拟合优度较差，因此不能把较小 covariance 单独解释为最终总精度更高。两种方法使用同一观测样本，缺少跨方法 covariance，所以能谱比值带也不是严格的差异显著性。</div>
+<h2>能区、binning 与 objective 审计</h2>
+<table><thead><tr><th>项目</th><th>v6 2D</th><th>official Pass5</th></tr></thead><tbody>
+<tr><td>Nhit</td><td>100≤Nhit&lt;3000；7 个 Nhit 带，44 个选中 Nhit×predE cells</td><td>30≤Nhit&lt;2000；edges = 30/60/100/200/300/500/800/2000</td></tr>
+<tr><td>能量坐标</td><td>predE 选中包络 0.1–316.23 TeV；响应 true-E 0.1–1000 TeV；本报告传播 1–100 TeV</td><td>Nhit-only，无 event-level reconstructed-energy cut；7 个代表能量约 0.562–15.849 TeV</td></tr>
+<tr><td>目标函数</td><td>44 个 Stage-E excess cells 上的 conservative χ²，σ=√(N_on+B_on)，ndof=41</td><td>7-bin spatial cube 的 Poisson likelihood；HESSE 中共 7 个 free parameters（Crab 3 + nuisance norms）</td></tr>
+</tbody></table>
+<div class="callout warn"><strong>科学解释限制：</strong>这是完整管线比较，不是 predE 独立增益实验。除 predE 外，两侧的 Nhit 覆盖/edges、cell selection、背景、PSF/IRF、objective 与 nuisance 处理均不同。要隔离 predE 增益，必须在同一 v6 管线内固定这些选择，只切换 predE 维度。当前结果不能支持“v6 总精度已证明优于 Pass5”，也不能把 covariance 差异归因于 predE。</div>
+<div class="callout warn"><strong>Pass5 provenance 限定：</strong>merged map → data config → data.root → covariance YAML 的 SHA256、live time 与时间戳顺序已记录；但 <code>data_config.yaml</code> 和 <code>covariance_fit.yaml</code> 仍内嵌已不存在的 <code>common_gti_fit_interactive/</code> 路径，实际文件位于 <code>common_gti_fit/</code>。因此文件级 provenance 可审计，但路径元数据不是完全自洽闭环，原始 YAML 未被改写。</div>
 </main></body></html>"""
     report_path.write_text(content, encoding="utf-8")
 
@@ -435,34 +631,88 @@ def main() -> None:
     v6_values, v6_cov, v6_diagnostics = load_v6(args.v6_json)
     pass5_values, pass5_cov, pass5_diagnostics = load_pass5(args.pass5_yaml)
     gti_manifest = json.loads(args.gti_manifest.read_text(encoding="utf-8"))
+    scientific_audit = json.loads(args.audit_json.read_text(encoding="utf-8"))
+    sample_contract = scientific_audit["sample_contract"]
+    live_time_audit = scientific_audit["live_time_comparison"]
+    if not all(
+        [
+            sample_contract["duration_sum_matches_manifest"],
+            sample_contract["accepted_maps_matches"],
+            sample_contract["eos_matches_accepted_maps"],
+            sample_contract["merged_map_terminal_log_matches"],
+        ]
+    ):
+        raise ValueError("common-GTI sample audit did not pass")
+    if not math.isclose(
+        args.v6_live_days,
+        float(gti_manifest["common_gti_live_time_days"]),
+        rel_tol=0.0,
+        abs_tol=1e-12,
+    ):
+        raise ValueError("--v6-live-days differs from the terminal common-GTI manifest")
+    if not math.isclose(
+        args.pass5_live_days,
+        float(live_time_audit["pass5_merged_header_days"]),
+        rel_tol=0.0,
+        abs_tol=1e-12,
+    ):
+        raise ValueError("--pass5-live-days differs from the merged-map header audit")
     energies = np.geomspace(1.0, 100.0, 301)
+    v6_scale_factor = pdg_scale_factor(v6_diagnostics["chi2_over_ndof"])
     v6_relative = relative_uncertainty(v6_cov, energies)
+    v6_relative_inflated = v6_relative * v6_scale_factor
     pass5_relative = relative_uncertainty(pass5_cov, energies)
     volume_ratio = math.sqrt(float(np.linalg.det(v6_cov) / np.linalg.det(pass5_cov)))
-    v6_rows, pass5_rows = write_tables(args.output_dir, energies, v6_values, v6_cov, pass5_values, pass5_cov)
+    volume_ratio_inflated = volume_ratio * v6_scale_factor**3
+    v6_rows, pass5_rows = write_tables(
+        args.output_dir,
+        energies,
+        v6_values,
+        v6_cov,
+        pass5_values,
+        pass5_cov,
+        v6_scale_factor,
+    )
 
-    plot_parameter_table(args.output_dir, v6_rows, pass5_rows)
+    plot_parameter_table(args.output_dir, v6_rows, pass5_rows, v6_scale_factor)
     plot_correlations(args.output_dir, v6_cov, pass5_cov)
-    plot_spectral_precision(args.output_dir, energies, v6_relative, pass5_relative, volume_ratio)
+    plot_spectral_precision(
+        args.output_dir,
+        energies,
+        v6_relative,
+        v6_relative_inflated,
+        pass5_relative,
+        volume_ratio,
+        volume_ratio_inflated,
+        v6_scale_factor,
+    )
     plot_spectrum(args.output_dir, energies, v6_values, v6_relative, pass5_values, pass5_relative)
 
     parameter_comparison = []
     for name, (v6_value, v6_sigma), (p5_value, p5_sigma) in zip(["phi0_at_3tev", "alpha_at_3tev", "beta"], v6_rows, pass5_rows):
+        v6_sigma_inflated = v6_sigma * v6_scale_factor
         parameter_comparison.append(
             {
                 "parameter": name,
                 "v6_value": v6_value,
                 "v6_sigma": v6_sigma,
+                "v6_sigma_birge_pdg": v6_sigma_inflated,
                 "pass5_value": p5_value,
                 "pass5_sigma": p5_sigma,
                 "sigma_v6_over_pass5": v6_sigma / p5_sigma,
+                "sigma_v6_over_pass5_birge_pdg": v6_sigma_inflated / p5_sigma,
                 "v6_reduction_percent": 100.0 * (1.0 - v6_sigma / p5_sigma),
+                "v6_reduction_percent_birge_pdg": 100.0
+                * (1.0 - v6_sigma_inflated / p5_sigma),
             }
         )
     summary = {
-        "sample": "Pass5 and v6 restricted to identical sorted recovered-time GTIs",
-        "selected_hour_count": 3969,
-        "gti_interval_count": int(gti_manifest["interval_count"]),
+        "sample": (
+            "Pass5 and v6 use the same accepted-hour/common-GTI selection, with "
+            "pipeline-specific effective live time."
+        ),
+        "selected_hour_count": int(gti_manifest["accepted_hour_count"]),
+        "gti_interval_count": int(gti_manifest["common_gti_interval_count"]),
         "gti_manifest": str(args.gti_manifest),
         "v6_live_days": args.v6_live_days,
         "pass5_live_days": args.pass5_live_days,
@@ -475,16 +725,23 @@ def main() -> None:
         "pass5_covariance": pass5_cov.tolist(),
         "pass5_correlation": correlation(pass5_cov).tolist(),
         "joint_error_volume_ratio_v6_over_pass5": volume_ratio,
+        "joint_error_volume_ratio_v6_over_pass5_birge_pdg": volume_ratio_inflated,
+        "v6_birge_pdg_scale_factor": v6_scale_factor,
         "parameter_comparison": parameter_comparison,
         "v6_diagnostics": v6_diagnostics,
         "pass5_diagnostics": pass5_diagnostics,
+        "scientific_audit": scientific_audit,
+        "covariance_validation_passed": True,
         "caveats": [
             "Formal HESSE statistical covariance only; systematic uncertainty is excluded.",
+            "v6 has chi2/ndof = 20.943; its raw HESSE covariance is not demonstrated to be a reliable precision measure.",
+            "The raw joint error-volume ratio is 0.528, but the Birge/PDG-scaled ratio is 50.617; neither establishes superior v6 total precision.",
             "v6 uses a conservative chi-square objective while Pass5 uses a Poisson likelihood, so the formal covariance definitions are not identical.",
             "Official Pass5 uses 30 <= Nhit < 2000 while the current v6 fit uses 100 <= Nhit < 3000 with different bin edges; this is a full-pipeline comparison, not an isolated predE ablation.",
-            "The current v6 Stage F goodness of fit is poor, so a smaller formal covariance is not by itself proof of smaller total uncertainty.",
-            "The methods use the same observation sample; no cross-method covariance is available for a rigorous difference significance.",
+            "The nominal common-GTI selection is shared, but the effective live times differ by about 4615 seconds because Pass5 counts official-event/DI occupancy while v6 sums recovered-time interval endpoints.",
+            "No cross-method covariance is available for a rigorous difference significance.",
             "The plotted spectral-uncertainty range is 1-100 TeV. Pass5 remains an Nhit-only analysis and therefore has no event-by-event reconstructed-energy cut.",
+            "Pass5 provenance retains stale common_gti_fit_interactive paths; file hashes and chronology are audited, but embedded path provenance is not fully self-contained.",
         ],
     }
     (args.output_dir / "v6_vs_pass5_covariance_summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")

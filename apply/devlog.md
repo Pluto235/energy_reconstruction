@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-07-31 16:20 · [uncommitted] Audit and finalize the Crab v6 versus Pass5 common-GTI covariance comparison with terminal manifests, live-time provenance, and qualified uncertainty reporting.
+
 - **energy_reconstruction** · 2026-07-21 17:12 · [uncommitted] Refit Pass5 seven-bin double-Rayleigh PSFs from 10,000 official WCDA MC files and expose full-sample overflow containment.
 
 - **energy_reconstruction** · 2026-07-21 14:20 · [d55cc9e] Fit seven predE-folded Nhit profiles with conditional double Rayleigh, improving KL by 10.5-80.3x over single Rayleigh.

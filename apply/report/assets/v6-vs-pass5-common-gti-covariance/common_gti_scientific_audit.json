@@ -1,0 +1,232 @@
+{
+  "sample_contract": {
+    "accepted_jobs": 928,
+    "accepted_hours": 3401,
+    "common_gti_intervals": 4763,
+    "common_gti_tsv_duration_seconds": 11287782.126103623,
+    "manifest_duration_seconds": 11287782.126103623,
+    "duration_sum_matches_manifest": true,
+    "accepted_maps_line_count": 928,
+    "accepted_maps_unique_count": 928,
+    "accepted_maps_matches": true,
+    "eos_nonempty_j2000_count": 928,
+    "eos_matches_accepted_maps": true,
+    "merged_map_input_count": 928,
+    "merged_map_terminal_log_matches": true
+  },
+  "live_time_comparison": {
+    "v6_gti_seconds": 11287782.126103627,
+    "v6_gti_days": 130.6456264595327,
+    "pass5_merged_header_seconds": 11283167.176349299,
+    "pass5_merged_header_days": 130.592212689228,
+    "pass5_chunk_header_sum_seconds": 11283167.200001037,
+    "pass5_chunk_header_sum_days": 130.59221296297497,
+    "chunk_sum_minus_merged_header_seconds": 0.023651737719774246,
+    "v6_minus_pass5_seconds": 4614.949754327536,
+    "relative_difference_percent_of_v6": 0.040884468735937124,
+    "chunk_count": 928,
+    "chunks_abs_delta_le_0p2_seconds": 898,
+    "chunks_delta_gt_10_seconds": 14,
+    "large_delta_seconds_sum": 4600.588690509001,
+    "large_delta_share_percent": 99.68881429738065,
+    "median_chunk_delta_seconds": 0.0030133688806017744,
+    "mean_chunk_delta_seconds": 4.972980714002004,
+    "accepted_hours_with_zero_pass5_mask_histogram": 20,
+    "zeroed_hour_v6_gti_seconds": 3079.175830073651,
+    "zeroed_hours": [
+      "20220427_10",
+      "20220427_11",
+      "20220428_10",
+      "20220428_11",
+      "20220429_10",
+      "20220429_11",
+      "20220516_10",
+      "20220516_11",
+      "20220613_15",
+      "20220621_10",
+      "20220621_11",
+      "20220622_17",
+      "20220623_10",
+      "20220623_11",
+      "20220625_10",
+      "20220625_11",
+      "20220627_10",
+      "20220627_11",
+      "20220628_10",
+      "20220628_11"
+    ],
+    "interpretation": "The pipelines share the same nominal accepted-hour/common-GTI selection, but they do not have identical effective live time. Pass5 Ltime counts official-event/DI time occupancy after GTI masking, whereas v6 sums continuous recovered-time GTI endpoints. Use 'common-GTI selected sample' with the 4614.950 s exposure caveat; do not claim strict second-for-second identity."
+  },
+  "pass5_provenance": {
+    "description": "File-level provenance audit for the final common-GTI official Pass5 fit.",
+    "files": {
+      "strict_recovery_manifest": {
+        "path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/strict_recovery/strict_recovery_manifest.json",
+        "bytes": 926841,
+        "mtime": "2026-07-19T06:38:29.850445+08:00",
+        "sha256": "1d112ec2f75b91053d27ef0675a6c12058a90d3ee12416959954ab10a1c1ce84"
+      },
+      "accepted_maps_list": {
+        "path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/strict_recovery/accepted_maps.list",
+        "bytes": 123424,
+        "mtime": "2026-07-19T06:38:29.706605+08:00",
+        "sha256": "0f420c6cd2ffdd13891f3c991d33f2e8c3ef72d1327baeb2da57982d33129643"
+      },
+      "merged_map": {
+        "path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/pass5_v6_common_gti_map.root",
+        "bytes": 776863034,
+        "mtime": "2026-07-20T10:33:06.983911+08:00",
+        "sha256": "e4434142ebfcc1a7d6257d8b11d01d47fe30f324047d37d6e17be8da2d00bbea"
+      },
+      "strict_live_days": {
+        "path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit/strict_pass5_live_days.txt",
+        "bytes": 17,
+        "mtime": "2026-07-21T11:33:50.485768+08:00",
+        "sha256": "40eace7c82d7f593b4c3aeb2028e8935e3cd643f0e0d0765eb77bd16627283c3"
+      },
+      "data_config": {
+        "path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit/data_config.yaml",
+        "bytes": 327,
+        "mtime": "2026-07-21T11:33:50.671597+08:00",
+        "sha256": "cf9c792b293a73fb94dfd0619c5368dc8b4ffc95e499cb9949c866ab23bea656"
+      },
+      "data_root": {
+        "path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit/data.root",
+        "bytes": 216358261,
+        "mtime": "2026-07-21T11:34:17.628055+08:00",
+        "sha256": "b4bb90f7e8d167251030a71c9dcf493b31ee97abdd1d2df9e024599001b83849"
+      },
+      "covariance_fit": {
+        "path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit/covariance_fit.yaml",
+        "bytes": 10068,
+        "mtime": "2026-07-21T11:35:05.781449+08:00",
+        "sha256": "cdf81114bdecf63cefe8a5939c4bf51b19adf170ddd32b71595841b7cf2b225f"
+      }
+    },
+    "merge": {
+      "log_path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/merge_strict_map.sh.out.87689726.0",
+      "terminal_line": "STRICT_MAP_MERGE_COMPLETE maps=928 output=/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/pass5_v6_common_gti_map.root",
+      "expected_terminal_line": "STRICT_MAP_MERGE_COMPLETE maps=928 output=/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/pass5_v6_common_gti_map.root",
+      "terminal_line_matches": true,
+      "input_map_line_count": 928,
+      "input_map_unique_count": 928
+    },
+    "eos_map_set": {
+      "root": "/eos/user/l/liushijie/pass5_crab_v6_sorted_gti/pass5_crab_v6_sorted_gti_map_chunks",
+      "nonempty_j2000_count": 928,
+      "accepted_map_unique_count": 928,
+      "matches_accepted_maps_list": true,
+      "only_eos": [],
+      "only_accepted_maps_list": []
+    },
+    "data_config": {
+      "data_read_path": [
+        "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/pass5_v6_common_gti_map.root"
+      ],
+      "data_read_path_matches_merged_map": true,
+      "live_time_days": 130.592212689228,
+      "live_time_matches_header": true,
+      "embedded_data_save_path": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit_interactive/data.root",
+      "embedded_data_save_path_exists": false,
+      "actual_data_root": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit/data.root"
+    },
+    "covariance_fit": {
+      "embedded_all_sky_map": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit_interactive/data.root",
+      "embedded_all_sky_map_exists": false,
+      "actual_data_root": "/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance/common_gti_fit/data.root",
+      "covariance_status": 3,
+      "pivot_tev": 3.0
+    },
+    "chronology": {
+      "merged_map_then_data_config_then_data_root_then_covariance_fit": true
+    },
+    "path_provenance_status": "relocated_with_stale_embedded_paths",
+    "path_provenance_note": "data_config.yaml and covariance_fit.yaml retain common_gti_fit_interactive output paths that no longer exist. The products are present under common_gti_fit with a monotonic generation chronology, but the embedded path chain is not self-contained and must not be described as fully path-clean provenance."
+  },
+  "analysis_scope": {
+    "v6": {
+      "selected_cell_count": 44,
+      "nhit_range": "100 <= Nhit < 3000",
+      "nhit_bins": [
+        "[100,200)",
+        "[1100,2000)",
+        "[200,300)",
+        "[2000,3000)",
+        "[300,500)",
+        "[500,800)",
+        "[800,1100)"
+      ],
+      "predE_coordinate": "log10(E_pred / GeV)",
+      "selected_predE_bins": [
+        "[2,2.5)",
+        "[2.5,3)",
+        "[3,3.25)",
+        "[3.25,3.5)",
+        "[3.5,3.75)",
+        "[3.75,4.0)",
+        "[4.0,4.25)",
+        "[4.25,4.5)",
+        "[4.5,4.75)",
+        "[4.75,5.0)",
+        "[5,5.5)"
+      ],
+      "selected_predE_envelope_tev": [
+        0.1,
+        316.22776601683796
+      ],
+      "true_energy_response_log10_gev": [
+        2.0,
+        6.0
+      ],
+      "true_energy_response_tev": [
+        0.1,
+        1000.0
+      ],
+      "objective": "chi2 on 44 Stage-E excess cells",
+      "sigma_model": "sqrt(N_on + B_on)",
+      "chi2": 858.6766948243794,
+      "ndof": 41
+    },
+    "pass5": {
+      "analysis_bin_count": 7,
+      "nhit_range": "30 <= Nhit < 2000",
+      "nhit_edges": [
+        30,
+        60,
+        100,
+        200,
+        300,
+        500,
+        800,
+        2000
+      ],
+      "event_level_energy_cut": null,
+      "representative_log10_energy_tev": [
+        -0.25,
+        -0.05,
+        0.15,
+        0.4,
+        0.6,
+        0.9,
+        1.2
+      ],
+      "representative_energy_tev": [
+        0.5623413251903491,
+        0.8912509381337456,
+        1.4125375446227544,
+        2.51188643150958,
+        3.9810717055349722,
+        7.943282347242816,
+        15.848931924611133
+      ],
+      "objective": "Poisson likelihood on the seven-bin spatial cube",
+      "free_parameter_count": 7
+    },
+    "comparison_energy_range_tev": [
+      1.0,
+      100.0
+    ],
+    "comparison_classification": "full_pipeline_comparison",
+    "not_an_isolated_predE_gain_test": "Cuts, Nhit coverage and edges, 2D cell selection, background/PSF/IRF construction, objective, and nuisance treatment differ. An isolated predE ablation must hold those choices fixed inside the v6 pipeline."
+  }
+}

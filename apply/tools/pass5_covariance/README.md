@@ -1,177 +1,108 @@
-# Pass5 versus v6 Crab covariance comparison
+# Pass5 versus v6 Crab common-GTI covariance audit
 
-This workflow compares the v6 64748 2D `Nhit x predE` Crab fit with the
-official Pass5 Nhit-only fit on identical recovered-time GTIs. Both final
-covariances are expressed for a natural-log LogPar model at a 3 TeV pivot, and
-the plotted uncertainty range is 1-100 TeV.
+This workspace compares the v6 64748 2D Nhit x predE Crab fit with the
+official Pass5 Nhit-only fit. Both final 3x3 covariances are represented as
+log10_phi0, alpha, beta for a natural-log LogPar model at a 3 TeV pivot.
+The plotted propagation range is 1-100 TeV.
 
-## Audited sample contract
+## Terminal production state
 
-- v6 files with recovered time: `3969`
-- nominal 2022-H1 hourly slots absent before Stage C: `375`
-- Pass5 event-level matches for the selected hours: `3969`
-- sorted recovered-time GTI intervals: `8641`
-- true gaps greater than 60 seconds: `4672` (`522529.189930 s`)
-- exact sorted-GTI live time: `149.089914423326 d`
-- negative MJD steps in the original event order: `4170`
-- obsolete unsorted Stage C rough estimate: `125.670245718786 d`
+Production is complete. ETO jobs 65274, 65275, and 65276 completed with exit
+code zero and must not be resubmitted. The IHEP recovery state is:
 
-The old 125.67-day estimate must not be used for this comparison. Stage C
-applied `np.diff` to event-order MJD without sorting, counted positive jumps as
-gaps, and ignored the corresponding negative time wraps. The GTI extractor
-sorts valid `match_status == 0` MJD values inside each file before finding real
-gaps.
+- 1078 candidate DI chunks;
+- 928 accepted maps;
+- 150 rejected chunks (104 acceptance failures and 46 with no central events);
+- zero Step2, J2000, or other recovery work remaining;
+- 928 unique entries in strict_recovery/accepted_maps.list;
+- exact agreement with the 928 nonempty J2000 ROOT files on EOS.
 
-The IHEP run directory retains its historical `125d` name:
+The final common selection contains 3401 accepted hourly files and 4763 GTI
+intervals. common_gti.tsv sums to 11287782.126103623 s, or
+130.645626459533 d.
 
-```text
-/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance
-```
+Do not use the original full-sample counts of 3969 hours and 8641 intervals as
+metadata for the final covariance comparison. Those describe the
+pre-intersection v6 sample.
 
-All products inside the current workflow are identified as `sorted_gti`.
+## Effective live-time qualification
 
-## 1. Reconstruct v6 GTIs on ETO
+The merged Pass5 map header reports 130.592212689228 d. It is 4614.949754 s
+shorter than the v6 GTI endpoint sum (0.040884% of the v6 exposure). This is
+not a missing-map problem:
 
-Run the GTI audit through Slurm:
+- 898 of 928 chunks agree within 0.2 seconds;
+- 14 chunks account for 99.69% of the difference;
+- 20 accepted hourly Pass5 logs have a zero hMJD_all_fine count after the GTI
+  mask, totaling 3079.175830 s of v6 GTI duration.
 
-```bash
-cd /home/server/projects/energy_reconstruction/apply/tools/pass5_covariance
-sbatch run_extract_v6_gti_slurm.sh
-```
+The two pipelines therefore share the same nominal accepted-hour/common-GTI
+selection, but not identical effective live time. Pass5 uses official-event/DI
+time occupancy (bkg->EffLtime); v6 integrates recovered-time GTI interval
+endpoints. Describe this as a common-GTI selected sample with an exposure
+caveat, not as strict second-for-second identity.
 
-The authoritative outputs are:
+## Rebuilding the terminal manifest
 
-```text
-v6_gti_output/v6_sorted_gti.tsv
-v6_gti_output/v6_sorted_gti_manifest.json
-v6_gti_output/v6_sorted_gti_source_files.csv
-```
+Run this only to refresh audit metadata from the existing final IHEP state; it
+does not rerun production:
 
-`build_gti_source_files.py` expands the Stage C file ledger into one exposure
-row per GTI. Stage F can then integrate the true source zenith exposure rather
-than spreading a per-file rough duration uniformly over the file span.
+    python3 build_common_gti_manifest.py \
+      --run-dir /home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance
 
-## 2. Refit v6 with exact GTIs
+The builder requires recovery counts to be terminal, enforces unique map URIs,
+and compares accepted_maps.list with every accepted recovery record. It
+writes:
 
-```bash
-cd /home/server/projects/energy_reconstruction/apply/tools/pass5_covariance
-sbatch run_v6_sorted_gti_fit_slurm.sh
-```
+    common_gti/common_gti_manifest.json
+    common_gti/common_gti.tsv
+    common_gti/included_source_file_ids.txt
 
-This creates an independent, non-promoted Stage F run under:
+included_source_file_ids.txt contains 3401 unique parent hourly-file IDs; the
+manifest separately records 4763 expanded GTI source rows.
 
-```text
-apply/output/stage_f_v6_64748_nhit100_reselect44_split56_miss030_sortedgti149
-```
+## Read-only live-time and provenance audits
 
-It reuses the same 44-cell Stage A response and Stage E excess counts while
-recomputing the source-theta exposure from the exact GTIs.
+On IHEP, ROOT can scan every accepted map header:
 
-## 3. Mask Pass5 event-level hours on IHEP
+    root -l -b -q \
+      'audit_pass5_map_livetime.C("strict_recovery/accepted_maps.list","strict_recovery/pass5_map_livetime_audit.csv")'
 
-Build the isolated GTI-aware copy of the official hourly program:
+Completed hourly logs are parsed with:
 
-```bash
-cd /home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance
-./build_gti_hour_binary.sh
-```
+    python3 audit_pass5_hour_logs.py \
+      --log-dir /home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance \
+      --output-csv strict_recovery/pass5_hour_gti_mask_audit.csv
 
-Build the 3969 hourly jobs:
+File hashes, merge logs, EOS map membership, and the Pass5 fit chain are
+captured with build_pass5_provenance.py. The audit found that data_config.yaml
+and covariance_fit.yaml retain stale common_gti_fit_interactive/ paths although
+the actual products are under common_gti_fit/. File hashes and monotonic
+timestamps are recorded, but the embedded path provenance is not fully
+self-contained; do not rewrite the original fit YAML to conceal this.
 
-```bash
-python3 build_gti_hour_jobs.py \
-  --source-files v6_source_files.csv \
-  --gti-tsv v6_gti_output/v6_sorted_gti.tsv \
-  --output-dir gti_hour_selection \
-  --scratch-dir /scratchfs/lhaaso/liushijie/pass5_crab_v6_sorted_gti_hours
-```
+build_common_gti_audit.py consolidates the sample, live-time, provenance,
+energy/binning, and objective checks into CSV and JSON inputs for the report.
 
-Each event is tested against the corresponding v6 GTI before filling the
-official Pass5 `hacc`, `hon`, `hmjd`, and `hMJD_all_fine` products. Existing
-official maps are never overwritten.
+## Covariance and scientific scope
 
-Submit the hourly array to the short queue:
+The report generator fails unless both covariances are finite symmetric
+positive-definite 3x3 matrices, their diagonal errors match the reported
+parameter errors, their order is log10_phi0, alpha, beta, and both pivots are
+3 TeV.
 
-```bash
-./submit_gti_hours.sh
-```
+The comparison is a full-pipeline comparison:
 
-## 4. Generate and merge Direct Integration maps
+- v6 uses 44 selected 2D cells, 100 <= Nhit < 3000, a predE envelope of
+  0.1-316.23 TeV, and conservative chi-square on Stage-E excess counts;
+- Pass5 uses seven Nhit-only bins, 30 <= Nhit < 2000, no event-level
+  reconstructed-energy cut, and a Poisson spatial likelihood;
+- background, PSF/IRF, binning, nuisance handling, and objective all differ.
 
-After all hourly `acc/bkg` pairs exist, build 4-hour DI jobs from the masked
-scratch products:
+An isolated predE gain test must hold those choices fixed within one pipeline.
+The current comparison cannot attribute a covariance difference to predE.
 
-```bash
-python3 build_strict_hour_lists.py \
-  --source-files v6_source_files.csv \
-  --gti-manifest v6_gti_output/v6_sorted_gti_manifest.json \
-  --data-root /scratchfs/lhaaso/liushijie/pass5_crab_v6_sorted_gti_hours \
-  --xrootd-prefix "" \
-  --output-dir strict_hour_selection \
-  --scratch-dir /scratchfs/lhaaso/liushijie/pass5_crab_v6_sorted_gti_map_chunks
-
-./submit_strict_map_chunks.sh
-```
-
-The DI jobs intentionally have no short wall-time limit. Merge only after all
-1078 J2000 chunks are present:
-
-```bash
-hep_sub -g lhaaso -mem 8000 merge_strict_map.sh
-```
-
-The merged map is:
-
-```text
-pass5_v6_sorted_gti_map.root
-```
-
-## 5. Fit Pass5 and export HESSE covariance
-
-```bash
-hep_sub -g lhaaso -mem 15000 prepare_strict_pass5_fit.sh
-```
-
-The official workflow is preserved through ROI preparation and nuisance-source
-fitting. Before the final covariance fit, the Crab LogPar parameters are
-exactly reparameterized from the official 10 TeV pivot to 3 TeV. The isolated
-`gtlike_cov` executable adds full covariance, correlation, EDM, covariance
-status, minimum value, and function-call metadata without changing the
-likelihood or HESSE rule.
-
-Final Pass5 output:
-
-```text
-sorted_gti_fit/covariance_fit.yaml
-```
-
-## 6. Plot the comparison
-
-```bash
-python report/plot_v6_vs_pass5_covariance.py \
-  --pass5-yaml sorted_gti_fit/covariance_fit.yaml \
-  --pass5-live-days "$(cat sorted_gti_fit/strict_pass5_live_days.txt)" \
-  --v6-json output/stage_f_v6_64748_nhit100_reselect44_split56_miss030_sortedgti149/runs/v6_64748_nhit100_reselect44_split56_miss030_sortedgti149_stage_f/fit_v6_64748_nhit100_reselect44_split56_miss030_sortedgti149_metadata.json \
-  --v6-live-days 149.08991442332612 \
-  --gti-manifest tools/pass5_covariance/v6_gti_output/v6_sorted_gti_manifest.json \
-  --output-dir report/assets/v6-vs-pass5-sorted-gti-covariance \
-  --report-html report/crab_v6_vs_pass5_sorted_gti_covariance_report.html
-```
-
-Both PNG and vector PDF figures are generated.
-
-## Interpretation limits
-
-- Covariances are formal HESSE statistical uncertainties; systematics are not
-  included.
-- v6 uses a conservative chi-square objective, while Pass5 uses a Poisson
-  likelihood.
-- Pass5 uses `30 <= Nhit < 2000`; v6 uses `100 <= Nhit < 3000` with different
-  bin edges. This is a full-pipeline comparison, not an isolated predE
-  ablation.
-- Pass5 is Nhit-only and has no event-by-event reconstructed-energy cut. The
-  reported spectral-uncertainty comparison is evaluated over 1-100 TeV.
-- The v6 goodness of fit remains poor. A smaller formal covariance alone is not
-  proof of a smaller total uncertainty.
-- Cross-method covariance is unavailable, so the spectrum-ratio band is not a
-  rigorous difference significance.
+The v6 LogPar fit has chi2/ndof = 20.943334. Its raw HESSE joint error-volume
+ratio relative to Pass5 is 0.528, while applying the Birge/PDG scale factor to
+v6 gives 50.617. Neither number proves that v6 has smaller total uncertainty,
+and systematics and cross-method covariance are absent.

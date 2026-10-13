@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 06:28 · [uncommitted] Fence January source claims after February throughput loss; preserve accepted receipts and diagnose node scratch exhaustion, damaged legacy friend, and delayed concurrency response.
+
 - **energy_reconstruction** · 2026-10-14 03:58 · [uncommitted] Launch the remaining 677 files with verified two-lane production, preserve four accepted identities, and schedule 15-minute priority monitoring plus final 681-file Slurm acceptance.
 
 - **energy_reconstruction** · 2026-10-14 03:27 · [uncommitted] Fix seven-column XRootD byte accounting; pass all 17 IHEP regressions and live queue/readback checks, preserve four accepted files and deploy the remaining 677 with new identities.

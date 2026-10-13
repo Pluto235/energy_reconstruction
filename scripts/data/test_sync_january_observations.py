@@ -1,31 +1,33 @@
 from pathlib import Path
-import hashlib
 import tempfile
 import unittest
+from unittest.mock import patch
 
-from sync_january_observations import verify
+from observation_state import KEEP
+from sync_january_observations import validate_report, verify
 
 
 class TransferAuditTests(unittest.TestCase):
-    def test_accepts_expected_file_and_rejects_corruption_and_path_escape(self):
+    def test_metadata_size_paths_and_legacy_identity_without_hashing(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            name = "Esg20220101_00.root"
-            (root / name).write_bytes(b"rootdata")
-            report = {"day": "20220101", "file_count": 1, "bytes": 8,
-                      "files": [{"name": name, "output": {"bytes": 8,
-                                "sha256": hashlib.sha256(b"rootdata").hexdigest()}}]}
-            verify(report, root)
-            (root / name).write_bytes(b"rootxxxx")
-            with self.assertRaises(RuntimeError):
+            root = Path(directory); name = 'Esg20220101_00.root'
+            (root / name).write_bytes(b'rootdata')
+            record = dict(name=name, receipt_id='b'*32, source=dict(selected_entries=2,header_entries=1),
+                          output=dict(bytes=8, entries=2, header_entries=1))
+            report = dict(day='20220101', file_count=1, bytes=8, files=[record])
+            metadata=dict(entries=2,header_entries=1,branches=KEEP,branch_entries=[2]*30,header_branches=['run'])
+            with patch('sync_january_observations.read_metadata', return_value=metadata):
                 verify(report, root)
-            (root / name).write_bytes(b"wrongdat")
-            with self.assertRaises(RuntimeError):
+                record.pop('receipt_id'); record['output']['sha256']='a'*64
                 verify(report, root)
-            report["files"][0]["name"] = "../escape.root"
-            with self.assertRaises(ValueError):
-                verify(report, root)
+                metadata['branches']=KEEP-{'vx'}
+                with self.assertRaises(RuntimeError): verify(report, root)
+                metadata['branches']=KEEP
+                (root/name).write_bytes(b'root')
+                with self.assertRaises(RuntimeError): verify(report, root)
+                record['name']='../escape.root'
+                with self.assertRaises(ValueError): validate_report(report)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

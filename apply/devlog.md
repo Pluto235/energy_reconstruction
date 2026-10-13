@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-13 17:29 · [uncommitted] Optimize January recovery with one cut scan, measured 32 MiB caches, durable hash-free receipts and a 5.75 GiB reserved queue; validate 4/8-worker cohorts and submit eight production shards.
+
 - **energy_reconstruction** · 2026-10-13 15:35 · [uncommitted] Guard observation receipt cleanup against non-staging paths and symlinks; verify the first rebuilt full-hour files end to end on ETO.
 
 - **energy_reconstruction** · 2026-10-13 15:19 · [uncommitted] Bound January observation staging to four files after IHEP quota exhaustion; fail on ROOT write errors and delete only temporary copies after ETO SHA-256 receipts.

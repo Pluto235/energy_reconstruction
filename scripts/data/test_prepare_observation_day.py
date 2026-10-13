@@ -4,12 +4,15 @@ from pathlib import Path
 import tempfile
 import subprocess
 import sys
+import os
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
 import ROOT
 
-from prepare_observation_day import KEEP, MACRO, inspect, main
+from prepare_observation_day import KEEP, MACRO, inspect, main, prepare_one
+from observation_state import StagingQueue, atomic_json
 
 
 class ObservationReductionTests(unittest.TestCase):
@@ -40,8 +43,21 @@ class ObservationReductionTests(unittest.TestCase):
             self.assertTrue({"vx", "vy", "vq", "vt", "vidmc", "ievent"}.issubset(KEEP))
             ROOT.gROOT.ProcessLine(f".L {MACRO}")
             self.assertEqual(ROOT.filter_observed_pincness_loop_scoped(str(source), str(output), 1.1), 0)
+            self.assertTrue(hasattr(ROOT, "observation_filter_stats"), "One-scan metrics are missing")
+            stats = ROOT.observation_filter_stats()
+            self.assertEqual((stats.input_entries, stats.selected_entries, stats.header_entries), (5, 2, 2))
             self.assertEqual(inspect(source)["selected_entries"], 2)
             self.assertEqual(inspect(output, 2, 2)["entries"], 2)
+            for cache in (0, 32, 128):
+                candidate = Path(directory) / f"cache{cache}.root"
+                self.assertEqual(ROOT.filter_observed_pincness_loop_scoped(str(source), str(candidate), 1.1, cache), 0)
+                self.assertEqual(inspect(candidate, 2, 2)["entries"], 2)
+                left, right = ROOT.TFile.Open(str(output)), ROOT.TFile.Open(str(candidate))
+                self.assertTrue(ROOT.same_observation_tree(left.Get("t_eventout"), right.Get("t_eventout")))
+                events = right.Get("t_eventout")
+                events.GetEntry(0); self.assertEqual(events.ievent, 0)
+                events.GetEntry(1); self.assertEqual(events.ievent, 1)
+                left.Close(); right.Close()
             with self.assertRaises(RuntimeError):
                 inspect(output, 3, 2)
             with self.assertRaises(RuntimeError):
@@ -56,6 +72,29 @@ rc = ROOT.filter_observed_pincness_loop_scoped({str(source)!r}, {str(Path(direct
 raise SystemExit(0 if rc != 0 else 1)
 '''], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            stage, work = Path(directory) / 'stage', Path(directory) / 'work'
+            stage.mkdir(); (work / 'audit').mkdir(parents=True)
+            (work / 'audit_files').mkdir(); (work / 'acks').mkdir()
+            named_source = Path(directory) / 'Esg20220105_00.root'
+            os.link(source, named_source)
+            args = SimpleNamespace(output_root=stage, audit_dir=work/'audit',
+                                   archive_root=Path(directory)/'no_archive', day='20220105')
+            config=dict(capacity_bytes=2**20,initial_reservation_bytes=2**20,cache_mb=32,full_read=True)
+            atomic_json(work/'queue_config.json',config)
+            queue=StagingQueue(stage,work)
+            record=prepare_one(str(named_source),args,config,queue)
+            self.assertNotIn('sha256',record['output'])
+            self.assertFalse((work/'acks'/(record['name']+'.ack')).exists())
+            self.assertEqual(queue.usage(),record['output']['bytes'])
+            retry_source = Path(directory) / 'Esg20220105_01.root'
+            os.link(source, retry_source)
+            config.update(capacity_bytes=65536,initial_reservation_bytes=4096)
+            atomic_json(work/'queue_config.json',config)
+            with patch('prepare_observation_day.time.sleep', return_value=None):
+                retried = prepare_one(str(retry_source),args,config,queue)
+            self.assertEqual(retried['output']['entries'],2)
+            self.assertFalse(list(stage.glob('01??/*.partial')))
+            self.assertLessEqual(queue.usage(),config['capacity_bytes'])
 
 
 if __name__ == "__main__":

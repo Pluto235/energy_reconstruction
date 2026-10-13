@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-13 12:56 · [uncommitted] Start resumable direct IHEP-to-ETO synchronization of 10,000 MC eventout ROOT files (174.2 GB) into /mnt/newdisk/shijie/WCDA_simulation.
+
 - **energy_reconstruction** · 2026-10-13 12:07 · [uncommitted] Restore GitHub main and Mac-only source changes to ETO /mnt/newdisk/shijie/energy; retain differing originals, merge devlogs, and relocate recovered output links.
 
 - **energy_reconstruction** · 2026-07-31 16:20 · [uncommitted] Audit and finalize the Crab v6 versus Pass5 common-GTI covariance comparison with terminal manifests, live-time provenance, and qualified uncertainty reporting.

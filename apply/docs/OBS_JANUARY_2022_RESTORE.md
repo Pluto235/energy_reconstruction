@@ -2,7 +2,7 @@
 
 Time and J2000 coordinate recovery is planned as an independent, receipt-driven pipeline that reuses legacy products and fills missing events. See [the January time recovery plan](../../docs/superpowers/plans/2026-10-13-january-time-recovery.md). That plan has not been deployed or submitted and does not change the acquisition workflow below.
 
-Status: the optimized workflow has passed complete-hour tests, 4/8-worker transfer cohorts, and has been submitted for full-month continuation. At the end of the cohorts, 98 of the 681 files were confirmed on ETO; monthly completion remains pending. Source/target paths and the original 31 manifests are unchanged.
+Status: **complete at 2026-10-13 22:53:18 +0800**. All **681 original-manifest files across 31 dates**, totaling **151,096,492,606 bytes**, are confirmed on ETO. Receiver exit code is 0; task-owned ROOT staging and all byte reservations are empty. Final manifest/name/size/receipt reconciliation passed at 23:51–23:52. Performance checkpoints and incident reports below are historical.
 
 ## Data contract
 
@@ -122,3 +122,14 @@ At 20:45, ETO contained 402 / 681 receipts (89,637,856,695 bytes); the last 30 m
 Both tasks were owner/command/node verified, snapshotted, held and checked for zero current hosts. All eight January trimming jobs now exclude **both `lhws247.ihep.ac.cn` and `lhws261.ihep.ac.cn`** on their next match, while healthy running jobs were left running. The two held jobs' stale reservations were released under nonblocking per-file and queue locks without deleting their existing unaudited outputs; then the same task IDs were released to rematch. Evidence and exact requirements are in `.control/optimization_20261013/cvmfs_lhws261_failure_jobs.json` and `cvmfs_lhws261_reschedule.json`.
 
 The byte cap remains 5.5 GiB, source full read-back remains enabled, and acknowledgment-driven cleanup continues. Future ETA must include rematching and uneven shard workloads, rather than assuming all eight Running statuses represent healthy throughput.
+
+
+## Final completion and reconciliation (2026-10-13 23:52)
+
+ETO `progress.json` records completion at **22:53:18**, all 31 dates / 681 files / 151,096,492,606 bytes, no errors, an empty queue and zero reservations. `completed.json` is present, receiver `exit_code` is 0, and the log ends with `JANUARY_SYNC_COMPLETE files=681`.
+
+The final check reread all original manifests directly from IHEP, compared their exact 681 unique names against both ETO receipts and actual target ROOT filenames, checked every target size against its receipt/audit bytes, and checked each receipt's selected-event/header counts against its source audit. All 681 IHEP acknowledgments match their corresponding audited identities; no temporary ROOT or partial remains under the task's `01??` staging directories. This reconciliation did not rehash files or repeat full content read-back: full retained-branch/header validation was performed during production and ROOT/byte checks during receiving.
+
+Final evidence: ETO `.recovery/2026-10-13/obs-january/final_verification.json`; IHEP `.control/optimization_20261013/final_source_verification.json`. One source task, `3726355.0`, lingered in a ROOT bus-error loop after publishing its final validated output. Its owner, command, shard arguments, all assigned-day audits, all monthly confirmations and empty staging were verified before removing that task. The saved job ad is `completed_lingering_job.json`; this post-output shutdown failure does not invalidate the independently verified ETO files.
+
+All requested January observation acquisition work is complete. The scratch byte cap stayed 5.5 GiB after the home migration. Original EOS data, the Jan31 archive, durable audit/receipt records and confirmed ETO outputs remain preserved. Time/J2000 recovery, inference and training were not started as part of this acquisition.

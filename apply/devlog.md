@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-13 23:52 · [uncommitted] Verify January acquisition completion at 22:53: 681 files / 31 dates / 151.096 GB on ETO, exact manifest and receipt reconciliation, empty staging and safe retirement of the post-output ROOT shutdown task.
+
 - **energy_reconstruction** · 2026-10-13 20:46 · [uncommitted] Isolate repeat ROOT/CVMFS failures on lhws261, reschedule only two affected January shards and exclude both failed nodes for future matches; preserve their outputs and reclaim stale reservations safely.
 
 - **energy_reconstruction** · 2026-10-13 20:10 · [uncommitted] Plan independent January time/J2000 recovery with legacy event-key reuse, missing-event completion, a bounded EOS queue and one-to-two-worker validation before parallel production.

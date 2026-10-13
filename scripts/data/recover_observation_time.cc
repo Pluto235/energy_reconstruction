@@ -56,6 +56,8 @@ struct FileMeta {
   std::string hour;
 };
 
+struct ReducedRow { int ievent; Long64_t sec; double subsec; };
+
 struct ReducedContext {
   Key key;
   std::string path;
@@ -70,9 +72,7 @@ struct ReducedContext {
   bool use_leaf_fallback = false;
   bool used_ies_fallback = false;
   Long64_t entries = 0;
-  std::vector<int> event_ids;
-  std::vector<Long64_t> secs;
-  std::vector<double> subsecs;
+  std::map<int,ReducedRow> rows;
 };
 
 struct MissingReducedCache {
@@ -250,7 +250,8 @@ bool setup_reduced_branches(ReducedContext &ctx) {
 ReducedContext *load_reduced(
     const Key &key, const std::map<Key, std::string> &manifest,
     const std::map<std::pair<int, int>, std::string> &run_seq_manifest,
-    ReducedContext &ctx, MissingReducedCache &missing_cache, bool &used_ies_fallback) {
+    ReducedContext &ctx, MissingReducedCache &missing_cache, bool &used_ies_fallback,
+    const std::set<int> &needed) {
   if (ctx.file && ctx.key == key) {
     used_ies_fallback = ctx.used_ies_fallback;
     return &ctx;
@@ -293,20 +294,15 @@ ReducedContext *load_reduced(
     return &ctx;
   }
 
-  if(ctx.entries<0 || ctx.entries>512LL*1024*1024/20) throw std::runtime_error("Reduced scalar cache exceeds 512 MiB");
-  ctx.event_ids.resize(ctx.entries);
-  ctx.secs.resize(ctx.entries);
-  ctx.subsecs.resize(ctx.entries);
-  for (Long64_t i = 0; i < ctx.entries; ++i) {
+  if(ctx.entries<0) throw std::runtime_error("Invalid reduced entry count");
+  for (int i : needed) {
+    if(i<0 || i>=ctx.entries) continue;
     if (ctx.tree->GetEntry(i) <= 0) throw std::runtime_error("Reduced read failed: " + ctx.path);
     if (ctx.use_leaf_fallback) {
-      ctx.event_ids[i] = static_cast<int>(ctx.leaf_ievent->GetValue());
-      ctx.secs[i] = static_cast<Long64_t>(ctx.leaf_sec->GetValueLong64());
-      ctx.subsecs[i] = ctx.leaf_subsec->GetValue();
+      ctx.rows.emplace(i,ReducedRow{static_cast<int>(ctx.leaf_ievent->GetValueLong64()),
+        static_cast<Long64_t>(ctx.leaf_sec->GetValueLong64()),ctx.leaf_subsec->GetValue()});
     } else {
-      ctx.event_ids[i] = ctx.ievent;
-      ctx.secs[i] = ctx.sec;
-      ctx.subsecs[i] = ctx.subsec;
+      ctx.rows.emplace(i,ReducedRow{ctx.ievent,ctx.sec,ctx.subsec});
     }
   }
   return &ctx;
@@ -411,7 +407,7 @@ struct Stats {
   Long64_t entries=0,reused_time=0,reused_coords=0,new_time=0,new_coords=0;
   Long64_t coordinate_calls=0,coordinate_checks=0,ies_fallback=0,skipped_legacy_files=0;
   Long64_t status[7]={};
-  Long64_t reduced_groups=0,read_bytes=0,max_rss_kib=0;
+  Long64_t reduced_groups=0,reduced_rows_read=0,read_bytes=0,max_rss_kib=0;
   double cpu_seconds=0;
   std::map<std::string,double> seconds;
 };
@@ -515,17 +511,26 @@ public:
     stats.seconds["legacy_index"]=index_reported?0:index_seconds;
     stats.read_bytes=index_reported?0:index_read_bytes;index_reported=true;
     targets.reserve(expected>=0?expected:1024);
+    std::map<Key,std::set<int>> needed;
     for(Long64_t i=0;i<source->GetEntries();++i) {
       double scalar_started=wall_seconds();
       require(source->GetEntry(i)>0,"Raw scalar read failed");
       stats.seconds["target_scalar_read"]+=wall_seconds()-scalar_started;
       if(!(pinc->GetValue()<1.1)) continue;
+      targets.push_back(event);
+      double grouping_started=wall_seconds();
+      if(old.find(event.key())==old.end()) needed[Key{event.irun,event.ies,event.iseq}].insert(event.ievent);
+      stats.seconds["key_matching"]+=wall_seconds()-grouping_started;
+    }
+    require(expected<0||expected==static_cast<Long64_t>(targets.size()),"Target count differs from observation receipt");
+    for(size_t i=0;i<targets.size();++i) {
+      event=targets[i];
       row=TimeRow{};bool fallback=false;std::string reduced_source;
       double matching_started=wall_seconds();
       auto hit=old.find(event.key());
       Legacy *legacy=hit==old.end()?nullptr:&hit->second;
       if(legacy && legacy->conflict) {
-        std::ostringstream error;error<<std::setprecision(17)<<"Conflicting legacy times at raw entry "<<i<<" key=("<<event.irun<<","<<event.ies<<","<<event.iseq<<","<<event.ievent<<") tai=("<<legacy->time.tai_sec<<","<<legacy->time.tai_subsec<<") versus ("<<legacy->conflict_sec<<","<<legacy->conflict_subsec<<")";
+        std::ostringstream error;error<<std::setprecision(17)<<"Conflicting legacy times at target entry "<<i<<" key=("<<event.irun<<","<<event.ies<<","<<event.iseq<<","<<event.ievent<<") tai=("<<legacy->time.tai_sec<<","<<legacy->time.tai_subsec<<") versus ("<<legacy->conflict_sec<<","<<legacy->conflict_subsec<<")";
         throw std::runtime_error(error.str());
       }
       if(legacy) {row=legacy->time;++stats.reused_time;stats.seconds["key_matching"]+=wall_seconds()-matching_started;}
@@ -541,12 +546,13 @@ public:
         auto cached=reduced_cache.find(key);
         if(cached==reduced_cache.end()) {
           CachedReduced value;MissingReducedCache missing;bool previous_error=root_error;
-          auto rc=load_reduced(key,manifest,run_seq,value.data,missing,value.fallback);
+          auto rc=load_reduced(key,manifest,run_seq,value.data,missing,value.fallback,needed.at(key));
           if(!rc) {root_error=previous_error;value.status=1;}
           else if(!rc->tree) value.status=2;
           else value.status=0;
           if(value.data.file) {reduced_read_bytes+=value.data.file->GetBytesRead();value.data.file.reset();value.data.tree=nullptr;}
-          cache_bytes+=value.data.event_ids.size()*4+value.data.secs.size()*8+value.data.subsecs.size()*8;
+          cache_bytes+=value.data.rows.size()*(sizeof(ReducedRow)+64);
+          stats.reduced_rows_read+=value.data.rows.size();
           require(cache_bytes<=512LL*1024*1024,"Hourly reduced cache exceeds 512 MiB");
           cached=reduced_cache.emplace(key,std::move(value)).first;
         }
@@ -554,9 +560,9 @@ public:
         fallback=cached_value.fallback;reduced_source=rc.path;
         if(cached_value.status) row.match_status=cached_value.status;
         else if(event.ievent<0||event.ievent>=rc.entries) row.match_status=3;
-        else if(rc.event_ids[event.ievent]!=event.ievent) row.match_status=4;
+        else if(rc.rows.at(event.ievent).ievent!=event.ievent) row.match_status=4;
         else {
-          row.tai_sec=rc.secs[event.ievent];row.tai_subsec=rc.subsecs[event.ievent];
+          row.tai_sec=rc.rows.at(event.ievent).sec;row.tai_subsec=rc.rows.at(event.ievent).subsec;
           if(row.tai_sec>0&&std::isfinite(row.tai_subsec)&&row.tai_subsec>=0&&row.tai_subsec<1) convert_time(row);
           if(!valid_time(row)) {row=TimeRow{};row.match_status=5;}
           else {++stats.new_time;if(fallback) ++stats.ies_fallback;}
@@ -592,7 +598,7 @@ public:
           <<",\"ies_fallback\":"<<(fallback&&valid_time(row)?"true":"false")<<",\"time_source\":"<<quote_json(legacy?"legacy":"reduced")<<",\"reduced_source\":"<<quote_json(reduced_source)<<"}\n";
       }
       require(times.Fill()>=0 && alignment.Fill()>=0,"ROOT Fill failed");
-      targets.push_back(event);++stats.status[row.match_status];++index;
+      ++stats.status[row.match_status];++index;
       stats.seconds["output_fill"]+=wall_seconds()-writing_started;
     }
     stats.entries=index;
@@ -620,7 +626,7 @@ public:
       <<",\"new_time\":"<<stats.new_time<<",\"new_coords\":"<<stats.new_coords<<",\"coordinate_calls\":"<<stats.coordinate_calls
       <<",\"coordinate_checks\":"<<stats.coordinate_checks<<",\"ies_fallback\":"<<stats.ies_fallback<<",\"skipped_legacy_files\":"<<skipped<<",\"status\":[";
     for(int i=0;i<7;++i) summary<<(i?",":"")<<stats.status[i];
-    summary<<"],\"reduced_groups\":"<<stats.reduced_groups<<",\"read_bytes\":"<<stats.read_bytes<<",\"max_rss_kib\":"<<stats.max_rss_kib<<",\"cpu_seconds\":"<<stats.cpu_seconds<<",\"seconds\":{";
+    summary<<"],\"reduced_groups\":"<<stats.reduced_groups<<",\"reduced_rows_read\":"<<stats.reduced_rows_read<<",\"read_bytes\":"<<stats.read_bytes<<",\"max_rss_kib\":"<<stats.max_rss_kib<<",\"cpu_seconds\":"<<stats.cpu_seconds<<",\"seconds\":{";
     bool comma=false;for(const auto &item:stats.seconds) {summary<<(comma?",":"")<<quote_json(item.first)<<":"<<item.second;comma=true;}
     summary<<"}}\n";summary.close();require(bool(summary),"Summary write failed");
     return stats;
@@ -709,6 +715,11 @@ void self_test(const std::string &directory) {
   Recovery hybrid(path("old.tsv"),path("reduced"));
   auto stats=hybrid.run(input,path("hybrid.root"),4,std::string(32,'c'),std::string(40,'b'));
   require(stats.reused_time==2&&stats.new_time==2&&stats.reused_coords==2&&stats.new_coords==2,"C/A/D/A reuse accounting failed");
+  require(stats.reduced_rows_read==2,"Reduced cache reads unused source entries");
+  fixture_events(path("Esg20220101_07.root"),{d,d});
+  Recovery repeated_missing("",path("reduced"));
+  auto repeated_stats=repeated_missing.run(path("Esg20220101_07.root"),path("repeated_missing.root"),2,"repeated","test");
+  require(repeated_stats.entries==2&&repeated_stats.new_time==2&&repeated_stats.reduced_rows_read==1,"Missing repeated event was dropped or read twice");
   fixture_events(path("observed/0101/Esg20220101_00.root"),{c,a,d,a});
   auto rows=fixture_rows(path("hybrid.root"));
   for(size_t i=0;i<rows.size();++i) require(same_time(rows[i],reference[i])&&same_coords(rows[i],reference[i]),"Hybrid differs from all-new reference");

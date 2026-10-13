@@ -36,8 +36,8 @@ No model parameters, preprocessing, event cuts or input data were changed.
 | Stage | Slurm | State when configured | Parameters / gate |
 |---|---|---|---|
 | January 1 pilot | 66045 | Running | All 23 files; batch 32, 100 MB chunks; verifies every selected hit and output file |
-| Full January inference | 66046 | Waiting on 66045 success | Prepared January launcher; batch 128; repeat provenance and memory gate before starting |
-| Full January validation | 66047 | Waiting on 66046 success | 681 filenames / 31 days, independent cuts and event identities, finite energy consistency, exact header content and schema |
+| Full January inference | 66052 | Waiting on 66045 success | 2 GPU / 16 CPU / 64 GB, batch 352 per GPU; provenance/memory gate and a two-GPU sample before production |
+| Full January validation | 66053 | Waiting on 66052 success | 681 filenames / 31 days, independent cuts and event identities, finite energy consistency, exact header content and schema |
 
 The pilot has its own `apply/output/inference_64748_acceptance/day/` directory.
 Production writes `/mnt/newdisk/shijie/WCDA_obs_eval_64748/` and does not reuse pilot
@@ -59,3 +59,39 @@ These checks establish computation/data-contract integrity. They do not validate
 the physical calibration or scientific suitability of the resulting spectrum.
 
 Background follow-up: thread heartbeat automation 64748 checks every 30 minutes, stays quiet during unchanged healthy progress, and reports stage completion/failure or required action. It stops after final acceptance.
+
+## Two-GPU tuning and estimated completion
+
+User requested both available V100s. Pending single-GPU jobs 66046/66047 were
+verified as task-owned and cancelled; 66052/66053 replace them. The running day
+acceptance 66045 was not interrupted. Production requests both GPUs and uses the
+entrypoint's native file sharding, batch 352 and two reader threads per worker.
+
+Slurm 66050/66051 benchmarked FP32 batches without changing the model or event
+preprocessing. GPU-only throughput was approximately 1,055 events/s over batches
+256–384. Batch 384 reserved 14.56 GB and exceeded the chosen headroom budget.
+Batch 352 reserved 13.35 GB (about 79% of Torch-reported available memory), with
+7.50 GB peak live allocation. A real 8,192-event run with reader-workers=2 passed
+in 17.44 seconds, about 470 events/s end to end. Higher memory occupancy alone
+did not materially improve GPU-only throughput; native two-worker execution is
+the main parallelism improvement.
+
+At 2026-10-14 01:56 +08:00, the day pilot had completed 7/23 files, writing
+935,604 events in 35 minutes. Its provisional completion was about 02:24. The
+January inputs contain 69,279,369 events; native shards contain 34,879,970 and
+34,399,399 input events. Using the pilot's 70.93% retention and 70–90% of the
+measured per-GPU throughput yields roughly 16.3–20.9 hours of month inference,
+plus an estimated 1–2 hours of independent validation. The provisional final
+window is October 14 evening through October 15 early morning, approximately
+20:00–02:00 Asia/Shanghai. This assumes a successful day pilot and no subsequent
+GPU contention; refresh it from the two-GPU sample and actual month progress.
+
+Evidence: two-gpu-tuning.json, batch-tuning-66050.json, two-gpu-eta.json and
+gpu_usage_<jobid>.csv in the control directory. The production job first runs
+two source files with 4,096 events each on both GPUs, verifies finite energies,
+header contents and source event identities, and writes two-gpu-acceptance.json.
+Only then does it invoke the prepared full January launcher.
+
+Native multi-GPU workers start with seeds 42 and 100042. Their per-file weighted
+hit sampling can differ from a one-GPU run; preserve the GPU count, input ordering,
+seed policy and code hash when reproducing this production configuration.

@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 02:02 · [uncommitted] Tune FP32 batch 352 to 13.35 GB reserved per V100, queue dual-GPU January job 66052 plus validation 66053 after day acceptance, replace pending single-GPU jobs and record measured ETA with updated follow-up.
+
 - **energy_reconstruction** · 2026-10-14 01:33 · [uncommitted] Fix uproot 5.7 object-array output with explicit typed TTrees, pass 128-event 64748 smoke 66044 and two regression cases, start day acceptance 66045 and gate month/validation 66046-66047 with quiet background follow-up.
 
 - **energy_reconstruction** · 2026-10-14 01:08 · [uncommitted] Add fixed January 64748 Slurm launcher for new py310/input/output paths, SHA-256/config logging and overwrite/concurrency guards; verify syntax, isolated execution and scheduler test-only without inference.

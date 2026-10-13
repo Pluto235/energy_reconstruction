@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=apply_obs_64748_january
 #SBATCH --partition=main
-#SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=32G
+#SBATCH --gres=gpu:2
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64G
 #SBATCH --time=72:00:00
 #SBATCH --chdir=/mnt/newdisk/shijie/energy
 #SBATCH --output=/mnt/newdisk/shijie/energy/logs/slurm/%x_%j.out
@@ -59,9 +59,9 @@ echo
   --day-prefix 01 \
   --summary-path "${OUTPUT_ROOT}/apply_summary_01_${SLURM_JOB_ID}.json" \
   --device cuda \
-  --gpu-ids 0 \
-  --batch-size 128 \
-  --reader-workers 0 \
+  --gpu-ids 0,1 \
+  --batch-size 352 \
+  --reader-workers 2 \
   --step-size "100 MB" \
   --cut-pinc-max 1.1 \
   --cut-fitstat-equals 0 \

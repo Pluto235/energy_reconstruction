@@ -74,7 +74,7 @@ Cohort jobs: four `3725607`–`3725610`; eight `3725681`–`3725688`, all `.0`. 
 
 Selected concurrency: **8 producers**, each 1 CPU / 4 GB, AlmaLinux9, default 15-hour walltime on `scheduler@schedd11.ihep.ac.cn`.
 
-Initial production jobs: `3725732.0`–`3725739.0`. Home quota failure stopped seven; the remaining job was verified, held and retired. Replacement production jobs: **`3726308.0`–`3726308.7`**, submitted at 19:36 with the same eight disjoint shards.
+Initial production jobs: `3725732.0`–`3725739.0`. Home quota failure stopped seven; the remaining job was verified, held and retired. Replacement production jobs: **`3726350.0`, `3726352.0`–`3726358.0`**, submitted through IHEP `hep_sub` at 19:41 with the same eight disjoint shards. A native-submit trial (`3726308.0`–`.7`) matched no machines under site policy and was ownership-checked and removed while all eight jobs were idle; do not restart it.
 
 The entrypoint is `code/run_observation_shard.sh shard INDEX 8`, with disjoint dates and unchanged complete manifests. Resubmitting the same shard skips confirmed/pending outputs and rebuilds only unfinished work. Queue limits permit fewer simultaneous writers when backlog or a larger reservation consumes capacity.
 
@@ -101,4 +101,4 @@ Fresh scratch quota: 521,844,200 KiB used, soft 524,288,000 KiB, hard 532,466,89
 
 Rolling cleanup remains mandatory: successful target checks → fsynced ETO receipt → durable matching IHEP acknowledgment → unlink only this task's temporary source output. Pending/unconfirmed files are retained. Transfer has already resumed and five pending files reached ETO with successful acknowledgment and cleanup (285 receipts at 19:37). Six tiny source regressions, Python compilation and shell syntax passed after the path change; no new full-hour I/O benchmark was needed for this configuration migration.
 
-Recovery snapshots, submit description and job identifiers are in `.control/optimization_20261013/home_recovery*`. For current progress use ETO receipts/progress plus live HTCondor status; estimates above describe their historical checkpoints, not current remaining time.
+Recovery snapshots, the retired native submit description, and active `home_recovery_hep_submissions.json` job identifiers are in `.control/optimization_20261013/home_recovery*`. Submit through `/afs/ihep.ac.cn/soft/common/sysgroup/hep_job/setup_hepjob.sh` and `hep_sub -g lhaaso -os AlmaLinux9 -m 4000 -cpu 1 -schedd schedd11` from the scratch control directory; plain native submission omitted site matching attributes. For current progress use ETO receipts/progress plus live HTCondor status; estimates above describe their historical checkpoints, not current remaining time.

@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-13 19:42 · [uncommitted] Submit scratch-based recovery through IHEP hep_sub site policy as 3726350.0 and 3726352.0–3726358.0; retire the unmatched idle native-submit trial and verify rotating cleanup of received files.
+
 - **energy_reconstruction** · 2026-10-13 19:38 · [uncommitted] Recover stalled January acquisition from IHEP home EDQUOT by moving verified controls to scratch, sharing the new path across callers, recalculating a 5.5 GiB rotating queue and submitting replacement shards 3726308.0–7.
 
 - **energy_reconstruction** · 2026-10-13 17:29 · [uncommitted] Optimize January recovery with one cut scan, measured 32 MiB caches, durable hash-free receipts and a 5.75 GiB reserved queue; validate 4/8-worker cohorts and submit eight production shards.

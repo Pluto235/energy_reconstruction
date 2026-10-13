@@ -9,7 +9,7 @@ import time
 import uuid
 
 STAGING = Path('/scratchfs2/lhaaso/liushijie/WCDA_obs_202201_trimmed_20261013')
-WORK = Path('/home/lhaaso/liushijie/WCDA_reconstruction/runs/obs_jan2022_restore_20261013')
+WORK = STAGING / '.control'
 KEEP = set(re.findall(r'"(\w+)"', Path(__file__).with_name('filter_observed_pincness_loop_scoped.C').read_text().split('return {', 1)[1].split('};', 1)[0]))
 
 

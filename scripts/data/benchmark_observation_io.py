@@ -10,9 +10,7 @@ import time
 
 import ROOT
 from prepare_observation_day import MACRO, filter_source, inspect
-
-WORK = Path('/home/lhaaso/liushijie/WCDA_reconstruction/runs/obs_jan2022_restore_20261013')
-STAGING = Path('/scratchfs2/lhaaso/liushijie/WCDA_obs_202201_trimmed_20261013')
+from observation_state import STAGING, WORK
 
 
 def compare(left_path, right_path):

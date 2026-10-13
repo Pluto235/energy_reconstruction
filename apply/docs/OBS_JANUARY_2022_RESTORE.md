@@ -7,7 +7,7 @@ Status: the optimized workflow has passed complete-hour tests, 4/8-worker transf
 Only `pincness < 1.1`. Keep all 30 branches defined in `scripts/data/filter_observed_pincness_loop_scoped.C`; remove `vflag`, `vnpe`, `vqsamp`; retain `vx/vy/vq/vt/vidmc`. Preserve selected event order, original filenames and the complete `t_eventout_h`. No other physical cuts, inference, training or time recovery.
 
 - Inputs: `/eos/lhaaso/ai/wcda/raw/2022/01??/Esg202201??_HH.root`.
-- Source work: `/home/lhaaso/liushijie/WCDA_reconstruction/runs/obs_jan2022_restore_20261013`.
+- Source work: `/scratchfs2/lhaaso/liushijie/WCDA_obs_202201_trimmed_20261013/.control` (migrated from home after the 18:12 control-record quota failure; the old home path is no longer usable).
 - Task-owned staging: `/scratchfs2/lhaaso/liushijie/WCDA_obs_202201_trimmed_20261013/<MMDD>/`.
 - Destination: `/mnt/newdisk/shijie/WCDA_obs/<MMDD>/`.
 - Preserved archive: `/scratchfs2/lhaaso/liushijie/WCDA_observation_20220101_20220630/0131/`, 23 files / 4,941,889,023 bytes.
@@ -47,7 +47,7 @@ Legacy migration reused and checked 82 existing targets, including pending old o
 
 ## Byte-bound producer/receiver queue
 
-Producers continue immediately after publishing a complete, validated output. They wait only when a shared byte reservation cannot fit. Per-file locks prevent duplicate processing and allow a restarted worker to reclaim only its own stale partial. A shared NFS `flock` protects reservations, promotion and cleanup; the inspected mount uses remote locking (`local_lock=none`).
+Producers continue immediately after publishing a complete, validated output. They wait only when a shared byte reservation cannot fit. Per-file locks prevent duplicate processing and allow a restarted worker to reclaim only its own stale partial. A shared `flock` protects reservations, promotion and cleanup. State originally used the remotely locked NFS home mount; after the home quota failure it resides on the same shared Lustre scratch filesystem as staging.
 
 The budget includes **the maximum reserved size of every writing `.partial` plus all complete pending files**, and also counts any untracked task outputs. A process-level `RLIMIT_FSIZE` enforces the reserved maximum during ROOT writes. An oversized file fails without publishing, its partial is removed under the queue lock, and it retries with a larger reservation. Normal failures have three attempts; persistent errors remain visible in job logs. A missing audited file with no matching receipt fails visibly rather than being declared complete.
 
@@ -74,7 +74,7 @@ Cohort jobs: four `3725607`–`3725610`; eight `3725681`–`3725688`, all `.0`. 
 
 Selected concurrency: **8 producers**, each 1 CPU / 4 GB, AlmaLinux9, default 15-hour walltime on `scheduler@schedd11.ihep.ac.cn`.
 
-Production job IDs: `3725732.0`, `3725733.0`, `3725734.0`, `3725735.0`, `3725736.0`, `3725737.0`, `3725738.0`, `3725739.0`.
+Initial production jobs: `3725732.0`–`3725739.0`. Home quota failure stopped seven; the remaining job was verified, held and retired. Replacement production jobs: **`3726308.0`–`3726308.7`**, submitted at 19:36 with the same eight disjoint shards.
 
 The entrypoint is `code/run_observation_shard.sh shard INDEX 8`, with disjoint dates and unchanged complete manifests. Resubmitting the same shard skips confirmed/pending outputs and rebuilds only unfinished work. Queue limits permit fewer simultaneous writers when backlog or a larger reservation consumes capacity.
 
@@ -85,3 +85,20 @@ Inspect source `logs/optimized_shard<N>.out/.err`, `audit_files/`, `acks/`, `aud
 Small regressions cover strict cuts/NaN/order/header/30 branches, all cache modes, ROOT write failure, kernel-enforced partial limits and retry growth, nonblocking publication, legacy/v2 receipt compatibility, wrong-UUID acknowledgment rejection, concurrent byte reservation limits, metadata/size/path validation, and cleanup path guards. Six source unit tests, Python compilation and shell syntax passed. Full-hour ROOT checks ran only in HTCondor. The Mac is outside the data path; no SSH key/password was read or copied.
 
 ETA from these small cohorts: roughly **4–7 hours remaining** for the approximately 583 files after the cohort checkpoint. The lower end assumes steady production overlaps transfers; the conservative end extrapolates the measured eight-file launch-to-ACK window. EOS/Lustre load and varied hourly file sizes can change this. Monthly completion is not claimed. New transfers have ROOT/byte checks and full source read-back, but no bitwise hash comparison. Energy inference, training and time recovery are outside this run.
+
+
+## Home control-record quota recovery (2026-10-13 evening)
+
+At 19:29, ETO contained 280 durable receipts / 61,323,797,791 bytes. The last new receipt was at 18:12; source writes of `queue_status.json` and `queue_ledger.json` failed with `EDQUOT` on the NFS home filesystem, while scratch remained below its personal soft quota. This invalidated the earlier 20:30–21:30 ETA. The home quota utility returned no usable report; available filesystem bytes do not prove personal quota availability, and we do not infer the specific byte/inode limit from `df`.
+
+All original manifests, audits, acknowledgments, code snapshots, logs and queue state were copied and directly compared (1,224 files) into staging `.control/` before removing the old task-owned home copy. Scratch control file creation and fsync passed. Home still refused a symlink even after removal, so **all active callers use the new scratch control path directly**: shared `observation_state.WORK`, producer/benchmark wrappers, receiver and benchmark program. No other project's files or configuration were touched.
+
+Eleven old, inactive `month_default*.err` logs (242,271,559 bytes) were copied and compared before removal from home; they remain under staging `.home_quota_recovery/old_logs/`. These control/log allocations are included in the non-queue scratch usage when calculating capacity. Original EOS files, the Jan31 archive and confirmed ETO outputs remain intact.
+
+Receiver PID 145451 resumed transfer and acknowledgment/cleanup from the durable receipts. The held old producer was owner/command/arguments checked again before removal. Seven stale reservations belonging to exited/held producers were archived and released under the shared queue lock. Their complete but unaudited outputs remain in staging for full ROOT validation/reuse inside the replacement HTCondor jobs; they are never declared complete from their filenames alone.
+
+Fresh scratch quota: 521,844,200 KiB used, soft 524,288,000 KiB, hard 532,466,892 KiB. Actual queued output allocation: 4,721,451,008 bytes; all other scratch allocation (including relocated controls/logs): 529,647,009,792 bytes. Applying the same 1 GiB soft / 6 GiB hard safety margins gives the revised **5.5 GiB (5,905,580,032 bytes)** capacity. Initial reservation remains 640 MiB; full retained-branch/header read-back remains enabled. Eight replacement jobs use 1 CPU / 4,000 MB, AlmaLinux9 and the unchanged 681-file manifests.
+
+Rolling cleanup remains mandatory: successful target checks → fsynced ETO receipt → durable matching IHEP acknowledgment → unlink only this task's temporary source output. Pending/unconfirmed files are retained. Transfer has already resumed and five pending files reached ETO with successful acknowledgment and cleanup (285 receipts at 19:37). Six tiny source regressions, Python compilation and shell syntax passed after the path change; no new full-hour I/O benchmark was needed for this configuration migration.
+
+Recovery snapshots, submit description and job identifiers are in `.control/optimization_20261013/home_recovery*`. For current progress use ETO receipts/progress plus live HTCondor status; estimates above describe their historical checkpoints, not current remaining time.

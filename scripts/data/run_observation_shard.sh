@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # files DAY NAME... runs a measured cohort; shard INDEX COUNT resumes the month.
 set -euo pipefail
-work=/home/lhaaso/liushijie/WCDA_reconstruction/runs/obs_jan2022_restore_20261013
+work=/scratchfs2/lhaaso/liushijie/WCDA_obs_202201_trimmed_20261013/.control
 set +u
 source /cvmfs/sft.cern.ch/lcg/views/LCG_106/x86_64-el9-gcc13-opt/setup.sh
 set -u

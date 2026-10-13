@@ -7,12 +7,12 @@ import shlex
 import subprocess
 import time
 
-from observation_state import KEEP, ack_matches, atomic_json, file_path, make_receipt, record_id
+from observation_state import KEEP, WORK as SOURCE_WORK, ack_matches, atomic_json, file_path, make_receipt, record_id
 
 STATE = Path('/mnt/newdisk/shijie/energy/.recovery/2026-10-13/obs-january')
 DESTINATION = Path('/mnt/newdisk/shijie/WCDA_obs')
 REMOTE = 'liushijie@lxlogin.ihep.ac.cn'
-WORK = '/home/lhaaso/liushijie/WCDA_reconstruction/runs/obs_jan2022_restore_20261013'
+WORK = str(SOURCE_WORK)
 SOURCE = '/scratchfs2/lhaaso/liushijie/WCDA_obs_202201_trimmed_20261013'
 
 

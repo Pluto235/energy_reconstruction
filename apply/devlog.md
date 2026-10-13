@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-13 19:38 · [uncommitted] Recover stalled January acquisition from IHEP home EDQUOT by moving verified controls to scratch, sharing the new path across callers, recalculating a 5.5 GiB rotating queue and submitting replacement shards 3726308.0–7.
+
 - **energy_reconstruction** · 2026-10-13 17:29 · [uncommitted] Optimize January recovery with one cut scan, measured 32 MiB caches, durable hash-free receipts and a 5.75 GiB reserved queue; validate 4/8-worker cohorts and submit eight production shards.
 
 - **energy_reconstruction** · 2026-10-13 15:35 · [uncommitted] Guard observation receipt cleanup against non-staging paths and symlinks; verify the first rebuilt full-hour files end to end on ETO.

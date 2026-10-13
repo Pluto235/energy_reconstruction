@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 06:48 · [uncommitted] Retire v2 after empty-EOS and acknowledgment checks, preserve 239 receipt identities, prepare a fenced 442-file v3 scope and three-scope final acceptance while full IHEP tests queue.
+
 - **energy_reconstruction** · 2026-10-14 06:43 · [uncommitted] Check priority before each claim, record scratch-directory errors, and support immutable audited legacy exclusions; reproduce three failures then pass 14 protocol checks, queue full IHEP regression.
 
 - **energy_reconstruction** · 2026-10-14 06:28 · [uncommitted] Fence January source claims after February throughput loss; preserve accepted receipts and diagnose node scratch exhaustion, damaged legacy friend, and delayed concurrency response.

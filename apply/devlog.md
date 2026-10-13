@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 01:04 · [uncommitted] Reuse ETO Conda for new-disk Python 3.10 py310, install CUDA 12.4 Torch and project dependencies, and verify both V100s plus unchanged 64748 config/weights in Slurm 66040 without inference.
+
 - **energy_reconstruction** · 2026-10-14 00:41 · [uncommitted] Archive nine AstroCluster energy recoveries (24,669 files / 16.95 GB), verify 50 checkpoints, restore runs and reconstruct 64748 config from matching snapshots; retain ETO source and document runtime gaps.
 
 - **energy_reconstruction** · 2026-10-14 00:27 · [uncommitted] Extend the validated observation acquisition to isolated February manifests (28 days / 600 files), preserve January defaults and receipt guards, deploy the 5.5 GiB queue and submit eight IHEP producers with an independent ETO receiver.

@@ -1,0 +1,2 @@
+# ETO: NVIDIA 550.163.01 / Tesla V100 (sm_70); install with the cu124 extra index.
+torch==2.6.0+cu124

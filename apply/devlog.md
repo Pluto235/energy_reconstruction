@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-13 20:10 · [uncommitted] Plan independent January time/J2000 recovery with legacy event-key reuse, missing-event completion, a bounded EOS queue and one-to-two-worker validation before parallel production.
+
 - **energy_reconstruction** · 2026-10-13 20:05 · [uncommitted] Diagnose ROOT/CVMFS failures on lhws247, preserve task evidence and reschedule only four affected January shards with that node excluded; verify restored production, transfer receipts and cleanup on the other four workers.
 
 - **energy_reconstruction** · 2026-10-13 19:42 · [uncommitted] Submit scratch-based recovery through IHEP hep_sub site policy as 3726350.0 and 3726352.0–3726358.0; retire the unmatched idle native-submit trial and verify rotating cleanup of received files.

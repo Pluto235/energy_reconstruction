@@ -1,5 +1,7 @@
 # January 2022 observation recovery — optimized production
 
+Time and J2000 coordinate recovery is planned as an independent, receipt-driven pipeline that reuses legacy products and fills missing events. See [the January time recovery plan](../../docs/superpowers/plans/2026-10-13-january-time-recovery.md). That plan has not been deployed or submitted and does not change the acquisition workflow below.
+
 Status: the optimized workflow has passed complete-hour tests, 4/8-worker transfer cohorts, and has been submitted for full-month continuation. At the end of the cohorts, 98 of the 681 files were confirmed on ETO; monthly completion remains pending. Source/target paths and the original 31 manifests are unchanged.
 
 ## Data contract

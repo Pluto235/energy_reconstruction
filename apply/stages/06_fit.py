@@ -106,6 +106,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--reference-ratio-min", type=float, default=0.3)
     parser.add_argument("--reference-ratio-max", type=float, default=3.0)
     parser.add_argument("--energy-quadrature-points", type=int, default=64)
+    parser.add_argument(
+        "--energy-scale-delta",
+        type=float,
+        default=0.0,
+        help=(
+            "Diagnostic energy-scale bridge: relabel the Stage A true-energy axis used to build the "
+            "model flux integral by logE_true += log10(1+delta) before folding. Default 0.0 is a "
+            "verified no-op (edges are left untouched, so the run is bit-identical to today)."
+        ),
+    )
 
     parser.add_argument("--npz-name", type=str, default="fit_v1.npz")
     parser.add_argument("--metadata-name", type=str, default="fit_v1_metadata.json")
@@ -429,6 +439,22 @@ def integrate_flux_bins(
         integrand = flux * math.log(10.0) * E_tev
         out[idx] = 0.5 * (hi - lo) * float(np.sum(weights * integrand))
     return out
+
+
+def apply_energy_scale_delta(loge_edges: np.ndarray, energy_scale_delta: float) -> np.ndarray:
+    """Relabel the true-energy bin edges by logE_true += log10(1+delta).
+
+    A no-op when ``energy_scale_delta`` is 0.0 (returns the edges unchanged, so
+    the fit stays bit-identical to the default). A non-zero delta shifts the
+    true-energy axis used to build the model flux integral, answering "if each
+    reco cell's true energy is globally off by delta, how does the recovered
+    SED move".
+    """
+    if float(energy_scale_delta) == 0.0:
+        return loge_edges
+    if float(energy_scale_delta) <= -1.0:
+        raise ValueError("--energy-scale-delta must be > -1 (1+delta must stay positive)")
+    return np.asarray(loge_edges, dtype=np.float64) + math.log10(1.0 + float(energy_scale_delta))
 
 
 def model_counts(
@@ -1518,6 +1544,7 @@ def make_metadata(
             "pivot_tev": float(args.pivot_tev),
             "logpar_log_base": "natural_log",
             "energy_quadrature_points": int(args.energy_quadrature_points),
+            "energy_scale_delta": float(args.energy_scale_delta),
         },
         "statistic": {
             "baseline": "chi2 on Stage E excess",
@@ -1590,6 +1617,9 @@ def main() -> None:
 
     a_eff = np.asarray(response["a_eff"], dtype=np.float64)
     loge_edges = np.asarray(response["logE_true_edges"], dtype=np.float64)
+    # Guarded diagnostic: delta == 0.0 leaves loge_edges untouched (verified no-op);
+    # a non-zero delta relabels the true-energy axis fed into every model fold below.
+    loge_edges = apply_energy_scale_delta(loge_edges, float(args.energy_scale_delta))
     theta_edges = np.asarray(response["theta_true_edges_deg"], dtype=np.float64)
     containment = np.asarray(signal["containment_r_opt"], dtype=np.float64)
     observed = np.asarray(signal["excess"], dtype=np.float64)

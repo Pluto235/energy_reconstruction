@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crab SED v5 model compare</title>
+<style>
+body { margin:0; background:#f7f8f9; color:#17212b; font-family:Arial,Helvetica,sans-serif; line-height:1.55; }
+main { max-width:1180px; margin:0 auto; padding:34px 20px 60px; }
+h1 { margin:0 0 8px; font-size:32px; letter-spacing:0; }
+h2 { margin:34px 0 12px; font-size:22px; }
+p.lede { max-width:920px; color:#4b5563; }
+table { width:100%; border-collapse:collapse; margin:12px 0 24px; background:white; font-size:13px; }
+th,td { border:1px solid #d7dee3; padding:7px 8px; vertical-align:top; }
+th { background:#eef2f4; text-align:left; }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+code { background:#edf1f3; border-radius:4px; padding:1px 4px; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start; }
+figure { margin:0 0 18px; background:white; border:1px solid #d7dee3; padding:10px; }
+figure img { display:block; max-width:100%; height:auto; }
+figcaption { color:#59636e; font-size:12px; margin-top:6px; }
+.warn { background:#fff7ed; border:1px solid #fed7aa; padding:10px 12px; }
+.ok { color:#047857; font-weight:700; }
+.bad { color:#b45309; font-weight:700; }
+</style>
+</head>
+<body><main>
+<h1>Crab SED v5 model compare</h1>
+<p class="lede">Three reconstruction models are run through the same split56 v4-baseline analysis contract on the aligned 1258-file observation set. The official/reference SED points are plotted as context only; the main comparison is the three model branches.</p>
+
+<h2>Model Provenance</h2>
+<table><thead><tr><th>model</th><th>run_dir</th><th>tag</th><th>train dcedge_min</th><th>theta_embed_dim</th><th>use_core_box</th><th>Stage A run_dir</th><th>MC binned root</th><th>Stage A response</th><th>Aeff status</th></tr></thead><tbody><tr><td>8666</td><td><code>theta_recoxy_position_embed_midenergy_8666</code></td><td>theta_recoxy_position_embed_midenergy</td><td>20</td><td>16</td><td>False</td><td><code>theta_recoxy_position_embed_midenergy_8666</code></td><td><code>WCDA_simulation_binned_response_v4_split56_ridge</code></td><td>primary_thrown_aperture_conditioned_response</td><td>available</td></tr><tr><td>64670</td><td><code>theta_recoxy_position_embed_midenergy_no_core_cut_64670</code></td><td>theta_recoxy_position_embed_midenergy_no_core_cut</td><td>0</td><td>16</td><td>False</td><td><code>theta_recoxy_position_embed_midenergy_no_core_cut_64670</code></td><td><code>WCDA_simulation_binned_response_v6_64670_split56_candidate</code></td><td>primary_thrown_aperture_conditioned_response</td><td>available</td></tr><tr><td>64748</td><td><code>theta_recoxy_position_embed_noemax_no_core_cut_64748</code></td><td>theta_recoxy_position_embed_noemax_no_core_cut</td><td>0</td><td>16</td><td>False</td><td><code>theta_recoxy_position_embed_noemax_no_core_cut_64748</code></td><td><code>WCDA_simulation_binned_response_v7_64748_split56_fit33</code></td><td>primary_thrown_aperture_conditioned_response</td><td>available</td></tr></tbody></table>
+
+<h2>Baseline Contract</h2>
+<p>Fit cells are the fixed v4 split56 physical bins selected from <code>../output/model_compare_v5/config/v4_split56_fit33_physical_bins.csv</code>. Non-8666 selectors are mapped by <code>(nhit_bin,predE_bin)</code>, not by old cell id.</p>
+<table><thead><tr><th>model</th><th>fit cells</th><th>included cell_ids</th><th>first physical bins</th></tr></thead><tbody><tr><td>8666</td><td>33</td><td>1,2,3,4,15,16,17,18,28,29,30,31,32,42,43,44,45,46,56,57,58,59,70,71,72,73,74,85,86,87,88,89,90</td><td>[125,200) / [2,2.5); [125,200) / [2.5,3); [125,200) / [3,3.25); [125,200) / [3.25,3.5); [200,300) / [2.5,3); [200,300) / [3,3.25); [200,300) / [3.25,3.5); [200,300) / [3.5,3.75); ...</td></tr><tr><td>64670</td><td>33</td><td>1,2,3,4,15,16,17,18,28,29,30,31,32,42,43,44,45,46,56,57,58,59,70,71,72,73,74,85,86,87,88,89,90</td><td>[125,200) / [2,2.5); [125,200) / [2.5,3); [125,200) / [3,3.25); [125,200) / [3.25,3.5); [200,300) / [2.5,3); [200,300) / [3,3.25); [200,300) / [3.25,3.5); [200,300) / [3.5,3.75); ...</td></tr><tr><td>64748</td><td>33</td><td>1,2,3,4,15,16,17,18,28,29,30,31,32,42,43,44,45,46,56,57,58,59,70,71,72,73,74,85,86,87,88,89,90</td><td>[125,200) / [2,2.5); [125,200) / [2.5,3); [125,200) / [3,3.25); [125,200) / [3.25,3.5); [200,300) / [2.5,3); [200,300) / [3,3.25); [200,300) / [3.25,3.5); [200,300) / [3.5,3.75); ...</td></tr></tbody></table>
+
+<h2>Observation Alignment</h2>
+<p>Canonical manifest: <code>../output/model_compare_v5/common_1258_file_manifest.csv</code>; manifest months: 202201=658, 202202=600. All Stage C jobs were run without <code>--allow-entry-mismatch</code>.</p>
+<table><thead><tr><th>model</th><th>eval links</th><th>time links</th><th>eval symlinks</th><th>time symlinks</th><th>missing manifest eval</th><th>missing manifest time</th><th>extra eval</th><th>extra time</th><th>0131 eval</th><th>root months</th><th>Stage C input</th><th>processed</th><th>Stage C missing time</th><th>entry mismatch</th><th>allow mismatch</th><th>Stage C months</th></tr></thead><tbody><tr><td>8666</td><td>1,258</td><td>1,258</td><td>1,258</td><td>1,258</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>202201,202202</td><td>1,258</td><td>1,258</td><td>0</td><td>0</td><td>False</td><td>202201=658; 202202=600</td></tr><tr><td>64670</td><td>1,258</td><td>1,258</td><td>1,258</td><td>1,258</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>202201,202202</td><td>1,258</td><td>1,258</td><td>0</td><td>0</td><td>False</td><td>202201=658; 202202=600</td></tr><tr><td>64748</td><td>1,258</td><td>1,258</td><td>1,258</td><td>1,258</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>202201,202202</td><td>1,258</td><td>1,258</td><td>0</td><td>0</td><td>False</td><td>202201=658; 202202=600</td></tr></tbody></table>
+
+<h2>Rayleigh PSF Quality</h2>
+<figure><img src="assets/v5-model-compare/model_compare_psf_quality.png" alt="PSF quality comparison"><figcaption>Fit-cell PSF sigma, Rayleigh r_opt, and effective event count.</figcaption></figure>
+<table><thead><tr><th>model</th><th>median sigma deg</th><th>median r_opt deg</th><th>median containment</th><th>min Neff</th><th>warning cells</th><th>warning cell ids</th></tr></thead><tbody><tr><td>8666</td><td>0.3508</td><td>0.5542</td><td>0.7103</td><td>0</td><td>12</td><td>1,4,28,42,43,56,59,70,73,85,86,90</td></tr><tr><td>64670</td><td>0.43</td><td>0.6794</td><td>0.713</td><td>0</td><td>11</td><td>1,42,56,57,70,71,74,85,86,89,90</td></tr><tr><td>64748</td><td>0.3477</td><td>0.5493</td><td>0.6969</td><td>0</td><td>10</td><td>1,28,42,56,57,70,71,85,86,90</td></tr></tbody></table>
+
+<h2>Stage E Signal</h2>
+<figure><img src="assets/v5-model-compare/model_compare_stage_e_excess.png" alt="Stage E excess by Nhit"><figcaption>Stage E excess summed over the 33 fixed v4 split56 fit cells.</figcaption></figure>
+<table><thead><tr><th>model</th><th>N_on</th><th>B_on</th><th>excess</th><th>conservative err</th><th>quality</th><th>quality note</th></tr></thead><tbody><tr><td>8666</td><td>116,635</td><td>1.00547e+05</td><td>16088</td><td>466</td><td>failed</td><td>total formal sigma 45.9555 outside [50, 300]</td></tr><tr><td>64670</td><td>117,222</td><td>1.02664e+05</td><td>14558</td><td>468.9</td><td>failed</td><td>total formal sigma 40.7374 outside [50, 300]</td></tr><tr><td>64748</td><td>114,721</td><td>1.00193e+05</td><td>14528</td><td>463.6</td><td>failed</td><td>total formal sigma 44.8488 outside [50, 300]</td></tr></tbody></table>
+
+<h2>Stage F Fit</h2>
+<table><thead><tr><th>model</th><th>preferred</th><th>phi0</th><th>gamma/alpha</th><th>beta</th><th>chi2 / ndof</th><th>chi2/ndof</th><th>max |pull|</th></tr></thead><tbody><tr><td>8666</td><td>logpar</td><td>2.4701e-12</td><td>2.718</td><td>0.1377</td><td>112.9 / 30</td><td>3.762</td><td>5.434</td></tr><tr><td>64670</td><td>logpar</td><td>2.4886e-12</td><td>2.697</td><td>0.1326</td><td>130.9 / 30</td><td>4.365</td><td>6.331</td></tr><tr><td>64748</td><td>logpar</td><td>2.4695e-12</td><td>2.686</td><td>0.1194</td><td>110.9 / 30</td><td>3.695</td><td>6.238</td></tr></tbody></table>
+<div class="grid"><figure><img src="../output/model_compare_v5/8666/stage_f/runs/stage_f_v4baseline_fit33/pull_grid_logpar.png" alt="8666 logpar pull grid"><figcaption>8666 Stage F LogPar pull grid.</figcaption></figure><figure><img src="../output/model_compare_v5/64670/stage_f/runs/stage_f_v4baseline_fit33/pull_grid_logpar.png" alt="64670 logpar pull grid"><figcaption>64670 Stage F LogPar pull grid.</figcaption></figure><figure><img src="../output/model_compare_v5/64748/stage_f/runs/stage_f_v4baseline_fit33/pull_grid_logpar.png" alt="64748 logpar pull grid"><figcaption>64748 Stage F LogPar pull grid.</figcaption></figure></div>
+
+<h2>Stage G SED</h2>
+<div class="grid">
+<figure><img src="assets/v5-model-compare/model_compare_sed_overlay.png" alt="SED overlay"><figcaption>Three model Stage G Nhit-grouped flux points and best-fit curves. Official pass5 and external points are gray background references.</figcaption></figure>
+<figure><img src="assets/v5-model-compare/model_compare_ratio_to_8666.png" alt="ratio to 8666"><figcaption>Stage G Nhit-grouped flux ratios relative to 8666.</figcaption></figure>
+</div>
+
+<h2>Warnings And Deviations</h2>
+<div class="warn"><p>8666: Stage E quality gate failed (total formal sigma 45.9555 outside [50, 300])</p><p>8666: Stage D promotion status blocked_quality_gate</p><p>8666: PSF warnings in 12 fit cells</p><p>64670: Stage E quality gate failed (total formal sigma 40.7374 outside [50, 300])</p><p>64670: Stage D promotion status blocked_quality_gate</p><p>64670: PSF warnings in 11 fit cells</p><p>64748: Stage E quality gate failed (total formal sigma 44.8488 outside [50, 300])</p><p>64748: Stage D promotion status blocked_quality_gate</p><p>64748: PSF warnings in 10 fit cells</p></div>
+
+<h2>Checklist</h2>
+<table><thead><tr><th>item</th><th>status</th></tr></thead><tbody><tr><td>symlink roots validated</td><td><span class="ok">pass</span></td></tr><tr><td>three Stage C 1258-file gates passed</td><td><span class="ok">pass</span></td></tr><tr><td>three Stage F/G completed</td><td><span class="ok">pass</span></td></tr><tr><td>report exists</td><td><span class="ok">pass</span></td></tr><tr><td>warnings/deviations captured</td><td><span class="ok">pass</span></td></tr></tbody></table>
+</main></body></html>

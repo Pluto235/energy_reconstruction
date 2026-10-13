@@ -2,8 +2,11 @@
 set -euo pipefail
 
 RUN_DIR=${RUN_DIR:-/home/lhaaso/liushijie/energy/pass5_crab_v6_125d_covariance}
-FIT_DIR="$RUN_DIR/sorted_gti_fit"
-MAP="$RUN_DIR/pass5_v6_sorted_gti_map.root"
+# Overridable so this can target the 928-accepted-map common-GTI merge
+# (pass5_v6_common_gti_map.root) without colliding with any prior full-sample
+# sorted_gti fit output.
+FIT_DIR=${FIT_DIR:-$RUN_DIR/sorted_gti_fit}
+MAP=${MAP:-$RUN_DIR/pass5_v6_sorted_gti_map.root}
 PASS5_BASE=/home/lhaaso/xishaoqiang/lhaaso/data/pass5/z50
 OFFICIAL_CRAB=/home/lhaaso/liushijie/energy/wcda_crab_sed_pass5_20260616_104941
 
@@ -21,9 +24,14 @@ fi
 mkdir -p "$FIT_DIR"
 cd "$FIT_DIR"
 
+# root -q's implicit end-of-macro cleanup (TFile/TTree global destructors,
+# since the macro never calls f.Close()) has been observed to make the whole
+# process exit nonzero even after the printf below succeeds and prints the
+# correct value; set -o pipefail then kills the script silently with no
+# diagnostic output. Force an explicit, clean exit code on the success path.
 LIVE_DAYS=$(
     root -l -b -q -e \
-        "TFile f(\"$MAP\"); auto t=(TTree*)f.Get(\"bkg_header\"); if(!t)t=(TTree*)f.Get(\"map_header\"); if(!t)t=(TTree*)f.Get(\"Map_header\"); if(!t){fprintf(stderr,\"Missing bkg/map header\\n\"); gSystem->Exit(4);} double x=0; t->SetBranchAddress(\"Ltime\",&x); t->GetEntry(0); printf(\"STRICT_LIVE_DAYS %.12f\\n\",x/86400.);" \
+        "TFile f(\"$MAP\"); auto t=(TTree*)f.Get(\"bkg_header\"); if(!t)t=(TTree*)f.Get(\"map_header\"); if(!t)t=(TTree*)f.Get(\"Map_header\"); if(!t){fprintf(stderr,\"Missing bkg/map header\\n\"); gSystem->Exit(4);} double x=0; t->SetBranchAddress(\"Ltime\",&x); t->GetEntry(0); printf(\"STRICT_LIVE_DAYS %.12f\\n\",x/86400.); gSystem->Exit(0);" \
         | awk '/STRICT_LIVE_DAYS/ {print $2}'
 )
 if [[ -z "$LIVE_DAYS" ]]; then

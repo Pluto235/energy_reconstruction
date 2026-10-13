@@ -51,6 +51,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-theta-missing-mass", type=float, default=0.10)
     parser.add_argument("--allow-containment-warning", action="store_true", default=False)
     parser.add_argument("--allow-angle-warning", action="store_true", default=False)
+    parser.add_argument(
+        "--force-include-cell-ids",
+        type=str,
+        default="",
+        help="Comma-separated cell IDs to include after the MC/PSF selector is built.",
+    )
+    parser.add_argument(
+        "--force-exclude-cell-ids",
+        type=str,
+        default="",
+        help="Comma-separated cell IDs to exclude after the MC/PSF selector is built.",
+    )
+    parser.add_argument(
+        "--expected-fit-cells",
+        type=int,
+        default=None,
+        help="Fail unless the final selector contains exactly this many included cells.",
+    )
     return parser.parse_args()
 
 
@@ -89,6 +107,10 @@ def as_int(value: Any, default: int = 0) -> int:
         return int(float(value))
     except (TypeError, ValueError):
         return default
+
+
+def parse_cell_ids(value: str) -> set[int]:
+    return {int(item.strip()) for item in str(value).split(",") if item.strip()}
 
 
 def pred_index(label: str) -> int:
@@ -147,6 +169,12 @@ def psf_quality(
 
 def main() -> None:
     args = parse_args()
+    force_include_ids = parse_cell_ids(args.force_include_cell_ids)
+    force_exclude_ids = parse_cell_ids(args.force_exclude_cell_ids)
+    overlap = sorted(force_include_ids & force_exclude_ids)
+    if overlap:
+        raise SystemExit(f"cell IDs cannot be both force-included and force-excluded: {overlap}")
+
     prefit_rows, prefit_fields = read_csv(resolve(args.prefit_selector_csv))
     ledger_rows, _ = read_csv(resolve(args.candidate_ledger_csv))
     psf_rows, _ = read_csv(resolve(args.stage_b_summary_csv))
@@ -340,13 +368,41 @@ def main() -> None:
             out["subset_reason"] = "not on original MC ridge and not the one-bin high-predE extension"
             out["cell_role"] = "excluded"
             out["exclusion_source"] = "MC_ridge_highEplus1_selector"
+
+        cell_id = as_int(out.get("cell_id"), default=-1)
+        out["selection_override_flag"] = ""
+        if cell_id in force_exclude_ids:
+            out["include"] = 0
+            out["subset_reason"] = "explicit reselect exclusion from the prior v6 fit selector"
+            out["cell_role"] = "reselect_excluded"
+            out["exclusion_source"] = "explicit_reselect_override"
+            out["selection_override_flag"] = "force_exclude"
+        elif cell_id in force_include_ids:
+            if tail:
+                raise SystemExit(f"force-included cell {cell_id} is an >=6 diagnostic tail cell")
+            out["include"] = 1
+            out["subset_reason"] = "explicit reselect inclusion on top of the prior v6 fit selector"
+            out["cell_role"] = "reselect_fit"
+            out["exclusion_source"] = ""
+            out["selection_override_flag"] = "force_include"
         output_rows.append(out)
+
+    known_cell_ids = {as_int(row.get("cell_id"), default=-1) for row in output_rows}
+    unknown_overrides = sorted((force_include_ids | force_exclude_ids) - known_cell_ids)
+    if unknown_overrides:
+        raise SystemExit(f"selection overrides reference unknown cell IDs: {unknown_overrides}")
 
     included_tail = [row for row in output_rows if truthy(row.get("include")) and str(row.get("predE_bin")) == ">=6"]
     if included_tail:
         raise SystemExit(f"selector illegally includes >=6 diagnostic tail rows: {included_tail}")
 
     included_rows = [row for row in output_rows if truthy(row.get("include"))]
+    if args.expected_fit_cells is not None and len(included_rows) != int(args.expected_fit_cells):
+        included_ids = [as_int(row.get("cell_id")) for row in included_rows]
+        raise SystemExit(
+            f"final selector includes {len(included_rows)} cells, expected {int(args.expected_fit_cells)}: "
+            f"{included_ids}"
+        )
     extension_included_rows = [row for row in output_rows if truthy(row.get("highEplus1_included_flag"))]
     extension_rejected_rows = [row for row in output_rows if truthy(row.get("highEplus1_rejected_flag"))]
     tail_rows = [row for row in output_rows if str(row.get("predE_bin")) == ">=6"]
@@ -357,6 +413,7 @@ def main() -> None:
         "highEplus1_included_flag",
         "highEplus1_rejected_flag",
         "psf_quality_reasons",
+        "selection_override_flag",
     ]
     fieldnames = list(prefit_fields)
     for field in extra_fields:
@@ -383,7 +440,10 @@ def main() -> None:
         "candidate_ledger_csv": str(resolve(args.candidate_ledger_csv)),
         "stage_b_summary_csv": str(resolve(args.stage_b_summary_csv)),
         "subset_version": str(args.subset_version),
-        "rule": "preserve original MC-ridge fit cells; add at most one adjacent higher predE bin per Nhit; never extend lower; exclude >=6 tail from Stage F/G",
+        "rule": (
+            "preserve original MC-ridge fit cells; add at most one adjacent higher predE bin per Nhit; "
+            "apply explicit include/exclude overrides; never include >=6 tail cells in Stage F/G"
+        ),
         "thresholds": {
             "min_mc_count": int(args.min_mc_count),
             "min_psf_effective_events": float(args.min_psf_effective_events),
@@ -399,6 +459,11 @@ def main() -> None:
         "highEplus1_rejected_cells": len(extension_rejected_rows),
         "diagnostic_tail_cells": len(tail_rows),
         "included_cell_ids": [as_int(row.get("cell_id")) for row in included_rows],
+        "selection_overrides": {
+            "force_include_cell_ids": sorted(force_include_ids),
+            "force_exclude_cell_ids": sorted(force_exclude_ids),
+            "expected_fit_cells": args.expected_fit_cells,
+        },
         "highEplus1_included": [
             {"cell_id": as_int(row.get("cell_id")), "nhit_bin": row.get("nhit_bin"), "predE_bin": row.get("predE_bin")}
             for row in extension_included_rows

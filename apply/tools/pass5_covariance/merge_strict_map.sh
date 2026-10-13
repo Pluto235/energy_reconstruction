@@ -14,11 +14,27 @@ set -u
 if [[ ! -s "$MAP_LIST" ]]; then
     awk -F '\t' 'NR > 1 {print $5}' "$JOBS" > "$MAP_LIST"
 fi
+
+# Entries may be plain local paths or root://host//path XRootD URIs (EOS
+# recovery products). The legacy CVMFS envf.sh above can poison
+# LD_LIBRARY_PATH for modern xrdfs, so strip it for this check.
+map_exists() {
+    local path=$1
+    if [[ "$path" == root://* ]]; then
+        local rest=${path#root://}
+        local host=${rest%%/*}
+        local remote=/${rest#*/}
+        env -u LD_LIBRARY_PATH /usr/bin/xrdfs "$host" stat "$remote" >/dev/null 2>&1
+        return $?
+    fi
+    [[ -s "$path" ]]
+}
+
 missing=0
 map_count=0
 while IFS= read -r path; do
     map_count=$((map_count + 1))
-    if [[ ! -s "$path" ]]; then
+    if ! map_exists "$path"; then
         echo "Missing map: $path" >&2
         missing=$((missing + 1))
     fi

@@ -841,6 +841,7 @@ def build_stage_e(
         max_batches=None,
         mjd_min=processing.get("mjd_min"),
         mjd_max=processing.get("mjd_max"),
+        containment_override="none",
         no_promote_current=bool(args.no_promote_current),
     )
     metadata = stage05.make_metadata(

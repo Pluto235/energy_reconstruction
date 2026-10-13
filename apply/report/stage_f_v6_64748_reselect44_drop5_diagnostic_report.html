@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stage F 前向折叠拟合报告</title>
+<style>
+:root { --bg:#101418; --fg:#eef3f5; --muted:#a8b2b8; --panel:#171d22; --panel2:#1d242a; --border:#2e3942; --accent:#5fb3b3; --good:#52b788; --warn:#e9b44c; --code:#0b0f12; }
+@media (prefers-color-scheme: light) { :root { --bg:#f7f8f9; --fg:#1b2329; --muted:#56636b; --panel:#fff; --panel2:#f1f4f6; --border:#d7dee3; --code:#eef2f4; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans CJK SC","Microsoft YaHei",sans-serif; line-height:1.62; }
+main { max-width:1180px; margin:0 auto; padding:42px 20px 64px; }
+header { border-bottom:1px solid var(--border); margin-bottom:32px; padding-bottom:24px; }
+.eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.08em; font-size:12px; font-weight:700; }
+h1 { margin:8px 0 10px; font-size:clamp(30px,5vw,44px); line-height:1.15; }
+h2 { margin:38px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--border); font-size:24px; }
+h3 { margin:24px 0 8px; color:var(--accent); font-size:18px; }
+p { margin:10px 0; }
+code { padding:2px 5px; border-radius:4px; background:var(--code); font-size:13px; }
+.lead { max-width:940px; color:var(--muted); font-size:17px; }
+.grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:18px 0; }
+.metric { min-height:104px; padding:16px; border:1px solid var(--border); border-radius:8px; background:var(--panel); }
+.label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.07em; }
+.value { margin-top:8px; font-size:24px; font-weight:700; overflow-wrap:anywhere; }
+.note { margin-top:7px; color:var(--muted); font-size:13px; }
+.callout { margin:18px 0; padding:16px 18px; border:1px solid var(--border); border-left:4px solid var(--accent); border-radius:8px; background:var(--panel); }
+.callout.good { border-left-color:var(--good); }
+.callout.warn { border-left-color:var(--warn); }
+.table-wrap { width:100%; overflow-x:auto; margin:18px 0; border:1px solid var(--border); border-radius:8px; background:var(--panel); }
+table { width:100%; min-width:1040px; border-collapse:collapse; font-size:14px; }
+th,td { padding:10px 12px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+th { background:var(--panel); font-weight:700; white-space:nowrap; }
+tbody tr:nth-child(odd) td { background:var(--panel2); }
+.num { text-align:right; font-variant-numeric:tabular-nums; }
+.figure-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-top:18px; }
+figure { margin:0; padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--panel); }
+figure img { display:block; width:100%; height:auto; border-radius:4px; background:#fff; }
+figcaption { margin-top:9px; color:var(--muted); font-size:13px; }
+footer { margin-top:54px; padding-top:18px; border-top:1px solid var(--border); color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
+@media (max-width:900px) { .grid,.figure-grid { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">LHAASO-WCDA · Crab SED diagnostic</div>
+    <h1>Stage F 前向折叠拟合报告</h1>
+    <p class="lead">本页记录当前 Stage F 的目的、输入、方法和结果：把假设的 Crab 能谱通过 Stage A 二维响应折叠到观测 cell，与 Stage E 的逐 cell excess 做拟合对比。当前报告使用 selector <code>v6_64748_reselect44_drop_display_1_2_15_26_65</code>，作为进入 Stage G 的 diagnostic baseline。</p>
+  </header>
+  <section>
+    <h2>结论摘要</h2>
+    <p>保守误差口径下，当前首选模型是 <code>logpar</code>。Reference-count preflight 状态为 <code>passed</code>，该 run 的状态是：<strong>可作为 Stage G diagnostic baseline</strong>。</p>
+    <div class="grid">
+      <div class="metric"><div class="label">Run</div><div class="value">v6_64748_reselect44_drop5_stage_f</div><div class="note">Stage F fit</div></div>
+      <div class="metric"><div class="label">使用 cells</div><div class="value">39</div><div class="note">subset: <code>v6_64748_reselect44_drop_display_1_2_15_26_65</code></div></div>
+      <div class="metric"><div class="label">可见曝光</div><div class="value">42.206 d</div><div class="note">Crab theta inside response grid</div></div>
+      <div class="metric"><div class="label">PL chi2/ndof</div><div class="value">196.89/37</div><div class="note">conservative error</div></div>
+    </div>
+    <div class="callout good">
+      <strong>Reference-count preflight：</strong>
+      使用 WCDA-1 Crab 参考谱时，Stage A/E 预计信号数为 <code>24494</code>，Stage E excess 为 <code>23591.5</code>，observed/expected = <code>0.963154</code>。
+    </div>
+  </section>
+  <section>
+    <h2>为什么做 Stage F</h2>
+    <p>Stage A 给出 MC 响应 <code>A_eff(E_true, theta)</code>，Stage E 给出观测侧每个 cell 的 <code>N_on</code>、背景期望 <code>B_on</code> 和 excess。Stage F 的作用是把二者接起来：不从 <code>E_pred</code> 反推真实能量，而是把一个物理能谱假设从真实能量空间前向折叠到观测 cell 空间，再和 Stage E excess 比较。</p>
+    <p>这一步有两个检查目标：第一，确认 Stage A 的绝对响应归一化和 Stage E 的信号量级在同一数量级；第二，为 Stage G 的 SED 点提供一个冻结谱形的全局拟合基准。</p>
+  </section>
+  <section>
+    <h2>Stage F 做了什么</h2>
+    <p>本 run 读取 Stage A 的二维响应和 Stage E 的逐 cell 信号表，按 Crab 在观测窗口内的天顶角曝光分布计算每个 cell 的预期信号数。拟合统计量是保守误差口径下的 chi-square：</p>
+    <p><code>chi2 = sum_b ((excess_b - N_exp,b) / sigma_b)^2</code></p>
+    <p>谱模型包括幂律 PL 和 LogPar。LogPar 只有在相对 PL 的 chi2 改善达到阈值时才作为首选；本 run 的改善量为 <code>10.768</code>，因此保留 PL。</p>
+    <ul>
+      <li>Stage A response: <code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_a_v6_64748_nhit100_reselect44_split56_miss030_aperture_conditioned/response_2d_v6_64748_nhit100_reselect44_split56_miss030_aperture_conditioned.npz</code></li>
+      <li>Stage E signal: <code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_e_v6_64748_nhit100_reselect44_split56_miss030_containment1_annnorm/runs/v6_64748_nhit100_reselect44_split56_miss030_stage_e_containment1_annnorm/signal_v6_64748_nhit100_reselect44_split56_miss030_containment1_annnorm.npz</code></li>
+      <li>Cell subset: <code>/mnt/mydisk/server/projects/energy_reconstruction/apply/config/cell_selector_v6_64748_reselect44_drop_display_1_2_15_26_65.csv</code></li>
+    </ul>
+  </section>
+  <section>
+    <h2>Cell subset 说明</h2>
+    <p>Stage F 不在拟合中按 residual 自动删 cell；include/exclude 完全来自传入的 selector CSV。selector 中的排除原因会记录在 metadata，用于区分 frozen baseline、transition probe 和 diagnostics。</p>
+    <ul>
+      <li>Included cells: <code>3, 4, 5, 6, 15, 17, 18, 19, 20, 21, 29, 30, 31, 32, 33, 34, 42, 43, 44, 45, 46, 47, 48, 56, 57, 58, 59, 60, 61, 62, 71, 72, 73, 74, 75, 86, 87, 88, 89</code></li>
+      <li>Excluded cells: <code>1, 2, 7, 8, 9, 10, 11, 12, 13, 14, 16, 22, 23, 24, 25, 26, 27, 28, 35, 36, 37, 38, 39, 40, 41, 49, 50, 51, 52, 53, 54, 55, 63, 64, 65, 66, 67, 68, 69, 70, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 90, 91</code></li>
+    </ul>
+  </section>
+  <section>
+    <h2>拟合参数</h2>
+    <ul>
+      <li>PL: <code>phi0=2.161534e-12</code>, <code>gamma=2.70668</code>, p-value <code>1.0849e-23</code>，chi2/ndof = <code>196.89/37</code>。</li>
+      <li>LogPar: <code>phi0=2.234362e-12</code>, <code>alpha=2.72371</code>, <code>beta=0.0392397</code>, p-value <code>3.8807e-22</code>，chi2/ndof = <code>186.12/36</code>。</li>
+    </ul>
+  </section>
+  <section>
+    <h2>逐 cell 残差</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>cell</th><th>Nhit bin</th><th>log10 E_pred bin</th><th class="num">excess</th><th class="num">err</th><th class="num">PL model</th><th class="num">PL pull</th><th class="num">LogPar model</th><th class="num">LogPar pull</th></tr></thead>
+        <tbody><tr><td>3</td><td>[100,200)</td><td>[3,3.25)</td><td class="num">1707.54</td><td class="num">269.82</td><td class="num">1721.95</td><td class="num">-0.053423</td><td class="num">1721.39</td><td class="num">-0.051353</td></tr><tr><td>4</td><td>[100,200)</td><td>[3.25,3.5)</td><td class="num">-277.906</td><td class="num">244.44</td><td class="num">567.677</td><td class="num">-3.4592</td><td class="num">580.662</td><td class="num">-3.5124</td></tr><tr><td>5</td><td>[100,200)</td><td>[3.5,3.75)</td><td class="num">-107.378</td><td class="num">213.62</td><td class="num">289.503</td><td class="num">-1.8578</td><td class="num">295.897</td><td class="num">-1.8878</td></tr><tr><td>6</td><td>[100,200)</td><td>[3.75,4.0)</td><td class="num">-413.991</td><td class="num">168.86</td><td class="num">144.598</td><td class="num">-3.308</td><td class="num">144.296</td><td class="num">-3.3062</td></tr><tr><td>15</td><td>[200,300)</td><td>[2.5,3)</td><td class="num">6879.81</td><td class="num">211.2</td><td class="num">7500.63</td><td class="num">-2.9395</td><td class="num">7145.13</td><td class="num">-1.2562</td></tr><tr><td>17</td><td>[200,300)</td><td>[3.25,3.5)</td><td class="num">1145.34</td><td class="num">121.11</td><td class="num">823.739</td><td class="num">2.6554</td><td class="num">843.531</td><td class="num">2.4919</td></tr><tr><td>18</td><td>[200,300)</td><td>[3.5,3.75)</td><td class="num">275.471</td><td class="num">118.01</td><td class="num">288.545</td><td class="num">-0.11079</td><td class="num">295.279</td><td class="num">-0.16785</td></tr><tr><td>19</td><td>[200,300)</td><td>[3.75,4.0)</td><td class="num">-255.211</td><td class="num">112.99</td><td class="num">162.671</td><td class="num">-3.6983</td><td class="num">162.16</td><td class="num">-3.6938</td></tr><tr><td>20</td><td>[200,300)</td><td>[4.0,4.25)</td><td class="num">-200.555</td><td class="num">87.787</td><td class="num">83.1457</td><td class="num">-3.2317</td><td class="num">78.5111</td><td class="num">-3.1789</td></tr><tr><td>21</td><td>[200,300)</td><td>[4.25,4.5)</td><td class="num">142.801</td><td class="num">54.856</td><td class="num">38.5971</td><td class="num">1.8996</td><td class="num">33.7199</td><td class="num">1.9885</td></tr><tr><td>29</td><td>[300,500)</td><td>[3,3.25)</td><td class="num">4013.51</td><td class="num">109.44</td><td class="num">3829.55</td><td class="num">1.681</td><td class="num">3865.42</td><td class="num">1.3532</td></tr><tr><td>30</td><td>[300,500)</td><td>[3.25,3.5)</td><td class="num">2830.84</td><td class="num">94.79</td><td class="num">2400.72</td><td class="num">4.5376</td><td class="num">2466.33</td><td class="num">3.8454</td></tr><tr><td>31</td><td>[300,500)</td><td>[3.5,3.75)</td><td class="num">788.072</td><td class="num">64.046</td><td class="num">659.096</td><td class="num">2.0138</td><td class="num">677.404</td><td class="num">1.7279</td></tr><tr><td>32</td><td>[300,500)</td><td>[3.75,4.0)</td><td class="num">394.34</td><td class="num">70.24</td><td class="num">195.33</td><td class="num">2.8333</td><td class="num">195.565</td><td class="num">2.8299</td></tr><tr><td>33</td><td>[300,500)</td><td>[4.0,4.25)</td><td class="num">38.2687</td><td class="num">63.622</td><td class="num">101.489</td><td class="num">-0.99369</td><td class="num">95.7948</td><td class="num">-0.90419</td></tr><tr><td>34</td><td>[300,500)</td><td>[4.25,4.5)</td><td class="num">64.81</td><td class="num">44.172</td><td class="num">54.1498</td><td class="num">0.24133</td><td class="num">46.8884</td><td class="num">0.40572</td></tr><tr><td>42</td><td>[500,800)</td><td>[3,3.25)</td><td class="num">480.655</td><td class="num">31.038</td><td class="num">507.364</td><td class="num">-0.86052</td><td class="num">516.185</td><td class="num">-1.1447</td></tr><tr><td>43</td><td>[500,800)</td><td>[3.25,3.5)</td><td class="num">1730.28</td><td class="num">59.31</td><td class="num">1689.58</td><td class="num">0.68608</td><td class="num">1740.39</td><td class="num">-0.17049</td></tr><tr><td>44</td><td>[500,800)</td><td>[3.5,3.75)</td><td class="num">1449.96</td><td class="num">54.259</td><td class="num">1452.15</td><td class="num">-0.040368</td><td class="num">1495.19</td><td class="num">-0.83356</td></tr><tr><td>45</td><td>[500,800)</td><td>[3.75,4.0)</td><td class="num">507.779</td><td class="num">34.15</td><td class="num">460.754</td><td class="num">1.377</td><td class="num">467.143</td><td class="num">1.1899</td></tr><tr><td>46</td><td>[500,800)</td><td>[4.0,4.25)</td><td class="num">178.752</td><td class="num">29.686</td><td class="num">93.2804</td><td class="num">2.8792</td><td class="num">90.1964</td><td class="num">2.9831</td></tr><tr><td>47</td><td>[500,800)</td><td>[4.25,4.5)</td><td class="num">14.6049</td><td class="num">22.834</td><td class="num">32.213</td><td class="num">-0.77113</td><td class="num">28.2568</td><td class="num">-0.59788</td></tr><tr><td>48</td><td>[500,800)</td><td>[4.5,4.75)</td><td class="num">3.6544</td><td class="num">15.438</td><td class="num">17.2337</td><td class="num">-0.87958</td><td class="num">13.3762</td><td class="num">-0.62972</td></tr><tr><td>56</td><td>[800,1100)</td><td>[3.25,3.5)</td><td class="num">94.9223</td><td class="num">12.21</td><td class="num">125.368</td><td class="num">-2.4935</td><td class="num">129.376</td><td class="num">-2.8218</td></tr><tr><td>57</td><td>[800,1100)</td><td>[3.5,3.75)</td><td class="num">441.343</td><td class="num">27.178</td><td class="num">509.018</td><td class="num">-2.49</td><td class="num">521.864</td><td class="num">-2.9627</td></tr><tr><td>58</td><td>[800,1100)</td><td>[3.75,4.0)</td><td class="num">523.473</td><td class="num">29.875</td><td class="num">525.917</td><td class="num">-0.081819</td><td class="num">530.595</td><td class="num">-0.23842</td></tr><tr><td>59</td><td>[800,1100)</td><td>[4.0,4.25)</td><td class="num">183.851</td><td class="num">19.135</td><td class="num">158.731</td><td class="num">1.3128</td><td class="num">154.885</td><td class="num">1.5138</td></tr><tr><td>60</td><td>[800,1100)</td><td>[4.25,4.5)</td><td class="num">88.0404</td><td class="num">15.683</td><td class="num">24.9161</td><td class="num">4.025</td><td class="num">22.7772</td><td class="num">4.1614</td></tr><tr><td>61</td><td>[800,1100)</td><td>[4.5,4.75)</td><td class="num">11.3574</td><td class="num">7.6578</td><td class="num">5.1954</td><td class="num">0.80467</td><td class="num">4.1283</td><td class="num">0.94402</td></tr><tr><td>62</td><td>[800,1100)</td><td>[4.75,5.0)</td><td class="num">2.10139</td><td class="num">4.4608</td><td class="num">2.28629</td><td class="num">-0.041449</td><td class="num">1.49619</td><td class="num">0.13567</td></tr><tr><td>71</td><td>[1100,2000)</td><td>[3.75,4.0)</td><td class="num">213.111</td><td class="num">17.288</td><td class="num">275.33</td><td class="num">-3.5989</td><td class="num">272.864</td><td class="num">-3.4563</td></tr><tr><td>72</td><td>[1100,2000)</td><td>[4.0,4.25)</td><td class="num">321.302</td><td class="num">21.135</td><td class="num">339.195</td><td class="num">-0.84659</td><td class="num">323.066</td><td class="num">-0.083465</td></tr><tr><td>73</td><td>[1100,2000)</td><td>[4.25,4.5)</td><td class="num">176.573</td><td class="num">16.045</td><td class="num">150.003</td><td class="num">1.656</td><td class="num">134.125</td><td class="num">2.6456</td></tr><tr><td>74</td><td>[1100,2000)</td><td>[4.5,4.75)</td><td class="num">72.6231</td><td class="num">10.458</td><td class="num">33.6837</td><td class="num">3.7233</td><td class="num">27.7664</td><td class="num">4.2891</td></tr><tr><td>75</td><td>[1100,2000)</td><td>[4.75,5.0)</td><td class="num">27.006</td><td class="num">20.469</td><td class="num">5.19799</td><td class="num">1.0654</td><td class="num">3.83818</td><td class="num">1.1318</td></tr><tr><td>86</td><td>[2000,3000)</td><td>[4.25,4.5)</td><td class="num">14.4511</td><td class="num">4.1891</td><td class="num">17.0861</td><td class="num">-0.62899</td><td class="num">14.6396</td><td class="num">-0.044997</td></tr><tr><td>87</td><td>[2000,3000)</td><td>[4.5,4.75)</td><td class="num">12.9369</td><td class="num">4.8024</td><td class="num">25.2497</td><td class="num">-2.5639</td><td class="num">19.3311</td><td class="num">-1.3315</td></tr><tr><td>88</td><td>[2000,3000)</td><td>[4.75,5.0)</td><td class="num">3.64907</td><td class="num">5.861</td><td class="num">19.6389</td><td class="num">-2.7282</td><td class="num">13.3917</td><td class="num">-1.6623</td></tr><tr><td>89</td><td>[2000,3000)</td><td>[5,5.5)</td><td class="num">13.3039</td><td class="num">8.0434</td><td class="num">5.42361</td><td class="num">0.97972</td><td class="num">3.17695</td><td class="num">1.259</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+  <section>
+    <h2>结果图</h2>
+    <div class="figure-grid">
+      
+      
+      
+      
+    </div>
+  </section>
+  <footer>
+    Generated from <code>/mnt/mydisk/server/projects/energy_reconstruction/apply/output/stage_f_diagnostics_v6_64748_reselect44_drop5/runs/v6_64748_reselect44_drop5_stage_f/fit_v6_64748_reselect44_drop5_metadata.json</code>.
+  </footer>
+</main>
+</body>
+</html>

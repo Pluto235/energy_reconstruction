@@ -6,13 +6,26 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-13 12:07 · [uncommitted] Restore GitHub main and Mac-only source changes to ETO /mnt/newdisk/shijie/energy; retain differing originals, merge devlogs, and relocate recovered output links.
+
 - **energy_reconstruction** · 2026-07-31 16:20 · [uncommitted] Audit and finalize the Crab v6 versus Pass5 common-GTI covariance comparison with terminal manifests, live-time provenance, and qualified uncertainty reporting.
 
 - **energy_reconstruction** · 2026-07-21 17:12 · [uncommitted] Refit Pass5 seven-bin double-Rayleigh PSFs from 10,000 official WCDA MC files and expose full-sample overflow containment.
 
 - **energy_reconstruction** · 2026-07-21 14:20 · [d55cc9e] Fit seven predE-folded Nhit profiles with conditional double Rayleigh, improving KL by 10.5-80.3x over single Rayleigh.
 
+- **energy_reconstruction** · 2026-07-21 (IHEP+ETO) · [uncommitted] Root-caused the reproducible ExitCode-34 failure (identical on both hep_sub attempts) by running `bash -x prepare_strict_pass5_fit.sh` interactively: the live-time ROOT one-liner correctly computes and prints `LIVE_DAYS=130.592212689228`, then the whole script dies silently right there under `set -e -o pipefail` -- `root -q`'s implicit end-of-macro TFile/TTree global-destructor cleanup (the macro never calls `f.Close()`) apparently returns nonzero even after the printf succeeds. Fixed by adding an explicit `gSystem->Exit(0);` after the printf. Verified by rerunning interactively on the login node (skips the hep_sub queue entirely): FINISHED_EXIT=0, MIGRAD converged, `covariance_status=3`, `common_gti_fit/covariance_fit.yaml` produced, pass5 live time 130.592212689228 d.
+  **Pass5 vs v6 common-GTI covariance comparison is now fully complete on both sides.** Generated the final report (`report/crab_v6_vs_pass5_common_gti_covariance_report.html`, assets under `report/assets/v6-vs-pass5-common-gti-covariance/`): v6 chi2/ndof=20.94 (worse than the 149-day full-sample run's 11.7, smaller-sample same-bin-count effect), PDG scale factor sqrt(chi2/ndof)=4.58. Raw-HESSE joint error-volume ratio v6/Pass5=0.528 (v6 looks smaller); after chi2/ndof inflation the ratio flips to 50.6 (v6 looks much larger) and per-parameter reduction goes from {phi0:+25%, alpha:-8%, beta:+57%} raw to {phi0:-243%, alpha:-395%, beta:-99%} inflated -- the naive HESSE comparison and the goodness-of-fit-corrected comparison give opposite headline conclusions, exactly the literature-review caveat this task set out to surface. Synced final report assets and `common_gti_fit/` to ETO.
+
+- **energy_reconstruction** · 2026-07-21 (IHEP) · [uncommitted] First `prepare_strict_pass5_fit.sh` submission (cluster 87712967) completed with ExitCode 34 and totally empty stdout/stderr -- `mkdir -p "$FIT_DIR"` ran (directory exists) but nothing after it produced a byte of output, so the failure is upstream of or inside the first `root -l -b -q` live-time extraction, with no diagnostic trail. Resubmitted as-is per user call (suspected transient environment issue rather than a code bug), cluster 87954887.
+
 - **energy_reconstruction** · 2026-07-20 20:15 · [24f465f] Collapse 91 Stage-B cells over predE into seven sumw-weighted Nhit profiles with exact-bin Rayleigh diagnostics.
+
+- **energy_reconstruction** · 2026-07-20 (IHEP) · [uncommitted] Merge confirmed clean (`STRICT_MAP_MERGE_COMPLETE maps=928`, one benign minAccCorr warning). Parameterized `prepare_strict_pass5_fit.sh`'s `MAP`/`FIT_DIR` (were hardcoded to the old full-sample `pass5_v6_sorted_gti_map.root` / `sorted_gti_fit`) per the handoff's guidance not to reuse that name for the 928-map common-GTI intersection. Submitted the official Pass5 gtselect/gtsrcmap/gtlike/gtlike_cov chain against `pass5_v6_common_gti_map.root`, output dir `common_gti_fit`, cluster 87712967, `-wt long`.
+
+- **energy_reconstruction** · 2026-07-20 (IHEP) · [uncommitted] `-wt long` fixed the timeout: 28/28 completed clean, 928/928 nonempty J2000 maps, and `scan_j2000_integrity.C` confirms all 928 pass ROOT-level integrity (TOTAL=928 GOOD=928 BAD=0) -- the corrupted-recovery-output problem is fully resolved. Resubmitted `merge_strict_map.sh` (also `-wt long` this time), cluster 87689726.
+
+- **energy_reconstruction** · 2026-07-20 (IHEP) · [uncommitted] The 94-chunk retry (cluster 87548556) itself hit every worker ExitCode 124 again (66/94 complete, 0/16 WORKER_DONE), leaving 28 chunks still missing (928 -> 900 nonempty). Two independently-sized arrays (128 workers/822 jobs; 16 workers/94 jobs) both died at ~6 processed chunks per worker regardless of worker count, pointing at a fixed `hep_sub` walltime class rather than per-job slowness. Found `hep_sub -wt {test,short,mid,long,special}`; `submit_strict_step2_recovery.sh` never set it (default class). Added `WALLTIME` (default `long`) and `-wt "$WALLTIME"` to the hep_sub call. Resubmitted the remaining 28 labels 1 worker per job, cluster 87657898, `-wt long`.
 
 - **energy_reconstruction** · 2026-07-19 22:59 · [e207416] Fit cells 1-3 with one spherical King and reject it: KL is 10.7-11.4x double-King and Delta AIC is 1.65e4-5.49e4 worse.
 
@@ -24,6 +37,12 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 - **energy_reconstruction** · 2026-07-19 00:07 · [fde0419] Fit full-sphere raw-MC cells 1-3 with Rayleigh cores plus spherical-King tails, improving KL 1.4-3.5x while exposing boundary-limited far tails.
 
+- **energy_reconstruction** · 2026-07-19 (IHEP) · [uncommitted] After the fixed merge script got past its precheck, `DI_Merge` itself segfaulted partway through 928 files with repeated `hon_N/hbkg_N/hoff_N is bad` errors. Added `scan_j2000_integrity.C` (opens every accepted J2000 URI via `TFile::Open`, flags ROOT's own "probably not closed" recovery warnings / zombie files / missing hMJD_all_fine / fewer than the expected 22 keys). Found 94/928 (10.1%) recovered maps were nonzero-but-truncated (55 unopenable zombies, 39 partial-key salvage) -- the same failure class the whole recovery effort exists to fix, this time from the recovery workers themselves, and invisible to every prior byte-size-only check, including `run_strict_step2_recovery_worker.sh`'s own idempotency skip (`remote_size -gt 0`). Removed the 94 corrupt EOS files first (otherwise the skip check would no-op on them), then added `build_targeted_step2_requeue.py` to hand-build a `step2_recovery_jobs.tsv` for just those 94 labels (reusing the hour-list relocation logic from `build_strict_recovery_manifest.py`, since that script's `classify()` can't see this failure mode). Resubmitted, cluster 87548556 (94 jobs, 16 workers). Next completion check must rerun `scan_j2000_integrity.C`, not just recount nonempty files, before merging again.
+
+- **energy_reconstruction** · 2026-07-19 (IHEP) · [uncommitted] Fix `merge_strict_map.sh`'s pre-merge existence check, which used bash `[[ -s "$path" ]]` on `root://...` XRootD URIs and therefore always reported all 928 maps missing (cluster 87542452 died on this false negative before ever calling `DI_Merge`; EOS content itself was intact). New `map_exists()` dispatches to `env -u LD_LIBRARY_PATH /usr/bin/xrdfs <host> stat <path>` for `root://` entries, plain `-s` otherwise. Resubmitted the merge, cluster 87544183.
+
+- **energy_reconstruction** · 2026-07-19 (IHEP) · [uncommitted] Pass5 EOS map recovery finished clean: reduced 16-worker Step2 array (cluster 87513951) completed 60/60 with ExitCode 0; rebuilt `strict_recovery_manifest.json` one more time to reach the expected final state (928 accepted / 150 rejected / 0 pending). Submitted `merge_strict_map.sh` with `MAP_LIST=strict_recovery/accepted_maps.list` (928 maps) -> `pass5_v6_common_gti_map.root`, cluster 87542452 (superseded, see fix above).
+
 - **energy_reconstruction** · 2026-07-18 21:08 · [715437d] Add untruncated raw-MC survival diagnostics for cells 1-3, exposing 17.9-29.5% weighted probability beyond 5 degrees.
 
 - **energy_reconstruction** · 2026-07-18 19:12 · [a50b205] Add Fermi-style double-King Stage B profile fitting and regenerate the 91-cell PSF grid with unchanged diagnostic and final-SED selectors.
@@ -31,6 +50,14 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 - **energy_reconstruction** · 2026-07-18 12:27 · [9e3f2eb] Expand the Scheme R double-Rayleigh Poisson-unbinned prototype into a complete Stage A-G report with PSF, background, pull, bootstrap, time-split, and final SED figures.
 
 - **energy_reconstruction** · 2026-07-18 01:20 · [uncommitted] Add a grid-free (unbinned) continuous-Poisson curvature fit for the 7 order-2 background cells and stand up the parallel `poisson_unbinned` experiment. New `fit_profiled_poisson_surface_unbinned` (point-evaluated likelihood + analytic annulus normalization, reusing the cutting-plane positivity); Stage-D plumbing `--poisson-quadratic-fit {binned,unbinned}` (default binned), `--allow-annulus-count-mismatch`, `--dump-off-events-npz`; new `bootstrap_v6_poisson_background_unbinned.py` (event resample + unbinned refit for order-2, analytic Poisson for order<=1) and `time_split_shape_consistency.py` (median-MJD g(τ)=B_on/N_ann gate); `compare_unbinned_quadratic_bon.py` and `test_unbinned_poisson_surface.py`; 3 `poisson_unbinned` sbatch. Production run (grid 65261, bootstrap 65262): 12-branch B_on envelope = 0 (was the pooled 0.786σ failure), time-split gate PASS (7/7, max 0.834σ), bootstrap 1000/1000 (min excess eigenvalue 12.86, PD). SED unchanged: conservative LogPar chi2/ndof 14.20 ≈ pooled 14.11. New report `crab_sed_v6_64748_nhit100_reselect44_scheme_R_double_rayleigh_poisson_unbinned_report.html`.
+
+- **energy_reconstruction** · 2026-07-18 17:15 · [uncommitted] Add the Scheme B counterpart of the Scheme R double-Rayleigh Poisson-unbinned background report. New ETO Slurm scripts (`scripts/slurm/{run,bootstrap}_v6_64748_scheme_B_poisson_{grid_branch,background}.sbatch`, `..._poisson_unbinned_{grid_branch,background}.sbatch`, `finalize_v6_64748_scheme_B_poisson_unbinned_report.sbatch`, `submit_v6_64748_scheme_B_poisson_unbinned{,_only}.sh`) mirror the Scheme R chain 1:1 — same double-Rayleigh Stage B/C PSF and frozen pooling manifest, only the response swapped to Scheme B's existing MC aperture-conditioned response (`stage_a_v6_64748_..._aperture_conditioned`, containment exactly 1, no Rayleigh factor). New `report/prepare_v6_scheme_b_double_rayleigh_poisson_unbinned_report.py` (copy of the Scheme R enrichment script, retargeted). Ran the full pooled-Poisson (jobs 65293/65294) and unbinned Poisson (jobs 65306/65307/65308) chains on ETO — 26 Slurm jobs total, all completed within ~45 minutes wall clock. Results: 12-branch B_on envelope max shift 0.719% (near-zero regression check, not exactly 0 like Scheme R since the response differs), time-split gate PASS (7/7 order-2 cells, max 0.834σ, equal-statistics median-MJD split), bootstrap 1000/1000 replicates completed with 0 failures. LogPar chi2/ndof: pooled conservative 14.06, unbinned conservative 14.16 (Scheme R: 14.11/14.20) — structurally consistent with Scheme R. New report `crab_sed_v6_64748_nhit100_reselect44_scheme_B_double_rayleigh_poisson_unbinned_report.html`; section structure (15 `<h2>` sections, 26 image refs) verified identical to the Scheme R report.
+
+- **energy_reconstruction** · 2026-07-18 16:30 · [uncommitted] Add forward-fold closure tooling. New `tools/closure_forward_fold_v6.py`: imports `stages/06_fit.py` and forward-folds an injected PL/LogPar spectrum (`--model {logpar,powerlaw}`, `--phi0/--alpha/--gamma/--beta`, `--pivot-tev`) through the same `model_counts()` math into a MOCK Stage-E signal NPZ (schema matches `05_signal.py`; `excess`=fold, `N_on=round(excess+B_on)`, errors + B_on/containment/labels copied from the real Stage-E NPZ), plus metadata JSON — for later `06_fit.py`+`07_sed_points.py` self-consistency re-fits. Includes `--true-energy-scale-delta` (relabels response true-E axis `logE+=log10(1+δ)`) and a `--self-test` mode over a fabricated 3×5×2 response. Guarded companion flag in `stages/06_fit.py`: `--energy-scale-delta` (default 0.0, verified no-op — edges pass through unchanged; non-zero relabels `loge_edges` once at load before every fold) via new `apply_energy_scale_delta()`; delta echoed into `forward_folding` metadata.
+
+- **energy_reconstruction** · 2026-07-18 (IHEP) · [uncommitted] Diagnose cluster 87341711's stall via `condor_history` (93/128 workers exited cleanly, 35/128 hit ExitCode 124 = timeout, none tripped the FAILED/SIZE_MISMATCH grep patterns used for monitoring); rebuilt `strict_recovery_manifest.json` with the array fully inactive (868 accepted, only 60 real Step2 gaps, not the ~316 implied by the raw completion counter) and submitted a reduced 16-worker Step2 recovery array, cluster 87513951.
+
+- **energy_reconstruction** · 2026-07-18 13:45 · [uncommitted] Add a per-cell fitted background-density surface grid to the poisson-unbinned report. New `report/plot_fitted_background_surfaces.py` reconstructs each cell's quadratic density from Stage-D `surface_density_coefficients` and renders the relative deviation `(q/q0-1)%` over the source-centered ROI for all 84 (Nhit,predE) cells in the physical grid layout (order-2 SED targets red-framed with τ, order-2 pooled donors orange, order-1 planes gray; ON aperture + annulus circle overlays; per-panel colour autoscale). Coefficients pulled from the ETO Stage-D NPZ (`extract_surf.py`); asset `fitted_background_surfaces_grid.png` inserted into the "Grid-Free Unbinned Poisson Method" section. Local-only hand-edit — not yet wired into the report builder, so a finalize re-run would drop it until the builder is extended.
 
 - **energy_reconstruction** · 2026-07-17 23:47 · [uncommitted] Add a Claude handoff for EOS recovery and the common-GTI Pass5-versus-v6 covariance comparison.
 
@@ -261,58 +288,113 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 - **energy** · 2026-06-17 20:55 · [948bef9] Add PredE-blind v3 Nhit-only control selector, cache builder, and Slurm runner.
 
 - **energy** · 2026-06-17 20:14 · [9c8a82a] Explain PSF effective-events calculation in the v3 report.
+
 - **energy** · 2026-06-17 19:48 · [83c8a67] Explain the r_opt and sigma relation in the v3 report.
+
 - **energy** · 2026-06-17 19:26 · [6c611bf] Clarify PSF sigma marker interpretation in the v3 report.
+
 - **energy** · 2026-06-17 17:54 · [699e533] Mark fit PSF sigma positions on active own-cell radial diagnostics.
+
 - **energy** · 2026-06-17 17:03 · [2065cab] Overlay fit PSF curves on active own-cell radial diagnostics.
+
 - **energy** · 2026-06-17 16:50 · [57defa5] Clarify active PSF borrowing sources in the v3 report.
+
 - **energy** · 2026-06-17 15:26 · [a990891] Remove the unnormalized active PSF radial plot from the v3 report.
+
 - **energy** · 2026-06-17 15:20 · [20d9940] Add active-cell MC theta profile diagnostics to the v3 report.
+
 - **energy** · 2026-06-17 12:09 · [de14f47] Show own-cell normalized radial PSF diagnostics for borrowed v3 cells.
+
 - **energy** · 2026-06-17 11:30 · [a38facc] Add normalized active PSF radial profile diagnostic to the v3 report.
+
 - **energy** · 2026-06-16 15:51 · [0d89f8b] Add v3 official forward-fold and off-source normalization diagnostics to the integrated report.
+
 - **energy** · 2026-06-16 15:26 · [4db3867] Update v3 selector sensitivity figures and tables around the active 30-cell PSF-borrow branch.
+
 - **energy** · 2026-06-16 15:15 · [e444f80] Add active fit-cell PSF profile diagnostics and PSF summary table to the v3 report.
+
 - **energy** · 2026-06-16 15:05 · [3e79cc2] Reorder v3 Stage D skymap diagnostics and remove duplicate baseline fit-cell maps.
+
 - **energy** · 2026-06-16 14:56 · [1bd1be6] Restore the standalone official/tutorial WCDA SED comparison figure in the v3 report.
+
 - **energy** · 2026-06-16 14:33 · [b6eeb4f] Overlay official pass5 and tutorial v0.99 points on the v3 Stage G SED plot.
+
 - **energy** · 2026-06-16 13:45 · [a3da2b9] Clarify v3 30-cell selection in the integrated report.
+
 - **energy** · 2026-06-16 13:26 · [3e1e1dc] Add tutorial v0.99 WCDA-only Crab SED points and overlay to the v3 integrated report.
+
 - **energy** · 2026-06-16 12:20 · [876ef99] Add official WCDA pass5 Crab SED points and overlay to the v3 integrated report.
+
 - **energy** · 2026-06-13 00:17 · [uncommitted] Add v3 PSF borrowing systematic Stage B variant, D-G Slurm chain, selector, and integrated report comparison.
+
 - **energy** · 2026-06-12 23:38 · [7e04701] Document v3 cell 39 high-theta PSF support audit and repair options.
+
 - **energy** · 2026-06-12 22:32 · [5c649b1] Document v3 PSF theta-support lessons in the integrated report.
+
 - **energy** · 2026-06-12 22:02 · [bd043d4] Freeze v3 baseline selector at 30 MC-ridge cells with PSF follow-up annotations.
+
 - **energy** · 2026-06-12 20:41 · [06455ab] Replace v3 hard-coded physical ridge with MC occupancy plus PSF-quality selector.
+
 - **energy** · 2026-06-12 17:13 · [162fff4] Add explanatory captions to the v3 integrated report figures.
+
 - **energy** · 2026-06-12 14:35 · [ff5a535] Add v3 full-cell Crab SED pipeline with 84 retained cells and fit-cell highlighting.
+
 - **energy** · 2026-06-12 13:19 · [3198068] Add roadmap v3 MC normalized energy-distribution overlay diagnostic.
+
 - **energy** · 2026-06-12 13:15 · [5182772] Set roadmap v3 mixed predE binning with low-end 0.5 dex and high-energy wide bins.
+
 - **energy** · 2026-06-12 13:12 · [997fb6f] Clarify roadmap v3 high-energy predE binning strategy.
+
 - **energy** · 2026-06-12 12:56 · [ff46d37] Refine roadmap v3 predE binning and accepted implementation decisions.
+
 - **energy** · 2026-06-12 11:53 · [804c425] Add roadmap v3 for HAWC-style cell selection and annulus 2D surface background.
+
 - **energy** · 2026-06-11 14:37 · [94e38db] Archive the LHAASO gamma source analysis guide Markdown under report references.
+
 - **energy** · 2026-06-11 14:32 · [7446e96] Archive the LHAASO Data Analysis Tutorial Markdown under report references.
+
 - **energy** · 2026-06-11 14:07 · [f150a1d] Overlay the 6-degree fiducial circle on the v2 counts skymap and remove the separate ROI crop figure.
+
 - **energy** · 2026-06-11 13:16 · [5c0ac43] Switch v2 profile diagnostics to counts maps and add a 6-degree ROI counts skymap.
+
 - **energy** · 2026-06-11 12:24 · [ade3eb0] Expand normalized profile diagnostics to all raw65 cells with v2_baseline24 fit cells highlighted.
+
 - **energy** · 2026-06-11 11:22 · [3a6a1c6] Add normalized fit-cell excess profile diagnostics to the Stage A-G SED report.
+
 - **energy** · 2026-06-11 11:12 · [28dadf5] Add v2_baseline24 fit-cell background-subtracted skymap to the Stage A-G SED report.
+
 - **energy** · 2026-06-11 10:49 · [95c05ab] Add v2_baseline24 fit-cell counts skymap to the Stage A-G SED report.
+
 - **energy** · 2026-06-11 10:35 · [9aad49e] Add v2_baseline24 selector and refreshed Stage F/G SED reports without cells 64/65.
+
 - **energy** · 2026-06-10 18:00 · [uncommitted] Pull revised Stage G external-reference report and outputs from ETO and restore local current/latest links.
+
 - **energy_reconstruction** · 2026-06-10 14:58 · [9af371b] Add MAGIC, H.E.S.S., and HAWC Crab SED reference overlays to Stage G diagnostics.
+
 - **energy** · 2026-06-10 14:21 · [uncommitted] Pull revised Stage G pool1 reference report and outputs from ETO and restore local current/latest links.
+
 - **energy_reconstruction** · 2026-06-10 13:47 · [uncommitted] Add WCDA-1 Pool-1 Table 1 reference points to Stage G diagnostic SED outputs and report.
+
 - **energy** · 2026-06-10 09:59 · [uncommitted] Pull Stage G SED point outputs, report, and script updates from ETO and restore local current/latest links.
+
 - **energy** · 2026-06-09 21:45 · [uncommitted] Pull Stage F baseline reports and outputs from ETO for local review.
+
 - **energy** · 2026-06-09 18:12 · [429533d] Replace Stage D/E skymap quicklook subtraction with formal Stage D ROI excess maps.
+
 - **energy** · 2026-06-09 17:15 · [f3bd5ef] Add v1 skymap diagnostics to Stage C/D/E reports and align Stage D with ROI-local background.
+
 - **energy** · 2026-06-09 13:41 · [35379c6] Translate Stage E report to Chinese and expand methodology explanation.
+
 - **energy** · 2026-06-09 11:42 · [uncommitted] Pull latest Stage E signal extraction outputs from ETO and repair local current/latest pointers.
+
 - **energy** · 2026-06-09 11:13 · [uncommitted] Sync full report directory from ETO into local apply reports.
+
 - **energy** · 2026-06-09 11:07 · [uncommitted] Pull latest Crab v2 cell skymap Markdown and HTML reports from ETO.
+
 - **energy** · 2026-06-05 14:08 · [uncommitted] Expand Stage B report explanation of MC reco-true PSF and core Rayleigh fit.
+
 - **energy** · 2026-06-04 11:27 · [uncommitted] Fix Stage B report diagnostic image paths for local Mac viewing.
+
 - **energy** · 2026-06-04 11:21 · [uncommitted] Pull updated apply folder from ETO and restore local devlog tracking.
+
 - **energy** · 2026-06-03 20:42 · [uncommitted] Add apply devlog and require devlog skill tracking for future changes.

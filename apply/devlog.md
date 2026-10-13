@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 01:37 · [uncommitted] Implement receipt-bound January time/J2000 recovery, pinned task-owned dependencies, strict reduced-source ambiguity checks, restart regressions and operational documentation.
+
 - **energy_reconstruction** · 2026-10-13 20:46 · [uncommitted] Isolate repeat ROOT/CVMFS failures on lhws261, reschedule only two affected January shards and exclude both failed nodes for future matches; preserve their outputs and reclaim stale reservations safely.
 
 - **energy_reconstruction** · 2026-10-13 20:10 · [uncommitted] Plan independent January time/J2000 recovery with legacy event-key reuse, missing-event completion, a bounded EOS queue and one-to-two-worker validation before parallel production.

@@ -5,9 +5,9 @@ This workflow restores the 31-day / 681-file January observation manifest as ind
 ## Isolated implementation and dependencies
 
 - ETO implementation checkout: `/mnt/newdisk/shijie/energy-time-recovery`, branch `codex/january-time-recovery`, in the energy repository. Do not overwrite the unrelated inference edits in `/mnt/newdisk/shijie/energy`.
-- ETO revised-run state: `/mnt/newdisk/shijie/energy/.recovery/2026-10-14/obs-january-time`.
-- IHEP revised-run control: `/scratchfs2/lhaaso/liushijie/WCDA_time_recovery_202201_20261014/.control`.
-- IHEP revised-run temporary EOS: `/eos/user/l/liushijie/WCDA_time_recovery_202201_20261014`.
+- ETO current-run state: `/mnt/newdisk/shijie/energy/.recovery/2026-10-14/obs-january-time-v2`.
+- IHEP current-run control: `/scratchfs2/lhaaso/liushijie/WCDA_time_recovery_202201_20261014_v2/.control`.
+- IHEP current-run temporary EOS: `/eos/user/l/liushijie/WCDA_time_recovery_202201_20261014_v2`.
 - Existing ETO IHEP connection: `.recovery/2026-10-13/obs-january/ihep.sock`. Do not copy credentials.
 
 Production uses task-owned, unmodified Cog and SLALIB copies in `.control/deps/Cog` and `.control/deps/slalib`. The worker verifies `deps/dependency_sha256.txt` before compiling. Cog was copied from the historical algorithm's dependency directory; the provenance is retained in `deps/ORIGIN.txt`. No runtime path points into another user's home. The reference source is byte-identical to the user's `/home/lhaaso/liushijie/time-recover/src/recover_wcda_time.cc` and is stored as `.control/deps/legacy_reference.cc`.
@@ -50,4 +50,22 @@ The ETO receiver runs through `scripts/slurm/sync_observation_time.sbatch SNAPSH
 
 File delivery, successful event recovery and temporary cleanup are separate acceptance totals. Do not report the month complete while any manifest file is missing or conflicted. Report the old `0101_22` 393 failures separately against current keys and list any remaining failures.
 
+## Accepted files and transport revision
+
+The original January receipts contain **69,279,369 selected events in 681 files**. All files fit the validated 4 GiB scratch envelope; the largest target has 363,560 events (`Esg20220126_22.root`).
+
+Commit `c13e789` produced four accepted files, totaling **912,934 events**, all with valid time and coordinates: `0101_00`, `0101_01`, `0101_22` and `0102_00`. Their receipts, immutable configuration and acknowledgments remain in the prior `obs-january-time` / `WCDA_time_recovery_202201_20261014` run. Its `retired_run_acceptance.json` records the exact names and zero queued bytes. These files must not be recomputed or overwritten by the current run.
+
+Both pilot hours matched the unmodified reference algorithm exactly, row by row. `0101_00` reused 228,604 times and recovered 91,654 new times; its recovery, reference and upload took 87.406, 135.595 and 2.086 seconds respectively. Peak RSS was 715,052 KiB. `0101_22` contains 116,551 successful events. Slurm audit `66056` confirmed that all **393 historical failures were restored**, with zero remaining and zero absent target keys. Pilot receipts and per-event historical audit remain in the prior run directory.
+
+The first production workers `3727913.0` / `3727914.0` each generated one valid product, then stopped safely because queue accounting interpreted the timestamp column of the actual seven-column `xrdfs -l` listing as its size. Receiver `66057` was canceled. Slurm job `66058` verified, published, acknowledged and cleaned both retained products using their original request identities. The prior producer concurrency is fenced at zero; its unprocessed requests remain as evidence and must not be restarted.
+
+The current transport revision reads the fourth column's byte count, skips directories, and rejects unknown formats. Regression tests include a real listing layout, partial files, nonzero directory aggregate sizes and malformed output. The C++ recovery source and scientific conversion are unchanged. A live IHEP probe checks upload/readback, actual listing sizes, reservation capacity and cleanup before restarting production.
+
+The current run's expected name set is the original manifest minus the four explicitly accepted files: **677 files / 68,366,435 events**. Its source commit and configuration are new, and every new request retains its own immutable identity. Final January acceptance must combine the four prior receipts with the 677 current receipts, require an exact 681-name union without duplicates, revalidate every friend against its original observation using the appropriate frozen configuration, and confirm both temporary EOS queues are empty. A current-run completion marker for 677 files alone does not prove full-month acceptance.
+
+The IHEP site walltime table gives `lhaaso_default=54000` (15 hours) and `lhaaso_short=1800` (30 minutes). Use the default category for production. Exclude `lhws247`, `lhws261`, and the observed startup-stalled `bws0995` from this task's future matches. The latter's original job `3727721.0` never claimed a file; its diagnostics are retained, and the validated retry was `3727837.0` on `aws003`. Do not alter other jobs or cluster services.
+
 Downstream energy inference must apply its final `survivor_event_indices` to this friend and alignment tree, or reassociate by event key. These friends correspond to the complete pincness-only input, before additional inference cuts.
+
+Parser revision verification: IHEP job `3728070.0` passed all 17 tests in 13.125 seconds. Live probe `3728064.0` verified a 19-byte partial, a 99/100-byte reservation boundary, rejection above capacity, exact EOS readback and zero bytes after cleanup.

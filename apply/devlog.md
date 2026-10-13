@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 03:27 · [uncommitted] Fix seven-column XRootD byte accounting; pass all 17 IHEP regressions and live queue/readback checks, preserve four accepted files and deploy the remaining 677 with new identities.
+
 - **energy_reconstruction** · 2026-10-14 02:00 · [uncommitted] Bound reduced caches to requested missing-event indices after real-hour failure; preserve duplicates, verify all 15 batch regressions, retain failed-run evidence and audit 393 historical failures.
 
 - **energy_reconstruction** · 2026-10-14 01:37 · [uncommitted] Implement receipt-bound January time/J2000 recovery, pinned task-owned dependencies, strict reduced-source ambiguity checks, restart regressions and operational documentation.

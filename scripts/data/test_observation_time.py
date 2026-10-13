@@ -47,6 +47,19 @@ class ProtocolTests(unittest.TestCase):
             self.assertEqual(m.queue_usage(self.config), 1000)
         self.assertTrue((self.root/'queue_ledger.json').exists())
 
+    def test_real_xrdfs_listing_counts_size_column_and_skips_directories(self):
+        listing = ('drwxr-x--- user group 59 2026-10-14 02:55:00 /eos/time/0101\n'
+                   '-rw-r--r-- user group 42 2026-10-14 02:55:00 /eos/time/0101/file.root\n'
+                   '-rw-r--r-- user group 17 2026-10-14 02:55:00 /eos/time/0101/file.partial\n')
+        with patch.object(self.module, 'eos_command', return_value=listing):
+            self.assertEqual(self.module.eos_listing(self.config),
+                             {'/eos/time/0101/file.root': 42, '/eos/time/0101/file.partial': 17})
+
+    def test_unknown_xrdfs_listing_cannot_undercount_queue(self):
+        with patch.object(self.module, 'eos_command', return_value='unrecognized listing format'):
+            with self.assertRaises(ValueError):
+                self.module.queue_usage(self.config)
+
     def test_cleanup_requires_exact_receipt(self):
         m = self.module
         m.put_request(self.config, self.request)

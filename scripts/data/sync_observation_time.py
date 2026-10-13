@@ -102,9 +102,9 @@ def eos_listing(config):
         fields = line.split()
         if not fields or fields[0].startswith('d'):
             continue
-        if len(fields) < 3 or not fields[-2].isdigit():
+        if len(fields) != 7 or not fields[0].startswith('-') or not fields[3].isdigit():
             raise ValueError('Unrecognized xrdfs listing; refusing to undercount queue')
-        result[fields[-1]] = int(fields[-2])
+        result[fields[-1]] = int(fields[3])
     return result
 
 

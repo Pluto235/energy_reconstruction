@@ -615,8 +615,6 @@ def process_one_file(
     total_events = 0
     cut_pass_events = 0
     written_events = 0
-    wrote_tree = False
-    template_arrays: Optional[Dict[str, np.ndarray]] = None
     remaining = max_events_per_file
     rng = np.random.default_rng(seed)
 
@@ -632,7 +630,15 @@ def process_one_file(
 
             with uproot.recreate(out_path) as fout:
                 if header_arrays is not None:
-                    fout[header_tree_name] = header_arrays
+                    fout.mktree(header_tree_name, header_arrays)
+
+                # Explicit TTrees support object/string arrays and preserve empty output schemas.
+                output_types = {
+                    name: tree[name].interpretation.awkward_form(tree.file).type
+                    for name in tree.keys() if name not in DROP_BRANCHES
+                }
+                output_types.update(ml_logE_pred=np.float32, ml_energy_pred=np.float32)
+                fout.mktree(tree_name, output_types)
 
                 for arrays in tree.iterate(
                     list(tree.keys()),
@@ -641,9 +647,6 @@ def process_one_file(
                     decompression_executor=executor,
                     interpretation_executor=executor,
                 ):
-                    if template_arrays is None:
-                        template_arrays = arrays
-
                     selected_event_indices = filter_event_indices(
                         arrays,
                         cut_pinc_max=cut_pinc_max,
@@ -683,20 +686,12 @@ def process_one_file(
                         prepared["survivor_event_indices"],
                         loge_preds,
                     )
-                    if not wrote_tree:
-                        fout[tree_name] = event_payload
-                        wrote_tree = True
-                    else:
-                        fout[tree_name].extend(event_payload)
+                    fout[tree_name].extend(event_payload)
                     written_events += int(prepared["survivor_event_indices"].shape[0])
 
                     if remaining is not None and remaining <= 0:
                         break
 
-                if not wrote_tree:
-                    if template_arrays is None:
-                        template_arrays = tree.arrays(list(tree.keys()), entry_start=0, entry_stop=0, library="np")
-                    fout[tree_name] = build_empty_payload(template_arrays)
     finally:
         if executor is not None:
             executor.shutdown(wait=True)

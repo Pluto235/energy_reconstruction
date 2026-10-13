@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 01:33 · [uncommitted] Fix uproot 5.7 object-array output with explicit typed TTrees, pass 128-event 64748 smoke 66044 and two regression cases, start day acceptance 66045 and gate month/validation 66046-66047 with quiet background follow-up.
+
 - **energy_reconstruction** · 2026-10-14 01:08 · [uncommitted] Add fixed January 64748 Slurm launcher for new py310/input/output paths, SHA-256/config logging and overwrite/concurrency guards; verify syntax, isolated execution and scheduler test-only without inference.
 
 - **energy_reconstruction** · 2026-10-14 01:04 · [uncommitted] Reuse ETO Conda for new-disk Python 3.10 py310, install CUDA 12.4 Torch and project dependencies, and verify both V100s plus unchanged 64748 config/weights in Slurm 66040 without inference.

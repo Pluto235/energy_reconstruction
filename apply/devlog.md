@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 03:58 · [uncommitted] Launch the remaining 677 files with verified two-lane production, preserve four accepted identities, and schedule 15-minute priority monitoring plus final 681-file Slurm acceptance.
+
 - **energy_reconstruction** · 2026-10-14 03:27 · [uncommitted] Fix seven-column XRootD byte accounting; pass all 17 IHEP regressions and live queue/readback checks, preserve four accepted files and deploy the remaining 677 with new identities.
 
 - **energy_reconstruction** · 2026-10-14 02:00 · [uncommitted] Bound reduced caches to requested missing-event indices after real-hour failure; preserve duplicates, verify all 15 batch regressions, retain failed-run evidence and audit 393 historical failures.

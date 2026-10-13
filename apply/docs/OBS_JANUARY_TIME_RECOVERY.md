@@ -69,3 +69,13 @@ The IHEP site walltime table gives `lhaaso_default=54000` (15 hours) and `lhaaso
 Downstream energy inference must apply its final `survivor_event_indices` to this friend and alignment tree, or reassociate by event key. These friends correspond to the complete pincness-only input, before additional inference cuts.
 
 Parser revision verification: IHEP job `3728070.0` passed all 17 tests in 13.125 seconds. Live probe `3728064.0` verified a 19-byte partial, a 99/100-byte reservation boundary, rejection above capacity, exact EOS readback and zero bytes after cleanup.
+
+## Current production and follow-up
+
+Frozen execution commit: `cbb1ca20fac9091db006c3951d01e49a1fd9bdbf`; current configuration ID: `e0b8da048b870b0e8706a6109c3db6f2`. IHEP producers are `3728077.0` (worker 0, observed on bws1015) and `3728078.0` (worker 1, observed on bws1008). Both have produced successive files with the repaired byte accounting; the first checked snapshot had 28 ready products and no producer errors. ETO receiver is Slurm `66059`.
+
+The receiver initially dispatches the complete remaining request set serially. Until that pass finishes, `progress.json` can still be absent or unchanged while producers make durable EOS products. Inspect source `requests`, `ready`, job logs and states as well as destination receipts. Ready products are not counted as delivered until full ETO verification and acknowledgment finish.
+
+A 15-minute Codex heartbeat named **Energy 一月时间恢复验收** (automation ID `energy`) continues this chat's task through final validation. It records monitoring history and updates ETA from sustained production, with scheduler and backpressure waits separate. The runtime `check_observation_priority.py` watches the ongoing February acquisition without altering its jobs; it reduces only this recovery's concurrency after two slow 15-minute windows, and restores two lanes when acquisition finishes. A user pause must also pause the heartbeat and create `monitor_pause.json`.
+
+After current-run completion, submit `final_acceptance.py` from the v2 state directory to ETO Slurm with 1 CPU / 2 GiB and the existing observation `pydeps` on PYTHONPATH. It rechecks all 681 friends against their observations using their respective frozen configurations, verifies the exact manifest union and total 69,279,369 rows, checks exception accounting, and confirms both source queues are empty. Only its successful `final_acceptance.json` establishes full-month acceptance. Update this document and the devlog, commit and push the final report, then stop the heartbeat. Do not archive the chat automatically.

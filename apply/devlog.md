@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 06:56 · [uncommitted] Correct omitted helper in the test-only package, verify exact frozen-file hashes, and resubmit bounded full IHEP regression while retaining the production gate.
+
 - **energy_reconstruction** · 2026-10-14 06:48 · [uncommitted] Retire v2 after empty-EOS and acknowledgment checks, preserve 239 receipt identities, prepare a fenced 442-file v3 scope and three-scope final acceptance while full IHEP tests queue.
 
 - **energy_reconstruction** · 2026-10-14 06:43 · [uncommitted] Check priority before each claim, record scratch-directory errors, and support immutable audited legacy exclusions; reproduce three failures then pass 14 protocol checks, queue full IHEP regression.

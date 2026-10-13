@@ -522,7 +522,8 @@ def legacy_manifest(config, day):
             continue
         summary = read_json(summary_path)
         # Legacy summaries have no per-row fallback provenance: reject the whole affected file.
-        reusable = int(summary['ies_fallback']==0 and summary['entries']>=0)
+        reusable = int(summary['ies_fallback']==0 and summary['entries']>=0
+                       and str(friend) not in config.get('excluded_legacy_friends', {}))
         lines.append(f'{main}\t{friend}\t{reusable}\t0\n')
     temporary = path.with_suffix('.tsv.partial')
     with temporary.open('w') as out:
@@ -665,6 +666,9 @@ def worker(config, index, workers, once_name=None):
                 continue
             did_work = False
             for request_path in sorted((Path(config['control'])/'requests').glob('*.json')):
+                # A priority change must stop claims within the current scan.
+                if mode_path.exists() and index>=read_json(mode_path)['active_workers']:
+                    break
                 request = read_json(request_path)
                 validate_request(config, request)
                 name = request['name']
@@ -693,8 +697,8 @@ def worker(config, index, workers, once_name=None):
                     started = time.time()
                     atomic_json(state_path,dict(request,state='running',attempts=attempts,started_at=started,worker=index))
                     directory = scratch/request['request_id']
-                    directory.mkdir(exist_ok=True)
                     try:
+                        directory.mkdir(exist_ok=True)
                         eos_remove(config,request)
                         target_day = name[3:11]
                         if day!=target_day or engine is None:

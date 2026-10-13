@@ -30,6 +30,53 @@ class ProtocolTests(unittest.TestCase):
                             record_id='v2:'+'d'*32, config_id='a'*32,
                             git_commit='b'*40, entries=4, bytes=100)
 
+    def test_worker_obeys_zero_concurrency_during_request_scan(self):
+        m = self.module
+        second = dict(self.request, name='Esg20220101_01.root', request_id='e'*32)
+        self.config['allowed_names'].append(second['name'])
+        for req in (self.request, second):
+            m.put_request(self.config, req)
+        m.atomic_json(self.root/'concurrency.json', {'active_workers': 2})
+        def reserve(*args):
+            m.atomic_json(self.root/'concurrency.json', {'active_workers': 0})
+            return False
+        with patch.dict(os.environ, _CONDOR_SCRATCH_DIR=str(self.root)), patch.object(m, 'reserve', side_effect=reserve) as claim, patch.object(m.time, 'sleep', side_effect=InterruptedError):
+            with self.assertRaises(InterruptedError):
+                m.worker(self.config, 0, 2)
+        self.assertEqual(claim.call_count, 1)
+
+    def test_scratch_mkdir_failure_is_recorded_without_ready(self):
+        m = self.module
+        m.put_request(self.config, self.request)
+        (self.root/'logs').mkdir()
+        scratch = self.root/'wcda_time'
+        scratch.mkdir()
+        (scratch/self.request['request_id']).write_text('occupied')
+        m.atomic_json(self.root/'concurrency.json', {'active_workers': 2})
+        def reserve(*args):
+            m.atomic_json(self.root/'concurrency.json', {'active_workers': 0})
+            return True
+        with patch.dict(os.environ, _CONDOR_SCRATCH_DIR=str(self.root)), patch.object(m, 'reserve', side_effect=reserve), patch.object(m.time, 'sleep', side_effect=InterruptedError):
+            with self.assertRaises(InterruptedError):
+                m.worker(self.config, 0, 2)
+        state = m.read_json(self.root/'states'/(self.request['name']+'.json'))
+        self.assertEqual(state['state'], 'retry')
+        self.assertEqual(state['attempts'], 1)
+        self.assertFalse(list((self.root/'ready').iterdir()))
+
+    def test_audited_legacy_exclusion_preserves_manifest_provenance(self):
+        m = self.module
+        old = self.root/'old'
+        main = old/'0106/Esg20220106_13.root'
+        friend = old/'recovered_time/0106/Esg20220106_13.time.root'
+        main.parent.mkdir(parents=True);friend.parent.mkdir(parents=True)
+        main.write_bytes(b'fixture');friend.write_bytes(b'broken')
+        m.atomic_json(Path(str(friend)+'.summary.json'), {'ies_fallback': 0, 'entries': 4})
+        (self.root/'legacy').mkdir()
+        config = dict(self.config, old_root=str(old), excluded_legacy_friends={str(friend): 'verified zombie; incident 20261014'})
+        manifest = m.legacy_manifest(config, '20220106').read_text()
+        self.assertEqual(manifest, str(main)+'\t'+str(friend)+'\t0\t0\n')
+
     def test_receipt_identity_is_immutable(self):
         m = self.module
         m.put_request(self.config, self.request)

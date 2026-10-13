@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 06:43 · [uncommitted] Check priority before each claim, record scratch-directory errors, and support immutable audited legacy exclusions; reproduce three failures then pass 14 protocol checks, queue full IHEP regression.
+
 - **energy_reconstruction** · 2026-10-14 06:28 · [uncommitted] Fence January source claims after February throughput loss; preserve accepted receipts and diagnose node scratch exhaustion, damaged legacy friend, and delayed concurrency response.
 
 - **energy_reconstruction** · 2026-10-14 03:58 · [uncommitted] Launch the remaining 677 files with verified two-lane production, preserve four accepted identities, and schedule 15-minute priority monitoring plus final 681-file Slurm acceptance.

@@ -76,7 +76,10 @@ int filter_observed_pincness_loop_scoped(const char *input_path,
   {
     TTreeFormula select_formula("select_formula", selection, event_tree);
     for (Long64_t i = 0; i < input_entries; ++i) {
-      event_tree->GetEntry(i);
+      if (event_tree->GetEntry(i) <= 0) {
+        input_file->Close();
+        return 8;
+      }
       if (select_formula.EvalInstance() != 0.0) {
         selected_entries.push_back(i);
       }
@@ -115,8 +118,13 @@ int filter_observed_pincness_loop_scoped(const char *input_path,
   filtered_tree->SetDirectory(output_file);
 
   for (size_t j = 0; j < selected_entries.size(); ++j) {
-    event_tree->GetEntry(selected_entries[j]);
-    filtered_tree->Fill();
+    if (event_tree->GetEntry(selected_entries[j]) <= 0 ||
+        filtered_tree->Fill() < 0 || output_file->TestBit(TFile::kWriteError)) {
+      std::cerr << "event read/write failed at selected entry " << j << std::endl;
+      output_file->Close();
+      input_file->Close();
+      return 9;
+    }
     if ((j + 1) % 50000 == 0) {
       std::cout << "FILL_PROGRESS " << (j + 1) << "/" << selected_entries.size()
                 << std::endl;
@@ -124,12 +132,19 @@ int filter_observed_pincness_loop_scoped(const char *input_path,
   }
 
   TTree *copied_header = header_tree->CloneTree(-1, "fast");
+  if (!copied_header) {
+    output_file->Close();
+    input_file->Close();
+    return 10;
+  }
   copied_header->SetName("t_eventout_h");
   copied_header->SetDirectory(output_file);
 
-  output_file->Write("", TObject::kOverwrite);
+  const auto written = output_file->Write("", TObject::kOverwrite);
   output_file->Close();
+  const bool write_failed = written <= 0 || output_file->TestBit(TFile::kWriteError);
   input_file->Close();
+  if (write_failed) return 11;
 
   std::cout << "INPUT " << input_path << std::endl;
   std::cout << "OUTPUT " << output_path << std::endl;
@@ -138,4 +153,12 @@ int filter_observed_pincness_loop_scoped(const char *input_path,
   std::cout << "CUT " << selection << std::endl;
   std::cout << "DROPPED_BRANCHES vflag,vnpe,vqsamp" << std::endl;
   return 0;
+}
+
+bool readable_observation_tree(TTree *tree) {
+  tree->SetBranchStatus("*", 1);
+  for (Long64_t i = 0; i < tree->GetEntries(); ++i) {
+    if (tree->GetEntry(i) <= 0) return false;
+  }
+  return true;
 }

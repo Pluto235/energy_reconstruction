@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-13 15:19 · [uncommitted] Bound January observation staging to four files after IHEP quota exhaustion; fail on ROOT write errors and delete only temporary copies after ETO SHA-256 receipts.
+
 - **energy_reconstruction** · 2026-10-13 14:35 · [uncommitted] Restore January observation acquisition with the verified 30-branch pincness contract, reuse Jan31 archive, submit 31 IHEP day workers, and gate ETO transfers on ROOT audits.
 
 - **energy_reconstruction** · 2026-10-13 14:06 · [uncommitted] Verify completed MC sync to ETO: 10,000 expected eventout ROOT files, 174,198,529,036 bytes, rsync exit 0 at 13:54:27.

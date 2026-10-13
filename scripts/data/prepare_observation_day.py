@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Reuse or rebuild one day of the established pincness/branch-reduced inputs."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -33,6 +34,8 @@ def inspect(path, expected_entries=None, expected_headers=None):
                 raise RuntimeError(f"Branch/entry/header mismatch: {path}")
             if tree.GetEntries("!(pincness < 1.1)") != 0:
                 raise RuntimeError(f"Event cut violated: {path}")
+            if not ROOT.readable_observation_tree(tree) or not ROOT.readable_observation_tree(header):
+                raise RuntimeError(f"Unreadable retained data: {path}")
         elif not KEEP.issubset(branches):
             raise RuntimeError(f"Missing source branches: {path}")
         return {
@@ -53,7 +56,7 @@ def main():
     parser.add_argument("audit_dir", type=Path)
     parser.add_argument("archive_root", type=Path)
     args = parser.parse_args()
-    if not re.fullmatch(r"202201\d{2}", args.day):
+    if args.day not in {f"202201{n:02d}" for n in range(1, 32)}:
         raise ValueError("This restoration is restricted to January 2022")
     sources = args.manifest.read_text().splitlines()
     prefix = f"root://eos01.ihep.ac.cn//eos/lhaaso/ai/wcda/raw/2022/{args.day[4:]}/"
@@ -65,11 +68,23 @@ def main():
     output_dir = args.output_root / args.day[4:]
     output_dir.mkdir(parents=True, exist_ok=True)
     args.audit_dir.mkdir(parents=True, exist_ok=True)
+    file_audits = args.audit_dir.parent / "audit_files"
+    acks = args.audit_dir.parent / "acks"
+    file_audits.mkdir(exist_ok=True)
+    acks.mkdir(exist_ok=True)
     ROOT.gROOT.ProcessLine(f'.L {MACRO}')
     records = []
     for url in sources:
         name = url.rsplit("/", 1)[-1]
         output = output_dir / name
+        file_report = file_audits / f"{name}.json"
+        ack = acks / f"{name}.ack"
+        if file_report.exists() and ack.exists():
+            record = json.loads(file_report.read_text())["files"][0]
+            if ack.read_text().strip() == record["output"]["sha256"]:
+                records.append(record)
+                output.unlink(missing_ok=True)
+                continue
         source = inspect(url)
         archive = args.archive_root / args.day[4:] / name
         if not output.exists() and archive.is_file():
@@ -87,8 +102,26 @@ def main():
             result = inspect(temporary, source["selected_entries"], source["header_entries"])
             temporary.replace(output)
             reused = False
-        records.append({"name": name, "source": source, "output": result, "reused": reused})
+        digest = hashlib.sha256()
+        with output.open("rb") as file:
+            for block in iter(lambda: file.read(8 * 1024 * 1024), b""):
+                digest.update(block)
+        result["sha256"] = digest.hexdigest()
+        record = {"name": name, "source": source, "output": result, "reused": reused}
+        records.append(record)
+        temporary_report = file_report.with_suffix(".json.partial")
+        temporary_report.write_text(json.dumps({
+            "day": args.day, "file_count": 1, "bytes": result["bytes"], "files": [record],
+        }) + "\n")
+        temporary_report.replace(file_report)
         print(f"VERIFIED {args.day} {name} entries={result['entries']} bytes={result['bytes']} reused={reused}", flush=True)
+        deadline = time.monotonic() + 6 * 3600
+        while not ack.exists() or ack.read_text().strip() != result["sha256"]:
+            if time.monotonic() > deadline:
+                raise TimeoutError(f"No verified ETO receipt within six hours: {name}")
+            time.sleep(10)
+        output.unlink()
+        print(f"ETO_ACK_CLEANED {name}", flush=True)
     report = {
         "day": args.day, "cut": "pincness < 1.1", "kept_branches": sorted(KEEP),
         "file_count": len(records), "bytes": sum(r["output"]["bytes"] for r in records),

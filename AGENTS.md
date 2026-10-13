@@ -49,3 +49,5 @@ Recent history uses short, imperative commit subjects, for example `Add apply pl
 ## Disk recovery (2026-10-13)
 
 The active checkout is now `/mnt/newdisk/shijie/energy` on ETO. See `apply/docs/RECOVERY_2026-10-13.md` for sources, preserved variants, and missing data. Old `/mnt/mydisk` input paths in scripts and saved metadata remain historical; do not launch production workloads until their data and model dependencies have been restored.
+
+January observation acquisition uses `/mnt/newdisk/shijie/WCDA_obs/<MMDD>/`. These are pincness-filtered, 30-branch model inputs, not inference outputs. The source-side IHEP HTCondor workflow and receipt/state paths are documented in `apply/docs/OBS_JANUARY_2022_RESTORE.md`; keep temporary staging bounded by verified ETO receipts.

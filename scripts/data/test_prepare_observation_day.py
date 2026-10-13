@@ -2,6 +2,8 @@
 from array import array
 from pathlib import Path
 import tempfile
+import subprocess
+import sys
 import unittest
 
 import ROOT
@@ -38,6 +40,16 @@ class ObservationReductionTests(unittest.TestCase):
                 inspect(output, 3, 2)
             with self.assertRaises(RuntimeError):
                 inspect(Path(directory) / "missing.root")
+            # A full filesystem must fail, even when Fill only writes buffered baskets at close.
+            result = subprocess.run([sys.executable, "-c", f'''
+import ROOT, resource, signal
+signal.signal(signal.SIGXFSZ, signal.SIG_IGN)
+ROOT.gROOT.ProcessLine({f'.L {MACRO}'!r})
+resource.setrlimit(resource.RLIMIT_FSIZE, (4096, 4096))
+rc = ROOT.filter_observed_pincness_loop_scoped({str(source)!r}, {str(Path(directory) / 'limited.root')!r}, 1.1)
+raise SystemExit(0 if rc != 0 else 1)
+'''], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

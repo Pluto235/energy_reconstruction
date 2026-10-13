@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 07:16 · [uncommitted] Diagnose a second-node compile ENOSPC with bounded block/inode/quota/write probes on failed and proven nodes; keep full-regression and production gates closed.
+
 - **energy_reconstruction** · 2026-10-14 06:56 · [uncommitted] Correct omitted helper in the test-only package, verify exact frozen-file hashes, and resubmit bounded full IHEP regression while retaining the production gate.
 
 - **energy_reconstruction** · 2026-10-14 06:48 · [uncommitted] Retire v2 after empty-EOS and acknowledgment checks, preserve 239 receipt identities, prepare a fenced 442-file v3 scope and three-scope final acceptance while full IHEP tests queue.

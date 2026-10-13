@@ -107,3 +107,10 @@ Both v2 source jobs are now absent: the held owned 3728077.0 was removed after i
 ## Regression packaging repair (2026-10-14 06:56)
 
 Test job 3728396.0 ran 20 checks but all failed at module import because the test-only control copy omitted observation_state.py. This does not establish a behavioral regression. Archived test_3728396.err/out retain the evidence. Copied the exact helper from the frozen de2c690 snapshot; SHA-256 equality of all five runtime/test files against the v3 production package is verified. The production v3 package already contained this helper and its code/config identity is unchanged. Resubmitted one bounded full regression as 3728412.0 with logs/test_retry.out and test_retry.err, the same 4 GiB RequestDisk and three node exclusions. The regression gate remains closed pending actual success. February remains 537/600 with two zero-throughput windows; v3 has zero production jobs/requests/ready/receipts, active_workers=0, control 832 KiB.
+
+
+## Scratch diagnosis before another regression (2026-10-14 07:16)
+
+Regression 3728412.0 exited code 1 on slot123@bws1012 during g++ assembly output with ENOSPC; no tests ran. RequestDisk in history is 4,194,304 KiB. Earlier production ENOSPC was on bws1008, so this is not confined to the first node. Collector Disk advertisements (about 15 GB for sampled BWS slots) do not establish actual writable blocks/inodes or quota in the job sandbox. Do not attribute or blindly resubmit.
+
+Two bounded 1 CPU/512 MiB diagnostic jobs are queued: 3728436.0 pinned to bws1012, and 3728440.0 pinned to the previously proven pilot node aws003. Both use the owned repairtest/.control/probes/check_scratch.sh, RequestDisk=4 GiB, and logs/scratch_probe[ _aws003 ].out/err. They inspect statvfs plus df blocks/inodes and own quota, and create/fsync/remove only a unique 1 MiB test file in their own scratch and /tmp. No existing data is removed. Owner and exact probe Cmd were verified before resource/node edits. Read their results before selecting any next full-test run. v3 remains untouched, zero claims/production jobs, and the final 681-file gate remains closed.

@@ -1,6 +1,6 @@
 # January 2022 observation-input restoration
 
-Status: January 31 was copied successfully (23 files, 4,941,889,023 bytes). The remaining January dates are being rebuilt. The bounded rolling pipeline below replaces the failed whole-day staging attempt; monthly completion requires its `completed.json` and receiver exit code 0.
+Status at 2026-10-13 15:33 (Asia/Shanghai): all four shards are running. January 2 and 3 hour 00 have been newly filtered, fully read back and SHA-256 verified on ETO (581,595,261 and 575,874,303 bytes; 318,251 and 309,894 selected events). January 4 hour 00 passed source checks and is transferring. January 31 was copied successfully (23 files, 4,941,889,023 bytes). The remaining January dates are being rebuilt. The bounded rolling pipeline below replaces the failed whole-day staging attempt; monthly completion requires its `completed.json` and receiver exit code 0.
 
 ## Verified historical contract
 
@@ -25,7 +25,7 @@ The replacement flow bounds staging to at most four hourly files:
 1. Four HTCondor shards process disjoint dates sequentially. Shard 0 first revalidates January 31, then handles days 1,5,...29; the other shards handle days 2,6,...30; 3,7,...27; and 4,8,...28.
 2. For each output, the producer completes the ROOT checks, computes SHA-256, and atomically publishes `audit_files/<name>.json`.
 3. ETO receives that single file with resumable rsync, checks filename, byte count, ROOT signature and SHA-256, then atomically writes a matching source-side acknowledgment.
-4. The producer removes only its staging file after the acknowledgment. Unlinking an archive hard link preserves the original archive.
+4. The producer removes only its staging file after the acknowledgment. The cleanup code rejects output roots outside this exact run tree and rejects staging symlinks. Unlinking an archive hard link preserves the original archive.
 5. Atomic `audit/YYYYMMDD.json` records whole-day completion. ETO marks a day complete only after all its file receipts match; `completed.json` requires all 31 days / 681 files.
 
 A restart reuses acknowledged records and verified ETO files. A producer waits at most six hours for an acknowledgment; the receiver has a 36-hour deadline. These limits make a lost transfer process fail visibly. A changed upstream input requires a fresh run directory and source manifest; this recovery assumes the original January inputs remain immutable.
@@ -50,9 +50,12 @@ Inspect `progress.json`, `sync_rolling.log`, `pid`, `exit_code`, and eventual `c
 ## Verification
 
 - Tiny ROOT fixture: strict pincness boundary, NaN exclusion, exactly 30 retained branches, required hit features, complete header, count mismatch and missing-file rejection.
+- Cleanup guard: an output root outside this task-created staging tree is rejected before accessing inputs.
 - Deliberately restricted file size: disk write failure returns a nonzero filter result.
 - Real-schema smoke: first 2,048 events of `0101/Esg20220101_00.root`, 54 selected, complete 160-entry header, output 331,992 bytes.
 - Receiver: valid file accepted; corrupt signature, same-size ROOT-like content with a wrong SHA-256, and path escape rejected.
 - Python compilation, shell syntax, and remote ROOT/receiver unit checks passed.
 
 No energy inference, reduced time-data transfer, or time recovery is included. The monthly production outputs and their checksums become verified only as the running pipeline completes; estimates must use measured full-file throughput.
+
+The first rebuilt files took 223–246 seconds from batch start to source verification, including runtime startup; ETO receipts followed in 37–69 seconds. A provisional January estimate is 10–14 hours from 15:33, subject to later input sizes and I/O contention. This is an estimate, not a completion guarantee. If a shard reaches its walltime, resubmit the same shard index: verified receipts survive, so already received files are skipped.

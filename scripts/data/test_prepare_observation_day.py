@@ -5,13 +5,19 @@ import tempfile
 import subprocess
 import sys
 import unittest
+from unittest.mock import patch
 
 import ROOT
 
-from prepare_observation_day import KEEP, MACRO, inspect
+from prepare_observation_day import KEEP, MACRO, inspect, main
 
 
 class ObservationReductionTests(unittest.TestCase):
+    def test_cleanup_rejects_nonstaging_output_root(self):
+        with patch.object(sys, "argv", ["prepare", "20220101", "unused", "/eos/raw", "unused", "unused"]):
+            with self.assertRaisesRegex(ValueError, "temporary staging"):
+                main()
+
     def test_cut_branches_header_and_validation(self):
         with tempfile.TemporaryDirectory() as directory:
             source, output = [Path(directory) / name for name in ("source.root", "output.root")]

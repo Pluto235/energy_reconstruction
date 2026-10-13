@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-13 15:35 · [uncommitted] Guard observation receipt cleanup against non-staging paths and symlinks; verify the first rebuilt full-hour files end to end on ETO.
+
 - **energy_reconstruction** · 2026-10-13 15:19 · [uncommitted] Bound January observation staging to four files after IHEP quota exhaustion; fail on ROOT write errors and delete only temporary copies after ETO SHA-256 receipts.
 
 - **energy_reconstruction** · 2026-10-13 14:35 · [uncommitted] Restore January observation acquisition with the verified 30-branch pincness contract, reuse Jan31 archive, submit 31 IHEP day workers, and gate ETO transfers on ROOT audits.

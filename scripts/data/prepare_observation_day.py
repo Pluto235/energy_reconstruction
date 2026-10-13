@@ -58,6 +58,9 @@ def main():
     args = parser.parse_args()
     if args.day not in {f"202201{n:02d}" for n in range(1, 32)}:
         raise ValueError("This restoration is restricted to January 2022")
+    staging = Path("/scratchfs2/lhaaso/liushijie/WCDA_obs_202201_trimmed_20261013")
+    if args.output_root.resolve() != staging or (args.output_root / args.day[4:]).is_symlink():
+        raise ValueError("Receipt cleanup is restricted to this run's temporary staging tree")
     sources = args.manifest.read_text().splitlines()
     prefix = f"root://eos01.ihep.ac.cn//eos/lhaaso/ai/wcda/raw/2022/{args.day[4:]}/"
     if not sources or len(sources) != len(set(sources)) or any(
@@ -77,6 +80,8 @@ def main():
     for url in sources:
         name = url.rsplit("/", 1)[-1]
         output = output_dir / name
+        if output.is_symlink() or output.with_suffix(".root.partial").is_symlink():
+            raise ValueError(f"Unexpected staging symlink: {output}")
         file_report = file_audits / f"{name}.json"
         ack = acks / f"{name}.ack"
         if file_report.exists() and ack.exists():
@@ -91,6 +96,8 @@ def main():
             output.hardlink_to(archive)
         reused = output.exists()
         try:
+            if not reused:
+                raise RuntimeError("No existing output to reuse")
             result = inspect(output, source["selected_entries"], source["header_entries"])
         except RuntimeError:
             if output.exists():

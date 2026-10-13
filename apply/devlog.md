@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 07:44 · [uncommitted] Verify actual block exhaustion on BWS and AWS physical roots despite advertised capacity, archive probe evidence, and test a different LHWS node without launching an unsafe regression.
+
 - **energy_reconstruction** · 2026-10-14 07:29 · [uncommitted] Diagnose probe queue eligibility, broaden the existing comparative probe to available AWS nodes, and prepare a fail-closed scratch preflight before the unchanged full test.
 
 - **energy_reconstruction** · 2026-10-14 07:16 · [uncommitted] Diagnose a second-node compile ENOSPC with bounded block/inode/quota/write probes on failed and proven nodes; keep full-regression and production gates closed.

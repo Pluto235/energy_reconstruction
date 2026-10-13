@@ -11,7 +11,7 @@ from pathlib import Path
 import time
 
 import ROOT
-from observation_state import KEEP, STAGING, StagingQueue, ack_matches, atomic_json, file_lock, file_path
+from observation_state import DAYS, KEEP, STAGING, StagingQueue, ack_matches, atomic_json, file_lock, file_path
 
 ROOT.gROOT.SetBatch(True)
 MACRO = Path(__file__).with_name("filter_observed_pincness_loop_scoped.C")
@@ -186,8 +186,8 @@ def main():
     parser.add_argument('archive_root', type=Path)
     parser.add_argument('--names', nargs='+', help='Benchmark a subset of this unchanged full-day manifest')
     args = parser.parse_args()
-    if args.day not in {f'202201{n:02d}' for n in range(1, 32)}:
-        raise ValueError('This restoration is restricted to January 2022')
+    if args.day not in DAYS:
+        raise ValueError('Day is outside the configured observation month')
     if args.output_root.resolve() != STAGING or (args.output_root / args.day[4:]).is_symlink():
         raise ValueError("Receipt cleanup is restricted to this run's temporary staging tree")
     sources = args.manifest.read_text().splitlines()

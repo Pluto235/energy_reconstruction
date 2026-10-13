@@ -1,5 +1,7 @@
 """Durable observation receipts and a shared byte budget for this restoration."""
 from contextlib import contextmanager
+import calendar
+from datetime import datetime
 import fcntl
 import json
 import os
@@ -8,7 +10,16 @@ import re
 import time
 import uuid
 
-STAGING = Path('/scratchfs2/lhaaso/liushijie/WCDA_obs_202201_trimmed_20261013')
+_config_path = Path(__file__).with_name('run_config.json')
+_config = json.loads(_config_path.read_text()) if _config_path.exists() else {}
+MONTH = _config.get('month', '202201')
+RUN_DATE = _config.get('run_date', '20261013')
+EXPECTED_FILES = _config.get('expected_files', 681)
+if MONTH not in {'202201', '202202'} or not re.fullmatch(r'20\d{6}', RUN_DATE) or not isinstance(EXPECTED_FILES, int) or EXPECTED_FILES <= 0:
+    raise ValueError('Invalid observation run configuration')
+RUN_DAY = datetime.strptime(RUN_DATE, '%Y%m%d').strftime('%Y-%m-%d')
+DAYS = tuple(f'{MONTH}{day:02d}' for day in range(1, calendar.monthrange(int(MONTH[:4]), int(MONTH[4:]))[1] + 1))
+STAGING = Path(f'/scratchfs2/lhaaso/liushijie/WCDA_obs_{MONTH}_trimmed_{RUN_DATE}')
 WORK = STAGING / '.control'
 KEEP = set(re.findall(r'"(\w+)"', Path(__file__).with_name('filter_observed_pincness_loop_scoped.C').read_text().split('return {', 1)[1].split('};', 1)[0]))
 
@@ -59,7 +70,7 @@ def ack_matches(record, text):
 
 
 def file_path(root, name):
-    if not re.fullmatch(r'Esg202201(?:0[1-9]|[12][0-9]|3[01])_(?:[01][0-9]|2[0-3])\.root', name):
+    if not re.fullmatch(r'Esg\d{8}_(?:[01][0-9]|2[0-3])\.root', name) or name[3:11] not in DAYS:
         raise ValueError(f'Invalid observation name: {name}')
     root = Path(root)
     path = root / name[7:11] / name
@@ -101,7 +112,7 @@ class StagingQueue:
 
     def _usage(self, ledger):
         actual = {}
-        for path in self.root.glob('01??/Esg*.root*'):
+        for path in self.root.glob(MONTH[4:] + '??/Esg*.root*'):
             if path.is_symlink():
                 raise ValueError(f'Unexpected queue symlink: {path}')
             name = path.name.split('.root', 1)[0] + '.root'

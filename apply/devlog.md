@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 00:27 · [uncommitted] Extend the validated observation acquisition to isolated February manifests (28 days / 600 files), preserve January defaults and receipt guards, deploy the 5.5 GiB queue and submit eight IHEP producers with an independent ETO receiver.
+
 - **energy_reconstruction** · 2026-10-13 23:52 · [uncommitted] Verify January acquisition completion at 22:53: 681 files / 31 dates / 151.096 GB on ETO, exact manifest and receipt reconciliation, empty staging and safe retirement of the post-output ROOT shutdown task.
 
 - **energy_reconstruction** · 2026-10-13 20:46 · [uncommitted] Isolate repeat ROOT/CVMFS failures on lhws261, reschedule only two affected January shards and exclude both failed nodes for future matches; preserve their outputs and reclaim stale reservations safely.

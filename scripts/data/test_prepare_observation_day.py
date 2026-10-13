@@ -12,12 +12,12 @@ from unittest.mock import patch
 import ROOT
 
 from prepare_observation_day import KEEP, MACRO, inspect, main, prepare_one
-from observation_state import StagingQueue, atomic_json
+from observation_state import DAYS, MONTH, StagingQueue, atomic_json
 
 
 class ObservationReductionTests(unittest.TestCase):
     def test_cleanup_rejects_nonstaging_output_root(self):
-        with patch.object(sys, "argv", ["prepare", "20220101", "unused", "/eos/raw", "unused", "unused"]):
+        with patch.object(sys, "argv", ["prepare", DAYS[0], "unused", "/eos/raw", "unused", "unused"]):
             with self.assertRaisesRegex(ValueError, "temporary staging"):
                 main()
 
@@ -75,10 +75,10 @@ raise SystemExit(0 if rc != 0 else 1)
             stage, work = Path(directory) / 'stage', Path(directory) / 'work'
             stage.mkdir(); (work / 'audit').mkdir(parents=True)
             (work / 'audit_files').mkdir(); (work / 'acks').mkdir()
-            named_source = Path(directory) / 'Esg20220105_00.root'
+            named_source = Path(directory) / f'Esg{DAYS[4]}_00.root'
             os.link(source, named_source)
             args = SimpleNamespace(output_root=stage, audit_dir=work/'audit',
-                                   archive_root=Path(directory)/'no_archive', day='20220105')
+                                   archive_root=Path(directory)/'no_archive', day=DAYS[4])
             config=dict(capacity_bytes=2**20,initial_reservation_bytes=2**20,cache_mb=32,full_read=True)
             atomic_json(work/'queue_config.json',config)
             queue=StagingQueue(stage,work)
@@ -86,14 +86,14 @@ raise SystemExit(0 if rc != 0 else 1)
             self.assertNotIn('sha256',record['output'])
             self.assertFalse((work/'acks'/(record['name']+'.ack')).exists())
             self.assertEqual(queue.usage(),record['output']['bytes'])
-            retry_source = Path(directory) / 'Esg20220105_01.root'
+            retry_source = Path(directory) / f'Esg{DAYS[4]}_01.root'
             os.link(source, retry_source)
             config.update(capacity_bytes=65536,initial_reservation_bytes=4096)
             atomic_json(work/'queue_config.json',config)
             with patch('prepare_observation_day.time.sleep', return_value=None):
                 retried = prepare_one(str(retry_source),args,config,queue)
             self.assertEqual(retried['output']['entries'],2)
-            self.assertFalse(list(stage.glob('01??/*.partial')))
+            self.assertFalse(list(stage.glob(MONTH[4:]+'??/*.partial')))
             self.assertLessEqual(queue.usage(),config['capacity_bytes'])
 
 

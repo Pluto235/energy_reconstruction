@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Receive validated January files, persist ROOT/byte receipts, then reclaim staging."""
+"""Receive the configured observation month, persist receipts, then reclaim staging."""
+import calendar
 import json
 import os
 from pathlib import Path
@@ -7,18 +8,19 @@ import shlex
 import subprocess
 import time
 
-from observation_state import KEEP, WORK as SOURCE_WORK, ack_matches, atomic_json, file_path, make_receipt, record_id
+from observation_state import DAYS, EXPECTED_FILES, MONTH, RUN_DAY, STAGING, KEEP, WORK as SOURCE_WORK, ack_matches, atomic_json, file_path, make_receipt, record_id
 
-STATE = Path('/mnt/newdisk/shijie/energy/.recovery/2026-10-13/obs-january')
+STATE = Path(f'/mnt/newdisk/shijie/energy/.recovery/{RUN_DAY}/obs-{calendar.month_name[int(MONTH[4:])].lower()}')
+SSH_SOCKET = Path('/mnt/newdisk/shijie/energy/.recovery/2026-10-13/obs-january/ihep.sock')
 DESTINATION = Path('/mnt/newdisk/shijie/WCDA_obs')
 REMOTE = 'liushijie@lxlogin.ihep.ac.cn'
 WORK = str(SOURCE_WORK)
-SOURCE = '/scratchfs2/lhaaso/liushijie/WCDA_obs_202201_trimmed_20261013'
+SOURCE = str(STAGING)
 
 
 def validate_report(report):
     day = report['day']
-    if day not in {f'202201{n:02d}' for n in range(1, 32)}:
+    if day not in DAYS:
         raise ValueError(f'Unexpected day: {day}')
     names = [r['name'] for r in report['files']]
     if not names or len(names) != report['file_count'] or len(set(names)) != len(names):
@@ -130,22 +132,32 @@ def receive(ssh, report, source_ack, source_pending=True):
     return record
 
 
+def validate_manifests(manifests):
+    names = [name for day_names in manifests.values() for name in day_names]
+    if set(manifests) != set(DAYS) or len(names) != EXPECTED_FILES or len(set(names)) != EXPECTED_FILES:
+        raise ValueError(f'Source manifests must contain {len(DAYS)} dates / {EXPECTED_FILES} unique files')
+    for day, day_names in manifests.items():
+        if not day_names or any(file_path(DESTINATION, name).parent.name != day[4:] for name in day_names):
+            raise ValueError(f'Invalid source manifest: {day}')
+    return set(names)
+
+
 def main():
     STATE.mkdir(parents=True, exist_ok=True)
     DESTINATION.mkdir(parents=True, exist_ok=True)
-    ssh = ['ssh', '-S', str(STATE / 'ihep.sock'), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=30']
+    ssh = ['ssh', '-S', str(SSH_SOCKET), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=30']
     command = '''from pathlib import Path
 import json
 w=Path(WORK_VALUE);root=Path(SOURCE_VALUE)
 r={k:[json.loads(p.read_text()) for p in (w/d).glob('*.json')] for k,d in [('files','audit_files'),('days','audit')]}
 r['acks']={p.stem:p.read_text() for p in (w/'acks').glob('*.ack')}
-r['manifests']={p.stem:[u.rsplit('/',1)[-1] for u in p.read_text().splitlines()] for p in (w/'manifests').glob('202201??.txt')}
-r['pending']=[p.name for p in root.glob('01??/Esg*.root*')]
+r['manifests']={p.stem:[u.rsplit('/',1)[-1] for u in p.read_text().splitlines()] for p in (w/'manifests').glob(MANIFEST_GLOB)}
+r['pending']=[p.name for p in root.glob(PENDING_GLOB)]
 import sys
 sys.path.insert(0,str(w/'code'))
 from observation_state import StagingQueue
 r['queue']=StagingQueue().status()
-print(json.dumps(r))'''.replace('WORK_VALUE', repr(WORK)).replace('SOURCE_VALUE', repr(SOURCE))
+print(json.dumps(r))'''.replace('WORK_VALUE', repr(WORK)).replace('SOURCE_VALUE', repr(SOURCE)).replace('MANIFEST_GLOB', repr(MONTH + '??.txt')).replace('PENDING_GLOB', repr(MONTH[4:] + '??/Esg*.root*'))
     received, completed, errors, retry_at = {}, {}, {}, {}
     deadline = time.monotonic() + 36 * 3600
     while time.monotonic() < deadline:
@@ -155,9 +167,7 @@ print(json.dumps(r))'''.replace('WORK_VALUE', repr(WORK)).replace('SOURCE_VALUE'
         except (subprocess.CalledProcessError, ValueError) as exc:
             print(f'SOURCE_POLL_RETRY {exc}', flush=True); time.sleep(10); continue
         manifests = data['manifests']
-        expected = {name for names in manifests.values() for name in names}
-        if len(manifests) != 31 or len(expected) != 681 or sum(map(len, manifests.values())) != 681:
-            raise ValueError('Source manifest snapshot must contain exactly 31 dates / 681 unique names')
+        expected = validate_manifests(manifests)
         for report in sorted(data['files'], key=lambda r: r['files'][0].get('prepared_at', 0)):
             validate_report(report)
             if report['file_count'] != 1:
@@ -186,12 +196,12 @@ print(json.dumps(r))'''.replace('WORK_VALUE', repr(WORK)).replace('SOURCE_VALUE'
         atomic_json(STATE/'progress.json', dict(completed_days=sorted(completed), files=len(received),
                     bytes=sum(r['output']['bytes'] for r in received.values()), errors=errors,
                     queue=data['queue'], updated_at=time.strftime('%Y-%m-%dT%H:%M:%S%z')))
-        if len(completed) == 31 and set(received) == expected and not data['pending']:
+        if len(completed) == len(DAYS) and set(received) == expected and not data['pending']:
             atomic_json(STATE/'completed.json', list(completed.values()))
-            print('JANUARY_SYNC_COMPLETE files=681', flush=True)
+            print(f'OBSERVATION_SYNC_COMPLETE month={MONTH} files={EXPECTED_FILES}', flush=True)
             return
         time.sleep(3)
-    raise TimeoutError('January preparation did not complete within 36 hours')
+    raise TimeoutError(f'{MONTH} preparation did not complete within 36 hours')
 
 
 if __name__ == '__main__':

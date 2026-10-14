@@ -9,7 +9,7 @@ The source request fixes the scientific design. Routine path adaptation and miss
 - [x] Verify response/model/cuts/binning/primary denominator and PSF; reuse compatible arrays and rebuild missing 2R from saved original profiles with the original algorithm.
 - [x] Run fixture tests and real single-file Stage C smoke under Slurm, then monthly C and production D. D fails the required cell62 positivity contract; E–G stay blocked. This is not a completed valid spectrum.
 - [x] Validate aperture scaling once, 44-cell order, analytic integration, January provenance, exposure, convergence and fit quality separately; report66089 completes machine-readable receipts and HTML with scientific failure explicit.
-- [ ] Prepend devlog, commit and push code/config/docs; keep outputs out of Git.
+- [x] Prepend devlog, commit and push code/config/docs; analysis code dd8b060 and final verification code7d46912 are pushed, with outputs outside Git.
 
 Run tag: `v6_64748_202201_scheme_R_double_rayleigh_analytic_bon`. All new outputs and stage reports are under `apply/output/<run-tag>/`. No current/latest links are promoted; existing directories are never overwritten.
 
@@ -36,3 +36,11 @@ Report66088 passes data/response/exposure checks but fails due to missing render
 Report retry66089 completes0:0 in3seconds. HTML anchors/local artifact links/images and copied artifact hashes pass local inspection. The cell62 figure displays the actual un-clipped negative quadratic; source exposure figure uses9.39254days, not the26.55336day detector live interval sum. Twelve initial fixtures pass; an additional JSON-versus-NPZ/count binding regression brings the final targeted suite to13tests. Added final delivery verification also checks all681parquet part hashes and their canonical dataset digest, pins source file hashes to actual Git blobs, retains the report generation base commit and records the later committed source version separately.
 
 The report is `report_202201.html`; data/science receipt is `final_acceptance.json`; commit/dataset delivery receipt is `delivery_receipt.json`. These live under the isolated run directory and are Git-ignored. Local report copy uses the same relative layout, with parquet data retained only on ETO. Review and provenance strengthening change only checks/reporting; no scientific stages, model, selector or already accepted input is altered.
+
+## Final delivery verification
+
+Slurm66090 completes `0:0` in4seconds with13fixtures passed, the Git worktree clean and all committed source blobs matching the deployed files. All681parquet parts, totaling881,189,730bytes, are SHA256-bound by the canonical part-list digest in `delivery_receipt.json`. Its source commit is `7d469123f83476bf39c7eac7a5871c5bfd8cea20`; report generation predates that commit, so the receipt preserves basecommitf979c5b and the exact generation-source hashes separately rather than relabeling history.
+
+Final report SHA256: `30dac1fef241cb140c1024c5645004494971f53b1e1694f2e249f48056b04adc`. Data/science receipt SHA256: `1599545471068ca1d8f783d89bffa7f18f373c8bc5410e4cf677ec4c733a3b98`. The local copied receipts and HTML anchors/artifact links/images pass checks; all three scientific PNGs are visually inspected. Full-page browser rendering is not verified because the browser tool disallows file URLs; no workaround is attempted.
+
+Both independent spec and code-quality reviews find no must-fix issue in the executed path. GitHub main is verified at7d46912 after normal push via the local bare Git bridge, without changing ETO SSH trust settings. The final scientific status remains `SCIENTIFIC_BACKGROUND_CONTRACT_FAILED`; E/F/G are `NOT_RUN_D_FAILED`, and no valid44-cell spectrum/SED is claimed. Existing fivev7pending jobs are unchanged.

@@ -6,6 +6,7 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-15 00:52 · [7d46912] Record completed delivery66090: thirteen tests, 681 hashed parquet parts, exact Git source bindings, report/receipt hashes and two independent reviews; retain scientific failure and blocked spectrum.
 - **energy_reconstruction** · 2026-10-15 00:48 · [uncommitted] Verify January report66089, bind 44-cell diagnostic JSON to NPZ and Stage C, preserve scientific failure, and add final 681-parquet/source-commit delivery receipt with thirteen fixtures.
 - **energy_reconstruction** · 2026-10-15 00:42 · [uncommitted] Execute frozen January v6 on ETO: 681-file C and GTI pass, rebuild exact 2R PSF, preserve cell62 negative analytic background and block formal E–G; add diagnostics, twelve fixtures, Slurm receipts and report source.
 - **energy_reconstruction** · 2026-10-15 00:04 · [uncommitted] Align January prediction time friends by unique event identity; fixtures and Slurm66078/66080 pass 681 files/48726074 rows twice, account for 464 source anomalies (0 predicted), preserve full time sources and failed-scope evidence.

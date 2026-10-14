@@ -35,9 +35,9 @@ No model parameters, preprocessing, event cuts or input data were changed.
 
 | Stage | Slurm | State when configured | Parameters / gate |
 |---|---|---|---|
-| January 1 pilot | 66045 | Running | All 23 files; batch 32, 100 MB chunks; verifies every selected hit and output file |
-| Full January inference | 66052 | Waiting on 66045 success | 2 GPU / 16 CPU / 64 GB, batch 352 per GPU; provenance/memory gate and a two-GPU sample before production |
-| Full January validation | 66053 | Waiting on 66052 success | 681 filenames / 31 days, independent cuts and event identities, finite energy consistency, exact header content and schema |
+| January 1 pilot | 66045 | PASS, completed 02:15 +08:00 | 23/23 files; 1,522,147 selected events; no failures |
+| Full January inference | 66063 | Relaunch; gated two-GPU sample before production | 2 GPU / 16 CPU / 64 GB, batch 352 per GPU; verifies day receipt, unchanged model/geometry and approved code hash |
+| Full January validation | 66064 | afterok:66063 | 681 filenames / 31 days, independent cuts and event identities, finite energy consistency, exact header content and schema |
 
 The pilot has its own `apply/output/inference_64748_acceptance/day/` directory.
 Production writes `/mnt/newdisk/shijie/WCDA_obs_eval_64748/` and does not reuse pilot
@@ -76,6 +76,7 @@ in 17.44 seconds, about 470 events/s end to end. Higher memory occupancy alone
 did not materially improve GPU-only throughput; native two-worker execution is
 the main parallelism improvement.
 
+Historical estimate before the failed launch (superseded; recompute from 66063):
 At 2026-10-14 01:56 +08:00, the day pilot had completed 7/23 files, writing
 935,604 events in 35 minutes. Its provisional completion was about 02:24. The
 January inputs contain 69,279,369 events; native shards contain 34,879,970 and
@@ -95,3 +96,41 @@ Only then does it invoke the prepared full January launcher.
 Native multi-GPU workers start with seeds 42 and 100042. Their per-file weighted
 hit sampling can differ from a one-GPU run; preserve the GPU count, input ordering,
 seed policy and code hash when reproducing this production configuration.
+
+## October 14 relaunch after discovery failure
+
+The day pilot 66045 passed at 02:15:34 +08:00. Job 66052 passed its two-file,
+8,192-event dual-GPU sample (603.79 events/s including startup) but failed when
+scanning the full input root: recursive discovery included
+`recovered_time/0101/Esg20220101_00.time.root`. This is an input-selection failure,
+not a prerequisite to finish recovering all event timestamps.
+
+Discovery now accepts only direct `MMDD/*.root` inputs, or direct `*.root` when
+an individual MMDD directory is supplied. Single-file input is unchanged. A
+fixture containing original files, time sidecars and unrelated nested files
+failed twice before the fix; all three discovery tests and both existing TTree
+writing tests now pass. The live January scan finds 681 files / 31 dates while
+excluding the time-recovery directory. No source data is moved or deleted.
+
+Pilot receipt and hashes are retained unchanged. `production-provenance.json`
+records the approved transition from entrypoint SHA256
+`91e804e5043b6ab1ef41f985300c528840e26ed367fb884ee548f38010e287cd` to
+`862706fc8a6d4cfab41e65ff495143a0db4b762ab994c036823e405a77f67375`.
+Reversing only the discovery patch reproduces the pilot hash; checkpoint, config,
+detector geometry, preprocessing and cuts are unchanged. The gate checks this
+transition, then the new job reruns the regression tests and real dual-GPU sample.
+Final validation binds the producer through `INFERENCE_JOB_ID=66063`, verifies the
+matching two-GPU receipt and uses the approved production provenance.
+
+Jobs 66063 / 66064 replace 66052 / 66053. The blocked old validator 66053 is
+cancelled; prior control scripts and sample receipt are preserved in
+`inference-64748/failed-66052/`. New production starts from an empty output root
+with the existing lock and overwrite refusal intact. Current job IDs remain in
+`inference-64748/jobs.json`.
+
+Batch 352 is retained. Batches 128–384 already measured roughly 1,055–1,064
+GPU-only events/s; batch 384 reserves 14.56 GB without a throughput gain, while
+352 reserves 13.35 GB. Larger batches therefore add memory pressure without a
+measured speed benefit. No mixed precision or model changes are introduced.
+The earlier calendar completion window is obsolete; refresh the estimate after
+66063 starts and real month progress is available.

@@ -131,7 +131,9 @@ def discover_root_files(input_root: str, max_files: Optional[int]) -> Tuple[List
         root_files = [str(input_path)]
         base_dir = str(input_path)
     elif input_path.is_dir():
-        root_files = sorted(str(path) for path in input_path.rglob("*.root") if path.is_file())
+        # Time-recovery sidecars can coexist beside the direct MMDD input directories.
+        pattern = "*.root" if is_day_dir_name(input_path.name) else "[0-9][0-9][0-9][0-9]/*.root"
+        root_files = sorted(str(path) for path in input_path.glob(pattern) if path.is_file())
         base_dir = str(input_path)
     else:
         raise FileNotFoundError(f"Input path does not exist: {input_root}")

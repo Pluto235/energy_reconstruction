@@ -38,6 +38,10 @@ arguments, provenance logging, missing model, existing output and lock contentio
 The fixture used a stub Python executable; it did not load the real model or read
 observation events.
 
-Dual-GPU production was queued as 66052 after successful day acceptance 66045;
-independent final validation is 66053. Superseded pending jobs 66046/66047 were
-cancelled intentionally. See OBS_JANUARY_64748_ACCEPTANCE.md for current evidence.
+One-day acceptance 66045 passed (23 files, 1,522,147 events). Relaunch 66063
+replaces 66052 after fixing recursive discovery of time-recovery sidecars;
+independent final validation is 66064, afterok:66063. The gated relaunch reruns
+the regression tests and dual-GPU sample before invoking this launcher. It uses
+only direct MMDD observation inputs, so auxiliary time recovery can proceed
+independently. Superseded pending validators/jobs are cancelled intentionally.
+See OBS_JANUARY_64748_ACCEPTANCE.md for provenance, controls and current evidence.

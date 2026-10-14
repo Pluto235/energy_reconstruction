@@ -200,3 +200,10 @@ ssh -o BatchMode=yes -o ConnectTimeout=10 -o RemoteCommand=none -o RequestTTY=no
 ```
 
 ETO-to-IHEP continues using the original task socket. For condor_ssh_to_job with Python, pass a single fully shell-quoted command (for example shlex.join) because the tool joins command arguments before remote eval; an unquoted -c body produces a shell syntax error and proves nothing about the job.
+
+
+## Completed odd-date shard retired (2026-10-14 13:19)
+
+The odd-date source shard has all158 assigned v3 files ready, with exact-identity durable acknowledgments and cleaned states. None of its files is running. Verified all158 names against ETO receipts and the source ready/ack records using the frozen control_path/validate_request helpers. After confirming Owner=liushijie, the exact v3 frozen worker Cmd, original index0/workers2 arguments and JobStatus2, removed only idle job3729557.0; Condor reports one successful change and zero errors. This releases its unused CPU/memory slot after completed work and preserves all original output identities. Evidence is source and ETO v3/probes/completed_shard0.json.
+
+Original even-date job3729558.0(index1/workers2) continues processing its remaining assigned files. Keep concurrency active_workers=2: this value permits index1, and setting it to1 would accidentally stop that remaining worker. The deployment records3729557 as retired and lists only3729558 as active. Do not restart the finished shard merely because global unconfirmed even requests remain. Preserve the validated disjoint day routing; no overlapping new producer or frozen request rebinding is introduced. The latest remaining-shard estimate is about1.8h at13:14, with full-month Slurm acceptance still required afterwards. February stays explicitly paused.

@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 10:09 · [uncommitted] Verify333GiB writable scratch on lhws161 and expand the two existing January source jobs to the measured healthy node while preserving resources, site policy and frozen identities.
+
 - **energy_reconstruction** · 2026-10-14 09:48 · [uncommitted] Preserve the explicit February pause across both monitors, archive verified placement evidence, and diagnose January node occupancy with one bounded alternate scratch probe.
 
 - **energy_reconstruction** · 2026-10-14 09:45 · [uncommitted] Exclude time-recovery sidecars from direct MMDD inference discovery, pass five regressions, and relaunch gated two-GPU January inference/validation as 66063/66064 with batch 352 and explicit provenance transition.

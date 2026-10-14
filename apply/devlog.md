@@ -1,7 +1,8 @@
 # apply devlog
 
 Lightweight running log of Codex-mediated modifications.
-Newest at top. Format: `- **energy_reconstruction** · 2026-10-14 17:33 · [uncommitted] 确认全部681文件交付及v3清理、源/接收正常完成，提交Slurm66076进行三scope全月最终验收。
+Newest at top. Format: `- **energy_reconstruction** · 2026-10-14 17:35 · [uncommitted] Slurm66076全量验收通过681文件/69279369行，记录464逐行异常与146合法fallback、全部确认清理及一月监测收尾。
+- **energy_reconstruction** · 2026-10-14 17:33 · [uncommitted] 确认全部681文件交付及v3清理、源/接收正常完成，提交Slurm66076进行三scope全月最终验收。
 - **energy_reconstruction** · 2026-10-14 16:44 · [uncommitted] 恢复 Mac 直连 ETO，核验新 cwd/scratch/18哈希及单文件完整确认清理，按锁放行剩余39个原身份有界重试。
 - **<version>** · YYYY-MM-DD HH:MM · [<sha>] <summary>`.
 Detailed design rationale belongs in `report/` or `docs/`. Authoritative history belongs in `git log`.

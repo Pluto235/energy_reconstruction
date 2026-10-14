@@ -228,3 +228,6 @@ The chat permission profile then changed to restricted filesystem/network access
 
 
 2026-10-14 17:33：v3 442/442 receipt 与 source cleaned-name 集合严格相等，queue0、无failed；原239+v3442共681文件已全部交付。接收Slurm66067 COMPLETED/0:0；原source3729558已自然完成，history Owner/Cmd/Args核验及ExitCode0，未重复remove或提交。override/sourcegate置0，二月仍暂停。已提交最终Slurm66076（1CPU/2GiB、energy/apply工作目录、原pydeps）运行既有final_acceptance.py，按三原scope配置全读681文件/69279369行，检查receipt output_stat、类型/顺序/六标量、friend状态和异常索引、所有scope清理及空队列。当前验收进行中，尚未宣布全月验收通过。
+
+
+2026-10-14 17:35 最终验收通过：Slurm66076 COMPLETED/0:0，final_acceptance.json 全量重读681文件、69279369行；原4+v2235+v3442三个scope的原配置/冻结SHA/receipt output_stat保持，六标量对齐、顺序、类型、行数、friend状态与异常索引通过。全部681已确认清理，三个临时队列均0，无未解决文件失败或发布冲突。时间和J2000成功69278905行；464行status1为unreadable_exact_reduced，保留逐行异常且未对不可读精确文件fallback。另146行合法唯一ies_fallback，均status0。时间复用48695536/新恢复20583369，坐标复用48434451/新恢复20844454。轻量final_light_report含完整最终验收报告、summary.json及610条exceptions_index.jsonl（464异常+146fallback）。此前40个getcwd失败文件已全部同身份补回并确认清理；历史错误归档保留。生产与接收正常结束，源gate0，一月监测在归档轻量报告后关闭，二月继续暂停且不自动恢复。后续能量推理必须按最终survivor_event_indices同步筛friend/alignment。

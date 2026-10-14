@@ -6,6 +6,7 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-15 00:42 · [uncommitted] Execute frozen January v6 on ETO: 681-file C and GTI pass, rebuild exact 2R PSF, preserve cell62 negative analytic background and block formal E–G; add diagnostics, twelve fixtures, Slurm receipts and report source.
 - **energy_reconstruction** · 2026-10-15 00:04 · [uncommitted] Align January prediction time friends by unique event identity; fixtures and Slurm66078/66080 pass 681 files/48726074 rows twice, account for 464 source anomalies (0 predicted), preserve full time sources and failed-scope evidence.
 
 - **energy_reconstruction** · 2026-10-14 23:23 · [uncommitted] Record completed January four-GPU inference 66070 and full acceptance 66071: 681 files/31 days, 48,726,074 predictions, 17.46 GB, unchanged provenance; save measured runtimes/resources and stop the monitor.

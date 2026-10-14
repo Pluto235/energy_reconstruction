@@ -180,3 +180,23 @@ The user's February pause also pauses its separate wcda hourly monitoring automa
 Diagnostic3729640.0 completed with ExitCode0, history slot41@lhws161.ihep.ac.cn, actual hostname lhws161, RequestDisk4194304KiB and default account LHAASO.lhaaso.default. Its scratch and /tmp share /dev/sda3, with356,981,579,776 available bytes (333GiB),467,389,047 free inodes and successful unique1MiB write/fsync/remove. Empty quota output is not expanded into a quota claim. Historical output filename scratch_probe_january_first_283.out remains unchanged.
 
 After verifying both existing source jobs3729557.0 and3729558.0 are owned by liushijie, have the precise v3 frozen worker Cmd and are idle, expanded only their placement from measured lhws132 to measured lhws132 OR lhws161. Preserved3900MiB memory,4GiB scratch, all three node exclusions, account and complete site-generated requirements. Both matching directions succeed for56 lhws161 slots, with2 unclaimed at sampling time. No new production job was submitted and no frozen scientific/config/request identity changed. The full probe and before/after requirements are archived in v3/probes/healthy_lhws161_placement.json. Actual process/log/ready/receipt evidence is still required before declaring production resumed; final acceptance remains the full three-scope681-file gate.
+
+
+## Production resumed and receiver recovered after reboot (2026-10-14 11:20)
+
+Both original January source jobs3729557.0 and3729558.0 started at10:25:30 on lhws161 slots42/31 with the exact frozen v3 Cmd. Direct job inspection through condor_ssh_to_job confirms both Python workers and both persistent ROOT recovery processes, about696–741MiB process RSS and359,775,031,296 available scratch bytes. No source job was repeated or replaced. At11:17 the source has95 ready files /10,309,341 events, all status0, zero fallback and no failed requests. Worker0 has46 ready/112 remaining, mean elapsed66.26s; worker1 has49 ready/235 remaining, mean elapsed62.29s. Because requests are assigned by day parity, use the slower remaining shard for ETA: about4.1h of compute from this sample, with changing day composition and final validation excluded. Do not use a simple equal split or the earlier53s baseline.
+
+ETO rebooted at11:04:51 (boot ID3b0f1619-3ddc-4910-a360-0caede9585fc); its previous receiver process and IHEP SSH master were absent although Slurm66062 still reported RUNNING. Its last pre-reboot durable count is30 files. Verified66062 owner=server, precise snapshot command and energy/apply cwd, archived reboot evidence, then canceled only this stale task job. No Slurm service, other job or original product was changed. February stopped processes also disappeared on reboot; retain its explicit pause, preserve old PID evidence as historical_processes and leave active processes empty so reused PIDs cannot be mistaken for a resumed receiver. Its wcda monitor remains PAUSED.
+
+Direct Mac-to-ETO IPv4/IPv6 timed out. Existing PDC-shell forwarding reaches ETO normally, and direct ihep-shell also works. Use existing SSH identities only: normal Mac SSH authentication with AddKeysToAgent=yes and temporary agent forwarding rebuilt the same task master socket on ETO; no private-key/password content was read as data or transferred. The previous stale socket was removed only after failed master check, same-owner/socket-type verification. New master11064 was verified with a real IHEP hostname command.
+
+Submitted replacement Slurm66067 from energy/apply with1CPU/2GiB and the unchanged de2c690 snapshot/config. Its actual receiver PID11359 is running; durable receipts/cleaned increased30→37 after restart. At that sample the month is4+235+37=276/681 confirmed, while95 v3 files are produced; these are different counts. Source queue7,121,975,296bytes is below16GiB. Initial renewed progress.json can lag while it consumes the ready backlog, so use durable receipts and source cleaned evidence. Keep confirmed outputs and all three scope identities; final681-file full Slurm acceptance is still pending.
+
+Fallback Mac transport (no SSH config or service changes):
+
+```bash
+ssh -o BatchMode=yes -o ConnectTimeout=10 -o RemoteCommand=none -o RequestTTY=no \
+  -o 'ProxyCommand=ssh -o BatchMode=yes -o ConnectTimeout=10 -o RemoteCommand=none -o RequestTTY=no -W "%h:%p" PDC-shell' ETO
+```
+
+ETO-to-IHEP continues using the original task socket. For condor_ssh_to_job with Python, pass a single fully shell-quoted command (for example shlex.join) because the tool joins command arguments before remote eval; an unquoted -c body produces a shell syntax error and proves nothing about the job.

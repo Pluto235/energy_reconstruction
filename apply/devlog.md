@@ -6,6 +6,10 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 11:20 · [uncommitted] Verify continuous two-shard production, recover the reboot-lost ETO SSH master and receiver with unchanged identities, preserve the February pause, and update measured shard ETA and durable delivery evidence.
+
+- **energy_reconstruction** · 2026-10-14 10:41 · [uncommitted] Pause January inference 66063 in requeue-hold and hold validator 66064 for user GPU reset, pause automation, verify CUDA contexts released, and preserve outputs plus partial-file evidence for reviewed resumption.
+
 - **energy_reconstruction** · 2026-10-14 10:09 · [uncommitted] Verify333GiB writable scratch on lhws161 and expand the two existing January source jobs to the measured healthy node while preserving resources, site policy and frozen identities.
 
 - **energy_reconstruction** · 2026-10-14 09:48 · [uncommitted] Preserve the explicit February pause across both monitors, archive verified placement evidence, and diagnose January node occupancy with one bounded alternate scratch probe.

@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 08:40 · [uncommitted] Verify the complete 18-file frozen test package, pass all 20 IHEP regressions with exit zero, and start v3 Slurm reception while retaining February priority and all 239 carried identities.
+
 - **energy_reconstruction** · 2026-10-14 08:17 · [uncommitted] Fit only the small regression to measured 3957 MiB slots with a 3900 MiB request, verify both scheduling directions, and preserve production settings and validation gates.
 
 - **energy_reconstruction** · 2026-10-14 08:04 · [uncommitted] Resolve probe placement with real site-account eligibility, verify 664 GiB writable scratch on lhws132, and submit guarded full regression without changing frozen production identities.

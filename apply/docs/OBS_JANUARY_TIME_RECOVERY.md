@@ -225,3 +225,6 @@ The chat permission profile then changed to restricted filesystem/network access
 
 
 2026-10-14 16:44：Mac 已恢复直连 ETO；boot_id 未变，Slurm66067/PID11359 接收器真实存活。原 IHEP3729558 第二次启动于 slot5@lhws161，PID3379161 的真实 cwd 可正常 getcwd；scratch 360947998720 bytes、467351472 free inodes、唯一1MiB write/fsync/delete 通过，18冻结文件 SHA256 保持一致。Esg20220128_05.root canary 首次新尝试成功：136233 行全 status0、fallback0，经 ETO full-event-alignment+ROOT+bytes receipt 和源精确 ack/cleaned 核验。fence0且无running后，在每文件锁下核验归档请求SHA及原身份，仅将其余39个 getcwd失败状态重置一次有界重试周期；随后 gate/override2 放行，保留原402与原4/v2235。全月此时642/681，最终全月验收仍待剩余交付清理完成。证据 probes/cwd_live_recovery_20261014.json、cwd_canary_accepted_20261014.json。二月仍暂停。
+
+
+2026-10-14 17:33：v3 442/442 receipt 与 source cleaned-name 集合严格相等，queue0、无failed；原239+v3442共681文件已全部交付。接收Slurm66067 COMPLETED/0:0；原source3729558已自然完成，history Owner/Cmd/Args核验及ExitCode0，未重复remove或提交。override/sourcegate置0，二月仍暂停。已提交最终Slurm66076（1CPU/2GiB、energy/apply工作目录、原pydeps）运行既有final_acceptance.py，按三原scope配置全读681文件/69279369行，检查receipt output_stat、类型/顺序/六标量、friend状态和异常索引、所有scope清理及空队列。当前验收进行中，尚未宣布全月验收通过。

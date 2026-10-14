@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 08:17 · [uncommitted] Fit only the small regression to measured 3957 MiB slots with a 3900 MiB request, verify both scheduling directions, and preserve production settings and validation gates.
+
 - **energy_reconstruction** · 2026-10-14 08:04 · [uncommitted] Resolve probe placement with real site-account eligibility, verify 664 GiB writable scratch on lhws132, and submit guarded full regression without changing frozen production identities.
 
 - **energy_reconstruction** · 2026-10-14 07:44 · [uncommitted] Verify actual block exhaustion on BWS and AWS physical roots despite advertised capacity, archive probe evidence, and test a different LHWS node without launching an unsafe regression.

@@ -1,0 +1,83 @@
+{
+  "ok": true,
+  "files": 681,
+  "passed_files": 681,
+  "prediction_entries": 48726074,
+  "original_entries": 69279369,
+  "original_nonzero_status": 464,
+  "prediction_nonzero_status": 0,
+  "output_root": "/mnt/newdisk/shijie/WCDA_obs_eval_64748_time_aligned",
+  "verified_at": "2026-10-15T00:03:30.092410+08:00",
+  "slurm_jobs": {
+    "smoke": 66078,
+    "incomplete_receipt_scope": 66079,
+    "full_alignment_and_independent_verification": 66080
+  },
+  "full_job_state": "COMPLETED",
+  "full_job_exit_code": "0:0",
+  "full_job_elapsed": "00:04:15",
+  "full_job_max_rss_kib": 1023920,
+  "original_status": [
+    69278905,
+    464,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "prediction_status": [
+    48726074,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "original_anomalies_absent_from_prediction": 464,
+  "verification": "681 unique-key joins, exact output inventory, all time fields/type/NaN precision bitwise equal; separate remapping and output SHA-256 pass",
+  "detailed_reports": {
+    "/mnt/newdisk/shijie/energy/.recovery/2026-10-14/prediction-time-alignment/align_66078.json": "a03fcc949bf2d2285cc9fdab7ac95a6d6574f25b4f7d6dd48899e68e8b82081b",
+    "/mnt/newdisk/shijie/energy/.recovery/2026-10-14/prediction-time-alignment/verify_66078.json": "ee2e87cc38a205c1e60b7c7c39e96282a5b20a64a0f56094810ded2e0e25b3cf",
+    "/mnt/newdisk/shijie/energy/.recovery/2026-10-14/prediction-time-alignment/align_66079.json": "e6a445167c728c898aa3cde5c4ca9e505506ccc2016689e729094432e0ae5d91",
+    "/mnt/newdisk/shijie/energy/.recovery/2026-10-14/prediction-time-alignment/align_66080.json": "d75a54d7a283cb9636ca8025beae99e48d22cf2a881b17cc1c483829308a9611",
+    "/mnt/newdisk/shijie/energy/.recovery/2026-10-14/prediction-time-alignment/verify_66080.json": "111ee30d5e8b225b8f066ea10b6c38f5edf0530824864acad5ee27e8456fa62d"
+  },
+  "file_receipts": "/mnt/newdisk/shijie/WCDA_obs_eval_64748_time_aligned/<MMDD>/Esg*.time.receipt.json",
+  "preserved_partial_outputs": "/mnt/newdisk/shijie/WCDA_obs_eval_64748_time_aligned_partial_66079",
+  "fixture_tests": {
+    "tests": 2,
+    "passed": 2,
+    "includes": "A/C subset, reordered identities, all four missing-key fields, both duplicate-key sources, nonzero status, NaN, float64/subseconds/signed zero, int64/float32 fields, no overwrite, changed source"
+  },
+  "anomaly_files": [
+    {
+      "relative_path": "0103/Esg20220103_05.root",
+      "original_status": [
+        290166,
+        464,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "prediction_status": [
+        206286,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "limits": [
+    "No training or energy inference",
+    "No Stage C\u2013G execution",
+    "No physical calibration or spectrum validation",
+    "Keep original full time sequence for GTI/exposure"
+  ]
+}

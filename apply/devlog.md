@@ -6,6 +6,10 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 09:48 · [uncommitted] Preserve the explicit February pause across both monitors, archive verified placement evidence, and diagnose January node occupancy with one bounded alternate scratch probe.
+
+- **energy_reconstruction** · 2026-10-14 09:45 · [uncommitted] Exclude time-recovery sidecars from direct MMDD inference discovery, pass five regressions, and relaunch gated two-GPU January inference/validation as 66063/66064 with batch 352 and explicit provenance transition.
+
 - **energy_reconstruction** · 2026-10-14 09:36 · [uncommitted] Pause the verified February receiver on user instruction, replace the throughput throttle with January priority, and submit two resource-matched January workers while preserving frozen identities and final acceptance.
 
 - **energy_reconstruction** · 2026-10-14 08:40 · [uncommitted] Verify the complete 18-file frozen test package, pass all 20 IHEP regressions with exit zero, and start v3 Slurm reception while retaining February priority and all 239 carried identities.

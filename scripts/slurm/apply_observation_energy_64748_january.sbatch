@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=apply_obs_64748_january
 #SBATCH --partition=main
-#SBATCH --gres=gpu:2
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=64G
+#SBATCH --gres=gpu:4
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=96G
 #SBATCH --time=72:00:00
 #SBATCH --chdir=/mnt/newdisk/shijie/energy
 #SBATCH --output=/mnt/newdisk/shijie/energy/logs/slurm/%x_%j.out
@@ -19,7 +19,7 @@ RUN_DIR="${REPO_ROOT}/runs/theta_recoxy_position_embed_noemax_no_core_cut_64748"
 
 cd "${REPO_ROOT}"
 export PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
-export PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
+export PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
 
 [[ -x "${ENV_PREFIX}/bin/python" ]] || { echo "py310 environment is not ready: ${ENV_PREFIX}" >&2; exit 64; }
 [[ -d "${INPUT_ROOT}/0101" ]] || { echo "January input directory is missing" >&2; exit 64; }
@@ -59,8 +59,8 @@ echo
   --day-prefix 01 \
   --summary-path "${OUTPUT_ROOT}/apply_summary_01_${SLURM_JOB_ID}.json" \
   --device cuda \
-  --gpu-ids 0,1 \
-  --batch-size 352 \
+  --gpu-ids 0,1,2,3 \
+  --batch-size 384 \
   --reader-workers 2 \
   --step-size "100 MB" \
   --cut-pinc-max 1.1 \

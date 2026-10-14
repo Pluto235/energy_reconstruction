@@ -3,6 +3,45 @@
 ETO project: `/mnt/newdisk/shijie/energy`. Control scripts and receipts:
 `.recovery/2026-10-14/inference-64748/`.
 
+## Current four-GPU restart (October 14)
+
+The user restored all four V100s and explicitly abandoned the old two-GPU run.
+Jobs 66063/66064 are cancelled. Cleanup removed only the old dedicated January
+prediction directory: 48 ROOT files, 1,095,453,833 bytes. Originals, weights,
+configs, detector geometry, pilot data, logs and receipts are retained;
+`abandon-2gpu-cleanup.json` records every removed output. New production starts
+with an empty `/mnt/newdisk/shijie/WCDA_obs_eval_64748`.
+
+Slurm 66068 passed all five discovery/TTree regressions, capacity/finite-output
+checks on each of four GPUs at batches 352/384/400, and a simultaneous four-file
+32,768-event native-sharding sample. Independent checks preserved headers, event
+identities/cuts and finite consistent energies. The sample took 28.892 seconds,
+1,134.14 events/s overall. Batch 384 is the largest tested batch within the chosen
+88% Torch-reserved-memory budget on every card, with no material throughput loss:
+8.180 GB live / 14.561 GB reserved per GPU. Batch 400 reserved 15.171 GB without a
+speed benefit. No model, preprocessing, precision or event-cut changes are made.
+
+Production 66070 requests four GPUs, 32 CPUs and 96 GB RAM on main, afterok:66068.
+It verifies `four-gpu-tuning.json`, unchanged `production-provenance.json` hashes,
+and the exact launcher GPU/batch settings, then repeats the four-file acceptance
+before running all 681 January files / 31 dates. Validator 66071 is afterok:66070
+and binds both the four-GPU sample receipt and final summary to that producer.
+The overwrite/concurrency guards remain active. Unbuffered child output improves
+progress logging. Current IDs are in `inference-64748/jobs.json`; controls are
+`month_4gpu.sbatch`, `gate_four_gpu.py`, `verify_four_gpu_sample.py` and
+`verify_month_4gpu.py` under the same ignored evidence directory.
+
+The four native shards use seeds 42, 100042, 200042 and 300042. Their weighted hit
+samples differ from the abandoned two-GPU partition; no old prediction file is
+reused. Reproduction must preserve four GPUs, file ordering and this seed policy.
+
+The pilot retention predicts about 49 million selected events in January.
+The short four-GPU sample implies approximately 12 hours of inference at its
+measured rate. Allow roughly 10–14 hours of inference plus 1–2 hours for independent
+validation, and update from full-month progress; startup, file sizes and shared
+I/O limit the accuracy of this early estimate. The 30-minute monitor is resumed
+for the new job IDs and stays quiet when healthy progress has no meaningful change.
+
 ## Accepted 128-event smoke test
 
 - Slurm `66044`: COMPLETED, exit `0:0`, 8 seconds including startup/validation.
@@ -31,13 +70,13 @@ passes after the fix for both selected events and an all-rejected input. The
 expected extra `nvidmc` is the writer's counter for the retained jagged ID branch.
 No model parameters, preprocessing, event cuts or input data were changed.
 
-## Gated jobs
+## Current gated jobs
 
 | Stage | Slurm | State when configured | Parameters / gate |
 |---|---|---|---|
 | January 1 pilot | 66045 | PASS, completed 02:15 +08:00 | 23/23 files; 1,522,147 selected events; no failures |
-| Full January inference | 66063 | User-paused for shutdown/GPU reset; requeued in held state | 2 GPU / 16 CPU / 64 GB, batch 352 per GPU; verifies day receipt, unchanged model/geometry and approved code hash |
-| Full January validation | 66064 | User-held; afterok:66063 | 681 filenames / 31 days, independent cuts and event identities, finite energy consistency, exact header content and schema |
+| Full January inference | 66070 | Fresh four-GPU run after tuning 66068 and its own four-file sample | 4 GPU / 32 CPU / 96 GB, batch 384 per GPU; unchanged model/geometry and approved code hash |
+| Full January validation | 66071 | afterok:66070 | 681 filenames / 31 days, independent cuts and event identities, finite energy consistency, exact header content and schema |
 
 The pilot has its own `apply/output/inference_64748_acceptance/day/` directory.
 Production writes `/mnt/newdisk/shijie/WCDA_obs_eval_64748/` and does not reuse pilot
@@ -60,7 +99,7 @@ the physical calibration or scientific suitability of the resulting spectrum.
 
 Background follow-up: thread heartbeat automation 64748 checks every 30 minutes, stays quiet during unchanged healthy progress, and reports stage completion/failure or required action. It stops after final acceptance.
 
-## Two-GPU tuning and estimated completion
+## Historical two-GPU tuning and estimated completion
 
 User requested both available V100s. Pending single-GPU jobs 66046/66047 were
 verified as task-owned and cancelled; 66052/66053 replace them. The running day

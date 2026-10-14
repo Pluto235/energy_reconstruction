@@ -17,10 +17,12 @@ Submit on ETO after those checks pass:
 sbatch /mnt/newdisk/shijie/energy/scripts/slurm/apply_observation_energy_64748_january.sbatch
 ```
 
-Resources: two GPUs, 16 CPU cores, 64 GB RAM, 72 hours; batch size 352 per GPU,
-two reader threads per worker. Slurm 66051 tested 8,192 real events: 17.44 seconds,
-7.50 GB peak allocated / 13.35 GB reserved per GPU on a 16 GiB V100.
-The gated production job first validates two files on both GPUs before the full month.
+Resources: four GPUs, 32 CPU cores, 96 GB RAM, 72 hours; batch size 384 per GPU,
+two reader threads per worker. Slurm 66068 tested all four V100s at batches
+352/384/400, then passed 32,768 real events in 28.892 seconds (1,134 events/s).
+Batch 384 peaks at 8.180 GB live / 14.561 GB reserved per GPU. The gated production
+job repeats a four-file sample before the month. Larger batch 400 added memory
+pressure without increasing throughput.
 
 Logs: `/mnt/newdisk/shijie/energy/logs/slurm/apply_obs_64748_january_<jobid>.out`
 and `.err`. Standard output records the job, Python executable/version, Git commit,
@@ -38,10 +40,12 @@ arguments, provenance logging, missing model, existing output and lock contentio
 The fixture used a stub Python executable; it did not load the real model or read
 observation events.
 
-One-day acceptance 66045 passed (23 files, 1,522,147 events). Relaunch 66063
-replaces 66052 after fixing recursive discovery of time-recovery sidecars;
-independent final validation is 66064, afterok:66063. The gated relaunch reruns
-the regression tests and dual-GPU sample before invoking this launcher. It uses
-only direct MMDD observation inputs, so auxiliary time recovery can proceed
-independently. Superseded pending validators/jobs are cancelled intentionally.
-See OBS_JANUARY_64748_ACCEPTANCE.md for provenance, controls and current evidence.
+One-day acceptance 66045 passed (23 files, 1,522,147 events). Following user GPU
+reset and abandonment of the two-GPU run, fresh four-GPU production is 66070,
+afterok:66068 tuning; independent final validation is 66071, afterok:66070.
+Old 66063/66064 are cancelled and their 48 prediction files (1.10 GB) were removed
+with a cleanup receipt. Source observations and models remain unchanged. Only
+direct MMDD inputs are discovered, so auxiliary time recovery is independent.
+Native four-way sharding changes the per-file weighted hit sampling seeds;
+old two-GPU predictions are not reused. See OBS_JANUARY_64748_ACCEPTANCE.md for
+provenance, four-GPU controls and current evidence.

@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 15:03 · [uncommitted] Archive40 unconfirmed cwd failures after402 v3 confirmations, prove stale process cwd versus valid current control path, fence claims, verify18 frozen hashes, and stage a bounded one-file restart without changing science/config/receipt identities.
+
 - **energy_reconstruction** · 2026-10-14 13:19 · [uncommitted] Verify all158 odd-date files are received/acknowledged/cleaned, retire only the completed idle source job, and preserve index1 claim permission and frozen identities for the remaining even shard.
 
 - **energy_reconstruction** · 2026-10-14 11:33 · [uncommitted] Abandon two-GPU jobs and clean 48 old outputs (1.10 GB), pass four-V100 batch/sample validation 66068, and queue fresh January inference 66070 plus validator 66071 at batch 384 with preserved provenance and updated ETA/monitor.

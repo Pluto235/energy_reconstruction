@@ -3,7 +3,45 @@
 ETO project: `/mnt/newdisk/shijie/energy`. Control scripts and receipts:
 `.recovery/2026-10-14/inference-64748/`.
 
-## Current four-GPU restart (October 14)
+## Completed January production and acceptance
+
+Final acceptance passed at **2026-10-14 19:03:57 +08:00**. Slurm producer 66070 and
+independent validator 66071 both completed with exit 0:0. The final receipt is
+`.recovery/2026-10-14/inference-64748/month-acceptance.json`, SHA256
+`374315c92c680b96683b101ba8cda3549e05257ac47615aa419ebc480c510838`.
+
+| Result | Verified value |
+|---|---|
+| January coverage | 681 files, 31 dates; source/output/summary/receipt filenames agree |
+| Input events | 69,279,369 |
+| Selected predictions written | 48,726,074; zero failed files |
+| ROOT output size | 17,463,533,948 bytes (17.46 GB) |
+| Producer runtime | 11:34:13–18:52:36, 7 h 18 min 23 s including preflight |
+| Independent validator runtime | 18:52:37–19:03:57, 11 min 20 s |
+| Total elapsed | 7 h 29 min 44 s |
+| Producer peak RSS reported by Slurm | 10,704,860 KiB (10.21 GiB) |
+| Validator peak RSS reported by Slurm | 388,972 KiB (380 MiB) |
+
+Output remains `/mnt/newdisk/shijie/WCDA_obs_eval_64748/`, with final producer
+summary `apply_summary_01_66070.json`. The validator checked every file's source
+cuts and event identities/order, prediction finiteness/positivity and energy/logE
+consistency, header schema/content, output tree schema, file/day coverage and
+aggregate counts. Current model/config/geometry/entrypoint hashes were rechecked
+against the approved provenance after acceptance; all agree.
+
+Five-second GPU samples recorded peak device memory 14,272 MiB on each 16,384 MiB
+V100 (87.1%), with peak utilization 100%. Mean sampled utilization across the
+whole run, including CPU preparation, I/O and startup, was 44.5%, 44.0%, 44.2%
+and 43.7% on GPUs 0–3. High memory occupancy is not sustained compute utilization.
+The cards were released after production finished.
+
+The task registry now records completion, and automation 64748 is paused after
+successful acceptance. No further jobs or repeated full validation are needed.
+This establishes computation and data-contract integrity; physical calibration
+and scientific suitability are outside these checks. The earlier ETA ranges in
+the history below are superseded by the measured completion times above.
+
+## Four-GPU restart history (October 14)
 
 The user restored all four V100s and explicitly abandoned the old two-GPU run.
 Jobs 66063/66064 are cancelled. Cleanup removed only the old dedicated January
@@ -75,8 +113,8 @@ No model parameters, preprocessing, event cuts or input data were changed.
 | Stage | Slurm | State when configured | Parameters / gate |
 |---|---|---|---|
 | January 1 pilot | 66045 | PASS, completed 02:15 +08:00 | 23/23 files; 1,522,147 selected events; no failures |
-| Full January inference | 66070 | Fresh four-GPU run after tuning 66068 and its own four-file sample | 4 GPU / 32 CPU / 96 GB, batch 384 per GPU; unchanged model/geometry and approved code hash |
-| Full January validation | 66071 | afterok:66070 | 681 filenames / 31 days, independent cuts and event identities, finite energy consistency, exact header content and schema |
+| Full January inference | 66070 | PASS; completed 18:52:36 +08:00 | 4 GPU / 32 CPU / 96 GB, batch 384 per GPU; unchanged model/geometry and approved code hash |
+| Full January validation | 66071 | PASS; completed 19:03:57 +08:00 | 681 filenames / 31 days, independent cuts and event identities, finite energy consistency, exact header content and schema |
 
 The pilot has its own `apply/output/inference_64748_acceptance/day/` directory.
 Production writes `/mnt/newdisk/shijie/WCDA_obs_eval_64748/` and does not reuse pilot

@@ -2,6 +2,14 @@
 
 ETO launcher: `scripts/slurm/apply_observation_energy_64748_january.sbatch`.
 
+**Completed and accepted 2026-10-14 19:03:57 +08:00:** producer 66070 and validator
+66071 both exited 0:0. All 681 files / 31 dates passed independent full acceptance;
+48,726,074 predictions occupy 17.46 GB under `/mnt/newdisk/shijie/WCDA_obs_eval_64748`.
+Producer and validator ran 7 h 18 min and 11 min respectively. Automation is stopped.
+See OBS_JANUARY_64748_ACCEPTANCE.md and `month-acceptance.json` for checked evidence.
+The launch instructions below are retained for reproduction; the existing accepted
+output directory must not be overwritten or submitted again automatically.
+
 This launcher fixes the Python environment to `/mnt/newdisk/shijie/conda/envs/py310`,
 input to `/mnt/newdisk/shijie/WCDA_obs`, day prefix to `01`, model to
 `runs/theta_recoxy_position_embed_noemax_no_core_cut_64748`, and output to

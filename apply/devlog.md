@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 23:23 · [uncommitted] Record completed January four-GPU inference 66070 and full acceptance 66071: 681 files/31 days, 48,726,074 predictions, 17.46 GB, unchanged provenance; save measured runtimes/resources and stop the monitor.
+
 - **energy_reconstruction** · 2026-10-14 11:33 · [uncommitted] Abandon two-GPU jobs and clean 48 old outputs (1.10 GB), pass four-V100 batch/sample validation 66068, and queue fresh January inference 66070 plus validator 66071 at batch 384 with preserved provenance and updated ETA/monitor.
 
 - **energy_reconstruction** · 2026-10-14 10:41 · [uncommitted] Pause January inference 66063 in requeue-hold and hold validator 66064 for user GPU reset, pause automation, verify CUDA contexts released, and preserve outputs plus partial-file evidence for reviewed resumption.

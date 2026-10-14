@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 08:04 · [uncommitted] Resolve probe placement with real site-account eligibility, verify 664 GiB writable scratch on lhws132, and submit guarded full regression without changing frozen production identities.
+
 - **energy_reconstruction** · 2026-10-14 07:44 · [uncommitted] Verify actual block exhaustion on BWS and AWS physical roots despite advertised capacity, archive probe evidence, and test a different LHWS node without launching an unsafe regression.
 
 - **energy_reconstruction** · 2026-10-14 07:29 · [uncommitted] Diagnose probe queue eligibility, broaden the existing comparative probe to available AWS nodes, and prepare a fail-closed scratch preflight before the unchanged full test.

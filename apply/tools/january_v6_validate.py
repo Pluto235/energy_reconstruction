@@ -29,6 +29,19 @@ def check_selected_cells(selected, rows):
     require(len(frozen) == 44 and selected == frozen, "Manifest changed frozen 44-cell order")
 
 
+def check_diagnostic(diagnostic, data, selected, c_rows):
+    require(diagnostic["input_rows"] == c_rows, "Diagnostic input rows differ from Stage C")
+    require(data["cell_id"].tolist() == list(range(1, 92)), "Diagnostic 91-cell order")
+    require([row["cell_id"] for row in diagnostic["cells"]] == selected, "Diagnostic 44-cell order")
+    columns = {"N_on": "N_on", "raw_analytic_B_on": "B_on_analytic", "surface_min": "on_aperture_surface_min", "annulus_counts": "annulus_counts"}
+    for row in diagnostic["cells"]:
+        index = row["cell_id"] - 1
+        for name, column in columns.items():
+            value = float(data[column][index])
+            require(row[name] == value or (row[name] is None and not math.isfinite(value)), f"Diagnostic JSON/NPZ differ: cell {row['cell_id']} {name}")
+    require(data["fit_rank"][61] == 6 and 0 < data["fit_condition_number"][61] <= 1e8, "Cell62 numerical linear-solve gate")
+
+
 def npz(path):
     with np.load(path, allow_pickle=False) as data:
         return {key: data[key] for key in data.files}

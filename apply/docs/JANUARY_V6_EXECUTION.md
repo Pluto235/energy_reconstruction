@@ -8,7 +8,7 @@ The source request fixes the scientific design. Routine path adaptation and miss
 - [x] Audit original full time sequences with the old 60-second gap definition, globally merge overlapping intervals, and feed interval rows through the existing Stage F source trajectory integrator.
 - [x] Verify response/model/cuts/binning/primary denominator and PSF; reuse compatible arrays and rebuild missing 2R from saved original profiles with the original algorithm.
 - [x] Run fixture tests and real single-file Stage C smoke under Slurm, then monthly C and production D. D fails the required cell62 positivity contract; E–G stay blocked. This is not a completed valid spectrum.
-- [ ] Validate aperture scaling once, 44-cell order, analytic integration, January provenance, exposure, convergence and fit quality separately; create machine-readable receipts and HTML.
+- [x] Validate aperture scaling once, 44-cell order, analytic integration, January provenance, exposure, convergence and fit quality separately; report66089 completes machine-readable receipts and HTML with scientific failure explicit.
 - [ ] Prepend devlog, commit and push code/config/docs; keep outputs out of Git.
 
 Run tag: `v6_64748_202201_scheme_R_double_rayleigh_analytic_bon`. All new outputs and stage reports are under `apply/output/<run-tag>/`. No current/latest links are promoted; existing directories are never overwritten.
@@ -32,3 +32,7 @@ ProductionD66085 fails with cell62 minimum−0.001473146297436counts/pixel; diag
 Fixed44PSF fallbackcells56,61,70,75,86,87 remain in the scheme. Negative diagnosticexcess occurs in4,5,6,21,75; N_on<10 in61,62,70,86,87,88,89. These are diagnostics, not removal rules. No spectralpull or goodness-of-fit is available.
 
 Report66088 passes data/response/exposure checks but fails due to missing renderer deployment; its Markdown and logs are preserved under failed_report_66088. The renderer is then deployed with its assets; retry stays within the same pinned scientific inputs. New output directory remains `/mnt/newdisk/shijie/energy/apply/output/v6_64748_202201_scheme_R_double_rayleigh_analytic_bon/`.
+
+Report retry66089 completes0:0 in3seconds. HTML anchors/local artifact links/images and copied artifact hashes pass local inspection. The cell62 figure displays the actual un-clipped negative quadratic; source exposure figure uses9.39254days, not the26.55336day detector live interval sum. Twelve initial fixtures pass; an additional JSON-versus-NPZ/count binding regression brings the final targeted suite to13tests. Added final delivery verification also checks all681parquet part hashes and their canonical dataset digest, pins source file hashes to actual Git blobs, retains the report generation base commit and records the later committed source version separately.
+
+The report is `report_202201.html`; data/science receipt is `final_acceptance.json`; commit/dataset delivery receipt is `delivery_receipt.json`. These live under the isolated run directory and are Git-ignored. Local report copy uses the same relative layout, with parquet data retained only on ETO. Review and provenance strengthening change only checks/reporting; no scientific stages, model, selector or already accepted input is altered.

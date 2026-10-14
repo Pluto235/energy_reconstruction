@@ -15,7 +15,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "apply/tools"))
 from january_v6_inputs import TAG, BASE, load_json, sha256, check_stat
-from january_v6_validate import check, run_dir, stage_paths, require
+from january_v6_validate import check, run_dir, stage_paths, require, check_diagnostic
 
 
 def table(headers, rows):
@@ -36,6 +36,7 @@ def main():
     diagnostic = load_json(root / "background_diagnostic/diagnostic.json")
     compatibility_path = REPO / "apply/docs/JANUARY_V6_MC_COMPATIBILITY.json"
     compatibility = load_json(compatibility_path)
+    require(compatibility["decision"]["blockers"] == [] and compatibility["decision"]["nominal_response"] == "reuse_compatibility_passed" and compatibility["decision"]["scheme_R_response"] == "reuse_compatibility_passed", "MC compatibility decisions failed")
     c = load_json(run_dir(root, "c") / "obs_events_metadata.json")
     check("c", root, REPO)
     psf_receipt = check("psf", root, REPO)
@@ -53,12 +54,14 @@ def main():
         if "path" in artifact and "sha256" in artifact:
             require(sha256(artifact["path"]) == artifact["sha256"], f"MC compatibility artifact changed: {artifact['path']}")
     d = np.load(root / "background_diagnostic/background_signal_diagnostic.npz")
+    check_diagnostic(diagnostic, d, manifest["selected_cell_ids"], c["processing"]["selected_rows"])
     ids = d["cell_id"].astype(int)
     selected_indices = np.flatnonzero(np.isin(ids, manifest["selected_cell_ids"]))
     failed_ids = [row["cell_id"] for row in diagnostic["failures"]]
     require(failed_ids == [62], "Unexpected frozen failure set; report must be reviewed")
     i62 = ids.tolist().index(62)
     require(d["fit_rank"][i62] == 6 and np.isfinite(d["fit_condition_number"][i62]), "Numerical background fit failed")
+    require(c["processing"]["selected_rows"] == 21559258 and gti["merged_interval_count"] == 756 and d["annulus_counts"][i62] == 10 and d["annulus_pixels"][i62] == 5648, "Observed report constants changed")
     f = importlib.import_module("apply.stages.06_fit")
     response_path = REPO / f"apply/output/stage_e_{BASE}_fixed712979_rayleigh_annnorm/response_{BASE}_fixed712979_rayleigh.npz"
     with np.load(response_path) as response:

@@ -9,6 +9,19 @@ spec.loader.exec_module(validation)
 
 
 class ResponseContractTest(unittest.TestCase):
+    def test_diagnostic_json_must_match_raw_arrays_and_c_count(self):
+        ids = np.arange(1, 92)
+        data = {"cell_id": ids, "N_on": ids.copy(), "B_on_analytic": ids.astype(float), "on_aperture_surface_min": np.ones(91), "annulus_counts": ids.copy(), "fit_rank": np.full(91, 6), "fit_condition_number": np.ones(91)}
+        rows = [{"cell_id": i, "N_on": i, "raw_analytic_B_on": float(i), "surface_min": 1., "annulus_counts": i} for i in range(1, 45)]
+        diagnostic = {"input_rows": 123, "cells": rows}
+        validation.check_diagnostic(diagnostic, data, list(range(1, 45)), 123)
+        rows[0]["N_on"] += 1
+        with self.assertRaisesRegex(ValueError, "N_on"):
+            validation.check_diagnostic(diagnostic, data, list(range(1, 45)), 123)
+        rows[0]["N_on"] -= 1
+        with self.assertRaisesRegex(ValueError, "input rows"):
+            validation.check_diagnostic(diagnostic, data, list(range(1, 45)), 124)
+
     def test_manifest_cannot_change_frozen_selected_cells(self):
         rows = [{"cell_id": str(i), "include": "1"} for i in range(1, 45)]
         selected = list(range(1, 45))

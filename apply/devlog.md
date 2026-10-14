@@ -1,7 +1,8 @@
 # apply devlog
 
 Lightweight running log of Codex-mediated modifications.
-Newest at top. Format: `- **<version>** · YYYY-MM-DD HH:MM · [<sha>] <summary>`.
+Newest at top. Format: `- **energy_reconstruction** · 2026-10-14 16:44 · [uncommitted] 恢复 Mac 直连 ETO，核验新 cwd/scratch/18哈希及单文件完整确认清理，按锁放行剩余39个原身份有界重试。
+- **<version>** · YYYY-MM-DD HH:MM · [<sha>] <summary>`.
 Detailed design rationale belongs in `report/` or `docs/`. Authoritative history belongs in `git log`.
 
 ---

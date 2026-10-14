@@ -5,9 +5,9 @@ This workflow restores the 31-day / 681-file January observation manifest as ind
 ## Isolated implementation and dependencies
 
 - ETO implementation checkout: `/mnt/newdisk/shijie/energy-time-recovery`, branch `codex/january-time-recovery`, in the energy repository. Do not overwrite the unrelated inference edits in `/mnt/newdisk/shijie/energy`.
-- ETO current-run state: `/mnt/newdisk/shijie/energy/.recovery/2026-10-14/obs-january-time-v2`.
-- IHEP current-run control: `/scratchfs2/lhaaso/liushijie/WCDA_time_recovery_202201_20261014_v2/.control`.
-- IHEP current-run temporary EOS: `/eos/user/l/liushijie/WCDA_time_recovery_202201_20261014_v2`.
+- ETO current-run state: `/mnt/newdisk/shijie/energy/.recovery/2026-10-14/obs-january-time-v3`.
+- IHEP current-run control: `/scratchfs2/lhaaso/liushijie/WCDA_time_recovery_202201_20261014_v3/.control`.
+- IHEP current-run temporary EOS: `/eos/user/l/liushijie/WCDA_time_recovery_202201_20261014_v3`.
 - Existing ETO IHEP connection: `.recovery/2026-10-13/obs-january/ihep.sock`. Do not copy credentials.
 
 Production uses task-owned, unmodified Cog and SLALIB copies in `.control/deps/Cog` and `.control/deps/slalib`. The worker verifies `deps/dependency_sha256.txt` before compiling. Cog was copied from the historical algorithm's dependency directory; the provenance is retained in `deps/ORIGIN.txt`. No runtime path points into another user's home. The reference source is byte-identical to the user's `/home/lhaaso/liushijie/time-recover/src/recover_wcda_time.cc` and is stored as `.control/deps/legacy_reference.cc`.
@@ -155,3 +155,14 @@ Bounded corrected run 3728812.0 passed all 20 tests in 10.271 seconds and histor
 Submitted ETO receiver Slurm66062 from energy/apply with the exact de2c690 snapshot/config, 1 CPU/2 GiB. It started immediately at 08:39:48 and is RUNNING; the prior test-only 39-hour prediction was not its actual scheduling result. First sample has six durably dispatched requests (seven local request records) while the initial serial 442-request pass runs. No production source workers have been submitted, concurrency stays zero while February is 537/600, and v3 output receipts remain zero. The original 239 accepted friend identities remain carried unchanged. Inspect actual request/ready counts during initial dispatch rather than missing/stale progress.json.
 
 While the verified test node was busy, one full-4000-MiB alternate probe 3728753.0 ran on lhws235 and measured only 12,570,624 free bytes on a 100% root filesystem; it is rejected for recovery. It finished before the attempted ad edit, so history RequestDisk is the site default 2 KiB, not a 4 GiB reservation. It performed only the bounded 1 MiB write/remove diagnostics; no heavy test or recovery ran there. Do not misreport this as a viable full-profile node or repeat the finished probe. Future production remains subject to fresh actual scratch capacity and complete two-way scheduling/account checks.
+
+
+## User changes priority to January (2026-10-14 09:35)
+
+The user explicitly requests pausing February acquisition and completing January time/J2000 recovery first. This supersedes the previous February-throughput throttle. February has 537/600 receipts; no source jobs with its exact control Cmd remain on schedd11. Verified ETO wrapper PID219775 and receiver PID219777 against owner and full command line, then SIGSTOP both. Their state is T; February monitor_pause.json records the pause, original commands, and no automatic resume. Existing receipts, finished files, queue contents and partials are retained. Do not resume February without user instruction.
+
+All442 v3 requests are durably dispatched and Slurm66062 remains the receiver. Runtime user_priority_override.json now requests two January workers. The runtime priority checker verifies February receiver processes stay stopped and follows this explicit override instead of reducing January concurrency because February throughput is zero. A January monitor_pause.json still stops this recovery. Frozen scientific code/config/request identities are unchanged; old4 and v2235 receipts retain their original identities.
+
+Submitted January workers3729557.0(index0) and3729558.0(index1) under source concurrency0, then verified Owner=liushijie, exact v3/code/run_observation_time_shard.sh Cmd, actual account LHAASO.lhaaso.default, 4GiB RequestDisk and all three excluded nodes. Both matching directions succeed against40 lhws132 slots. Production memory is now3900MiB rather than4000: the healthy node has3957MiB per slot, measured recovery RSS was below716MiB, and the complete20 tests passed at3900. This is a resource placement adjustment; no algorithm, alignment, conflict, fallback, capacity or publication rule is relaxed. Earlier actual scratch evidence on this node showed664GiB available and successful fsync. Source probes/january_first_placement.json records job/account/resource matching. After setup, the runtime priority checker successfully sets concurrency2. Jobs were initially idle; genuine production and delivery must be checked from logs/ready/receipts, not inferred from submission.
+
+Final acceptance remains mandatory across all three scopes:4+235+442=681 files and69,279,369 events. Full ROOT validation is run through ETO Slurm before claiming month completion. Future energy inference must apply final survivor_event_indices identically to friend/alignment.

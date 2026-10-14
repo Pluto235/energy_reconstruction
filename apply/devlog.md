@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 09:36 · [uncommitted] Pause the verified February receiver on user instruction, replace the throughput throttle with January priority, and submit two resource-matched January workers while preserving frozen identities and final acceptance.
+
 - **energy_reconstruction** · 2026-10-14 08:40 · [uncommitted] Verify the complete 18-file frozen test package, pass all 20 IHEP regressions with exit zero, and start v3 Slurm reception while retaining February priority and all 239 carried identities.
 
 - **energy_reconstruction** · 2026-10-14 08:17 · [uncommitted] Fit only the small regression to measured 3957 MiB slots with a 3900 MiB request, verify both scheduling directions, and preserve production settings and validation gates.
@@ -28,11 +30,21 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 - **energy_reconstruction** · 2026-10-14 03:58 · [uncommitted] Launch the remaining 677 files with verified two-lane production, preserve four accepted identities, and schedule 15-minute priority monitoring plus final 681-file Slurm acceptance.
 
-- **energy_reconstruction** · 2026-10-14 03:27 · [uncommitted] Fix seven-column XRootD byte accounting; pass all 17 IHEP regressions and live queue/readback checks, preserve four accepted files and deploy the remaining 677 with new identities.
+- **energy_reconstruction** · 2026-10-14 03:26 · [uncommitted] Correct XRootD listing byte accounting with real-format and live-capacity checks; preserve four accepted friends and their identities, verify all 393 historical failures restored, and isolate remaining-file deployment.
 
-- **energy_reconstruction** · 2026-10-14 02:00 · [uncommitted] Bound reduced caches to requested missing-event indices after real-hour failure; preserve duplicates, verify all 15 batch regressions, retain failed-run evidence and audit 393 historical failures.
+- **energy_reconstruction** · 2026-10-14 02:02 · [uncommitted] Tune FP32 batch 352 to 13.35 GB reserved per V100, queue dual-GPU January job 66052 plus validation 66053 after day acceptance, replace pending single-GPU jobs and record measured ETA with updated follow-up.
 
-- **energy_reconstruction** · 2026-10-14 01:37 · [uncommitted] Implement receipt-bound January time/J2000 recovery, pinned task-owned dependencies, strict reduced-source ambiguity checks, restart regressions and operational documentation.
+- **energy_reconstruction** · 2026-10-14 01:33 · [uncommitted] Fix uproot 5.7 object-array output with explicit typed TTrees, pass 128-event 64748 smoke 66044 and two regression cases, start day acceptance 66045 and gate month/validation 66046-66047 with quiet background follow-up.
+
+- **energy_reconstruction** · 2026-10-14 01:08 · [uncommitted] Add fixed January 64748 Slurm launcher for new py310/input/output paths, SHA-256/config logging and overwrite/concurrency guards; verify syntax, isolated execution and scheduler test-only without inference.
+
+- **energy_reconstruction** · 2026-10-14 01:04 · [uncommitted] Reuse ETO Conda for new-disk Python 3.10 py310, install CUDA 12.4 Torch and project dependencies, and verify both V100s plus unchanged 64748 config/weights in Slurm 66040 without inference.
+
+- **energy_reconstruction** · 2026-10-14 00:41 · [uncommitted] Archive nine AstroCluster energy recoveries (24,669 files / 16.95 GB), verify 50 checkpoints, restore runs and reconstruct 64748 config from matching snapshots; retain ETO source and document runtime gaps.
+
+- **energy_reconstruction** · 2026-10-14 00:27 · [uncommitted] Extend the validated observation acquisition to isolated February manifests (28 days / 600 files), preserve January defaults and receipt guards, deploy the 5.5 GiB queue and submit eight IHEP producers with an independent ETO receiver.
+
+- **energy_reconstruction** · 2026-10-13 23:52 · [uncommitted] Verify January acquisition completion at 22:53: 681 files / 31 dates / 151.096 GB on ETO, exact manifest and receipt reconciliation, empty staging and safe retirement of the post-output ROOT shutdown task.
 
 - **energy_reconstruction** · 2026-10-13 20:46 · [uncommitted] Isolate repeat ROOT/CVMFS failures on lhws261, reschedule only two affected January shards and exclude both failed nodes for future matches; preserve their outputs and reclaim stale reservations safely.
 

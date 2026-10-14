@@ -36,8 +36,8 @@ No model parameters, preprocessing, event cuts or input data were changed.
 | Stage | Slurm | State when configured | Parameters / gate |
 |---|---|---|---|
 | January 1 pilot | 66045 | PASS, completed 02:15 +08:00 | 23/23 files; 1,522,147 selected events; no failures |
-| Full January inference | 66063 | Relaunch; gated two-GPU sample before production | 2 GPU / 16 CPU / 64 GB, batch 352 per GPU; verifies day receipt, unchanged model/geometry and approved code hash |
-| Full January validation | 66064 | afterok:66063 | 681 filenames / 31 days, independent cuts and event identities, finite energy consistency, exact header content and schema |
+| Full January inference | 66063 | User-paused for shutdown/GPU reset; requeued in held state | 2 GPU / 16 CPU / 64 GB, batch 352 per GPU; verifies day receipt, unchanged model/geometry and approved code hash |
+| Full January validation | 66064 | User-held; afterok:66063 | 681 filenames / 31 days, independent cuts and event identities, finite energy consistency, exact header content and schema |
 
 The pilot has its own `apply/output/inference_64748_acceptance/day/` directory.
 Production writes `/mnt/newdisk/shijie/WCDA_obs_eval_64748/` and does not reuse pilot
@@ -134,3 +134,28 @@ GPU-only events/s; batch 384 reserves 14.56 GB without a throughput gain, while
 measured speed benefit. No mixed precision or model changes are introduced.
 The earlier calendar completion window is obsolete; refresh the estimate after
 66063 starts and real month progress is available.
+
+## User pause for shutdown and GPU reset (10:40 +08:00)
+
+At the user's request, 66063 was terminated and requeued in a held state using
+`scontrol requeuehold`; 66064 was held separately. This releases CUDA contexts,
+unlike process suspension. The 30-minute automation 64748 is PAUSED. No automatic
+release or resubmission is authorized until the user requests resumption.
+Verification found no GPU compute processes, 5 MiB on each V100 and 0% utilization.
+The unrelated CPU-only time receiver 66062 remains running; host shutdown will
+interrupt that separate workflow.
+
+Inputs, checkpoints and all existing outputs remain in place. At pause request,
+48 output paths existed; these two were actively being written and must be
+reviewed before reuse: `0103/Esg20220103_00.root` and
+`0103/Esg20220103_01.root`. No partial file was deleted or accepted as complete.
+Other outputs also require provenance and content verification before a resume;
+the full-month acceptance is still pending. Current evidence is
+`pause-66063.json`, with prior job registry, provenance, sample receipt and logs
+preserved in `paused-66063/` under the control directory.
+
+Do not simply release 66063: the production launcher deliberately refuses an
+existing output set. Resumption must review the preserved files, keep source
+ordering/shards/seeds and approved provenance, and arrange an explicit resume or
+fresh output directory before rebuilding the validator dependency. Previous
+calendar completion estimates are withdrawn for this user pause.

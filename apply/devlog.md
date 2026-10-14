@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-14 10:41 · [uncommitted] Pause January inference 66063 in requeue-hold and hold validator 66064 for user GPU reset, pause automation, verify CUDA contexts released, and preserve outputs plus partial-file evidence for reviewed resumption.
+
 - **energy_reconstruction** · 2026-10-14 09:45 · [uncommitted] Exclude time-recovery sidecars from direct MMDD inference discovery, pass five regressions, and relaunch gated two-GPU January inference/validation as 66063/66064 with batch 352 and explicit provenance transition.
 
 - **energy_reconstruction** · 2026-10-14 02:02 · [uncommitted] Tune FP32 batch 352 to 13.35 GB reserved per V100, queue dual-GPU January job 66052 plus validation 66053 after day acceptance, replace pending single-GPU jobs and record measured ETA with updated follow-up.

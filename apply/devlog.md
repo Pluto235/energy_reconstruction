@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-15 22:35 · [uncommitted] Replace continuous chat polling with user-requested 30-minute ETO Slurm wakeups of the existing chat; verify daemon access in Slurm66164, launch timer66165, preserve quiet-normal/notify-actionable policy and final-delivery stop condition.
+
 - **energy** · 2026-10-15 22:10 · [uncommitted] Extend independent scalar friend audit with per-file phase timings, shared startup attribution and indexed transport/header/file retry and checkpoint recovery history; preserve frozen production code and inputs.
 
 - **energy** · 2026-10-15 21:07 · [uncommitted] Audit retry-ceiling update after draining 86 accepted files: prevent nested header/file retries exceeding three attempts, stop new source files on changed input, record interrupted checkpoint cleanup, and use verified site short/default classes. Scientific C++ and contract unchanged; five Slurm fixture groups pass.

@@ -187,3 +187,21 @@ directories for failed headers, checks candidate identity/header uniqueness/ROOT
 UUID and records the raw AI file's available metadata. It cannot publish a friend
 or substitute a mismatched stream. Its evidence appears under
 `audit/header_fullmonth/`; execution is deferred until production is terminal.
+
+## Thirty-minute follow-up
+
+At the user's request, active chat polling stops after submission. ETO Slurm
+66165 runs `tools/monitor_observation_nhit_30m.py`, queuing one check into the same
+Codex chat every 1800 seconds using the ETO daemon. Slurm 66164 verified daemon
+access from the actual scheduler context; the queue API also accepted a scoped
+installation self-test. The first regular check is 2026-10-15 23:04:59 Asia/Shanghai.
+This is an ETO timer, not a native app Scheduled entry: the automation-update tool
+was unavailable in this connection. No Mac filesystem, agent or socket is used.
+
+`audit/heartbeat/` contains the durable prompt, configuration, timer job identity,
+pending/handled tick receipts and logs. A file lock prevents duplicate timers;
+an unhandled or ambiguous queue request prevents more requests from accumulating.
+Normal checks stay quiet; actionable failures and the final result are reported.
+After final audit, failure investigation, documentation and publication, the
+checking turn writes `stop.json` and retires this timer. Receiver/source polling
+continues at its existing cadence to accept outputs and release staging promptly.

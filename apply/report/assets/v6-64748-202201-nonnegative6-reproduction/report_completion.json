@@ -1,0 +1,55 @@
+{
+  "result": "COMPLETED_PRESENTATION_DELIVERY",
+  "scientific_status": "DIAGNOSTIC_ONLY_UNCERTAINTY_NOT_CERTIFIED",
+  "source_commit": "8bcb9b5e61e78f814fba6813a01748fb0841e77f",
+  "slurm_jobs": [
+    {
+      "id": "66101",
+      "name": "v6_january_style",
+      "state": "COMPLETED",
+      "exit": "0:0",
+      "elapsed": "00:02:14",
+      "cpus": "4",
+      "memory": "8G"
+    },
+    {
+      "id": "66102",
+      "name": "v6_january_style",
+      "state": "COMPLETED",
+      "exit": "0:0",
+      "elapsed": "00:02:15",
+      "cpus": "4",
+      "memory": "8G"
+    },
+    {
+      "id": "66103",
+      "name": "v6_january_html",
+      "state": "COMPLETED",
+      "exit": "0:0",
+      "elapsed": "00:00:02",
+      "cpus": "2",
+      "memory": "4G"
+    }
+  ],
+  "report_sha256": "2c3b000db72fd430505affa8a77789d6d6dd30c2f81e258edabf96bce8b6abeb",
+  "validation_sha256": "ccff2d178c54fbcb8e309afbd8219b6cdf0aed6e4d9ebe62d629da020d41d08c",
+  "source_git_blobs": "MATCH_GENERATION_SOURCE_COMMIT",
+  "images": 25,
+  "sections": 17,
+  "source_analysis_receipt_unchanged": true,
+  "browser_preview": "NOT_RUN: file URL rejected by browser URL policy; no alternate route attempted",
+  "static_qa": "PASS: unique anchors, local links, image alt text, PNG signatures/CRC/dimensions",
+  "visual_png_review": [
+    "sed_both_overlay",
+    "pull_grid_propagated",
+    "normalized_dec_counts",
+    "roi_excess_grid",
+    "sed_points_ratio",
+    "model_counts_vs_excess",
+    "normalized_ra_excess"
+  ],
+  "limitation": "Desktop/mobile rendered layout not certified; scientific uncertainty remains uncertified",
+  "final_html_job": "66103",
+  "figure_generation_job": "66102",
+  "formatting_refresh": "Strip inherited trailing CSS whitespace; verify all25 image hashes, then invoke main with make_figures disabled in process; original analysis unchanged."
+}

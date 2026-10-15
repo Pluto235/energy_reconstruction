@@ -6,7 +6,7 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
-- **energy_reconstruction** · 2026-10-15 11:50 · [uncommitted] 按原 v6 版式生成一月非负约束复现报告：17章节、25图、44-cell账本与18点SED；保留诊断状态并核对原交付哈希。
+- **energy_reconstruction** · 2026-10-15 11:50 · [531ab91] 按原 v6 版式生成一月非负约束复现报告：17章节、25图、44-cell账本与18点SED；保留诊断状态并核对原交付哈希。
 
 - **energy_reconstruction** · 2026-10-15 11:30 · [uncommitted] Complete nonnegative6 delivery66100:23tests,53artifact hashes,44cells/18SED points retained; document failed6/8uncertainty cases and poor spectral goodness, preserve diagnostic-only status and final report/receipt hashes.
 - **energy_reconstruction** · 2026-10-15 11:27 · [uncommitted] Complete Slurm66094–66098 and independent diagnostic-result audit; fix browser-confirmed wide-table overflow before regenerating report and delivery hashes.

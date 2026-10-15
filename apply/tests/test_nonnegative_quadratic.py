@@ -24,6 +24,11 @@ class NonnegativeTests(unittest.TestCase):
         self.assertTrue(fit['active'])
         self.assertGreaterEqual(d.minimum_quadratic_on_centered_disk(fit['coefficients'],6.),-fit['tolerance'])
         self.assertGreater(fit['objective'],fit['unconstrained_objective'])
+        # Symmetry reduces this fixture to a one-parameter boundary solution.
+        basis=1-(self.a[:,3]+self.a[:,5])/36
+        weight=1/np.maximum(z,1)
+        c0=np.sum(weight*basis*z)/np.sum(weight*basis*basis)
+        np.testing.assert_allclose(fit['coefficients'],[c0,0,0,-c0/36,0,-c0/36],atol=1e-9,rtol=1e-8)
     def test_continuous_minima_and_grid_counterexample(self):
         from apply.stages.poisson_roi_background import _minimum_quadratic_on_centered_disk
         for c, minimum in [([1,-2,0,1,0,1],0),([36,0,0,-1,0,-1],0),([5,-2,0,-1,0,0],-43)]:

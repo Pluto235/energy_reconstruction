@@ -174,7 +174,7 @@ Cell62原 analytic B_on={cell62['old_B_on']:.12g}，本次={cell62['B_on']:.12g}
 
 ## 低统计、区间覆盖与偏差
 
-生产前锁定 [伪实验设计](pseudoexperiment_design.json)，SHA256={sha256(ROOT/'pseudoexperiment_design.json')}。每44cell做512次plug-in Poisson bootstrap；重拟合时重新计算权重及原归一化。使用样本SD作为σB，报告max(0,Bhat−zσB)至Bhat+zσB；不使用旧Hessian。4类独立真值为constant、正倾斜二次、内部接触零和圆周接触零，各N_ann=10/1000；每场景256次外层、128次内层。失败进入覆盖率分母。条件plug-in偏差、RMSE、边界率、失败率逐cell见 [bootstrap_cells.json](bootstrap_cells.json)；独立真值完整结果见 [coverage.json](coverage.json)。
+生产前锁定 [伪实验设计](pseudoexperiment_design.json)，SHA256={sha256(ROOT/'pseudoexperiment_design.json')}。每44cell做512次plug-in Poisson bootstrap；重拟合时重新计算权重及原归一化。使用样本SD作为σB，报告max(0,Bhat−zσB)至Bhat+zσB；不使用旧Hessian。4类独立真值为constant、正倾斜二次、内部接触零和圆周接触零，各N_ann=10/1000；每场景256次外层、128次内层。失败进入覆盖率分母；bias/RMSE仅对有效估计计算，失败率单列。条件plug-in偏差、RMSE、边界率、失败率逐cell见 [bootstrap_cells.json](bootstrap_cells.json)；独立真值完整结果见 [coverage.json](coverage.json)。
 
 覆盖试验仅验证cell62环区/孔径几何，不能证明全部44几何的普遍校准。68%/95%为名义水平，实际覆盖与1σ Monte Carlo误差如下；通过预设宽容下限也不等于证明精确名义覆盖。偏差门槛额外要求 |bias/true B|≤10%。不根据谱形、覆盖结果换真值或修正参数。
 ''',table(['真值','N_ann','true B','bias','RMSE','boundary','failure','cov68','cov95','MC SE68/95','预设下限68/95','偏差/覆盖门槛'],[[r['shape'],r['expected_annulus_count'],fmt(r['truth_B_on']),fmt(r['bias']),fmt(r['rmse']),fmt(r['boundary_rate']),fmt(r['failure_rate']),fmt(r['coverage68']),fmt(r['coverage95']),str(r['coverage_mc_se']),str(r['acceptance_lower']),r['pass_calibration']] for r in coverage]),

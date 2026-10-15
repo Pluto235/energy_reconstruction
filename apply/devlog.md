@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-15 13:28 · [uncommitted] 更新一月Stage G叠加图：加入7个Pass5点及点拟合LogPar，移除full-array PL；HSC数据来源等待确认。
+
 - **energy_reconstruction** · 2026-10-15 11:50 · [531ab91] 按原 v6 版式生成一月非负约束复现报告：17章节、25图、44-cell账本与18点SED；保留诊断状态并核对原交付哈希。
 
 - **energy_reconstruction** · 2026-10-15 11:30 · [uncommitted] Complete nonnegative6 delivery66100:23tests,53artifact hashes,44cells/18SED points retained; document failed6/8uncertainty cases and poor spectral goodness, preserve diagnostic-only status and final report/receipt hashes.

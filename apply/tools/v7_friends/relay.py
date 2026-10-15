@@ -19,10 +19,25 @@ def remote(code):
 def receipt_names(run):
     return set(json.loads(remote('import json;from pathlib import Path; print(json.dumps([p.parent.name+"_eventout.root" for p in Path('+repr(run)+').glob("files/*/receipt.json")]))')))
 
+
+def cleanup_staged(names,run):
+    remote('''import json,hashlib
+from pathlib import Path
+stage=Path('''+repr(STAGE)+''');run=Path('''+repr(run)+''')
+for n in '''+repr(names)+''':
+ p=stage/n
+ if not p.exists():continue
+ r=json.loads((run/'files'/n.removesuffix('.root')/'receipt.json').read_text())
+ if hashlib.sha256(p.read_bytes()).hexdigest()!=r.get('summary_sha256'):raise RuntimeError('receipt/hash missing; retain staging '+n)
+ p.unlink();(stage/(n+'.ready')).unlink(missing_ok=True)
+''')
+
 def main():
     global ON_ETO
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--inventory',type=Path,required=True);p.add_argument('--run',required=True);p.add_argument('--on-eto',action='store_true');args=p.parse_args();ON_ETO=args.on_eto
     inv=json.loads(args.inventory.read_text());items=inv['files'];done=receipt_names(args.run)
+    staged=set(json.loads(remote('import json;from pathlib import Path;print(json.dumps([p.name for p in Path('+repr(STAGE)+').glob("*.root")]))')))
+    cleanup_staged([x['summary_name'] for x in items if x['name'] in done and x['summary_name'] in staged],args.run)
     todo=[x for x in items if x['name'] not in done]
     for start in range(0,len(todo),100):
         batch=todo[start:start+100];names=[i['summary_name'] for i in batch]
@@ -56,14 +71,7 @@ for n in names:
         while not wanted.issubset(receipt_names(args.run)):
             if time.monotonic()>deadline:raise TimeoutError('No completed batch after one hour; inspect Slurm')
             time.sleep(3)
-        remote('''import json,hashlib
-from pathlib import Path
-stage=Path('''+repr(STAGE)+''');run=Path('''+repr(args.run)+''')
-for n in '''+repr(names)+''':
- p=stage/n;r=json.loads((run/'files'/n.removesuffix('.root')/'receipt.json').read_text())
- if hashlib.sha256(p.read_bytes()).hexdigest()!=r.get('summary_sha256'):raise RuntimeError('receipt/hash missing; retain staging '+n)
- p.unlink();(stage/(n+'.ready')).unlink()
-''')
+        cleanup_staged(names,args.run)
         print(json.dumps(dict(receipted_and_cleaned=start+len(batch),total=len(todo))),flush=True)
     print('All inventory files have receipts; scientific success is in summary.json.',flush=True)
 

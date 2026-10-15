@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-15 17:17 · [uncommitted] Deliver full v7 friend batch: 9981 files/38448238 events verified, 19 files quarantined, zero pending; independent Slurm66132 audit and 11 tests pass; document scoped diagnostics and hash-guarded resume cleanup.
+
 - **energy** · 2026-10-15 17:11 · [uncommitted] Exclude repeatedly stalled lhws183 from January extraction jobs while preserving site requirements; restart in isolated v4 staging.
 
 - **energy** · 2026-10-15 17:01 · [uncommitted] Fix IHEP uproot 5.3 string provenance writing; verify all six contract checks in both IHEP and ETO runtimes before v3 pilot.

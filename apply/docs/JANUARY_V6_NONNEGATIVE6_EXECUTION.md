@@ -146,3 +146,5 @@ Band update66107 completed0:0 in3s (2CPU/4GiB) from `2ad8666ef11e92f3ff710dc0c0d
 ### Original v6 curve comparison
 
 Add the archived Scheme R 2R analytic B_on Stage F LogPar to both January SED overlays as a rose dashed line (#db2777). Read phi0/alpha/beta directly from the existing hash-bound comparison JSON at pivot3TeV; no refit. Preserve January blue central curve and conditional covariance shading, Pass5/HSC and other reference points. Per user instruction, omit the unavailable original covariance band and explain this in the report. Only two PNGs and presentation/provenance files change.
+
+Slurm66108 completed0:0 in4s from `5f41ac37ddd9015d0a3785547e7d9a93bf7df7ef`. Both rose curves match an independent analytic evaluation at all320 energies; line styles, January blue line/band retention, omission of original shading and unchanged23 other images pass. Both PNGs visually checked; all local input/source/image hashes and PNG CRCs pass. Original53 science artifacts remain unchanged by the builder. HTML SHA256 `24f6df1b5b68d9b778caaa7440de462b0329b1d2b73c4cf59692e463e9631e7d`.

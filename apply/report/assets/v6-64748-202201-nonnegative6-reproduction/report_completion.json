@@ -1,7 +1,7 @@
 {
-  "result": "SED_REFERENCE_AND_COVARIANCE_BAND_UPDATE_COMPLETE",
+  "result": "ORIGINAL_V6_CURVE_OVERLAY_COMPLETE",
   "scientific_status": "DIAGNOSTIC_ONLY_UNCERTAINTY_NOT_CERTIFIED",
-  "source_commit": "2ad8666ef11e92f3ff710dc0c0d664d6f2f37f73",
+  "source_commit": "5f41ac37ddd9015d0a3785547e7d9a93bf7df7ef",
   "slurm_jobs": [
     {
       "id": "66101",
@@ -65,10 +65,19 @@
       "elapsed": "00:00:03",
       "cpus": "2",
       "memory": "4G"
+    },
+    {
+      "id": "66108",
+      "name": "v6_original_curve",
+      "state": "COMPLETED",
+      "exit": "0:0",
+      "elapsed": "00:00:04",
+      "cpus": "2",
+      "memory": "4G"
     }
   ],
-  "report_sha256": "fe14bd9e7142d64c04b8ff03408f4d43e886a1e296953cc592a2016e9076a93a",
-  "validation_sha256": "7d3fbf540713ceec94923caeb360b74d888c822fa895df761671f9d649fe2568",
+  "report_sha256": "24f6df1b5b68d9b778caaa7440de462b0329b1d2b73c4cf59692e463e9631e7d",
+  "validation_sha256": "e62e8f164a07ca626b876383899b361b1ffadcc21092586cc0ce2c395b4f024e",
   "source_git_blobs": "MATCH_GENERATION_SOURCE_COMMIT",
   "images": 25,
   "sections": 17,
@@ -86,10 +95,10 @@
     "sed_nhit_overlay"
   ],
   "limitation": "Desktop/mobile rendered layout not certified; scientific uncertainty remains uncertified",
-  "final_html_job": "66107",
+  "final_html_job": "66108",
   "figure_generation_job": "66102",
   "formatting_refresh": "Strip inherited trailing CSS whitespace; verify all25 image hashes, then invoke main with make_figures disabled in process; original analysis unchanged.",
-  "sed_overlay_generation_job": "66107",
+  "sed_overlay_generation_job": "66108",
   "changed_images": [
     "sed_both_overlay.png",
     "sed_nhit_overlay.png"
@@ -103,7 +112,9 @@
     "both updated SED overlays visually checked",
     "Stage F conditional 1-sigma shading in both overlays",
     "Full covariance propagated using original v6 helper; independently checked by finite differences",
-    "Covariance basis/symmetry/PSD and positive ordered bounds; center matches frozen curve"
+    "Covariance basis/symmetry/PSD and positive ordered bounds; center matches frozen curve",
+    "Original v6 line matches independent analytic LogPar evaluation at all320 plotted energies",
+    "Rose dashed line and only January covariance band verified on both figures"
   ],
   "hsc_reference_csv": "apply/report/assets/official-v099/wcda_crab_sed_v099_20250731_20260616_123624.csv",
   "hsc_point_fit": {
@@ -113,10 +124,7 @@
     "pivot_tev": 3.0
   },
   "hsc_fit_method": "Unweighted quadratic fit in ln(dN/dE) versus ln(E/3 TeV); visual reference only, not a likelihood fit",
-  "latest_sed_log_hashes": {
-    "v6_sed_band_66107.out": "378f630f69e224333f5706c88c20ed160ccf16a462d13a5da95f4e3549eeaf71",
-    "v6_sed_band_66107.err": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-  },
+  "latest_sed_log_hashes": {},
   "covariance_band": {
     "source": "propagated/fit.json: fits.logpar_conservative",
     "parameter_basis": [
@@ -168,5 +176,18 @@
       ]
     }
   },
-  "band_validation_script_sha256": "979e3eef63c6a5154fb7b30062d4a3bd54344c5956318c94a97fc2750244db74"
+  "band_validation_script_sha256": "979e3eef63c6a5154fb7b30062d4a3bd54344c5956318c94a97fc2750244db74",
+  "original_v6_overlay": {
+    "source": "scheme_R_double_rayleigh_analytic_bon_comparison.json: Scheme R 2R analytic B_on",
+    "color": "#db2777",
+    "linestyle": "--",
+    "covariance_band": false,
+    "reason": "Original covariance unavailable; omitted as requested",
+    "parameters": {
+      "phi0": 2.4265421276459192e-12,
+      "alpha": 2.7612846846974444,
+      "beta": 0.12018327474116283
+    },
+    "pivot_tev": 3.0
+  }
 }

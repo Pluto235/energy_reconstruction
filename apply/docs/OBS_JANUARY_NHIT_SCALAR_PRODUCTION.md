@@ -1,5 +1,17 @@
 # January 2022 scalar Nhit continuation
 
+**Final status, 2026-10-16 04:09 CST:** all **681 files / 69,279,369 events**
+passed independent Slurm audit 66179 and closure check 66180. The 55 legacy friends
+remain unchanged; 626 new scalar friends bring actual mixed size to 2,229,411,820
+bytes. The two user-confirmed segments affect 1,803 events. Jan23 and Jan28 use
+verified real headers. No unresolved file remains. See
+[the final report](OBS_JANUARY_NHIT_FINAL_REPORT.md) for exact coverage, performance,
+source exceptions, recovery history, validation limits and evidence paths.
+The sections below preserve implementation and recovery history; terminal old
+jobs and stale production snapshots must not be restarted. Final publication and
+timer retirement are recorded under `audit/github_publications.json` and
+`audit/heartbeat/`.
+
 2026-10-15. Run `20261015_january_v6_scalar` is independent of the paused v5 records
 and the previous benchmark. Its ETO state is
 `/mnt/newdisk/shijie/WCDA_obs_friends/nhit/manifests/20261015_january_v6_scalar/`;
@@ -14,14 +26,13 @@ only for those two missing segments. Record them as `user_confirmed_override`,
 with the authorization digest and missing-header fact; never invent a reduced
 header UUID/digest or describe these assignments as header-verified. The private
 verification is the user's attestation, not independently recovered evidence.
-Other segments retain the original header requirements. This entry records the
-authorization; it does not claim that the two failed files have already passed
-reprocessing. Apply the exception in isolated recovery after production, preserving
-old failure records and accepted outputs, then rerun the final audit.
+Other segments retain the original header requirements. Both authorized files
+subsequently passed isolated repair and the final independent audit. Original
+failure records, authorization and missing-header facts remain preserved.
 
 Esg20220123_00.root was separately quarantined for an unrecognized compression
-algorithm in its run140409/es1/seq9399 reduced header. It is outside this exception
-and requires independent investigation; do not extend poolused=7 to it.
+algorithm in its run140409/es1/seq9399 reduced header. It was later accepted with
+its unique real header and UUID; it is outside the user-confirmed exception.
 
 The authorized universe remains the 31-day / 681-file original WCDA_obs input
 snapshot, 69,279,369 events. Slurm 66152 checked the restoration receipts, current
@@ -74,7 +85,7 @@ in-flight reservations. Each file reserves two 128 MiB output limits plus 16 MiB
 control slack; 512 MiB remains below the current personal soft/hard limit. Stage
 and quota histories support measured peak usage; no shared-free-space assumption.
 
-Start/resume from ETO apply with:
+Historical start/resume command from ETO apply (this run is now complete):
 
 ```
 sbatch tools/observation_nhit_scalar/run.sbatch 20261015_january_v6_scalar
@@ -84,17 +95,17 @@ Code/config/input changes reject resumption. `progress.json` is provisional;
 `finished.json` may report terminal failures. Only `completed.json`, after all
 681 durable receipts and final digest checks, certifies a completed month.
 
-Known data dependency: Esg20220102_12 requires run139579/es1/seq3336 reduced.root.
+Original data dependency: Esg20220102_12 lacks run139579/es1/seq3336 reduced.root.
 The old investigation found only es2 at that sequence, which is not substitutable.
-The new workflow must isolate it unless an identity-exact reliable header is found.
-No poolused=7 imputation is permitted.
+It is now resolved only by the precise user-confirmed exception above, not by
+claiming a recovered header or applying a general poolused default.
 
 Preflight: four Python synthetic groups passed in Slurm 66153 (duplicate/missing/
 reordered/empty keys, charge/time/bin boundaries, unique/conflicting/missing header,
 non-7 pool and empty ROOT roundtrip). Every source worker additionally exercises
 its deployed C++ reader with a zero-hit event, exact boundaries, a rejected PINC
-boundary event and 100001 stored hits. Production results and measured performance
-will be added after execution; this implementation note is not a completion claim.
+boundary event and 100001 stored hits. The final report records production results
+and measured performance; the initial implementation checks are retained below.
 
 ## Full-file evidence and operational checks
 

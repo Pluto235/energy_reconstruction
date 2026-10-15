@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-15 16:44 · [uncommitted] Resume bounded MC summary transfer through verified IHEP login004 after round-robin exec failures; retain existing host-key checks and all published receipts.
+
 - **energy** · 2026-10-15 16:37 · [uncommitted] Add synthetic ROOT publication/report tests, final readback and scoped delivery workflow, raw-hit boundary diagnostics, and four-stream bounded transfers.
 
 - **energy** · 2026-10-15 16:36 · [uncommitted] Add bounded January observation Nhit/poolused friends with exact event-key matching, full retained-content verification, three-file gate and durable publication.

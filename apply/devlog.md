@@ -6,6 +6,9 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-15 11:09 · [uncommitted] Draft and verify the English energy poster from template e4d362c with five sourced figure groups, red open items and editable package; poster d8a76b6 is pushed.
+
+
 - **energy_reconstruction** · 2026-10-15 00:52 · [7d46912] Record completed delivery66090: thirteen tests, 681 hashed parquet parts, exact Git source bindings, report/receipt hashes and two independent reviews; retain scientific failure and blocked spectrum.
 - **energy_reconstruction** · 2026-10-15 00:48 · [uncommitted] Verify January report66089, bind 44-cell diagnostic JSON to NPZ and Stage C, preserve scientific failure, and add final 681-parquet/source-commit delivery receipt with thirteen fixtures.
 - **energy_reconstruction** · 2026-10-15 00:42 · [uncommitted] Execute frozen January v6 on ETO: 681-file C and GTI pass, rebuild exact 2R PSF, preserve cell62 negative analytic background and block formal E–G; add diagnostics, twelve fixtures, Slurm receipts and report source.

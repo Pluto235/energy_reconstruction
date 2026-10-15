@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-15 16:36 · [uncommitted] Add bounded January observation Nhit/poolused friends with exact event-key matching, full retained-content verification, three-file gate and durable publication.
+
 - **energy** · 2026-10-15 16:30 · [uncommitted] Use existing forwarded SSH agent for bounded direct ETO–IHEP summary transfer; add transport checks and preserve immutable friend processing contract.
 
 - **energy** · 2026-10-15 16:26 · [uncommitted] Add unfiltered atomic MC v7 friends with exact matching, native Nhit checks, bounded relay and readback; chi2 diagnostic-only by user instruction; 3-file Slurm pilot passes.

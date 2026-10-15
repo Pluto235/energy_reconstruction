@@ -6,6 +6,9 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-15 12:48 · [uncommitted] Revise poster Motivation from thesis proposal section 1.3; preserve later sections, verify PDF layout and refresh editable package (poster 6ea00db).
+
+
 - **energy_reconstruction** · 2026-10-15 11:09 · [uncommitted] Draft and verify the English energy poster from template e4d362c with five sourced figure groups, red open items and editable package; poster d8a76b6 is pushed.
 
 

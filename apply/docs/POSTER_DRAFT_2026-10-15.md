@@ -3,7 +3,7 @@
 The English poster draft is saved locally at `prestation/poster/` and versioned in the separate poster repository:
 
 - Template base: `e4d362ccfd5a7a34ff6de7c378df2dbdcd875a2b`.
-- Draft: [poster commit d8a76b6](https://github.com/Pluto235/poster/commit/d8a76b6e724004a4ee26bf76c14c72fe9d92de04), branch `codex/energy-reconstruction-draft`.
+- Draft: [poster commit 6ea00db](https://github.com/Pluto235/poster/commit/6ea00db1472f002da06cc53ee8025c245b800e99), branch `codex/energy-reconstruction-draft`.
 - Deliverables: `main.pdf`, `preview.png`, editable `main.tex`/`content.tex`, `energy_poster_draft.zip`, and an English README containing the narrative, figure inventory, provenance and completion checklist.
 - Original local folder: `.recovery/poster-before-template-20261015/`. The template main branch and original template files are preserved.
 
@@ -14,3 +14,7 @@ Scientific boundaries are explicit: the model-64748 evaluation file contains 857
 Validation: successful Tectonic compile with no overfull/underfull warnings; one 60 × 120 cm page; all six sections present; body text clear of the footer; red annotations present; no characters outside the page; all copied-asset hashes and the exact 44/91 selector checked; final PNG visually reviewed; ZIP integrity checked. A lightweight 20-bin display table was derived from saved predictions, with overall bias/scatter matching the saved metrics within 1e-7. No training, batch reconstruction or heavy computation ran locally.
 
 Small evidence snapshots and validation/output hashes are recorded in the poster repository under `evidence/`. Detailed source paths, public references and final-meeting requirements are in its README. The draft is ready for scientific discussion, not final printing.
+
+## Motivation revision
+
+Section 1 now follows the user-provided thesis proposal, section 1.3 (PDF pages 9–11, printed pages 6–8). The argument connects spectral curvature, cutoffs and time-resolved emission to information loss in shower-size proxies, energy migration, and the motivation for point-cloud learning. Crab reconstruction remains the test on real data; gains are explicitly subject to matched comparisons and observation validation. Source PDF identity and page mapping are saved in the poster evidence. Sections 2–6 and source figures are unchanged. The refreshed PDF compiles without overflow warnings, passes page/footer bounds checks, and has been visually inspected; the source ZIP contains the revised text.

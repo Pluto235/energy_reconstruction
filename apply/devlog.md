@@ -6,6 +6,7 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-15 13:45 · [uncommitted] 按原v6完整协方差传播定义补齐两张SED图的蓝色条件1σ带，注明逐能量统计含义及覆盖率限制。
 - **energy_reconstruction** · 2026-10-15 13:34 · [uncommitted] 根据确认来源补充HSC v0.99的7个SED点、误差棒和点拟合LogPar，更新两张Stage G叠加图及来源记录。
 - **energy_reconstruction** · 2026-10-15 13:28 · [uncommitted] 更新一月Stage G叠加图：加入7个Pass5点及点拟合LogPar，移除full-array PL；HSC数据来源等待确认。
 

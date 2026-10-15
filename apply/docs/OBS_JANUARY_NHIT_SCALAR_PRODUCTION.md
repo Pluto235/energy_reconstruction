@@ -77,3 +77,63 @@ non-7 pool and empty ROOT roundtrip). Every source worker additionally exercises
 its deployed C++ reader with a zero-hit event, exact boundaries, a rejected PINC
 boundary event and 100001 stored hits. Production results and measured performance
 will be added after execution; this implementation note is not a completion claim.
+
+## Full-file evidence and operational checks
+
+All three isolated full-file outputs passed exact comparison on aws003:
+
+| File | Events | Previous scalar source / s | Optimized source / s |
+|---|---:|---:|---:|
+| Esg20220101_00.root | 320258 | 213.4 | 154.792 |
+| Esg20220116_00.root | 165969 | 216.3 | 125.401 |
+| Esg20220131_00.root | 96190 | 102.2 | 73.052 |
+
+Total 582417 events: zero duplicate/missing/surplus keys and zero differences in
+keys, nv, Nhit, poolused, ihep_entry or eight-bin assignment. Aggregate source
+speedup is approximately 1.51x (531.9 to 353.2 seconds, 33.6% reduction). This is
+against the previous scalar implementation, not the older charge-transfer scheme.
+These runs used different hosts and do not control server/cache state; the gain
+is an observed workflow comparison, not a causal separation of each optimization.
+Detailed phases and actual transfer/ETO timings are in each pilot receipt.
+
+HTCondor 3741346 processed all three in one process/session. Restart 3742229
+processed zero files and skipped all three durable checkpoints. Both sessions
+rejected a second process's attempt to acquire their worker lock and passed actual
+C++ ROOT boundary/100001-hit fixtures. The first session's scheduler JobStartDate
+and its source session record are saved under audit/pilot_started.json, allowing
+startup before Python plus ROOT setup to be distinguished from source processing.
+
+Slurm 66155 verified a fresh connection specifically to lxlogin004 after the local
+alias was found to point at round-robin lxlogin. `ihep-work` now fixes HostName to
+lxlogin004 and verifies its key against the already trusted lxlogin cluster key;
+no host-key bypass, socket or agent is used. Early exec-channel retries are in the
+controller log. Old tasks 3739735/3739748/3739750 are retired; five own unaccepted
+source temporaries and four local unfinished request arrays were removed only
+after preserving source logs, task/failure records and cleanup inventory.
+
+Fresh `hep_clus -g lhaaso --walltime` reports default=15 h, long=720 h,
+short=30 min. The operational Slurm supervisor uses exact site-generated class
+attributes (short for pilot, default for production); each worker voluntarily
+checkpoints/exits after 8 h. It preserves Requirements and both node exclusions.
+The supervisor also holds this run's source jobs if the receiver detects changed
+input identity, stopping further file expansion. These controls are separate from
+frozen scientific source code. Run it alongside a resumed controller:
+
+```
+sbatch --partition=main --qos=default-safe --mem=1G --time=7-00:00:00 \
+  --wrap='cd /mnt/newdisk/shijie/energy && OPENBLAS_NUM_THREADS=1 /mnt/newdisk/shijie/conda/envs/py310/bin/python -u -B apply/tools/supervise_observation_nhit_scalar.py /mnt/newdisk/shijie/WCDA_obs_friends/nhit/manifests/20261015_january_v6_scalar'
+```
+
+The independent header investigation completed under HTCondor 3742218. Direct
+XRootD directory listings of Jan01/02/03 found no run139579/es1/seq3336 source.
+The same sequence's only Jan02 reduced file has a unique header **(139579,2,3336)**,
+UUID 591bc956-6b8a-11ec-b2ef-55e6020abeef: it is a different event stream and cannot
+supply the missing es1 header, even though it reports poolused=7. The investigation
+retains both initial diagnostic implementation failures and corrected results in
+audit/header_probe. This does not prove absence from every external archive.
+
+ETO execution commit: 182a93591d85f4beaf057598331f79bfea3d6d59. GitHub publication:
+9041c78847bf5eee9deef36e978d186367d42117, with exactly the same tree
+(e9d079f109b2ca2a535a2377fd5ae672e8322bcd), published through the connected API
+because ETO's SSH key is not authorized by GitHub. The publication audit records
+both identities; data products retain their actual ETO execution-code provenance.

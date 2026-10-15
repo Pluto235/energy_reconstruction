@@ -81,6 +81,16 @@ def plot_sed_overlay(points, frozen, path):
     ax.plot(pass5_e, pass5_y, 'o', ms=5, color='#111827', label='Pass5 WCDA points', zorder=5)
     ax.plot(energy, G.sed_curve(energy, model_name='logpar', params=pass5_fit, pivot_tev=3.),
         color='#111827', lw=1.7, label='Pass5 point-fit LogPar')
+    hsc_e, hsc_y, hsc_lo, hsc_hi = reference_sed.v099_points()
+    require(len(hsc_e)==len(hsc_y)==len(hsc_lo)==len(hsc_hi)==7, 'Expected seven archived HSC v0.99 points')
+    require(np.isfinite([hsc_e,hsc_y,hsc_lo,hsc_hi]).all() and np.all(np.asarray([hsc_lo,hsc_hi])>=0), 'Invalid HSC points/errors')
+    hsc_fit = reference_sed.fit_logpar_to_e2_points(hsc_e, hsc_y, pivot_tev=3.)
+    require(hsc_fit is not None, 'HSC point fit unavailable')
+    hsc_curve = G.sed_curve(energy, model_name='logpar', params=hsc_fit, pivot_tev=3.)
+    require(np.isfinite(hsc_curve).all() and np.all(hsc_curve>0), 'Invalid HSC point-fit curve')
+    ax.errorbar(hsc_e, hsc_y, yerr=[hsc_lo,hsc_hi], fmt='D', mfc='none', ms=5.5, color='#c26a16',
+        capsize=3, lw=1., label='HSC v0.99 WCDA points', zorder=7)
+    ax.plot(energy, hsc_curve, color='#c26a16', ls='--', lw=1.7, label='HSC v0.99 point-fit LogPar')
     pool = G.pool1_reference_points()
     ax.errorbar([p['emed_tev'] for p in pool], [p['E2_dnde'] for p in pool], yerr=[p['E2_dnde_err'] for p in pool],
         fmt='^', color='#7f3fbf', ms=4, capsize=2, lw=.8, alpha=.65, label='WCDA-1 Pool-1 Table 1')
@@ -99,6 +109,7 @@ def plot_sed_overlay(points, frozen, path):
     ax.grid(True, which='both', alpha=.22)
     labels = ax.get_legend_handles_labels()[1]
     require('Pass5 WCDA points' in labels and 'Pass5 point-fit LogPar' in labels, 'Missing Pass5 overlay')
+    require('HSC v0.99 WCDA points' in labels and 'HSC v0.99 point-fit LogPar' in labels, 'Missing HSC overlay')
     require(not any('full-array PL' in label for label in labels), 'Removed reference curve returned')
     ax.legend(fontsize=8, ncol=2)
     fig.savefig(path, dpi=180); plt.close(fig)
@@ -265,8 +276,8 @@ def main():
         figure(ASSETS/'model_counts_vs_excess.png','逐 cell 模型预期与观测 excess：一月传播误差版，全部 44-cell。')+
         figure(ASSETS/'spectrum_pulls.png','PL / LogPar 谱形和残差；两个误差口径均为诊断结果。'))
     section('sed', 'Stage G SED · 能谱点', p('固定 Stage F 优选 LogPar 谱形后，分组拟合单参数归一化；代表能量为模型加权真能量中位数。7 个 Nhit 点和 11 个 predE 点由同一 44-cell 产生，不能作为 18 个互相独立观测再拟合。')+
-        p('外部参考点沿用归档 Pass5、WCDA-1、MAGIC、H.E.S.S.、HAWC。Pass5 的 7 个点不含可用误差列，因此不补造误差棒；黑色曲线是在 log(dN/dE)–log(E/3 TeV) 空间对归档点做非加权二次拟合得到的 LogPar，仅用于视觉对照。已移除 1LHAASO WCDA full-array PL 曲线。外部数据并非共同 GTI 或相同样本，没有根据外部曲线调整本次参数。')+
-        figs([('sed_nhit_overlay.png','一月 Nhit 分组 SED、Pass5 点及其点拟合 LogPar 曲线。'),('sed_both_overlay.png','一月 Nhit + predE 分组 SED、Pass5 点及其点拟合 LogPar 曲线；18 点均保留。')])+
+        p('外部参考点沿用归档 Pass5、HSC v0.99、WCDA-1、MAGIC、H.E.S.S.、HAWC。HSC 使用确认的 Official tutorial v0.99 WCDA 7 个点及其误差（橙色空心菱形）；'+link(reference_sed.V099_CSV,'HSC v0.99 数据 CSV')+'。Pass5 的 7 个点不含可用误差列，因此不补造误差棒。Pass5 黑色实线与 HSC 橙色虚线均是在 log(dN/dE)–log(E/3 TeV) 空间对各自归档点做非加权二次拟合得到的 LogPar，仅用于视觉对照，非原流程的似然拟合结果。已移除 1LHAASO WCDA full-array PL 曲线。外部数据并非共同 GTI 或相同样本，没有根据外部曲线调整本次参数。')+
+        figs([('sed_nhit_overlay.png','一月 Nhit 分组 SED、Pass5 与 HSC v0.99 点及各自点拟合 LogPar 曲线。'),('sed_both_overlay.png','一月 Nhit + predE 分组 SED、Pass5 与 HSC v0.99 点及各自点拟合 LogPar 曲线；18 点均保留。')])+
         figs([('sed_points_ratio.png','相对本次冻结 LogPar 与归档 Pass5 点拟合曲线的比值；不隐藏末尾点。'),('sed_comparison.png','两种误差定义的 SED 对照；轻微横向错开仅用于辨认。')])+
         table(['Group','Bin','Cells','E50 [TeV]','E16–E84 [TeV]','E²dN/dE','Stat. error','χ²/dof'],[[esc(p['grouping']),esc(p['group_label']),p['n_cells'],fmt(p['effective_energy_tev']),f"{p['true_energy_p16_tev']:.4g}–{p['true_energy_p84_tev']:.4g}",fmt(p['e2_dnde']),fmt(p['e2_dnde_err']),f"{p['chi2']:.3f}/{p['ndof']}"] for p in sed['propagated']]))
     section('coverage', 'Uncertainty Calibration · 覆盖率与偏差', p('冻结设计：44-cell 各 512 次背景 bootstrap；4 类独立真值 × 两档环区计数，各 256 外层 × 128 内层。仅验证 cell 62 几何。失败保留在覆盖率分母，bias/RMSE 条件于有效估计。')+
@@ -277,7 +288,7 @@ def main():
         table(['Truth','Error','Parameter','Bias','RMSE','Coverage 95%'],[[esc(r['truth_model']),esc(r['mode']),esc(r['parameter']),fmt(r['bias']),fmt(r['rmse']),f"{r['coverage95']:.3%}"] for r in toys['parameters']]))
     section('audit', 'Metadata Audit · 来源与复现', table(['Check','Evidence'],[['原交付产物',f"{len(receipt['artifact_hashes'])} 个文件 SHA256 一致"],['固定选择与顺序','背景/信号/两误差谱均 44-cell 对齐'],['残差一致性','两误差 × 两模型 Σpull² 与保存 χ² 一致'],['SED 完整性','每个分组覆盖全部 44-cell，无丢失；7 + 11 点'],['科学标记',esc(acceptance['scientific_status'])],['分析来源提交',esc(completion['analysis_source_commit'])]])+
         p(link(ASSETS/'report_validation.json','本页输入、图表与源码 SHA256 清单')+' · '+link(ROOT/'pseudoexperiment_design.json','冻结伪实验设计')+' · '+link(ROOT/'delivery_completion.json','原分析完成收据'))+
-        p('本页只复用一月结果和制作诊断图，没有重新进行一月背景/谱优化、bootstrap、推理或时间对齐。Pass5 参考曲线由原 Stage G 辅助函数对归档点拟合，用于 SED 叠加图与比值图。原 v6 报告及原一月交付文件保持原状。'))
+        p('本页只复用一月结果和制作诊断图，没有重新进行一月背景/谱优化、bootstrap、推理或时间对齐。Pass5 参考曲线由原 Stage G 辅助函数对归档点拟合，用于 SED 叠加图与比值图；HSC v0.99 由原报告辅助函数读取并做同样定义的点拟合，用于两张 SED 叠加图。原 v6 报告及原一月交付文件保持原状。'))
     pars=lp['parameters']; err=lp['errors']
     section('final', 'Final v6 Fit Parameters · 最终诊断参数', table(['Parameter','Value','Conditional 1σ'],[[esc(k),fmt(v),fmt(err[k])] for k,v in pars.items()])+
         '<div class="callout"><strong>科学验收未通过。</strong>连续非负与正积分只证明数值有效；背景区间存在偏差与欠覆盖，谱的渐近拟合优度也未通过。上列谱参数和 SED 仅作诊断，不能作为已校准的正式 Crab 能谱。</div>')
@@ -297,7 +308,7 @@ def main():
             require(dest==validation_path.resolve() or dest.is_file(), f'Broken local link {target}')
     input_paths=[ROOT/name for name in ('analysis_manifest.json','delivery_receipt.json','delivery_completion.json','background_all91.json','signal_propagated_errors.npz','final_acceptance.json','coverage.json','bootstrap_cells.json','spectral_toys.json')]
     input_paths += [ROOT/m/name for m in fit_arrays for name in ('fit.npz','fit.json','sed.json')]
-    input_paths += [TEMPLATE,SELECTOR,reference_path,G.OFFICIAL_PASS5_CSV,OLD/'theta_exposure.png',OLD/'theta_exposure.json',OLD/'gti/gti_audit.json',OLD/'c/runs'/f'{OLD.name}_stage_c/obs_events_metadata.json',OLD/'background_diagnostic/background_signal_diagnostic.npz']
+    input_paths += [TEMPLATE,SELECTOR,reference_path,G.OFFICIAL_PASS5_CSV,reference_sed.V099_CSV,OLD/'theta_exposure.png',OLD/'theta_exposure.json',OLD/'gti/gti_audit.json',OLD/'c/runs'/f'{OLD.name}_stage_c/obs_events_metadata.json',OLD/'background_diagnostic/background_signal_diagnostic.npz']
     source_paths=[Path(__file__),Path(D.__file__),Path(F.__file__),Path(G.__file__),Path(reference_sed.__file__),REPO/'apply/report/prepare_v6_scheme_r_double_rayleigh_analytic_bon_report.py']
     for path,digest in receipt['artifact_hashes'].items(): require(sha256(ROOT/path)==digest, f'Analysis artifact modified by report: {path}')
     validation=dict(result='PASS_PRESENTATION_CHECKS',scientific_status=acceptance['scientific_status'],

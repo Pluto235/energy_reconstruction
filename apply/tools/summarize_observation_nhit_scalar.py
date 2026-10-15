@@ -1,5 +1,6 @@
 """Independent Slurm final audit/report for a finished mixed-schema Nhit run."""
 import argparse
+import importlib.util
 import csv
 import re
 from collections import Counter
@@ -24,10 +25,23 @@ def audit(state):
     config=json.loads((state/'config.json').read_text())
     command(['rsync','-rt','--partial','--timeout=180','--exclude=*.root','-e',shlex.join(SSH),
              REMOTE+':'+config['stage']+'/',str(state/'source_archive')+'/'])
+    repair = None
+    repair_policy = None
+    if (state/'repair.json').exists():
+        binding=json.loads((state/'repair.json').read_text());repair=Path(binding['state'])
+        if sha256(repair/'config.json')!=binding['config_sha256'] or sha256(repair/'finished.json')!=binding['finished_sha256']:
+            raise ValueError('repair binding changed')
+        repair_config=json.loads((repair/'config.json').read_text())
+        sys.path.insert(0,str(Path(__file__).resolve().parent/'observation_nhit_repair'))
+        from policy import load_policy
+        repair_policy=load_policy(repair,repair_config)
+        spec=importlib.util.spec_from_file_location('repair_validate',Path(__file__).resolve().parent/'observation_nhit_repair/validate.py')
+        repair_validate=importlib.util.module_from_spec(spec);spec.loader.exec_module(repair_validate)
     manifest=json.loads((state/'manifest.json').read_text())
     gate=json.loads((state/'gate.json').read_text())
     totals={kind:dict(files=0,events=0,bytes=0) for kind in ['legacy_with_charge','scalar_only']}
     bins=Counter();pools=Counter();boundaries=Counter();failures=[];surplus=0;segments=0;rows=[]
+    manual_rows=[];manual_events=0;repaired_names=[]
     for task in manifest['records']:
         name=task['name'];p=state/'receipts'/(name+'.json')
         if stamp(task['target'])!=task['input']:raise ValueError('INPUT_CHANGED '+name)
@@ -43,7 +57,27 @@ def audit(state):
             data=f['t_nhit'].arrays(SCALARS,library='np');seg=f['t_segments'].arrays().to_list()
             kind='legacy_with_charge' if 'vqsamp' in f['t_nhit'] else 'scalar_only'
             if kind!=rec['kind']:raise ValueError('schema category '+name)
-        check_scalars(data,seg,task['source_entries'])
+        if repair and (repair/'receipts'/(name+'.json')).exists():
+            repaired_names.append(name)
+            if sha256(p)!=sha256(repair/'receipts'/(name+'.json')):
+                raise ValueError('merged repair receipt changed')
+            repair_validate.check_scalars(data,seg,task['source_entries'],task=task,policy=repair_policy)
+            source=rec['source'];prov=source['provenance']
+            if (prov['code']!=repair_config['code'] or prov['git_commit']!=repair_config['git_commit'] or
+                prov['contract']!=repair_config['contract'] or prov['run_id']!=repair_config['run_id'] or
+                prov['repair_policy']!=repair_policy['binding'] or prov['target_stamp']!=task['input'] or
+                prov['target_path']!=task['target'] or source['segments']!=seg):
+                raise ValueError('repaired provenance mismatch')
+            with uproot.open(target) as f:
+                expected_prov=dict(prov,candidate_sha256=rec['candidate_sha256'],surplus_excluded=rec['validation']['surplus'],aligned=True)
+                if json.loads(str(f['provenance']))!=expected_prov:
+                    raise ValueError('embedded repair provenance changed')
+            for row in seg:
+                if row['poolused_source']=='user_confirmed_override':
+                    count=int(np.count_nonzero(data['segment_index']==row['segment_index']))
+                    manual_events+=count;manual_rows.append(dict(name=name,events=count,segment=row))
+        else:
+            check_scalars(data,seg,task['source_entries'])
         with uproot.open(task['target']) as f:
             expected=f['t_eventout'].arrays(KEYS+['nv'],library='np')
         if len(data['nv'])!=task['input']['entries']:raise ValueError('event count '+name)
@@ -62,6 +96,9 @@ def audit(state):
     sessions={}
     for p in sorted((state/'source_sessions').glob('*.json'),key=lambda p:p.name.endswith('.done.json')):
         row=json.loads(p.read_text());sessions[row['id']]=row
+    if repair:
+        for p in sorted((repair/'source_sessions').glob('*.json'),key=lambda p:p.name.endswith('.done.json')):
+            row=json.loads(p.read_text());sessions[row['id']]=row
     attempts=list(sessions.values())
     timings=[]
     for r in sorted(generated,key=lambda r:r['name']):
@@ -92,22 +129,36 @@ def audit(state):
         for segment in r['source']['segments']:
             if segment.get('attempts',1)>1:
                 operation_history['header_retries'].append(dict(name=r['name'],segment=segment))
+    operation_history['resolved_failures']=[json.loads(p.read_text()) for p in sorted((state/'resolutions').glob('*.json'))]
+    if repair:
+        operation_history['repair_state']=str(repair)
+        for p in sorted((repair/'source_archive').glob('production/*/attempts.json')):
+            operation_history['file_attempts'].append(dict(path=str(p),records=json.loads(p.read_text())))
+        for p in sorted(repair.glob('controller-*.log')):
+            for number,line in enumerate(p.read_text(errors='replace').splitlines(),1):
+                if line.startswith('TRANSPORT_RETRY '):
+                    operation_history['transport_failures'].append(dict(path=str(p),line=number,record=json.loads(line.split(' ',1)[1])))
     operation_history['scope']='Canonical production source archive and receiver logs, including successful recoveries; diagnostic header-probe setup failures are separately retained under audit/header_probe. Failed-file attempt lists also include non-retryable data failures.'
     atomic_json(state/'operation_history.json',operation_history)
     submissions=[json.loads(p.read_text()) for p in (state/'jobs').glob('production-*.json')
         if not p.name.endswith(('.output.json','.policy.json'))]
     first=min([r['at'] for r in submissions],default=None)
     last=json.loads((state/'finished.json').read_text())['finished_at']
+    if repair:last=max(last,json.loads((repair/'finished.json').read_text())['finished_at'])
     wall=last-first if first and last else None
     history=[json.loads(s) for s in (state/'staging_history.jsonl').read_text().splitlines()]
     source_history=[json.loads(s) for s in (state/'source_quota_history.jsonl').read_text().splitlines()]
+    if repair:
+        retained=repair_config['retained_original_stage_bytes']
+        history += [dict(bytes=json.loads(line)['bytes']+retained) for line in (repair/'staging_history.jsonl').read_text().splitlines()]
+        source_history += [dict(stage_bytes=json.loads(line)['stage_bytes']+retained) for line in (repair/'source_quota_history.jsonl').read_text().splitlines()]
     result=dict(status='complete' if len(rows)==681 else 'incomplete',files=len(rows),total_files=681,
         events=sum(t['events'] for t in totals.values()),total_events=manifest['total_events'],categories=totals,
         actual_mixed_bytes=sum(t['bytes'] for t in totals.values()),matching_coverage_accepted=1,
         monthly_event_coverage=sum(t['events'] for t in totals.values())/manifest['total_events'],
         accepted_duplicates=0,accepted_missing=0,surplus_excluded=surplus,failures=failures,
         bins=dict(bins),poolused=dict(pools),nhit_boundaries=dict(boundaries),segments=segments,
-        pilot=gate,production_wall_seconds=wall,production_wall_scope='First production submission through receiver final checksum audit; includes queueing and restarts, excludes earlier inherited production and this independent audit',production_files_per_hour=len(generated)*3600/wall if wall else None,
+        pilot=gate,production_wall_seconds=wall,production_wall_scope='First production submission through final repair acceptance when applicable; includes queueing, restarts, scheduled-check gaps and repair preparation, excludes earlier inherited production and this independent audit',production_files_per_hour=len(generated)*3600/wall if wall else None,
         stage_peak_observed_bytes=max([s['bytes'] for s in history]+[s['stage_bytes'] for s in source_history]),
         stage_peak_note='Apparent bytes observed by receiver polling and per-file source reservations; not an exact filesystem high-water counter; personal allocated quota checked independently',
         source_budget_bytes=2*1024**3,source_sessions=attempts,files_catalog=rows,final_audited_at=time.time(),
@@ -120,7 +171,12 @@ def audit(state):
         nhit_validation_scope='Exact independent comparison on three full pilots plus inherited original receipts. New production Nhit is source-calculated, digest/readback verified; ETO does not recompute charge or compare all 30 branches.',
         source_charge_boundary_hits=sum(r['source']['root']['charge_boundary'] for r in generated),
         source_time_boundary_hits=sum(r['source']['root']['time_boundary'] for r in generated),
+        user_confirmed_overrides=dict(files=len(manual_rows),segments=len(manual_rows),events=manual_events,records=manual_rows),
+        header_verified_segments=segments-len(manual_rows),header_verified_events=sum(t['events'] for t in totals.values())-manual_events,
+        repaired_files=repaired_names,
         source_boundary_scope='All PINC candidates for successfully accepted new files; any surplus is included in these source counters')
+    if len(rows)==681 and (result['events']!=69279369 or (repair and (len(manual_rows)!=2 or len(repaired_names)!=4))):
+        raise ValueError('full-month event/exception coverage incomplete')
     atomic_json(state/'final_audit.json',result)
     with (state/'file_catalog.csv').open('w',newline='') as f:
         writer=csv.DictWriter(f,fieldnames=['name','kind','events','bytes','sha256','receipt','receipt_sha256'])
@@ -136,6 +192,15 @@ def audit(state):
             error=item['failure'].get('error','') if isinstance(item['failure'],dict) else item['failure']
             match=re.search(r'/eos/lhaaso/raw/wcda/2022/\d{4}/.*?\.reduced\.root',error)
             writer.writerow(dict(name=item['name'],expected_events=item['expected_events'],required_header=match[0] if match else '',error=error))
+    if result['files']==681 and result['events']==69279369 and not failures:
+        if repair and (len(manual_rows)!=2 or len(repaired_names)!=4):
+            raise ValueError('repair/exception coverage incomplete')
+        atomic_json(state/'summary.json',dict(result,verified_files=result['files'],verified_events=result['events']))
+        atomic_json(state/'failures.json',[])
+        atomic_json(state/'completed.json',dict(status='complete',files=681,events=69279369,
+            user_confirmed_override_segments=len(manual_rows),user_confirmed_override_events=manual_events,
+            final_audit_sha256=sha256(state/'final_audit.json'),file_catalog_sha256=sha256(state/'file_catalog.csv'),
+            audit_code_sha256=sha256(__file__),completed_at=time.time()))
     print(json.dumps({k:v for k,v in result.items() if k not in ['files_catalog','source_sessions','pilot']},indent=2))
 
 

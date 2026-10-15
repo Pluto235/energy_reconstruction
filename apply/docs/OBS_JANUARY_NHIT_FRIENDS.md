@@ -74,3 +74,24 @@ Run `python -B tools/observation_nhit/test_nhit.py` for synthetic contract check
 `summary.json` aggregates only verified files and explicitly reports incomplete coverage.
 Boundary counts of zero mean not covered in actual data, even when synthetic
 boundary tests pass. A missing original event cannot be recovered by this pipeline.
+
+## First complete-file acceptance, 2026-10-15
+
+The frozen manifest contains 69,279,369 retained ETO events in 681 files;
+their corresponding raw files contain 2,216,905,881 entries. The accepted universe
+is the retained ETO set, not every raw event.
+
+Run `20261015_january_v4`, receiver Slurm **66136**, has published the complete
+`full/0101/Esg20220101_00.nhit.root`: 320,258 unique matches, zero missing or duplicate
+matches, all retained branch contents equal, 100% independently recomputed Nhit
+agreement and zero bin disagreements. Its 160 segment headers all report poolused=7.
+All eight bins are represented; 159,394 below-30 events are also retained.
+Exact Nhit=2000, charge=0.3 and absolute time=30 were not present in this file;
+their synthetic checks must not be presented as actual-data boundary coverage.
+
+Source extraction/readback took 611 seconds, peak RSS 847,216 KiB, output
+71,905,759 bytes. ETO independent validation took 39 seconds. The second and third
+full-file pilots and the remaining month are **not certified by this first result**.
+The receiver automatically expands only after all three complete-file pilots pass.
+Read `manifests/20261015_january_v4/progress.json`, `summary.json` and `failures.json`
+for current status; only that run's `completed.json` certifies the complete month.

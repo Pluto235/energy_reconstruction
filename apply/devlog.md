@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-15 20:35 · [uncommitted] Implement isolated scalar Nhit continuation: revalidate 55 legacy receipts, retire three held source jobs, verify ihep-work in Slurm, add four-reader headers and persistent sharded workers with gated full-file equality/speed tests and receipt-based cleanup.
+
 - **energy** · 2026-10-15 19:44 · [uncommitted] Benchmark PINC-only scalar friends on three complete files: 582417 exact matches, 1.78x measured processing speedup, 23.6x smaller outputs; leave production unchanged.
 
 - **energy** · 2026-10-15 19:25 · [uncommitted] Exclude recurrent bws0995 starter failures; audit controller-only v5 version transition and resume as Slurm 66149 without duplicate extraction or weakened acceptance.

@@ -21,8 +21,10 @@ BASE = Path('/mnt/newdisk/shijie/WCDA_obs_friends/nhit')
 INPUT = Path('/mnt/newdisk/shijie/WCDA_obs')
 REPO = Path('/mnt/newdisk/shijie/energy')
 OLD = REPO / '.recovery/2026-10-13/obs-january'
-REMOTE = 'liushijie@lxlogin.ihep.ac.cn'
-SSH = ['ssh', '-S', str(OLD/'ihep.sock'), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=30']
+REMOTE = 'ihep-work'
+SSH = ['ssh', '-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15',
+       '-o', 'RemoteCommand=none', '-o', 'ControlMaster=no', '-o', 'ControlPath=none',
+       '-o', 'IdentityAgent=none']
 PILOT = [f'Esg202201{d}_00.root' for d in ['01', '16', '31']]
 GIB = 1024**3
 EXCLUDED_MACHINES = ['lhws183.ihep.ac.cn', 'bws0995.ihep.ac.cn']
@@ -223,6 +225,8 @@ def summarize(state, done, failures):
 def run(args):
     require_slurm()
     state = BASE/'manifests'/args.run_id
+    if (state/'paused.json').exists():
+        raise RuntimeError('Retired/paused legacy run: do not restart; use the independent scalar workflow')
     state.mkdir(parents=True, exist_ok=True)
     lock = (state/'receiver.lock').open('a')
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)

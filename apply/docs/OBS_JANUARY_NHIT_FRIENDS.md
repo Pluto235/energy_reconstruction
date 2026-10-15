@@ -24,7 +24,7 @@ Original `vt`, `vidmc`, `rmds` and other retained branches remain in WCDA_obs.
 
 ## Execution
 
-From ETO `apply/`, submit `sbatch tools/observation_nhit/run.sbatch 20261015_january_v2`.
+From ETO `apply/`, submit `sbatch tools/observation_nhit/run.sbatch 20261015_january_v3`.
 The Slurm receiver uses the existing IHEP ControlMaster socket and submits one
 IHEP HTCondor task per file (1 CPU / 4000 MB, site hep_sub). IHEP extraction is the
 user-authorized exception to ETO-only compute. ROOT/NumPy/Awkward/uproot are from
@@ -33,6 +33,10 @@ Source reads use `root://eos01.ihep.ac.cn//eos/...`, including XRootD stat with 
 60-second timeout. The v1 pilot (Slurm 66130 / Condor 3739146) stalled on the
 compute-node EOS FUSE mount and was stopped before any output. Condor diagnostic
 3739170 successfully read the identical file over XRootD; v1 records are preserved.
+The v2 pilot matched all source keys and all 160 segment headers, then failed on
+uproot 5.3.7's dictionary-of-strings writer. The source table now uses an Awkward
+record array; all six synthetic checks pass on both IHEP LCG and ETO py310.
+V2 failed output remains isolated; v3 starts the full-file gate afresh.
 
 The complete 0101/0116/0131 `_00` files run sequentially. All must pass before
 automatic expansion, capped at four producers. Fresh Lustre personal quota is

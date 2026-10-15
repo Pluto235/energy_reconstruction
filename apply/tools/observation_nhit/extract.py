@@ -110,7 +110,8 @@ def extract(work, name):
             out.mktree('t_segments', {k: 'int32' for k in ['segment_index'] + KEYS[:3] + ['poolused']} |
                         {k: 'string' for k in ['path', 'uuid', 'source_filename', 'header_sha256']})
             if rows:
-                out['t_segments'].extend({k: [r[k] for r in rows] for k in rows[0]})
+                # An Awkward record also initializes uproot 5.3's string writer correctly.
+                out['t_segments'].extend(ak.Array(rows))
             lo = 0
             while lo < len(keys):
                 hi = min(lo + 1000, len(keys))

@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-15 17:01 · [uncommitted] Fix IHEP uproot 5.3 string provenance writing; verify all six contract checks in both IHEP and ETO runtimes before v3 pilot.
+
 - **energy** · 2026-10-15 16:54 · [uncommitted] Route January source reads through verified XRootD after compute-node FUSE stall; add publication recovery tests and verified-only summaries.
 
 - **energy** · 2026-10-15 16:44 · [uncommitted] Resume bounded MC summary transfer through verified IHEP login004 after round-robin exec failures; retain existing host-key checks and all published receipts.

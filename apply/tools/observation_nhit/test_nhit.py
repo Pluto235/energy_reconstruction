@@ -67,19 +67,20 @@ class Checks(unittest.TestCase):
             schema={k:'int32' for k in KEYS+['nv']} | dict(vt='var * float32',vidmc='var * int32')
             with uproot.recreate(inp) as f:
                 f.mktree('t_eventout',schema); f['t_eventout'].extend(a)
-                f.mktree('t_eventout_h',dict(filename='string')); f['t_eventout_h'].extend(dict(filename=['source']))
+                f.mktree('t_eventout_h',dict(filename='string')); f['t_eventout_h'].extend(ak.Array([dict(filename='source')]))
             frozen=stamp(inp)
             b={k:a[k] for k in KEYS+['nv']}
             b.update(vqsamp=ak.values_astype(ak.Array([[1,1],[1]]),np.float32),
                      nhit=np.array([1,1],dtype='i4'),poolused=np.array([0,0],dtype='i4'),
                      segment_index=np.array([0,0],dtype='i4'),input_entry=np.array([0,1],dtype='i8'),
                      ihep_entry=np.array([8,2],dtype='i8'))
-            seg=dict(segment_index=0,irun=1,ies=1,iseq=1,poolused=0)
+            seg=dict(segment_index=0,irun=1,ies=1,iseq=1,poolused=0,path='source.root')
             with uproot.recreate(friend) as f:
                 f.mktree('t_nhit',{k:'int32' for k in KEYS+['nv','nhit','poolused','segment_index']} |
                          dict(vqsamp='var * float32', input_entry='int64',ihep_entry='int64'))
                 f['t_nhit'].extend(b)
-                f.mktree('t_segments',{k:'int32' for k in seg}); f['t_segments'].extend({k:[v] for k,v in seg.items()})
+                f.mktree('t_segments',{k:'int32' for k in seg if k!='path'} | dict(path='string'))
+                f['t_segments'].extend(ak.Array([seg]))
             with uproot.open(inp) as f: common=f['t_eventout'].arrays()
             rec=dict(contract=CONTRACT,input=frozen,bytes=friend.stat().st_size,sha256=sha256(friend),
                      entries=2,source_entries=10,segments=[seg],blocks=[dict(start=0,stop=2,

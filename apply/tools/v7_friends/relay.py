@@ -29,10 +29,14 @@ def main():
         # A failed tar never gets a ready marker; retries overwrite only this bounded temporary batch.
         temp=STAGE+'.incoming'
         remote('from pathlib import Path;Path('+repr(temp)+').mkdir(parents=True,exist_ok=True)')
-        source=subprocess.Popen(SSH+['liushijie@lxlogin.ihep.ac.cn' if ON_ETO else 'ihep','tar -C '+shlex.quote(SOURCE)+' -cf - -- '+ ' '.join(map(shlex.quote,names))],stdout=subprocess.PIPE)
-        dest=subprocess.Popen(['tar','-C',temp,'-xf','-'] if ON_ETO else SSH+['ETO','tar -C '+shlex.quote(temp)+' -xf -'],stdin=source.stdout)
-        source.stdout.close(); drc=dest.wait();src=source.wait()
-        if drc or src:raise RuntimeError(f'tar failed source={src} destination={drc}; staging left for retry')
+        pipes=[]
+        for group in [names[i::4] for i in range(4)]:
+            if not group: continue
+            source=subprocess.Popen(SSH+['liushijie@lxlogin.ihep.ac.cn' if ON_ETO else 'ihep','tar -C '+shlex.quote(SOURCE)+' -cf - -- '+ ' '.join(map(shlex.quote,group))],stdout=subprocess.PIPE)
+            dest=subprocess.Popen(['tar','-C',temp,'-xf','-'] if ON_ETO else SSH+['ETO','tar -C '+shlex.quote(temp)+' -xf -'],stdin=source.stdout)
+            source.stdout.close();pipes.append((source,dest))
+        codes=[(dest.wait(),source.wait()) for source,dest in pipes]
+        if any(a or b for a,b in codes):raise RuntimeError(f'tar failed {codes}; staging left for retry')
         remote('''import hashlib,os
 from pathlib import Path
 names='''+repr(names)+'''

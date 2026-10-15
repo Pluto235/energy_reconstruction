@@ -34,9 +34,16 @@ def load_policy(folder, config):
             recovered[spec['name']] = exact[0]
     if set(recovered) != RECOVERED:
         raise ValueError('incomplete recovered header evidence')
-    return dict(records={r['name']: r for r in records}, recovered=recovered,
+    policy = dict(records={r['name']: r for r in records}, recovered=recovered,
                 binding=dict(authorization_sha256=AUTH_SHA,
                              header_evidence_sha256=config['header_evidence_sha256']))
+    if 'replica_evidence_sha256' in config:
+        from replica_header import EVIDENCE_SHA, NAME, load_route
+        if config['replica_evidence_sha256'] != EVIDENCE_SHA:
+            raise ValueError('unrecognized replica evidence')
+        policy['replica'] = load_route(Path(folder)/'replica_evidence.json', recovered[NAME])
+        policy['binding']['replica_evidence_sha256'] = EVIDENCE_SHA
+    return policy
 
 
 def authorization(task, policy):
@@ -105,3 +112,14 @@ def check_rows(rows, task, policy):
                 matches[0]['reduced_header_sha256'] != json_sha(evidence['header']) or
                 matches[0]['poolused_source'] != 'reduced_header'):
             raise ValueError('recovered header differs from independent investigation')
+    if policy.get('replica'):
+        from replica_header import NAME, ROW_FIELDS
+        if task['name'] != NAME:
+            raise ValueError('replica route outside diagnosed file')
+        route = policy['replica']
+        for row in rows:
+            expected = dict(zip(ROW_FIELDS, [route['uri'], 'eos92.ihep.ac.cn:1095', route['evidence_sha256']])) if row['path'] == evidence['path'] else dict.fromkeys(ROW_FIELDS, '')
+            if any(row.get(k) != v for k, v in expected.items()):
+                raise ValueError('segment replica provenance mismatch')
+            if row['path'] == evidence['path'] and row.get('header_reader') != 'native_ROOT':
+                raise ValueError('pinned header lacks native readback')

@@ -72,6 +72,8 @@ def audit(state):
             source=rec['source'];prov=source['provenance']
             if any(row.get('header_reader')=='native_ROOT' for row in seg):
                 validate_evidence(source['native_header_probe'],repair_policy['recovered'][name])
+                from replica_header import validate_probe
+                validate_probe(source['native_header_probe'],repair_policy)
                 proof=repair/'source_archive'/'production'/name/'native_header_probe.json'
                 saved=json.loads(proof.read_text())
                 if any(saved[k]!=v for k,v in source['native_header_probe'].items()):

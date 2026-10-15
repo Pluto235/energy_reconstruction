@@ -24,11 +24,11 @@ def one(spec, mode):
     uri=spec.get('read_uri',path if mode=='fuse_uproot' else 'root://eos01.ihep.ac.cn/'+path)
     result=dict(mode=mode,uri=uri,at=time.time(),host=os.uname().nodename)
     try:
-        if mode in ['root_then_uproot','native_ROOT']:
+        if mode in ['root_then_uproot','native_ROOT','native_direct']:
             import ROOT
             result['root_version']=str(ROOT.gROOT.GetVersion())
-        if mode=='native_ROOT':
-            f=ROOT.TFile.Open(uri,'READ')
+        if mode in ['native_ROOT','native_direct']:
+            f=ROOT.TNetXNGFile(uri,'READ') if mode=='native_direct' else ROOT.TFile.Open(uri,'READ')
             if not f or f.IsZombie():raise ValueError('ROOT zombie')
             try:
                 try:
@@ -37,6 +37,13 @@ def one(spec, mode):
                         if hasattr(actual,'GetHost') else endpoint(actual))
                 except Exception as e:result['data_server_lookup_error']=type(e).__name__
                 result['uuid']=str(f.GetUUID().AsString())
+                if mode=='native_direct':
+                    import ctypes
+                    result['metadata_hashes']={}
+                    for label,offset,size in [('wcdah',986671206,1647),('streamers',1105399178,6981)]:
+                        buf=ctypes.create_string_buffer(size)
+                        if f.ReadBuffer(buf,offset,size):raise ValueError('native metadata read error')
+                        result['metadata_hashes'][label]=dict(sha256=hashlib.sha256(buf.raw).hexdigest(),bytes=size)
                 result['header_keys']=sum(k.GetName()=='wcdah' for k in f.GetListOfKeys())
                 t=f.Get('wcdah');result['entries']=int(t.GetEntries())
                 result['read_bytes']=int(t.GetEntry(0))

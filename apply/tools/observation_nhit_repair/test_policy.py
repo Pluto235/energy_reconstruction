@@ -42,6 +42,54 @@ class PolicyTests(unittest.TestCase):
             bad=dict(actual);bad[field]=value
             with self.subTest(field=field),self.assertRaises(ValueError):validate_evidence(bad,expected)
 
+    def test_replica_binding_and_endpoint(self):
+        from replica_header import NAME, EVIDENCE_SHA, validate_probe
+        source=PARENT/'audit/header_io_v3/source/result.json'
+        (self.folder/'replica_evidence.json').write_bytes(source.read_bytes())
+        config=dict(self.config,replica_evidence_sha256=EVIDENCE_SHA)
+        policy=load_policy(self.folder,config);route=policy['replica'];expected=policy['recovered'][NAME]
+        proof=dict(uri=route['uri'],data_servers=[route['server']],evidence_sha256=EVIDENCE_SHA,
+                   uuid=expected['uuid'],header=expected['header'],entries=1,header_keys=1,metadata_hashes=route['hashes'])
+        actual=dict(path=route['uri'],opener='TNetXNGFile',native_server=route['server'],
+                    replica_probe=proof,metadata_hashes=route['hashes'])
+        validate_probe(actual,policy)
+        for field,value in [('native_server',dict(host='eos40.ihep.ac.cn',port=1095)),
+                            ('path',route['uri'].replace('40208','1300')),('opener','TFile')]:
+            bad=copy.deepcopy(actual);bad[field]=value
+            with self.subTest(field=field),self.assertRaises(ValueError):validate_probe(bad,policy)
+        for location in ['metadata_hashes','replica_probe']:
+            bad=copy.deepcopy(actual)
+            hashes=bad['metadata_hashes'] if location=='metadata_hashes' else bad['replica_probe']['metadata_hashes']
+            hashes['wcdah']['sha256']='0'*64
+            with self.subTest(location=location),self.assertRaises(ValueError):validate_probe(bad,policy)
+        (self.folder/'replica_evidence.json').write_text('{}')
+        with self.assertRaises(ValueError):load_policy(self.folder,config)
+
+    def test_replica_segment_roundtrip(self):
+        from replica_header import NAME,EVIDENCE_SHA,ROW_FIELDS
+        (self.folder/'replica_evidence.json').write_bytes((PARENT/'audit/header_io_v3/source/result.json').read_bytes())
+        policy=load_policy(self.folder,dict(self.config,replica_evidence_sha256=EVIDENCE_SHA))
+        task=next(r for r in json.loads((PARENT/'manifest.json').read_text())['records'] if r['name']==NAME)
+        expected=policy['recovered'][NAME];route=policy['replica']
+        from policy import json_sha
+        row=dict(segment_index=0,path=expected['path'],uuid=expected['uuid'],source_filename='original',
+                 header_sha256='original',reduced_header_sha256=json_sha(expected['header']),attempts=1,
+                 poolused_source='reduced_header',poolused_authorization_sha256='',reduced_header_missing=0,
+                 header_reader='native_ROOT',**{k:v[0] for k,v in expected['header'].items()},
+                 **dict(zip(ROW_FIELDS,[route['uri'],'eos92.ihep.ac.cn:1095',EVIDENCE_SHA])))
+        check_rows([row],task,policy)
+        for key in ROW_FIELDS:
+            bad=dict(row);bad[key]=''
+            with self.subTest(key=key),self.assertRaises(ValueError):check_rows([bad],task,policy)
+        data={k:np.array([row[k]],dtype='i4') for k in KEYS[:3]}
+        data.update(ievent=np.array([1],dtype='i4'),nv=np.array([4],dtype='i4'),nhit=np.array([3],dtype='i4'),
+                    poolused=np.array([7],dtype='i4'),segment_index=np.array([0],dtype='i4'),
+                    input_entry=np.array([0],dtype='i8'),ihep_entry=np.array([2],dtype='i8'))
+        path=self.folder/'pinned-roundtrip.root';provenance=dict(repair_policy=policy['binding'])
+        write_scalar(path,'t_nhit',data,[row],provenance)
+        readback(path,'t_nhit',data,[row],provenance)
+        check_scalars(data,[row],10,task=task,policy=policy)
+
     def test_digest_and_snapshot_binding(self):
         bad=copy.deepcopy(self.task);bad['input']['uuid']='changed'
         with self.assertRaises(ValueError):authorization(bad,self.policy)

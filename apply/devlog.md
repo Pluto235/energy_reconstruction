@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-16 02:45 · [uncommitted] Slurm66174 identifies zero metadata from eos40 and valid identity-exact bytes from eos92; Slurm66175 confirms valid native byte/header readback but a ROOT-loaded uproot process can ignore the requested route. Add an isolated plain-uproot endpoint check, pass its resolved EOS URL privately to native ROOT, require matching metadata digests/UUID/unique integer header before Nhit, and bind the diagnosis SHA and replica fields into source/ETO/final audit. Preserve previous repair states, redact capability-bearing native diagnostics, retain all stage metadata in the budget, and test route/digest/segment corruption plus complete scalar roundtrip under Slurm66176.
+
 - **energy** · 2026-10-16 02:20 · [uncommitted] Preserve completed Slurm66173/HTCondor3743395 metadata diagnostics: both requested fsids pass native ROOT but uproot returns zero metadata; the initial endpoint lookup used an unsupported attribute, so replica attribution remains unproven. Correct endpoint capture using executor resources and ROOT endpoint identity, strip URL credentials/capabilities, and keep this follow-up in separate header_io_v3 evidence. No production or repair snapshot changed.
 
 - **energy** · 2026-10-16 02:15 · [uncommitted] Metadata-only HTCondor3743346 reproduces both zero-filled and valid wcdah/StreamerInfo bytes for the same UUID; valid uproot and native ROOT reads agree. EOS inventories two replicas (fsid1300/eos40 and fsid40208/eos92). Add isolated per-replica read routing diagnostics and actual data-server recording; do not modify EOS or retry Nhit while source reliability is unresolved.

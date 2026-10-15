@@ -12,9 +12,9 @@ from common import atomic_json,require_slurm,sha256
 from transport import remote,remote_py,quota,transfer,REMOTE
 
 
-def run(state, replicas=False, endpoints=False):
+def run(state, replicas=False, endpoints=False, direct=False):
     require_slurm()
-    version='v3' if endpoints else ('v2' if replicas else 'v1')
+    version='v4' if direct else ('v3' if endpoints else ('v2' if replicas else 'v1'))
     work=state/('audit/header_io_'+version);work.mkdir(parents=True,exist_ok=True)
     lock=(work/'controller.lock').open('a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     stage='/scratchfs2/lhaaso/liushijie/WCDA_nhit_20261016_header_io_'+version
@@ -25,10 +25,13 @@ def run(state, replicas=False, endpoints=False):
     matches=[m for m in spec['matches'] if m.get('reliable_header') and m['same_segment_stem']]
     if len(matches)!=1:raise ValueError('no unique earlier header evidence')
     atomic_json(work/'spec.json',dict(name=spec['name'],expected=matches[0],target_stamp=spec['target_stamp'],evidence_sha256=expected))
-    if replicas or endpoints:
+    if replicas or endpoints or direct:
         current=json.loads((work/'spec.json').read_text())
         current['routes']=[dict(mode=mode,fsid=fsid,read_uri='root://eos01.ihep.ac.cn/'+matches[0]['path']+'?eos.forcefsid='+str(fsid))
                            for fsid in [1300,40208] for mode in ['uproot','native_ROOT']]
+        if direct:
+            current['routes']=[dict(mode=mode,fsid=40208,read_uri='root://eos01.ihep.ac.cn/'+matches[0]['path']+'?eos.forcefsid=40208')
+                               for mode in ['uproot','native_direct','root_then_uproot']]
         atomic_json(work/'spec.json',current)
         inventory=remote('eos root://eos01.ihep.ac.cn fileinfo '+shlex.quote(matches[0]['path']))
         atomic_json(work/'eos_fileinfo.json',dict(output=inventory,at=time.time()))
@@ -76,4 +79,4 @@ print(json.dumps(dict(job=j,original=r,updated=n)))
 
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('state',type=Path);p.add_argument('--replicas',action='store_true');p.add_argument('--endpoints',action='store_true');a=p.parse_args();run(a.state,a.replicas,a.endpoints)
+    p=argparse.ArgumentParser();p.add_argument('state',type=Path);p.add_argument('--replicas',action='store_true');p.add_argument('--endpoints',action='store_true');p.add_argument('--direct',action='store_true');a=p.parse_args();run(a.state,a.replicas,a.endpoints,a.direct)

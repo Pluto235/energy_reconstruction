@@ -2,6 +2,8 @@
 from array import array
 import hashlib
 import json
+import os
+from contextlib import contextmanager
 
 FIELDS = ['irun', 'ies', 'iseq', 'poolused']
 INTEGER_TYPES = {'Int_t', 'UInt_t', 'Long64_t', 'ULong64_t', 'Short_t', 'UShort_t'}
@@ -18,8 +20,33 @@ def validate_evidence(actual, expected):
         raise ValueError('native header invalid pool mask')
 
 
-def inspect(ROOT, path, expected):
-    f = ROOT.TFile.Open(path, 'READ')
+@contextmanager
+def quiet_native_access():
+    """ROOT errors may include EOS capabilities; never persist those URLs."""
+    originals = {fd: os.dup(fd) for fd in [1, 2]}
+    null = os.open(os.devnull, os.O_WRONLY)
+    try:
+        for fd in originals:
+            os.dup2(null, fd)
+        yield
+    finally:
+        for fd, original in originals.items():
+            os.dup2(original, fd); os.close(original)
+        os.close(null)
+
+
+def inspect(ROOT, path, expected, route=None, access_uri=None):
+    if access_uri is not None:
+        try:
+            with quiet_native_access():
+                return _inspect(ROOT, path, expected, route, access_uri)
+        except Exception as error:
+            raise ValueError('native resolved replica read failed: '+type(error).__name__) from None
+    return _inspect(ROOT, path, expected, route)
+
+
+def _inspect(ROOT, path, expected, route=None, access_uri=None):
+    f = ROOT.TNetXNGFile(access_uri or path, 'READ') if route else ROOT.TFile.Open(path, 'READ')
     if not f or f.IsZombie():
         raise ValueError('native ROOT cannot open header')
     try:
@@ -46,6 +73,13 @@ def inspect(ROOT, path, expected):
                       header_keys=count, read_bytes=size, types=types,
                       header={key: [int(getattr(tree, key))] for key in FIELDS},
                       reader='native_ROOT', root_version=str(ROOT.gROOT.GetVersion()))
+        if route:
+            from replica_header import native_hashes
+            actual.update(opener='TNetXNGFile', metadata_hashes=native_hashes(f, route))
+            endpoint = f.GetEndpointUrl()
+            actual['native_server'] = dict(host=str(endpoint.GetHost()), port=int(endpoint.GetPort()))
+            if actual['native_server'] != route['server']:
+                raise ValueError('native resolved endpoint changed')
         validate_evidence(actual, expected)
         actual['header_sha256'] = hashlib.sha256(json.dumps(actual['header'], sort_keys=True).encode()).hexdigest()
         return actual

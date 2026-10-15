@@ -269,3 +269,21 @@ alone does not establish which replica served a read. A separate header_io_v3
 diagnostic records actual data-server identity with the corrected reader API.
 Evidence and failures remain under audit/header_io_v1, v2 and v3. No EOS source
 is modified and no additional poolused default is authorized.
+
+Slurm 66174 / HTCondor 3743412 resolved actual uproot data-server identities:
+eos40:1095 returned zero-filled metadata, while eos92:1095 returned the expected
+bytes and unique header. Slurm 66175 confirmed another plain-uproot read from
+eos92 and a native ROOT read with identical metadata hashes/UUID/header. It also
+showed a ROOT-loaded uproot process reaching eos40 despite the requested fsid;
+the request parameter alone is therefore insufficient. The root cause of that
+routing behavior and the zero-filled replica is not established.
+
+The third isolated repair checks the routed header in a separate process that
+does not import ROOT. It requires actual eos92:1095, the observed wcdah and
+StreamerInfo SHA256 values, and the independent unique UUID/header identity.
+It then gives the resolved EOS access URL to native ROOT through a private pipe,
+requiring native metadata hashes and scalar contents to agree before any hit
+extraction. Transient access capabilities are not persisted; provenance records
+the logical read URI, server identity and diagnostic evidence digest. All other
+segments retain the existing checks. Source/ETO/final audit validate the new
+binding; no accepted friend or previous execution snapshot is rewritten.

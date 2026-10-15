@@ -45,6 +45,15 @@ def run(parent, state):
         snap=snapshot(prior_config['stage']);atomic_json(state/(prior.name+'-scheduler.json'),snap)
         if any(j['JobStatus'] not in [3,4] for j in snap['jobs']):raise RuntimeError('prior repair still active')
         retained += snap['stage_bytes']
+    # Metadata diagnosis is retained audit material, but still consumes this
+    # task's staging budget. Do not overlook its control files and logs.
+    for completed in sorted((parent/'audit').glob('header_io_v*/completed.json')):
+        stage_name = json.loads(completed.read_text())['stage']
+        snap = snapshot(stage_name)
+        atomic_json(state/(completed.parent.name+'-scheduler.json'), snap)
+        if any(j['JobStatus'] not in [3,4] for j in snap['jobs']):
+            raise RuntimeError('header diagnosis still active')
+        retained += snap['stage_bytes']
     freeze(parent)
     names = set(SCOPES)|RECOVERED
     manifest = json.loads((parent/'manifest.json').read_text())
@@ -75,12 +84,20 @@ def run(parent, state):
         if sha256(evidence) != expected: raise ValueError('header evidence changed')
         shutil.copyfile(auth, state/'authorization.json')
         shutil.copyfile(evidence, state/'header_evidence.json')
+        from replica_header import EVIDENCE_SHA, NAME
+        if [t['name'] for t in tasks] != [NAME]:
+            raise ValueError('replica recovery requires the sole remaining Jan28 file')
+        replica_evidence = parent/'audit/header_io_v3/source/result.json'
+        if sha256(replica_evidence) != EVIDENCE_SHA:
+            raise ValueError('replica diagnosis evidence changed')
+        shutil.copyfile(replica_evidence, state/'replica_evidence.json')
         atomic_json(state/'tasks.json', dict(pilot=[], production=tasks))
         config = dict(run_id=state.name,stage=stage,code=code,contract=CONTRACT,
             git_commit=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
             parent_state=str(parent),parent_manifest_sha256=sha256(parent/'manifest.json'),
             tasks_sha256=sha256(state/'tasks.json'),authorization_sha256=AUTH_SHA,
             header_evidence_sha256=expected,started_at=time.time(),max_workers=4,header_concurrency=4,
+            replica_evidence_sha256=EVIDENCE_SHA,
             retained_original_stage_bytes=retained,previous_repairs=previous,stage_budget_bytes=2*1024**3-retained)
         atomic_json(state/'config.json', config)
     config = json.loads((state/'config.json').read_text())
@@ -105,7 +122,7 @@ def run(parent, state):
     if not (state/'deployed.json').exists():
         remote('mkdir -p '+shlex.quote(stage)+'/sessions')
         for p in files: transfer(str(code_dir/p.name), REMOTE+':'+stage+'/'+p.name)
-        for name in ['config.json','tasks.json','authorization.json','header_evidence.json']:
+        for name in ['config.json','tasks.json','authorization.json','header_evidence.json','replica_evidence.json']:
             transfer(str(state/name),REMOTE+':'+stage+'/'+name)
         remote('chmod 755 '+shlex.quote(stage+'/worker.sh'))
         atomic_json(state/'deployed.json',dict(at=time.time(),stage=stage,code=code))

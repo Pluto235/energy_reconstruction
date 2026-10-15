@@ -109,6 +109,8 @@ def accept(state, folder, task, config, target, reference=None):
     if name == 'Esg20220128_06.root':
         from native_header import validate_evidence
         validate_evidence(rec['native_header_probe'], policy['recovered'][name])
+        from replica_header import validate_probe
+        validate_probe(rec['native_header_probe'], policy)
     if rec['name']!=name or not rec['source_readback']:
         raise ValueError('candidate identity/readback')
     if incoming.stat().st_size!=rec['bytes'] or sha256(incoming)!=rec['sha256']:

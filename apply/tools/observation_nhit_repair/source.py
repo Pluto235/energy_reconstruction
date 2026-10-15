@@ -114,6 +114,11 @@ def segment_rows(headers, day, wanted, task, policy, native=None):
         return row
     with ThreadPoolExecutor(max_workers=4) as executor:
         rows = list(executor.map(read, specs))
+    if policy.get('replica'):
+        from replica_header import ROW_FIELDS
+        for row in rows:
+            for key in ROW_FIELDS:
+                row.setdefault(key, '')
     check_rows(rows, task, policy)
     for i, row in enumerate(rows):
         row['segment_index'] = i
@@ -125,8 +130,10 @@ def write_scalar(path, tree, data, rows, provenance):
         f.mktree(tree, {k:'int64' if k in ['input_entry','ihep_entry'] else 'int32' for k in data})
         if len(data['nv']):
             f[tree].extend(data)
+        from replica_header import ROW_FIELDS
+        extra = ROW_FIELDS if rows and any(k in rows[0] for k in ROW_FIELDS) else []
         f.mktree('t_segments', {k:'int32' for k in ['segment_index']+KEYS[:3]+['poolused','attempts','reduced_header_missing']} |
-            {k:'string' for k in ['path','uuid','source_filename','header_sha256','reduced_header_sha256','poolused_source','poolused_authorization_sha256','header_reader']})
+            {k:'string' for k in ['path','uuid','source_filename','header_sha256','reduced_header_sha256','poolused_source','poolused_authorization_sha256','header_reader']+extra})
         if rows:
             f['t_segments'].extend(ak.Array(rows))
         f['provenance'] = json.dumps(provenance, sort_keys=True)
@@ -163,7 +170,22 @@ def extract(stage, folder, task, config, ROOT, session):
         then = time.monotonic()
         from native_header import inspect
         evidence = policy['recovered'][name]
-        actual = inspect(ROOT, source_uri(evidence['path']), evidence)
+        route = policy.get('replica')
+        if route:
+            from replica_header import validate_probe
+            child = subprocess.run([sys.executable, '-B', str(stage/'replica_header.py'), str(stage)],
+                                   capture_output=True, text=True, timeout=180)
+            if child.returncode:
+                raise ValueError('isolated pinned metadata preflight failed; no hit extraction')
+            replica_probe = json.loads(child.stdout)
+            access_uri = replica_probe.pop('_access_uri')
+            atomic_json(folder/'replica_header_probe.json', dict(replica_probe, checked_at=time.time()))
+            actual = inspect(ROOT, route['uri'], evidence, route=route, access_uri=access_uri)
+            del access_uri, child
+            actual['replica_probe'] = replica_probe
+            validate_probe(actual, policy)
+        else:
+            actual = inspect(ROOT, source_uri(evidence['path']), evidence)
         native_probe = actual
         atomic_json(folder/'native_header_probe.json', dict(actual, evidence_binding=policy['binding'],
                     session=session, checked_at=time.time()))
@@ -177,6 +199,9 @@ def extract(stage, folder, task, config, ROOT, session):
             header_sha256=json_sha(spec['header']),reduced_header_sha256=actual['header_sha256'],
             attempts=1,poolused_source='reduced_header',poolused_authorization_sha256='',
             reduced_header_missing=0,header_reader='native_ROOT')
+        if route:
+            native.update(header_read_uri=route['uri'],header_replica_server='eos92.ihep.ac.cn:1095',
+                          header_replica_evidence_sha256=route['evidence_sha256'])
         native_seconds = time.monotonic()-then
     tmp = folder/'hits.partial.root'
     stats = ROOT.nhit_benchmark_filter(source_uri(src), str(tmp))

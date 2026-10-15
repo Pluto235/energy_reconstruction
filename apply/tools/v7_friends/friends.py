@@ -10,7 +10,6 @@ import shutil
 import tempfile
 import time
 
-import awkward as ak
 import numpy as np
 import uproot
 
@@ -20,12 +19,15 @@ COMMON = ('ccindex','chi2','dcedge','dcedgepool','f5w','fitstat','istationcore',
           'mc_dangle','mc_dcore','mc_energy','mc_phi','mc_pid','mc_theta','mc_weight',
           'mc_xc','mc_yc','nfit','nfit0','phi','pincness','rmds','theta','xc','yc')
 EDGES = [30,60,100,200,300,500,800,2000]
-CONTRACT = dict(version=1, match_fields=MATCH_FIELDS, matching='exact float32 six-field bytes; all keys unique',
+CONTRACT = dict(version=2, match_fields=MATCH_FIELDS, matching='exact float32 six-field bytes; all keys unique',
                 identity_limit='Content correspondence is not independent physical event ID authentication',
                 chi2_policy='diagnostic only, explicitly authorized by user 2026-10-15',
                 float_policy='exact equality after float64-to-float32 cast; no tolerance',
                 filters='none', nhit='native unprefixed nq03t30s0+1+2, checked int64 sum',
-                tree='v7_friend', branch_prefix='v7_', extension='.v7friend', nhit_edges=EDGES)
+                tree='v7_friend', branch_prefix='v7_', extension='.v7friend', nhit_edges=EDGES,
+                raw_hit_check='not performed or required; native Nhit authoritative per user 2026-10-15',
+                upstream_time_rule='abs(vt)<30 per user; not independently established from stored float32 hits',
+                rmds_boundary_policy='summary decision authoritative for rounding-only differences; preserve eventout')
 
 def sha256(p):
     h=hashlib.sha256()
@@ -135,7 +137,6 @@ def process(item, run, base, stage):
             r['direct_identity_fields_in_event']=[k for k in NATIVE[-4:] if k in et.keys()]
             if r['direct_identity_fields_in_event']: raise ValueError('new direct identity fields; needs review')
             e=et.arrays(list(COMMON),library='np'); s=st.arrays(list(COMMON)+list(NATIVE),library='np')
-            h=et.arrays(['vqsamp','vt'],library='ak')
         rows,r['matching']=match_rows(e,s)
         if rows is None: raise ValueError('nonunique_or_missing_match')
         unused=np.setdiff1d(np.arange(st.num_entries),rows)
@@ -156,24 +157,22 @@ def process(item, run, base, stage):
         for label,(k,fn) in boundaries.items():
             x,y=e[k].astype('f8'),s[k][rows].astype('f8'); bad=np.flatnonzero(fn(x)!=fn(y))
             r['boundaries'][label]=dict(changed=len(bad),examples=examples(bad,rows,x,y))
-            if len(bad):r['failures'].append('boundary:'+label)
+            if label=='rmds_le20':
+                r['boundaries'][label]['decision_source']='native summary; eventout unchanged'
+                r['boundaries'][label]['accepted_rounding_flips']=len(bad) if r['common_fields'][k]['outside_rounding']==0 else 0
+            elif len(bad):r['failures'].append('boundary:'+label)
         native={k:s[k][rows] for k in NATIVE};r['native_ranges']={}
         for k,a in native.items():
             if a.dtype.kind not in 'iu' or a.ndim!=1: raise ValueError('noninteger native '+k)
             r['native_ranges'][k]=dict(dtype=str(a.dtype),min=int(a.min()) if len(a) else None,max=int(a.max()) if len(a) else None)
         nh=native_sum(native);r['poolused']=histogram(native['poolused'])
         r['poolused_unexpected_examples']=examples(np.flatnonzero((native['poolused']<0)|(native['poolused']>7)),rows,native['poolused'],native['poolused'])
-        if not ak.all(ak.num(h.vqsamp)==ak.num(h.vt)): raise ValueError('hit lengths differ')
-        if not ak.all(np.isfinite(h.vqsamp)) or not ak.all(np.isfinite(h.vt)): raise ValueError('nonfinite raw hit')
-        count=ak.to_numpy(ak.sum((h.vqsamp>=.3)&(abs(h.vt)<=30),axis=1)).astype('i8')
-        bad=np.flatnonzero(nh!=count);r['nhit_difference_native_minus_hits']=histogram(nh-count)
-        r['nhit_mismatches']=len(bad);r['nhit_examples']=examples(bad,rows,count,nh)
+        r['nhit_validation']='native integer fields and overflow-checked sum; no raw-hit recomputation'
         r['nhit_bins']=[]
         for i,lo in enumerate(EDGES):
             hi=EDGES[i+1] if i+1<len(EDGES) else None;mask=(nh>=lo)&((nh<hi) if hi is not None else True)
-            r['nhit_bins'].append(dict(lower=lo,upper=hi,events=int(mask.sum()),mismatches=int(np.sum(mask&(nh!=count)))))
-        r['nhit_below30']=dict(events=int(np.sum(nh<30)),mismatches=int(np.sum((nh<30)&(nh!=count))))
-        if len(bad): r['failures'].append('nhit_difference_requires_definition_or_alignment_review')
+            r['nhit_bins'].append(dict(lower=lo,upper=hi,events=int(mask.sum()),compared_events=0))
+        r['nhit_below30']=dict(events=int(np.sum(nh<30)),compared_events=0)
         payload={f'v7_{k}':v for k,v in native.items()}
         payload.update(v7_nhit_authoritative=nh,v7_eventout_entry=np.arange(len(rows),dtype='i8'),
                        v7_summary_entry=rows,v7_match_status=np.ones(len(rows),dtype='u1'))
@@ -230,7 +229,7 @@ def summarize(run, inventory):
             add(d,{x:v[x] for x in ('exact','rounding_only','outside_rounding','nonfinite')})
             if len(d['examples'])<5:d['examples']+=( [dict(file=r['file'],**x) for x in v['examples']][:5-len(d['examples'])])
         add(totals['boundaries'],{k:v['changed'] for k,v in r.get('boundaries',{}).items()})
-        for a,b in zip(totals['nhit_bins'],r.get('nhit_bins',[])):add(a,{k:b[k] for k in ('events','mismatches')})
+        for a,b in zip(totals['nhit_bins'],r.get('nhit_bins',[])):add(a,{k:b.get(k,0) for k in ('events','mismatches')})
         add(totals['nhit_below30'],r.get('nhit_below30',{}))
     totals['all_target_poolused_proven_7']=(totals['verified_files']==totals['target_files'] and set(totals['poolused_events'])=={'7'})
     tmp=run/'summary.json.tmp';dump(tmp,totals);os.replace(tmp,run/'summary.json')

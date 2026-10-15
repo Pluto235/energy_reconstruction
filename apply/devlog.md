@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-15 18:25 · [uncommitted] Adopt user-authorized native-only MC Nhit contract and summary rmds rounding-boundary decisions; preserve old versions, add resumable independent-package release and 13 passing Slurm tests.
+
 - **energy** · 2026-10-15 18:23 · [uncommitted] Record all three January full-file pilots passing: 582417 events, zero Nhit/bin differences; v5 automatically expands to four source tasks.
 
 - **energy** · 2026-10-15 18:12 · [uncommitted] Avoid reproducible EOS vector-read failure with native single-worker XRootD reads; v5 revalidates two existing friends before continuing the pilot gate.

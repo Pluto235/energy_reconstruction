@@ -28,14 +28,15 @@ def main():
                                       retry='Review raw-hit boundary/definition differences or listed failure; use a new reviewed run, never overwrite this receipt.') for r in failed])
     out['fields_coverage_fraction']={k:v/out['target_events_known'] if out['target_events_known'] else None for k,v in summary['field_coverage'].items()}
     for scope,receipts in [('all_matched_diagnostics',rlist),('published_verified',verified)]:
-        pools=Counter();poolfiles=Counter();delta=Counter();bins=[dict(lower=x,upper=EDGES[i+1] if i+1<len(EDGES) else None,events=0,mismatches=0) for i,x in enumerate(EDGES)];low=Counter()
+        pools=Counter();poolfiles=Counter();delta=Counter();bins=[dict(lower=x,upper=EDGES[i+1] if i+1<len(EDGES) else None,events=0,compared_events=0,mismatches=0) for i,x in enumerate(EDGES)];low=Counter()
         for r in receipts:
             pools.update(r.get('poolused',{}));poolfiles.update(r.get('poolused',{}).keys());delta.update(r.get('nhit_difference_native_minus_hits',{}));low.update(r.get('nhit_below30',{}))
             for a,b in zip(bins,r.get('nhit_bins',[])):
-                for k in ('events','mismatches'):a[k]+=b[k]
-        for b in bins:b['mismatch_rate']=b['mismatches']/b['events'] if b['events'] else None
+                for k in ('events','mismatches'):a[k]+=b.get(k,0)
+                a['compared_events']+=b.get('compared_events',b['events'] if 'nhit_difference_native_minus_hits' in r else 0)
+        for b in bins:b['mismatch_rate']=b['mismatches']/b['compared_events'] if b['compared_events'] else None
         out[scope]=dict(poolused_events=dict(pools),poolused_files=dict(poolfiles),nhit_difference_native_minus_hits=dict(delta),
-                        nhit_compared_events=sum(delta.values()),nhit_equal_events=delta.get('0',0),
+                        nhit_compared_events=sum(delta.values()),nhit_not_compared_events=sum(r.get('events') or 0 for r in receipts)-sum(delta.values()),nhit_equal_events=delta.get('0',0),
                         nhit_agreement=delta.get('0',0)/sum(delta.values()) if delta else None,nhit_bins=bins,nhit_below30=dict(low))
     out['all_target_poolused_proven_7']=(not failed and not missing and set(out['published_verified']['poolused_events'])=={'7'})
     hashes=defaultdict(list)
@@ -46,7 +47,8 @@ def main():
     out['summary_source_missing_files']=[r['file'] for r in failed if any('summary_source_missing' in x for x in r['failures'])]
     out['limitations']=['Six float32 content fields are not independent physical event ID authentication.',
                          'chi2 is diagnostic-only by explicit user instruction; its discrepancies are not resolved.',
-                         'Raw-hit mismatch files remain quarantined; threshold adjacency does not prove an upstream cause.',
+                         'Legacy raw-hit comparisons are historical diagnostics, not the current native-only publication criterion.' if out['code'].get('contract',{}).get('version',1)>=2 else 'Raw-hit mismatch files remain quarantined; threshold adjacency does not prove an upstream cause.',
+                         'For contract v2, rounding-only rmds boundary differences use the summary decision; original eventout is unchanged.',
                          'Only existing eventout events are covered; no upstream removed event is restored.']
     dump(args.run/'delivery_summary.json',out)
     print(json.dumps({k:out[k] for k in ('target_files','target_events_known','successful_files','failed_files','pending_files')}))

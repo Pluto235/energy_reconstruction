@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-15 18:23 · [uncommitted] Record all three January full-file pilots passing: 582417 events, zero Nhit/bin differences; v5 automatically expands to four source tasks.
+
 - **energy** · 2026-10-15 18:12 · [uncommitted] Avoid reproducible EOS vector-read failure with native single-worker XRootD reads; v5 revalidates two existing friends before continuing the pilot gate.
 
 - **energy** · 2026-10-15 18:08 · [uncommitted] Preserve Jan31 XRootD read failure and retry unchanged under Slurm 66141; two full pilots verify 486227 events, monthly gate remains closed.

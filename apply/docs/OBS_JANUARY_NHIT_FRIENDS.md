@@ -142,3 +142,24 @@ The remaining pilot is extracted afresh into an isolated v5 IHEP directory.
 All v4 failure/partial evidence remains preserved. Subsequent restarts use the
 normal run.sbatch v5 command, not the one-time adoption script. Only v5's eventual
 `completed.json` certifies this continued full-month run; v4 stays incomplete.
+
+## Full-file gate passed, 2026-10-15 18:22 CST
+
+All three full-file pilots have passed in v5. Jan31 task 3739298 completed native
+XRootD extraction and source readback in 263.6 seconds (peak RSS 643,332 KiB),
+then ETO verified its 96,190 events in 14.5 seconds. Output is 29,966,187 bytes;
+there are zero missing/duplicate matches and 169 verified segment headers.
+The earlier vector-read failure is bypassed successfully on the complete file;
+this does not establish the underlying EOS server constraint.
+
+The three-file aggregate is **582,417 events**, 493 segment headers, 100% Nhit
+agreement, zero bin disagreements and poolused=7 throughout the checked events.
+All eight bins and all eight exact lower Nhit edges, including Nhit=2000 (one
+event), are covered. The 236,768 events below 30 remain included. Exact charge
+0.3 and absolute time 30 remain absent in actual data; their tests are synthetic.
+
+Receiver 66142 automatically opened the monthly gate and submitted four source
+tasks (3739311/3739312/3739314/3739315) for Jan01 hours 01–04. The fresh personal
+quota record shows about 6.43 GiB below the soft limit; the existing reservation
+and concurrency limits remain unchanged. At this checkpoint 3/681 files are
+accepted, no current v5 failures exist, and **the full month is not yet accepted**.

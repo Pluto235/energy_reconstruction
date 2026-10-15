@@ -69,7 +69,7 @@ def profiles(cache, model, cells):
             fig.savefig(ASSETS/f'normalized_{axis_name}_{kind}.png', dpi=140); plt.close(fig)
 
 
-def plot_sed_overlay(points, frozen, fit, path):
+def plot_sed_overlay(points, frozen, fit, historical, path):
     plt = D.setup_matplotlib()
     fig, ax = plt.subplots(figsize=(10, 6.4), constrained_layout=True)
     energy = np.geomspace(.12, 260., 320)
@@ -82,6 +82,10 @@ def plot_sed_overlay(points, frozen, fit, path):
     ax.fill_between(energy, lower, upper, color='#2563eb', alpha=.18, linewidth=0,
         label='Stage F conditional 1-sigma band', zorder=1)
     ax.plot(energy, curve, color='#2563eb', lw=2., label='202201 Stage F LogPar')
+    historical_curve = G.sed_curve(energy, model_name='logpar', params=historical, pivot_tev=3.)
+    require(np.isfinite(historical_curve).all() and np.all(historical_curve>0), 'Invalid original v6 curve')
+    ax.plot(energy, historical_curve, color='#db2777', ls='--', lw=2.,
+        label='Original v6 Stage F LogPar', zorder=4)
     pass5_e, pass5_y = reference_sed.pass5_points()
     require(len(pass5_e)==len(pass5_y)==7, 'Expected seven archived Pass5 points')
     pass5_fit = G.official_pass5_point_fit()
@@ -115,6 +119,7 @@ def plot_sed_overlay(points, frozen, fit, path):
         ylabel=r'$E^2 dN/dE$ [TeV cm$^{-2}$ s$^{-1}$]', title='202201 diagnostic SED; uncertainty NOT certified')
     ax.grid(True, which='both', alpha=.22)
     labels = ax.get_legend_handles_labels()[1]
+    require('Original v6 Stage F LogPar' in labels, 'Missing original v6 curve')
     require('Stage F conditional 1-sigma band' in labels, 'Missing Stage F covariance band')
     require('Pass5 WCDA points' in labels and 'Pass5 point-fit LogPar' in labels, 'Missing Pass5 overlay')
     require('HSC v0.99 WCDA points' in labels and 'HSC v0.99 point-fit LogPar' in labels, 'Missing HSC overlay')
@@ -130,8 +135,9 @@ def make_sed_figures(fit_meta, sed):
     require(fit['model_name']=='logpar' and fit['fit_parameter_names']==['log10_phi0','alpha','beta'], 'Unexpected covariance basis')
     cov = np.asarray(fit['covariance'])
     require(cov.shape==(3,3) and np.isfinite(cov).all() and np.allclose(cov,cov.T) and np.all(np.linalg.eigvalsh(cov)>=0), 'Invalid Stage F covariance')
+    historical = next(r for r in load_json(REFERENCE/'scheme_R_double_rayleigh_analytic_bon_comparison.json')['comparison'] if r['label']=='Scheme R 2R analytic B_on')
     for name, selected in [('sed_nhit_overlay', [p for p in points if p.grouping=='nhit']), ('sed_both_overlay', points)]:
-        plot_sed_overlay(selected, frozen, fit, ASSETS/f'{name}.png')
+        plot_sed_overlay(selected, frozen, fit, historical, ASSETS/f'{name}.png')
 
 
 def make_figures(background, signal, fit_arrays, fit_meta, sed):
@@ -289,8 +295,9 @@ def main():
         figure(ASSETS/'spectrum_pulls.png','PL / LogPar 谱形和残差；两个误差口径均为诊断结果。'))
     section('sed', 'Stage G SED · 能谱点', p('固定 Stage F 优选 LogPar 谱形后，分组拟合单参数归一化；代表能量为模型加权真能量中位数。7 个 Nhit 点和 11 个 predE 点由同一 44-cell 产生，不能作为 18 个互相独立观测再拟合。')+
         p('蓝色实线为本次 Stage F 传播误差版 LogPar 最佳拟合；浅蓝阴影按原 v6 的协方差传播定义重建。令 L=ln(E/3 TeV)，g=(ln 10, −L, −L²)，C 为拟合参数 (log₁₀φ₀, α, β) 的完整协方差，则 σ²_lnSED=gᵀCg，上下界为 SED×exp(±σ_lnSED)，保留参数间相关性。图中标为 conditional 1-sigma band：这是局部高斯近似下逐能量的名义 1σ 条件统计误差带，不是全能段联合置信带；未乘 χ²/dof 膨胀因子，也不含 MC、PSF、曝光等系统误差。本次覆盖率检验未通过，因此该带仅供诊断，不能视为已认证的 68% 覆盖区间。')+
+        p('玫红色虚线为原版 v6（Scheme R 2R analytic B_on）的 Stage F 最佳拟合 LogPar，直接使用归档参数 φ₀=2.4265421276459192×10⁻¹²、α=2.7612846846974444、β=0.12018327474116283，pivot=3 TeV；'+link(reference_path,'原版参数来源')+'。原版完整协方差尚未恢复，因此暂不绘制其 1σ 阴影。一月蓝线与浅蓝条件统计带保持原定义，两条曲线仅供对照。')+
         p('外部参考点沿用归档 Pass5、HSC v0.99、WCDA-1、MAGIC、H.E.S.S.、HAWC。HSC 使用确认的 Official tutorial v0.99 WCDA 7 个点及其误差（橙色空心菱形）；'+link(reference_sed.V099_CSV,'HSC v0.99 数据 CSV')+'。Pass5 的 7 个点不含可用误差列，因此不补造误差棒。Pass5 黑色实线与 HSC 橙色虚线均是在 log(dN/dE)–log(E/3 TeV) 空间对各自归档点做非加权二次拟合得到的 LogPar，仅用于视觉对照，非原流程的似然拟合结果。已移除 1LHAASO WCDA full-array PL 曲线。外部数据并非共同 GTI 或相同样本，没有根据外部曲线调整本次参数。')+
-        figs([('sed_nhit_overlay.png','一月 Nhit 分组 SED、Stage F 条件 1σ 诊断带、Pass5 与 HSC v0.99 点及各自点拟合 LogPar 曲线。'),('sed_both_overlay.png','一月 Nhit + predE 分组 SED、Stage F 条件 1σ 诊断带、Pass5 与 HSC v0.99 点及各自点拟合 LogPar 曲线；18 点均保留。')])+
+        figs([('sed_nhit_overlay.png','一月 Nhit 分组 SED、Stage F 条件 1σ 诊断带、原版 v6 玫红虚线（无误差带）、Pass5 与 HSC v0.99 点及各自点拟合 LogPar 曲线。'),('sed_both_overlay.png','一月 Nhit + predE 分组 SED、Stage F 条件 1σ 诊断带、原版 v6 玫红虚线（无误差带）、Pass5 与 HSC v0.99 点及各自点拟合 LogPar 曲线；18 点均保留。')])+
         figs([('sed_points_ratio.png','相对本次冻结 LogPar 与归档 Pass5 点拟合曲线的比值；不隐藏末尾点。'),('sed_comparison.png','两种误差定义的 SED 对照；轻微横向错开仅用于辨认。')])+
         table(['Group','Bin','Cells','E50 [TeV]','E16–E84 [TeV]','E²dN/dE','Stat. error','χ²/dof'],[[esc(p['grouping']),esc(p['group_label']),p['n_cells'],fmt(p['effective_energy_tev']),f"{p['true_energy_p16_tev']:.4g}–{p['true_energy_p84_tev']:.4g}",fmt(p['e2_dnde']),fmt(p['e2_dnde_err']),f"{p['chi2']:.3f}/{p['ndof']}"] for p in sed['propagated']]))
     section('coverage', 'Uncertainty Calibration · 覆盖率与偏差', p('冻结设计：44-cell 各 512 次背景 bootstrap；4 类独立真值 × 两档环区计数，各 256 外层 × 128 内层。仅验证 cell 62 几何。失败保留在覆盖率分母，bias/RMSE 条件于有效估计。')+

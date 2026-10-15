@@ -1,5 +1,7 @@
 """Independent Slurm final audit/report for a finished mixed-schema Nhit run."""
 import argparse
+import csv
+import re
 from collections import Counter
 import json
 from pathlib import Path
@@ -85,6 +87,16 @@ def audit(state):
         source_time_boundary_hits=sum(r['source']['root']['time_boundary'] for r in generated),
         source_boundary_scope='All PINC candidates for successfully accepted new files; any surplus is included in these source counters')
     atomic_json(state/'final_audit.json',result)
+    with (state/'file_catalog.csv').open('w',newline='') as f:
+        writer=csv.DictWriter(f,fieldnames=['name','kind','events','bytes','sha256','receipt','receipt_sha256'])
+        writer.writeheader();writer.writerows(rows)
+    with (state/'failed_files.csv').open('w',newline='') as f:
+        writer=csv.DictWriter(f,fieldnames=['name','expected_events','required_header','error'])
+        writer.writeheader()
+        for item in failures:
+            error=item['failure'].get('error','') if isinstance(item['failure'],dict) else item['failure']
+            match=re.search(r'/eos/lhaaso/raw/wcda/2022/\d{4}/.*?\.reduced\.root',error)
+            writer.writerow(dict(name=item['name'],expected_events=item['expected_events'],required_header=match[0] if match else '',error=error))
     print(json.dumps({k:v for k,v in result.items() if k not in ['files_catalog','source_sessions','pilot']},indent=2))
 
 

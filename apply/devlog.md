@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-15 16:26 · [uncommitted] Add unfiltered atomic MC v7 friends with exact matching, native Nhit checks, bounded relay and readback; chi2 diagnostic-only by user instruction; 3-file Slurm pilot passes.
+
 - **energy** · 2026-10-15 14:20 · [uncommitted] Add original v6 archived LogPar as rose dashed comparison in both January SED overlays; preserve January covariance band and omit unavailable original band.
 
 - **energy_reconstruction** · 2026-10-15 13:45 · [uncommitted] 按原v6完整协方差传播定义补齐两张SED图的蓝色条件1σ带，注明逐能量统计含义及覆盖率限制。

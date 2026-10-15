@@ -181,3 +181,15 @@ unchanged, and this file must still pass the original complete acceptance checks
 Diagnostic advertisements, action and response are preserved on both hosts under
 v5 `attempts/Esg20220101_07.root/startup_stall/`. Recovery is not certified merely
 by the evacuation acknowledgment; watch the same job and its eventual receipt.
+
+
+## Repeated startup stall, 2026-10-15 19:08 CST
+
+Jan01 hour07 subsequently passed full acceptance: 104,689 events, 160 segments,
+100% matching and Nhit agreement, zero bin mismatches. The same slot126@bws0995
+then stalled Jan01 hour19 (Condor 3739373.0), with no START for over 17 minutes
+and the same missing-starter-address diagnostic. The existing job was restricted
+away from that host and fast-vacated, without a second submission. Both hosts
+retain the evidence in v5 attempts/Esg20220101_19.root/startup_stall/.
+Other files and full validation continue; the exact underlying host fault is
+unverified. This is a second startup incident, not a data acceptance failure.

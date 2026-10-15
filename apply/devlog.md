@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-15 19:08 · [uncommitted] Record hour07 full acceptance and recover repeated missing-starter stall for hour19 by same-job evacuation; preserve both incident records.
+
 - **energy** · 2026-10-15 18:50 · [uncommitted] Diagnose Jan01 hour07 unavailable starter; preserve evidence and evacuate same Condor job 3739329 off bws0995 without duplicate submission or changed acceptance.
 
 - **energy** · 2026-10-15 18:31 · [uncommitted] Deliver native-only MC v7 acceptance: all 10000 files/38521725 events pass readback, 19 quarantines resolved under explicit user policy; preserve old version and fix legacy diagnostic denominators.

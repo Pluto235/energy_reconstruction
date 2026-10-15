@@ -1,7 +1,7 @@
 {
-  "result": "PASS5_OVERLAY_UPDATE_COMPLETE_HSC_SOURCE_PENDING",
+  "result": "PASS5_AND_HSC_OVERLAY_UPDATE_COMPLETE",
   "scientific_status": "DIAGNOSTIC_ONLY_UNCERTAINTY_NOT_CERTIFIED",
-  "source_commit": "bb101ea1ec8dae8528704f32ac68f32cd5fa791b",
+  "source_commit": "a97548f8ee7aa6616068540d54fceb448f0f2471",
   "slurm_jobs": [
     {
       "id": "66101",
@@ -47,10 +47,19 @@
       "elapsed": "00:00:04",
       "cpus": "2",
       "memory": "4G"
+    },
+    {
+      "id": "66106",
+      "name": "v6_sed_hsc",
+      "state": "COMPLETED",
+      "exit": "0:0",
+      "elapsed": "00:00:03",
+      "cpus": "2",
+      "memory": "4G"
     }
   ],
-  "report_sha256": "7e6434cd222093c241bb7cbbc1c9723536efd1769ce0dc132b7d70fa18dab021",
-  "validation_sha256": "067ab977f4845f45ad7e3ab604ddf7b0ff09d7236de4235eff3f108f40523a1e",
+  "report_sha256": "fa28de94fb56670f3622a21bd04bafb56251fcd4382c36549f66d3f75f9d7ae2",
+  "validation_sha256": "8a1abb3d08f82cd01b139d638578ea62883a86e345313bbd8f347f27366a3e28",
   "source_git_blobs": "MATCH_GENERATION_SOURCE_COMMIT",
   "images": 25,
   "sections": 17,
@@ -64,23 +73,36 @@
     "roi_excess_grid",
     "sed_points_ratio",
     "model_counts_vs_excess",
-    "normalized_ra_excess"
+    "normalized_ra_excess",
+    "sed_nhit_overlay"
   ],
   "limitation": "Desktop/mobile rendered layout not certified; scientific uncertainty remains uncertified",
-  "final_html_job": "66105",
+  "final_html_job": "66106",
   "figure_generation_job": "66102",
   "formatting_refresh": "Strip inherited trailing CSS whitespace; verify all25 image hashes, then invoke main with make_figures disabled in process; original analysis unchanged.",
-  "sed_overlay_generation_job": "66105",
+  "sed_overlay_generation_job": "66106",
   "changed_images": [
     "sed_both_overlay.png",
     "sed_nhit_overlay.png"
   ],
   "unchanged_other_images": 23,
-  "hsc_status": "Awaiting confirmation of proposed Official tutorial v0.99 WCDA data",
+  "hsc_status": "User confirmed Official tutorial v0.99 WCDA: seven archived points and supplied errors",
   "plot_checks": [
-    "7 Pass5 points",
-    "Pass5 point-fit LogPar",
+    "7 Pass5 points and point-fit LogPar",
+    "7 HSC v0.99 points with supplied error bars and point-fit LogPar",
     "no full-array PL",
-    "new SED overlay visually checked"
-  ]
+    "both updated SED overlays visually checked"
+  ],
+  "hsc_reference_csv": "apply/report/assets/official-v099/wcda_crab_sed_v099_20250731_20260616_123624.csv",
+  "hsc_point_fit": {
+    "phi0": 2.430734923072885e-12,
+    "alpha": 2.66848047187163,
+    "beta": 0.11817564563094794,
+    "pivot_tev": 3.0
+  },
+  "hsc_fit_method": "Unweighted quadratic fit in ln(dN/dE) versus ln(E/3 TeV); visual reference only, not a likelihood fit",
+  "latest_sed_log_hashes": {
+    "v6_sed_hsc_66106.out": "08bb6e8105133bed535d8668603bcdf9325c855403b05a215df06eae8e835455",
+    "v6_sed_hsc_66106.err": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
 }

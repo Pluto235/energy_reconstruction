@@ -30,7 +30,10 @@ def main():
     for scope,receipts in [('all_matched_diagnostics',rlist),('published_verified',verified)]:
         pools=Counter();poolfiles=Counter();delta=Counter();bins=[dict(lower=x,upper=EDGES[i+1] if i+1<len(EDGES) else None,events=0,compared_events=0,mismatches=0) for i,x in enumerate(EDGES)];low=Counter()
         for r in receipts:
-            pools.update(r.get('poolused',{}));poolfiles.update(r.get('poolused',{}).keys());delta.update(r.get('nhit_difference_native_minus_hits',{}));low.update(r.get('nhit_below30',{}))
+            pools.update(r.get('poolused',{}));poolfiles.update(r.get('poolused',{}).keys());delta.update(r.get('nhit_difference_native_minus_hits',{}))
+            below=r.get('nhit_below30',{})
+            low.update({k:below.get(k,0) for k in ('events','mismatches')})
+            low['compared_events']+=below.get('compared_events',below.get('events',0) if 'nhit_difference_native_minus_hits' in r else 0)
             for a,b in zip(bins,r.get('nhit_bins',[])):
                 for k in ('events','mismatches'):a[k]+=b.get(k,0)
                 a['compared_events']+=b.get('compared_events',b['events'] if 'nhit_difference_native_minus_hits' in r else 0)

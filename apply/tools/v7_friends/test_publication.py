@@ -58,6 +58,13 @@ class Publication(unittest.TestCase):
             self.assertEqual(out['published_verified']['nhit_equal_events'],0)
             self.assertEqual(out['published_verified']['nhit_not_compared_events'],2)
             self.assertIsNone(out['published_verified']['nhit_agreement'])
+            receipt=next(run.rglob('receipt.json'));r=json.loads(receipt.read_text())
+            r.update(nhit_difference_native_minus_hits={'0':2},nhit_below30=dict(events=2,mismatches=0))
+            dump(receipt,r)
+            with patch('sys.argv',['deliver','--run',str(run),'--inventory',str(base/'inventory.json')]):deliver.main()
+            legacy=json.loads((run/'delivery_summary.json').read_text())
+            self.assertEqual(legacy['published_verified']['nhit_below30']['compared_events'],2)
+
 
     def test_native_only_and_rounding_rmds_boundary_accepted(self):
         with tempfile.TemporaryDirectory() as d:

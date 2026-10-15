@@ -34,3 +34,5 @@ python tools/v7_friends/audit.py --inventory output/v7_friends_20261015/input_in
 ```
 
 It reopens published friends, checks hashes, identities, mappings, schema, integer sums and metadata, and verifies quarantined packages have no friend. Original source stat identities are checked again; original SHA256 values were computed in Slurm during generation. Data and generated logs/manifests stay outside Git.
+
+For faster direct ETO→IHEP transport, use the existing Mac agent through an explicit `ssh -A ETO` session, then run the same relay on ETO with `--on-eto`. This uses existing agent identities without copying keys or changing SSH configuration. Keep that SSH session alive until transfer completes. A failed Mac relay can be stopped at its owned process IDs; its unready incoming batch is safely retransferred. The independent Slurm writer remains running.

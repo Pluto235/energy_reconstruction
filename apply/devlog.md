@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-15 16:30 · [uncommitted] Use existing forwarded SSH agent for bounded direct ETO–IHEP summary transfer; add transport checks and preserve immutable friend processing contract.
+
 - **energy** · 2026-10-15 16:26 · [uncommitted] Add unfiltered atomic MC v7 friends with exact matching, native Nhit checks, bounded relay and readback; chi2 diagnostic-only by user instruction; 3-file Slurm pilot passes.
 
 - **energy** · 2026-10-15 14:20 · [uncommitted] Add original v6 archived LogPar as rose dashed comparison in both January SED overlays; preserve January covariance band and omit unavailable original band.

@@ -9,6 +9,7 @@ import shlex
 import shutil
 import subprocess
 import time
+from collections import Counter
 
 import numpy as np
 import uproot
@@ -155,6 +156,10 @@ def receive(state, row, stage):
     name = row['name']; recpath = state/(name+'.ready.json')
     transfer(REMOTE+':'+stage+'/'+name+'.ready.json', str(recpath))
     record = json.loads(recpath.read_text())
+    task = json.loads((state/(name+'.task.json')).read_text())
+    if (record['name'] != name or record['request_sha256'] != task['request_sha256']
+            or record['code'] != task['code']):
+        raise ValueError('source receipt does not belong to frozen task: '+name)
     target = BASE/'full'/name[7:11]/name.replace('.root', '.nhit.root')
     target.parent.mkdir(parents=True, exist_ok=True)
     receipt_path = state/(name+'.receipt.json')
@@ -181,6 +186,22 @@ def receive(state, row, stage):
     atomic_json(state/(name+'.cleaned.json'), dict(cleaned_at=time.time()))
     (state/(name+'.requests.npz')).unlink(missing_ok=True)
     print('VERIFIED', name, record['entries'], flush=True)
+
+
+def summarize(state, done, failures):
+    bins = Counter(); pools = Counter(); boundaries = Counter(); events = 0; nsegments = 0
+    for name in sorted(done):
+        r = json.loads((state/(name+'.receipt.json')).read_text())
+        v = r['validation']; events += r['entries']; nsegments += v['segments']
+        bins.update(v['bins']); pools.update(v['poolused'])
+        boundaries.update({k:n for k,n in v.items() if k.startswith('events_nhit_') or k.startswith('hits_exact_')})
+    atomic_json(state/'summary.json', dict(status='complete' if len(done)==681 else 'incomplete',
+        verified_files=len(done), failed_files=len(failures), total_files=681, verified_events=events,
+        event_coverage='only validated files; pending/failed files are NOT verified',
+        nhit_equal_fraction=1 if events else None, bin_mismatch_fraction=0 if events else None,
+        delta_histogram={'0':events}, bins=dict(bins), poolused=dict(pools), segments=nsegments,
+        boundary_counts=dict(boundaries), boundary_note='zero means not covered in actual data',
+        failures=sorted(failures), contract=CONTRACT, updated_at=time.time()))
 
 
 def run(args):
@@ -244,6 +265,7 @@ def run(args):
         atomic_json(state/'progress.json', dict(verified=len(done), failed=len(failures), active=list(active),
                                                pilot_verified=pilot_ok, total=681, updated_at=time.time()))
         atomic_json(state/'failures.json', [json.loads((state/(n+'.failed.json')).read_text()) for n in sorted(failures)])
+        summarize(state, done, failures)
         if failures & set(PILOT):
             raise RuntimeError('Full-file pilot failed; automatic monthly expansion disabled')
         if len(done | failures) == 681:
@@ -257,7 +279,8 @@ def run(args):
             q = quota(); atomic_json(state/'quota.json', q)
             reserved = sum(s['reservation'] for s in active.values())
             # Failed artifacts remain reserved until reviewed; never silently delete evidence.
-            reserved += sum(json.loads((state/(n+'.task.json')).read_text())['reservation'] for n in failures)
+            reserved += sum(json.loads((state/(n+'.task.json')).read_text())['reservation']
+                            for n in failures if (state/(n+'.task.json')).exists())
             available = min(capacity-reserved, q['soft']-q['used']-GIB, q['hard']-q['used']-6*GIB)
             name = pending[0]; row = byname[name]
             estimate = row['input']['bytes'] + row['input']['entries']*16 + 64*1024**2

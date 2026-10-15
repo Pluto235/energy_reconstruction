@@ -44,11 +44,24 @@ def sha256(path):
     return h.hexdigest()
 
 
+def source_uri(path):
+    # Compute-node EOS FUSE mounts can stall; use the site's authenticated endpoint.
+    return 'root://eos01.ihep.ac.cn/' + str(path) if str(path).startswith('/eos/') else str(path)
+
+
 def stamp(path):
-    s = Path(path).stat()
-    with uproot.open(path) as f:
+    if str(path).startswith('/eos/'):
+        from XRootD import client
+        status, result = client.FileSystem('root://eos01.ihep.ac.cn').stat(str(path), timeout=60)
+        if not status.ok:
+            raise OSError(str(status))
+        size, mtime = result.size, result.modtime * 10**9
+    else:
+        s = Path(path).stat()
+        size, mtime = s.st_size, s.st_mtime_ns
+    with uproot.open(source_uri(path), timeout=60) as f:
         t = f['t_eventout']
-        return dict(bytes=s.st_size, mtime_ns=s.st_mtime_ns, uuid=str(f.file.uuid),
+        return dict(bytes=size, mtime_ns=mtime, uuid=str(f.file.uuid),
                     entries=t.num_entries, types=t.typenames(),
                     header_sha256=hashlib.sha256(json.dumps(f['t_eventout_h'].arrays().to_list(),
                         sort_keys=True).encode()).hexdigest())

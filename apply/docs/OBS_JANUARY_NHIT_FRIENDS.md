@@ -24,11 +24,15 @@ Original `vt`, `vidmc`, `rmds` and other retained branches remain in WCDA_obs.
 
 ## Execution
 
-From ETO `apply/`, submit `sbatch tools/observation_nhit/run.sbatch 20261015_january_v1`.
+From ETO `apply/`, submit `sbatch tools/observation_nhit/run.sbatch 20261015_january_v2`.
 The Slurm receiver uses the existing IHEP ControlMaster socket and submits one
 IHEP HTCondor task per file (1 CPU / 4000 MB, site hep_sub). IHEP extraction is the
 user-authorized exception to ETO-only compute. ROOT/NumPy/Awkward/uproot are from
 LCG_106 on IHEP and the existing py310 environment on ETO; no new dependency.
+Source reads use `root://eos01.ihep.ac.cn//eos/...`, including XRootD stat with a
+60-second timeout. The v1 pilot (Slurm 66130 / Condor 3739146) stalled on the
+compute-node EOS FUSE mount and was stopped before any output. Condor diagnostic
+3739170 successfully read the identical file over XRootD; v1 records are preserved.
 
 The complete 0101/0116/0131 `_00` files run sequentially. All must pass before
 automatic expansion, capped at four producers. Fresh Lustre personal quota is
@@ -58,5 +62,6 @@ for scheduler inspection. Restart with the same run ID and unchanged source.
 
 Run `python -B tools/observation_nhit/test_nhit.py` for synthetic contract checks.
 `progress.json` is provisional; only `completed.json` certifies all 681 files.
+`summary.json` aggregates only verified files and explicitly reports incomplete coverage.
 Boundary counts of zero mean not covered in actual data, even when synthetic
 boundary tests pass. A missing original event cannot be recovered by this pipeline.

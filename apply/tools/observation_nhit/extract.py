@@ -13,7 +13,7 @@ import numpy as np
 import uproot
 
 from common import (CONTRACT, KEYS, atomic_json, digest_column, histogram, lookup_chunk,
-                    nhit, sha256, stamp, sync_dir, unique_keys)
+                    nhit, sha256, source_uri, stamp, sync_dir, unique_keys)
 
 
 def segments(source, day, wanted):
@@ -33,7 +33,7 @@ def segments(source, day, wanted):
         if h['infiles'] != name.replace('.samp.dt.root', '.samp.root'):
             raise ValueError('segment filename/infiles disagree: ' + name)
         path = '/eos/lhaaso/raw/wcda/2022/' + day + '/' + name.replace('.samp.dt.root', '.reduced.root')
-        with uproot.open(path) as f:
+        with uproot.open(source_uri(path), timeout=60) as f:
             t = f['wcdah']
             if t.num_entries != 1:
                 raise ValueError('segment wcdah is not unique: ' + path)
@@ -61,6 +61,7 @@ def sha256_json(value):
 
 def extract(work, name):
     start = time.time()
+    print('START', name, flush=True)
     task = json.loads((work / (name + '.task.json')).read_text())
     if task['contract'] != CONTRACT:
         raise ValueError('contract mismatch')
@@ -76,6 +77,7 @@ def extract(work, name):
     seen = np.zeros(len(keys), dtype=bool)
     src = task['source']
     before = stamp(src)
+    print('SOURCE_METADATA', name, before['entries'], flush=True)
     if before['entries'] != task['source_entries'] or before['header_sha256'] != task['input']['header_sha256']:
         raise ValueError('original source count/header differs from restoration')
     common = list(task['input']['types'])
@@ -86,16 +88,19 @@ def extract(work, name):
     if output.exists() or partial.exists():
         raise FileExistsError('stale output requires explicit recovery: ' + str(output))
     blocks = []
-    with uproot.open(src, array_cache=None) as source:
+    with uproot.open(source_uri(src), array_cache=None, timeout=60) as source:
         tree = source['t_eventout']
         offset = 0
         for a in tree.iterate(KEYS, step_size=200000, library='np'):
             lookup_chunk(keys, order, a, offset, entries, seen)
             offset += len(a['irun'])
+            if offset % 1000000 == 0:
+                print('KEY_SCAN', name, offset, flush=True)
         if not np.all(seen):
             raise ValueError('missing source keys: ' + str(np.flatnonzero(~seen)[:10].tolist()))
         wanted = set(zip(*(target[k].tolist() for k in KEYS[:3])))
         segmap, rows = segments(source, name[7:11], wanted)
+        print('SEGMENTS', name, len(rows), flush=True)
         with uproot.recreate(partial, compression=uproot.ZLIB(4)) as out:
             schema = {k: 'int32' for k in KEYS + ['nv', 'nhit', 'poolused', 'segment_index']}
             schema.update(input_entry='int64', ihep_entry='int64', vqsamp='var * float32')

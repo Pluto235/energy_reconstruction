@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
+import shutil
 
 import awkward as ak
 import numpy as np
@@ -12,6 +13,7 @@ import uproot
 from common import CONTRACT, EDGES, KEYS, digest_column, lookup_chunk, nhit, sha256, stamp, unique_keys
 from extract import segments
 from verify import verify
+import run
 
 
 def table(ids):
@@ -88,6 +90,30 @@ class Checks(unittest.TestCase):
             with self.assertRaises(ValueError): verify(inp,friend,rec,frozen)
             rec['sha256']='bad'
             with self.assertRaises(ValueError): verify(inp,friend,rec,frozen)
+
+    def test_publication_failure_and_ack_recovery(self):
+        with tempfile.TemporaryDirectory() as d:
+            d=Path(d); state=d/'state'; state.mkdir(); name='Esg20220101_00.root'
+            blob=d/'blob'; blob.write_bytes(b'root-test')
+            record=dict(name=name, request_sha256='request', code={}, sha256=sha256(blob), bytes=9, entries=1)
+            (state/(name+'.task.json')).write_text(json.dumps(dict(request_sha256='request',code={})))
+            def transfer(src, dst):
+                if src.endswith('.ready.json'): Path(dst).write_text(json.dumps(record))
+                else: shutil.copyfile(blob,dst)
+            target=d/'full/0101/Esg20220101_00.nhit.root'
+            with patch.object(run,'BASE',d), patch.object(run,'transfer',transfer), patch.object(run,'cleanup') as cleanup:
+                with patch.object(run,'verify',side_effect=ValueError('bad content')):
+                    with self.assertRaises(ValueError): run.receive(state,dict(name=name,input={}),'/unused')
+                self.assertFalse(target.exists()); cleanup.assert_not_called()
+                cleanup.side_effect=RuntimeError('ack connection lost')
+                with patch.object(run,'verify',return_value={}):
+                    with self.assertRaises(RuntimeError): run.receive(state,dict(name=name,input={}),'/unused')
+                self.assertEqual(target.read_bytes(),b'root-test')
+                self.assertTrue((state/(name+'.receipt.json')).exists())
+                cleanup.side_effect=None
+                run.receive(state,dict(name=name,input={}),'/unused')
+                target.write_bytes(b'changed')
+                with self.assertRaises(ValueError): run.receive(state,dict(name=name,input={}),'/unused')
 
 
 if __name__ == '__main__': unittest.main()

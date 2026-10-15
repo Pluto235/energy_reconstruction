@@ -254,3 +254,18 @@ observed UUID/header contents, then runs the unchanged C++ Nhit implementation.
 Other headers retain the bounded uproot readers; no manual default is added.
 Native-reader metadata is saved and included in final audit. All repair states and
 failures are retained; ten targeted fixtures pass in Slurm 66169.
+
+The second repair's native preflight failed before hit extraction (missing
+StreamerInfo / zombie file); Slurm 66171 still reports 680 accepted files and
+69,209,278 events. Jan28_06 remains the sole missing file (70,091 events), and
+the two manual exceptions remain accepted with their original scope.
+
+Bounded metadata-only HTCondor diagnostics under Slurm 66172 and 66173 preserved
+both all-zero and valid reads of the same Jan28 wcdah/StreamerInfo byte ranges.
+Successful uproot and native ROOT reads agree with the earlier independent UUID
+and four header scalars. EOS reports replicas on eos40 (fsid1300) and eos92
+(fsid40208), but the initial endpoint lookup failed; the requested fsid parameter
+alone does not establish which replica served a read. A separate header_io_v3
+diagnostic records actual data-server identity with the corrected reader API.
+Evidence and failures remain under audit/header_io_v1, v2 and v3. No EOS source
+is modified and no additional poolused default is authorized.

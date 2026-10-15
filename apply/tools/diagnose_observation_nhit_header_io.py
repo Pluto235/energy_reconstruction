@@ -7,8 +7,16 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+from urllib.parse import urlsplit
 
 FIELDS=['irun','ies','iseq','poolused']
+
+
+def endpoint(value):
+    """Record only endpoint identity, never URL capabilities or credentials."""
+    value=str(value)
+    parsed=urlsplit(value if '://' in value else 'root://'+value)
+    return dict(host=parsed.hostname,port=parsed.port)
 
 
 def one(spec, mode):
@@ -23,6 +31,11 @@ def one(spec, mode):
             f=ROOT.TFile.Open(uri,'READ')
             if not f or f.IsZombie():raise ValueError('ROOT zombie')
             try:
+                try:
+                    actual=f.GetEndpointUrl()
+                    result['data_server']=(dict(host=str(actual.GetHost()),port=int(actual.GetPort()))
+                        if hasattr(actual,'GetHost') else endpoint(actual))
+                except Exception as e:result['data_server_lookup_error']=type(e).__name__
                 result['uuid']=str(f.GetUUID().AsString())
                 result['header_keys']=sum(k.GetName()=='wcdah' for k in f.GetListOfKeys())
                 t=f.Get('wcdah');result['entries']=int(t.GetEntries())
@@ -39,7 +52,9 @@ def one(spec, mode):
             with uproot.open(uri,timeout=40,handler=uproot.source.xrootd.MultithreadedXRootDSource,num_workers=1) if mode!='fuse_uproot' else uproot.open(uri) as f:
                 result['uuid']=str(f.file.uuid);result['keys']=f.keys()
                 try:
-                    result['data_servers']=[resource._file.get_property('DataServer') for resource in f.file.source._resources]
+                    executor=f.file.source._executor
+                    resources=([worker.resource for worker in executor.workers] if hasattr(executor,'workers') else [executor._resource])
+                    result['data_servers']=[endpoint(resource.file.get_property('DataServer')) for resource in resources]
                 except Exception as e:result['data_server_lookup_error']=repr(e)
                 # Record the byte locations and content hashes of metadata, not hit data.
                 key=f.key('wcdah')

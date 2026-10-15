@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-16 02:20 · [uncommitted] Preserve completed Slurm66173/HTCondor3743395 metadata diagnostics: both requested fsids pass native ROOT but uproot returns zero metadata; the initial endpoint lookup used an unsupported attribute, so replica attribution remains unproven. Correct endpoint capture using executor resources and ROOT endpoint identity, strip URL credentials/capabilities, and keep this follow-up in separate header_io_v3 evidence. No production or repair snapshot changed.
+
 - **energy** · 2026-10-16 02:15 · [uncommitted] Metadata-only HTCondor3743346 reproduces both zero-filled and valid wcdah/StreamerInfo bytes for the same UUID; valid uproot and native ROOT reads agree. EOS inventories two replicas (fsid1300/eos40 and fsid40208/eos92). Add isolated per-replica read routing diagnostics and actual data-server recording; do not modify EOS or retry Nhit while source reliability is unresolved.
 
 - **energy** · 2026-10-16 02:10 · [uncommitted] Preserve native ROOT StreamerInfo/zombie failure before any Jan28 hit extraction; schedule bounded metadata-only reader/process/FUSE diagnostics against the previously observed real UUID and header. Keep 680 accepted results and both confirmed overrides intact; no third blind full-file retry or added default.

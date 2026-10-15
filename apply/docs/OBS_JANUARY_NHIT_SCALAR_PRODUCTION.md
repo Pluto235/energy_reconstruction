@@ -223,3 +223,22 @@ Normal checks stay quiet; actionable failures and the final result are reported.
 After final audit, failure investigation, documentation and publication, the
 checking turn writes `stop.json` and retires this timer. Receiver/source polling
 continues at its existing cadence to accept outputs and release staging promptly.
+
+## Isolated terminal recovery
+
+Initial production ended with 677 accepted files and four isolated failures.
+Slurm 66158 independently audited 68,770,253 events with zero accepted duplicate,
+missing or surplus keys. Slurm 66163 / its HTCondor probe found reliable, unique,
+identity-exact original headers for Jan23_00 and Jan28_06 on a separate read; their
+UUIDs and scalar header contents are retained in `audit/header_fullmonth/source/result.json`.
+The earlier compression errors remain recorded; their underlying cause is not yet
+established. The Jan02/Jan03 missing streams remain absent.
+
+`tools/observation_nhit_repair/run_repair.py` provides isolated recovery for these
+four files, keeping the production source/config frozen and accepted files intact.
+It binds both source and ETO acceptance to the authorization digest, original
+input snapshots and new execution snapshot. Manual assignments carry explicit
+source/authorization/missing-header fields. Jan23/Jan28 use actual headers matching
+the independent evidence, not manual defaults. Nine fixture groups pass in Slurm
+66166. Initial summaries are archived, resolved failures retain their original
+records, and completion requires a new independent full-month audit.

@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-16 01:15 · [uncommitted] Add isolated four-file January repair after 677-file terminal audit: enforce digest-bound user exceptions for exactly two segments, require recovered Jan23/Jan28 real headers to match independent evidence, preserve initial failures/receipts, and pass nine Slurm66166 authorization/contract fixtures. Scientific C++ remains byte-identical.
+
 - **energy** · 2026-10-15 23:44 · [uncommitted] Record user-confirmed poolused=7 exceptions for exactly Jan02_12 run139579/es1/seq3336 and Jan03_05 run139579/es2/seq4700, bound to frozen input snapshots; retain missing-header provenance and queue isolated post-production recovery. Keep new Jan23_00 header compression failure outside the exception.
 
 - **energy** · 2026-10-15 22:35 · [uncommitted] Replace continuous chat polling with user-requested 30-minute ETO Slurm wakeups of the existing chat; verify daemon access in Slurm66164, launch timer66165, preserve quiet-normal/notify-actionable policy and final-delivery stop condition.

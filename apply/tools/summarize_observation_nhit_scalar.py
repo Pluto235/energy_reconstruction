@@ -25,18 +25,22 @@ def audit(state):
     config=json.loads((state/'config.json').read_text())
     command(['rsync','-rt','--partial','--timeout=180','--exclude=*.root','-e',shlex.join(SSH),
              REMOTE+':'+config['stage']+'/',str(state/'source_archive')+'/'])
-    repair = None
-    repair_policy = None
-    if (state/'repair.json').exists():
-        binding=json.loads((state/'repair.json').read_text());repair=Path(binding['state'])
-        if sha256(repair/'config.json')!=binding['config_sha256'] or sha256(repair/'finished.json')!=binding['finished_sha256']:
-            raise ValueError('repair binding changed')
-        repair_config=json.loads((repair/'config.json').read_text())
+    repairs = []
+    bindings=[]
+    if (state/'repairs.json').exists():bindings=json.loads((state/'repairs.json').read_text())
+    elif (state/'repair.json').exists():bindings=[json.loads((state/'repair.json').read_text())]
+    if bindings:
         sys.path.insert(0,str(Path(__file__).resolve().parent/'observation_nhit_repair'))
         from policy import load_policy
-        repair_policy=load_policy(repair,repair_config)
+        from native_header import validate_evidence
         spec=importlib.util.spec_from_file_location('repair_validate',Path(__file__).resolve().parent/'observation_nhit_repair/validate.py')
         repair_validate=importlib.util.module_from_spec(spec);spec.loader.exec_module(repair_validate)
+        for binding in bindings:
+            repair=Path(binding['state'])
+            if sha256(repair/'config.json')!=binding['config_sha256'] or sha256(repair/'finished.json')!=binding['finished_sha256']:
+                raise ValueError('repair binding changed')
+            repair_config=json.loads((repair/'config.json').read_text())
+            repairs.append(dict(state=repair,config=repair_config,policy=load_policy(repair,repair_config)))
     manifest=json.loads((state/'manifest.json').read_text())
     gate=json.loads((state/'gate.json').read_text())
     totals={kind:dict(files=0,events=0,bytes=0) for kind in ['legacy_with_charge','scalar_only']}
@@ -57,12 +61,21 @@ def audit(state):
             data=f['t_nhit'].arrays(SCALARS,library='np');seg=f['t_segments'].arrays().to_list()
             kind='legacy_with_charge' if 'vqsamp' in f['t_nhit'] else 'scalar_only'
             if kind!=rec['kind']:raise ValueError('schema category '+name)
-        if repair and (repair/'receipts'/(name+'.json')).exists():
+        owners=[item for item in repairs if (item['state']/'receipts'/(name+'.json')).exists()]
+        if len(owners)>1:raise ValueError('duplicate repair receipt ownership')
+        if owners:
+            owner=owners[0];repair=owner['state'];repair_config=owner['config'];repair_policy=owner['policy']
             repaired_names.append(name)
             if sha256(p)!=sha256(repair/'receipts'/(name+'.json')):
                 raise ValueError('merged repair receipt changed')
             repair_validate.check_scalars(data,seg,task['source_entries'],task=task,policy=repair_policy)
             source=rec['source'];prov=source['provenance']
+            if any(row.get('header_reader')=='native_ROOT' for row in seg):
+                validate_evidence(source['native_header_probe'],repair_policy['recovered'][name])
+                proof=repair/'source_archive'/'production'/name/'native_header_probe.json'
+                saved=json.loads(proof.read_text())
+                if any(saved[k]!=v for k,v in source['native_header_probe'].items()):
+                    raise ValueError('archived native header evidence differs')
             if (prov['code']!=repair_config['code'] or prov['git_commit']!=repair_config['git_commit'] or
                 prov['contract']!=repair_config['contract'] or prov['run_id']!=repair_config['run_id'] or
                 prov['repair_policy']!=repair_policy['binding'] or prov['target_stamp']!=task['input'] or
@@ -96,7 +109,8 @@ def audit(state):
     sessions={}
     for p in sorted((state/'source_sessions').glob('*.json'),key=lambda p:p.name.endswith('.done.json')):
         row=json.loads(p.read_text());sessions[row['id']]=row
-    if repair:
+    for item in repairs:
+        repair=item['state']
         for p in sorted((repair/'source_sessions').glob('*.json'),key=lambda p:p.name.endswith('.done.json')):
             row=json.loads(p.read_text());sessions[row['id']]=row
     attempts=list(sessions.values())
@@ -130,8 +144,9 @@ def audit(state):
             if segment.get('attempts',1)>1:
                 operation_history['header_retries'].append(dict(name=r['name'],segment=segment))
     operation_history['resolved_failures']=[json.loads(p.read_text()) for p in sorted((state/'resolutions').glob('*.json'))]
-    if repair:
-        operation_history['repair_state']=str(repair)
+    operation_history['repair_states']=[str(item['state']) for item in repairs]
+    for item in repairs:
+        repair=item['state']
         for p in sorted((repair/'source_archive').glob('production/*/attempts.json')):
             operation_history['file_attempts'].append(dict(path=str(p),records=json.loads(p.read_text())))
         for p in sorted(repair.glob('controller-*.log')):
@@ -144,12 +159,12 @@ def audit(state):
         if not p.name.endswith(('.output.json','.policy.json'))]
     first=min([r['at'] for r in submissions],default=None)
     last=json.loads((state/'finished.json').read_text())['finished_at']
-    if repair:last=max(last,json.loads((repair/'finished.json').read_text())['finished_at'])
+    for item in repairs:last=max(last,json.loads((item['state']/'finished.json').read_text())['finished_at'])
     wall=last-first if first and last else None
     history=[json.loads(s) for s in (state/'staging_history.jsonl').read_text().splitlines()]
     source_history=[json.loads(s) for s in (state/'source_quota_history.jsonl').read_text().splitlines()]
-    if repair:
-        retained=repair_config['retained_original_stage_bytes']
+    for item in repairs:
+        repair=item['state'];retained=item['config']['retained_original_stage_bytes']
         history += [dict(bytes=json.loads(line)['bytes']+retained) for line in (repair/'staging_history.jsonl').read_text().splitlines()]
         source_history += [dict(stage_bytes=json.loads(line)['stage_bytes']+retained) for line in (repair/'source_quota_history.jsonl').read_text().splitlines()]
     result=dict(status='complete' if len(rows)==681 else 'incomplete',files=len(rows),total_files=681,
@@ -175,7 +190,7 @@ def audit(state):
         header_verified_segments=segments-len(manual_rows),header_verified_events=sum(t['events'] for t in totals.values())-manual_events,
         repaired_files=repaired_names,
         source_boundary_scope='All PINC candidates for successfully accepted new files; any surplus is included in these source counters')
-    if len(rows)==681 and (result['events']!=69279369 or (repair and (len(manual_rows)!=2 or len(repaired_names)!=4))):
+    if len(rows)==681 and (result['events']!=69279369 or (repairs and (len(manual_rows)!=2 or len(repaired_names)!=4))):
         raise ValueError('full-month event/exception coverage incomplete')
     atomic_json(state/'final_audit.json',result)
     with (state/'file_catalog.csv').open('w',newline='') as f:
@@ -193,7 +208,7 @@ def audit(state):
             match=re.search(r'/eos/lhaaso/raw/wcda/2022/\d{4}/.*?\.reduced\.root',error)
             writer.writerow(dict(name=item['name'],expected_events=item['expected_events'],required_header=match[0] if match else '',error=error))
     if result['files']==681 and result['events']==69279369 and not failures:
-        if repair and (len(manual_rows)!=2 or len(repaired_names)!=4):
+        if repairs and (len(manual_rows)!=2 or len(repaired_names)!=4):
             raise ValueError('repair/exception coverage incomplete')
         atomic_json(state/'summary.json',dict(result,verified_files=result['files'],verified_events=result['events']))
         atomic_json(state/'failures.json',[])

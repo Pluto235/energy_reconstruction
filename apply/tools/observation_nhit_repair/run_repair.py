@@ -32,11 +32,27 @@ def run(parent, state):
     atomic_json(state/'original_scheduler.json', old)
     if any(j['JobStatus'] not in [3,4] for j in old['jobs']):
         raise RuntimeError('original source or investigation still active')
+    previous = []
+    if (parent/'repairs.json').exists(): previous=json.loads((parent/'repairs.json').read_text())
+    elif (parent/'repair.json').exists(): previous=[json.loads((parent/'repair.json').read_text())]
+    retained = old['stage_bytes']
+    for binding in previous:
+        prior=Path(binding['state'])
+        if prior==state: continue
+        if sha256(prior/'config.json')!=binding['config_sha256'] or sha256(prior/'finished.json')!=binding['finished_sha256']:
+            raise ValueError('prior repair binding changed')
+        prior_config=json.loads((prior/'config.json').read_text())
+        snap=snapshot(prior_config['stage']);atomic_json(state/(prior.name+'-scheduler.json'),snap)
+        if any(j['JobStatus'] not in [3,4] for j in snap['jobs']):raise RuntimeError('prior repair still active')
+        retained += snap['stage_bytes']
     freeze(parent)
     names = set(SCOPES)|RECOVERED
     manifest = json.loads((parent/'manifest.json').read_text())
-    tasks = [r for r in manifest['records'] if r['name'] in names]
-    if len(tasks) != 4: raise ValueError('repair scope differs')
+    scoped = [r for r in manifest['records'] if r['name'] in names]
+    if len(scoped) != 4: raise ValueError('repair scope differs')
+    tasks = [r for r in scoped if not (parent/'receipts'/(r['name']+'.json')).exists()
+             or (state/'receipts'/(r['name']+'.json')).exists()]
+    if not tasks: raise ValueError('no unaccepted repair tasks')
     archive = parent/'audit'/'initial_terminal'
     if not archive.exists():
         archive.mkdir()
@@ -65,7 +81,7 @@ def run(parent, state):
             parent_state=str(parent),parent_manifest_sha256=sha256(parent/'manifest.json'),
             tasks_sha256=sha256(state/'tasks.json'),authorization_sha256=AUTH_SHA,
             header_evidence_sha256=expected,started_at=time.time(),max_workers=4,header_concurrency=4,
-            retained_original_stage_bytes=old['stage_bytes'],stage_budget_bytes=2*1024**3-old['stage_bytes'])
+            retained_original_stage_bytes=retained,previous_repairs=previous,stage_budget_bytes=2*1024**3-retained)
         atomic_json(state/'config.json', config)
     config = json.loads((state/'config.json').read_text())
     if config['code'] != code or config['contract'] != CONTRACT:
@@ -95,10 +111,10 @@ def run(parent, state):
         atomic_json(state/'deployed.json',dict(at=time.time(),stage=stage,code=code))
     while True:
         snap,done,failed = poll(state,stage,config,'production',tasks)
-        atomic_json(state/'progress.json',dict(accepted=len(done),failed=len(failed),remaining=4-len(done)-len(failed),at=time.time()))
-        if len(done|failed)==4 and not any(j['JobStatus'] not in [3,4] for j in snap['jobs']): break
+        atomic_json(state/'progress.json',dict(accepted=len(done),failed=len(failed),remaining=len(tasks)-len(done)-len(failed),at=time.time()))
+        if len(done|failed)==len(tasks) and not any(j['JobStatus'] not in [3,4] for j in snap['jobs']): break
         pending={i for i,t in enumerate(tasks) if t['name'] not in done|failed}
-        ensure_workers(state,stage,'production',range(4),snap,pending)
+        ensure_workers(state,stage,'production',range(len(tasks)),snap,pending)
         time.sleep(20)
     freeze(parent)
     # Only receipt-confirmed results enter the primary catalogue. Old failures stay intact.
@@ -122,7 +138,10 @@ def run(parent, state):
     command(['rsync','-rt','--partial','--timeout=180','--exclude=*.root','-e',shlex.join(SSH),REMOTE+':'+stage+'/',str(state/'source_archive')+'/'])
     atomic_json(state/'final_quota.json',quota())
     atomic_json(state/'finished.json',dict(accepted=sorted(done),failed=sorted(failed),finished_at=time.time(),all_tasks_terminal=True))
-    atomic_json(parent/'repair.json',dict(state=str(state),config_sha256=sha256(state/'config.json'),finished_sha256=sha256(state/'finished.json')))
+    binding=dict(state=str(state),config_sha256=sha256(state/'config.json'),finished_sha256=sha256(state/'finished.json'))
+    previous=[b for b in previous if b['state']!=str(state)]
+    atomic_json(parent/'repairs.json',previous+[binding])
+    atomic_json(parent/'repair.json',binding)
     if set(SCOPES)<=done:
         atomic_json(parent/'authorizations/poolused_override_status.json',dict(status='accepted_with_user_confirmed_overrides',
             authorization_file=str(state/'authorization.json'),sha256=AUTH_SHA,repair_state=str(state),scope=sorted(SCOPES),at=time.time()))

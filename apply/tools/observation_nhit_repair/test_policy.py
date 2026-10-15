@@ -27,9 +27,20 @@ class PolicyTests(unittest.TestCase):
         r=self.policy['records'][self.task['name']]
         path=r['segment']['missing_reduced_path']; filename=Path(path).name.replace('.reduced.root','.samp.dt.root')
         self.spec=dict(key=(139579,1,3336),path=path,header=dict(filename=filename,infiles=filename.replace('.samp.dt.root','.samp.root')))
-        self.row=dict(override_row(self.spec,self.task,self.policy),segment_index=0)
+        self.row=dict(override_row(self.spec,self.task,self.policy),segment_index=0,header_reader='user_attestation')
 
     def tearDown(self):self.tmp.cleanup()
+
+    def test_native_evidence_conflicts(self):
+        from native_header import validate_evidence
+        expected=dict(uuid='real',header=dict(irun=[140739],ies=[2],iseq=[7581],poolused=[7]))
+        actual=dict(expected,entries=1,header_keys=1,read_bytes=16,types={k:'Int_t' for k in expected['header']})
+        validate_evidence(actual,expected)
+        for field,value in [('uuid','different'),('entries',2),('header_keys',2),('read_bytes',0),
+                            ('types',dict(actual['types'],poolused='Float_t')),
+                            ('header',dict(expected['header'],ies=[1]))]:
+            bad=dict(actual);bad[field]=value
+            with self.subTest(field=field),self.assertRaises(ValueError):validate_evidence(bad,expected)
 
     def test_digest_and_snapshot_binding(self):
         bad=copy.deepcopy(self.task);bad['input']['uuid']='changed'

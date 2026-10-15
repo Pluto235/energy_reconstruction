@@ -60,7 +60,7 @@ class ContractTests(unittest.TestCase):
             data=keys(list(range(count)))
             data.update(nv=np.zeros(count,dtype='i4'),nhit=np.zeros(count,dtype='i4'),poolused=np.full(count,3,dtype='i4'),
                 segment_index=np.zeros(count,dtype='i4'),ihep_entry=np.arange(count,dtype='i8'),input_entry=np.arange(count,dtype='i8'))
-            rows=[dict(segment_index=0,irun=0,ies=0,iseq=0,poolused=3,attempts=1,path='p',uuid='u',source_filename='s',header_sha256='h',reduced_header_sha256='r',poolused_source='reduced_header',poolused_authorization_sha256='',reduced_header_missing=0)] if count else []
+            rows=[dict(segment_index=0,irun=0,ies=0,iseq=0,poolused=3,attempts=1,path='p',uuid='u',source_filename='s',header_sha256='h',reduced_header_sha256='r',poolused_source='reduced_header',poolused_authorization_sha256='',reduced_header_missing=0,header_reader='uproot')] if count else []
             check_scalars(data,rows,max(1,count))
             with tempfile.TemporaryDirectory() as tmp:
                 p=Path(tmp)/'f.root';write_scalar(p,'t_nhit',data,rows,CONTRACT);readback(p,'t_nhit',data,rows,CONTRACT)

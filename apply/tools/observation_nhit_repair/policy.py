@@ -73,6 +73,14 @@ def check_rows(rows, task, policy):
     for row in rows:
         if not all(row.get(k) for k in ['path', 'source_filename', 'header_sha256']):
             raise ValueError('missing segment identity provenance')
+        reader=row.get('header_reader')
+        if reader is not None:
+            if reader not in ['uproot','native_ROOT','user_attestation']:
+                raise ValueError('unknown header reader')
+            if (reader=='user_attestation') != (row.get('poolused_source')=='user_confirmed_override'):
+                raise ValueError('header reader/source conflict')
+            if reader=='native_ROOT' and task['name']!='Esg20220128_06.root':
+                raise ValueError('native reader outside diagnosed file')
         if row.get('poolused_source') == 'user_confirmed_override':
             if (r is None or tuple(row[k] for k in KEYS[:3]) != SCOPES[task['name']] or
                     row['path'] != r['segment']['missing_reduced_path'] or

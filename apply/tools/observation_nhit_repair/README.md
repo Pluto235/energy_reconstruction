@@ -21,3 +21,11 @@ ownership. A repair receipt is published before source cleanup; only accepted
 repair receipts are linked into the primary catalogue. Original failure records
 and initial terminal audit remain under the primary state. A separate full-month
 Slurm audit must pass before month completion is declared.
+
+A subsequent isolated generation may select only still-unaccepted files. It checks
+that all previous source jobs are terminal, records their state bindings and
+retained stage sizes, and never modifies their snapshots. Jan28 uses a serial
+native ROOT preflight before Nhit extraction to address repeated uproot read
+failures. Real UUID, exact scalar header content, unique key/entry and integer
+types must match independent evidence; native ROOT also exercises a non-7
+synthetic header at worker startup. `repairs.json` preserves the state chain.

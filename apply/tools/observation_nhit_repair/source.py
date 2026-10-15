@@ -20,7 +20,7 @@ import uproot
 from common import KEYS, atomic_json, digest_column, sha256, source_uri, stamp, sync_dir, unique_keys
 from transport import parse_quota
 
-CONTRACT = dict(version=3, selection='pincness < 1.1',
+CONTRACT = dict(version=4, selection='pincness < 1.1',
     nhit='sum((vqsamp >= float32(0.3)) & (abs(vt) < 30))',
     edges=[30,60,100,200,300,500,800,2000], charge_saved=False, vidmc_read=False,
     poolused='identity-checked unique reduced wcdah; two digest-bound user-confirmed missing-segment exceptions; no pool cut',
@@ -100,14 +100,17 @@ def read_header(spec):
             time.sleep(2*(attempt+1))
 
 
-def segment_rows(headers, day, wanted, task, policy):
+def segment_rows(headers, day, wanted, task, policy, native=None):
     specs = header_specs(headers, day, wanted)
     from policy import override_row, check_rows
     def read(spec):
+        if native and spec['path'] == native['path']:
+            return dict(native)
         row = override_row(spec, task, policy)
         if row is None:
             row = dict(read_header(spec), poolused_source='reduced_header',
                        poolused_authorization_sha256='', reduced_header_missing=0)
+        row['header_reader'] = 'user_attestation' if row['poolused_source']=='user_confirmed_override' else 'uproot'
         return row
     with ThreadPoolExecutor(max_workers=4) as executor:
         rows = list(executor.map(read, specs))
@@ -123,7 +126,7 @@ def write_scalar(path, tree, data, rows, provenance):
         if len(data['nv']):
             f[tree].extend(data)
         f.mktree('t_segments', {k:'int32' for k in ['segment_index']+KEYS[:3]+['poolused','attempts','reduced_header_missing']} |
-            {k:'string' for k in ['path','uuid','source_filename','header_sha256','reduced_header_sha256','poolused_source','poolused_authorization_sha256']})
+            {k:'string' for k in ['path','uuid','source_filename','header_sha256','reduced_header_sha256','poolused_source','poolused_authorization_sha256','header_reader']})
         if rows:
             f['t_segments'].extend(ak.Array(rows))
         f['provenance'] = json.dumps(provenance, sort_keys=True)
@@ -154,6 +157,27 @@ def extract(stage, folder, task, config, ROOT, session):
     before = stamp(src)
     if before['entries'] != task['source_entries'] or before['header_sha256'] != task['input']['header_sha256']:
         raise ValueError('source metadata differs from frozen input')
+    native = None; native_probe = None; native_seconds = 0.0
+    if name == 'Esg20220128_06.root':
+        # Diagnose before hit extraction, serially, outside all uproot threads.
+        then = time.monotonic()
+        from native_header import inspect
+        evidence = policy['recovered'][name]
+        actual = inspect(ROOT, source_uri(evidence['path']), evidence)
+        native_probe = actual
+        atomic_json(folder/'native_header_probe.json', dict(actual, evidence_binding=policy['binding'],
+                    session=session, checked_at=time.time()))
+        with uproot.open(source_uri(src), timeout=60) as f:
+            hs = f['t_eventout_h'].arrays().to_list()
+        key = tuple(evidence['header'][k][0] for k in KEYS[:3])
+        spec = header_specs(hs, name[7:11], {key})[0]
+        if spec['path'] != evidence['path']: raise ValueError('native target segment path mismatch')
+        native = dict(zip(KEYS[:3], key), poolused=actual['header']['poolused'][0],
+            path=spec['path'],uuid=actual['uuid'],source_filename=spec['header']['filename'],
+            header_sha256=json_sha(spec['header']),reduced_header_sha256=actual['header_sha256'],
+            attempts=1,poolused_source='reduced_header',poolused_authorization_sha256='',
+            reduced_header_missing=0,header_reader='native_ROOT')
+        native_seconds = time.monotonic()-then
     tmp = folder/'hits.partial.root'
     stats = ROOT.nhit_benchmark_filter(source_uri(src), str(tmp))
     with uproot.open(tmp) as f:
@@ -165,8 +189,8 @@ def extract(stage, folder, task, config, ROOT, session):
     with uproot.open(source_uri(src), timeout=60) as f:
         headers = f['t_eventout_h'].arrays().to_list()
     wanted = set(zip(*(data[k].tolist() for k in KEYS[:3])))
-    rows = segment_rows(headers, name[7:11], wanted, task, policy)
-    header_seconds = time.monotonic()-then
+    rows = segment_rows(headers, name[7:11], wanted, task, policy, native)
+    header_seconds = time.monotonic()-then+native_seconds
     mapping = {tuple(r[k] for k in KEYS[:3]):r for r in rows}
     indices = [mapping[k]['segment_index'] for k in zip(*(data[k].tolist() for k in KEYS[:3]))]
     data['segment_index'] = np.asarray(indices, dtype='i4')
@@ -181,7 +205,7 @@ def extract(stage, folder, task, config, ROOT, session):
     if stamp(src) != before:
         raise ValueError('source changed during extraction')
     os.rename(out, folder/'candidate.root'); sync_dir(folder); tmp.unlink()
-    record = dict(name=name, entries=len(data['nv']), raw_entries=int(stats.raw), source=before,
+    record = dict(name=name, native_header_probe=native_probe, entries=len(data['nv']), raw_entries=int(stats.raw), source=before,
                   bytes=(folder/'candidate.root').stat().st_size, sha256=sha256(folder/'candidate.root'),
                   digests={k:digest_column(ak.Array(v)) for k,v in data.items()}, segments=rows, provenance=prov,
                   elapsed_seconds=time.monotonic()-start, header_seconds=header_seconds,
@@ -246,7 +270,10 @@ def worker(stage, phase, shard):
     ROOT.nhit_benchmark_selfcheck()
     from selftest import root_selftest
     checkdir=stage/'sessions'/session['id'];checkdir.mkdir()
-    session['root_selftest']=root_selftest(ROOT,checkdir);checkdir.rmdir()
+    session['root_selftest']=root_selftest(ROOT,checkdir)
+    from native_header import selfcheck
+    session['native_header_selftest']=selfcheck(ROOT,checkdir)
+    checkdir.rmdir()
     session['startup_seconds'] = time.monotonic()-started
     session['process_startup_seconds'] = time.time()-float(os.environ.get('NHIT_WORKER_BOOT_TIME',session['started_at']))
     atomic_json(stage/'sessions'/(session['id']+'.json'),session)

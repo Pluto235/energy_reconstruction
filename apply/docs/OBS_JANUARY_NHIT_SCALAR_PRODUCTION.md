@@ -242,3 +242,15 @@ source/authorization/missing-header fields. Jan23/Jan28 use actual headers match
 the independent evidence, not manual defaults. Nine fixture groups pass in Slurm
 66166. Initial summaries are archived, resolved failures retain their original
 records, and completion requires a new independent full-month audit.
+
+The first isolated repair accepted Jan02_12, Jan03_05 and Jan23_00. Slurm 66168
+then audited 680 files / 69,209,278 events. The two explicitly authorized missing
+segments affect 146 and 1,657 events respectively (1,803 total); their reduced
+header UUID/digest remain empty. Jan28_06 repeated its compression failure and
+remains isolated. The second repair generation selects only the remaining 70,091
+events. It first reads that one header with native ROOT, requires one wcdah key
+and row, integer scalar fields, positive read bytes, and exactly the independently
+observed UUID/header contents, then runs the unchanged C++ Nhit implementation.
+Other headers retain the bounded uproot readers; no manual default is added.
+Native-reader metadata is saved and included in final audit. All repair states and
+failures are retained; ten targeted fixtures pass in Slurm 66169.

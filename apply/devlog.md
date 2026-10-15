@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-16 01:40 · [uncommitted] Preserve 680 accepted friends and both Jan28 compression failures; add native ROOT header preflight with real UUID/integer/unique-header comparison to independent evidence, isolate the last unaccepted file in a new repair generation, and extend final audit across immutable repair states. Ten Slurm66169 fixtures pass; native ROOT fixture also runs before source extraction.
+
 - **energy** · 2026-10-16 01:15 · [uncommitted] Submit isolated repair Slurm66167 and dependent full audit66168; extend independent audit to validate manual provenance, merge resolved failure history and count manual events/segments separately, include repair elapsed time and combined staging in final throughput, and gate the month marker on 681 files/69279369 events.
 
 - **energy** · 2026-10-16 01:15 · [uncommitted] Add isolated four-file January repair after 677-file terminal audit: enforce digest-bound user exceptions for exactly two segments, require recovered Jan23/Jan28 real headers to match independent evidence, preserve initial failures/receipts, and pass nine Slurm66166 authorization/contract fixtures. Scientific C++ remains byte-identical.

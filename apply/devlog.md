@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-16 02:10 · [uncommitted] Preserve native ROOT StreamerInfo/zombie failure before any Jan28 hit extraction; schedule bounded metadata-only reader/process/FUSE diagnostics against the previously observed real UUID and header. Keep 680 accepted results and both confirmed overrides intact; no third blind full-file retry or added default.
+
 - **energy** · 2026-10-16 01:40 · [uncommitted] Preserve 680 accepted friends and both Jan28 compression failures; add native ROOT header preflight with real UUID/integer/unique-header comparison to independent evidence, isolate the last unaccepted file in a new repair generation, and extend final audit across immutable repair states. Ten Slurm66169 fixtures pass; native ROOT fixture also runs before source extraction.
 
 - **energy** · 2026-10-16 01:15 · [uncommitted] Submit isolated repair Slurm66167 and dependent full audit66168; extend independent audit to validate manual provenance, merge resolved failure history and count manual events/segments separately, include repair elapsed time and combined staging in final throughput, and gate the month marker on 681 files/69279369 events.

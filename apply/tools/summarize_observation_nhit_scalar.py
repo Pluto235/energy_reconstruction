@@ -4,6 +4,7 @@ from collections import Counter
 import json
 from pathlib import Path
 import sys
+import shlex
 import time
 
 sys.path.insert(0,str(Path(__file__).resolve().parent/'observation_nhit_scalar'))
@@ -17,6 +18,10 @@ def audit(state):
     require_slurm()
     if not (state/'finished.json').exists():
         raise RuntimeError('Receiver has not finished all remaining files')
+    from transport import command, SSH, REMOTE
+    config=json.loads((state/'config.json').read_text())
+    command(['rsync','-rt','--partial','--timeout=180','--exclude=*.root','-e',shlex.join(SSH),
+             REMOTE+':'+config['stage']+'/',str(state/'source_archive')+'/'])
     manifest=json.loads((state/'manifest.json').read_text())
     gate=json.loads((state/'gate.json').read_text())
     totals={kind:dict(files=0,events=0,bytes=0) for kind in ['legacy_with_charge','scalar_only']}
@@ -52,10 +57,14 @@ def audit(state):
         rows.append(dict(name=name,kind=kind,events=len(data['nv']),bytes=target.stat().st_size,
                          sha256=rec['sha256'],receipt=str(p),receipt_sha256=sha256(p)))
     generated=[json.loads(p.read_text()) for p in (state/'receipts').glob('*.json') if not json.loads(p.read_text())['inherited']]
-    attempts=[json.loads(p.read_text()) for p in (state/'source_sessions').glob('*.done.json')]
-    prod=[s for s in attempts if s['phase']=='production']
-    first=min([s['started_at'] for s in prod],default=None)
-    last=max([r['accepted_at'] for r in generated],default=None)
+    sessions={}
+    for p in sorted((state/'source_sessions').glob('*.json'),key=lambda p:p.name.endswith('.done.json')):
+        row=json.loads(p.read_text());sessions[row['id']]=row
+    attempts=list(sessions.values())
+    submissions=[json.loads(p.read_text()) for p in (state/'jobs').glob('production-*.json')
+        if not p.name.endswith(('.output.json','.policy.json'))]
+    first=min([r['at'] for r in submissions],default=None)
+    last=json.loads((state/'finished.json').read_text())['finished_at']
     wall=last-first if first and last else None
     history=[json.loads(s) for s in (state/'staging_history.jsonl').read_text().splitlines()]
     source_history=[json.loads(s) for s in (state/'source_quota_history.jsonl').read_text().splitlines()]
@@ -65,10 +74,12 @@ def audit(state):
         monthly_event_coverage=sum(t['events'] for t in totals.values())/manifest['total_events'],
         accepted_duplicates=0,accepted_missing=0,surplus_excluded=surplus,failures=failures,
         bins=dict(bins),poolused=dict(pools),nhit_boundaries=dict(boundaries),segments=segments,
-        pilot=gate,production_wall_seconds=wall,production_files_per_hour=len(generated)*3600/wall if wall else None,
+        pilot=gate,production_wall_seconds=wall,production_wall_scope='First production submission through receiver final checksum audit; includes queueing and restarts, excludes earlier inherited production and this independent audit',production_files_per_hour=len(generated)*3600/wall if wall else None,
         stage_peak_observed_bytes=max([s['bytes'] for s in history]+[s['stage_bytes'] for s in source_history]),
-        stage_peak_note='Observed by receiver polling and per-file source reservations; not an exact filesystem high-water counter',
+        stage_peak_note='Apparent bytes observed by receiver polling and per-file source reservations; not an exact filesystem high-water counter; personal allocated quota checked independently',
         source_budget_bytes=2*1024**3,source_sessions=attempts,files_catalog=rows,final_audited_at=time.time(),
+        audit_code_sha256=sha256(__file__),
+        generated_code_versions=dict(Counter(r['source']['provenance']['git_commit'] for r in generated)),
         nhit_validation_scope='Exact independent comparison on three full pilots plus inherited original receipts. New production Nhit is source-calculated, digest/readback verified; ETO does not recompute charge or compare all 30 branches.',
         source_charge_boundary_hits=sum(r['source']['root']['charge_boundary'] for r in generated),
         source_time_boundary_hits=sum(r['source']['root']['time_boundary'] for r in generated),

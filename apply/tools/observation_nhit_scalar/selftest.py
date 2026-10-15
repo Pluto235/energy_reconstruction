@@ -3,11 +3,12 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 import awkward as ak
 import numpy as np
 import uproot
 from common import KEYS, EDGES
-from source import CONTRACT, header_specs, validate_header, write_scalar, readback
+from source import HeaderTransportExhausted, is_transient_file_error, read_header, CONTRACT, header_specs, validate_header, write_scalar, readback
 from validate import align, check_scalars
 
 
@@ -16,6 +17,16 @@ def keys(values):
 
 
 class ContractTests(unittest.TestCase):
+    def test_retry_ceiling(self):
+        self.assertTrue(is_transient_file_error(OSError('connection timed out')))
+        self.assertFalse(is_transient_file_error(HeaderTransportExhausted('connection timed out')))
+        self.assertFalse(is_transient_file_error(FileNotFoundError('[3011] connection: missing header')))
+        with patch('source.uproot.open',side_effect=OSError('connection timed out')) as opened, patch('source.time.sleep'):
+            with self.assertRaises(HeaderTransportExhausted) as error:
+                read_header(dict(path='/test/timeout.root'))
+            self.assertEqual(opened.call_count,3)
+            self.assertFalse(is_transient_file_error(error.exception))
+
     def test_alignment(self):
         rows,extra=align(keys([3,1,8]),keys([1,9,3]))
         self.assertEqual(rows.tolist(),[2,0,-1]);self.assertEqual(extra.tolist(),[1])

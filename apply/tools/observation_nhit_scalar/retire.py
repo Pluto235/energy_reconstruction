@@ -9,7 +9,7 @@ OLD = '/scratchfs2/lhaaso/liushijie/WCDA_nhit_20261015_january_v5'
 code = '''import json, subprocess
 stage = %r
 base=['-name','scheduler@schedd11.ihep.ac.cn']
-raw=subprocess.check_output(['condor_q']+base+['-constraint','Owner == "liushijie" && ClusterId >= 3739000','-json'],text=True)
+raw=subprocess.check_output(['condor_q']+base+['-constraint','Owner == "liushijie" && ClusterId >= 3739000','-json','-attributes','Owner,Cmd,Args,ClusterId,ProcId,JobStatus,CurrentHosts,Requirements'],text=True)
 rows=json.loads(raw.strip() or '[]')
 jobs=[r for r in rows if r.get('Cmd','').startswith(stage+'/')]
 for r in jobs:

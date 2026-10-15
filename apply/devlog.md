@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-15 21:07 · [uncommitted] Audit retry-ceiling update after draining 86 accepted files: prevent nested header/file retries exceeding three attempts, stop new source files on changed input, record interrupted checkpoint cleanup, and use verified site short/default classes. Scientific C++ and contract unchanged; five Slurm fixture groups pass.
+
 - **energy** · 2026-10-15 20:53 · [uncommitted] Pass all three optimized full-file Nhit pilots (582417 exact matches; 1.506x over prior scalar baseline), prove persistent execution/restart/duplicate exclusion, and automatically launch four production shards. Add Slurm input-change/site-class guard and independent mixed-schema final audit; retain missing es1 header as a data dependency.
 
 - **energy** · 2026-10-15 20:35 · [uncommitted] Implement isolated scalar Nhit continuation: revalidate 55 legacy receipts, retire three held source jobs, verify ihep-work in Slurm, add four-reader headers and persistent sharded workers with gated full-file equality/speed tests and receipt-based cleanup.

@@ -48,7 +48,8 @@ def submit(state, stage, phase, shard, generation):
             prior['cluster']=found[0]['ClusterId'];atomic_json(record,prior)
         return prior['cluster']
     cmd=('source /afs/ihep.ac.cn/soft/common/sysgroup/hep_job/setup_hepjob.sh; cd '+shlex.quote(stage)+
-         '; hep_sub ./worker.sh -argu '+shlex.quote(stage)+f' {phase} {shard} -g lhaaso -os AlmaLinux9 -m 4000 -cpu 1 -wt long -schedd schedd11'+
+         '; hep_sub ./worker.sh -argu '+shlex.quote(stage)+f' {phase} {shard} -g lhaaso -os AlmaLinux9 -m 4000 -cpu 1 -schedd schedd11'+
+         (' -wt short' if phase=='pilot' else '')+
          ' -o '+label+'.out -e '+label+'.err')
     atomic_json(record,dict(label=label,status='submission_pending',at=time.time(),phase=phase,shard=shard))
     output=remote(cmd,attempts=1)
@@ -131,7 +132,9 @@ def poll(state, stage, config, phase, tasks):
         try:
             receive(state,stage,phase,byname[name],config)
         except Exception as e:
-            if 'INPUT_CHANGED' in str(e):raise
+            if 'INPUT_CHANGED' in str(e):
+                remote_py('import json; from pathlib import Path; Path('+repr(stage+'/STOP_EXPANSION.json')+').write_text('+repr(json.dumps(dict(error=str(e),at=time.time())))+')')
+                raise
             atomic_json(folder/'failed.json',dict(name=name,error=repr(e),traceback=traceback.format_exc(),at=time.time(),phase='ETO'))
             print('QUARANTINED',phase,name,repr(e),flush=True)
     done={n for n in byname if (state/phase/n/'cleaned.json').exists()}

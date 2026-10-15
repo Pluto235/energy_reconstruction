@@ -137,3 +137,26 @@ ETO execution commit: 182a93591d85f4beaf057598331f79bfea3d6d59. GitHub publicati
 (e9d079f109b2ca2a535a2377fd5ae672e8322bcd), published through the connected API
 because ETO's SSH key is not authorized by GitHub. The publication audit records
 both identities; data products retain their actual ETO execution-code provenance.
+
+## Audited control update during production
+
+At 86 durable accepted files, the four source jobs were held and their execution
+hosts released. The receiver first drained every ready candidate, then stopped
+on the explicit hold. Jobs 3742240–3742243 were retired only after checking their
+Owner/Cmd/Arguments and CurrentHosts=0. `migrations/retry_ceiling_v2/` preserves
+old code/config, complete source metadata/logs, scheduler records, receipt count
+and the four unconfirmed ROOT intermediates' size/mtime inventory. No accepted
+file is re-extracted or overwritten. New workers own and audit cleanup of only
+those incomplete intermediates before restarting their deterministic shards.
+
+The update prevents a header's three exhausted connection attempts from triggering
+three additional whole-file attempts, adds a source stop flag for changed input
+identity, records interrupted-file cleanup, and includes shell/environment startup
+in a separate timing field. Site-native short/default classes are now selected at
+submission, preserving original Requirements; the supervisor remains as a guard.
+The scientific contract and C++ Nhit reader are byte-identical to the passing
+three-file pilot. Successful header reads/mapping and scalar acceptance are
+unchanged. Five synthetic groups pass in Slurm 66161, including a mocked header
+connection that is attempted exactly three times and cannot cascade to file retry.
+Original pilot/production receipts keep their actual code provenance; the code
+transition is explicit rather than relabelling old outputs as the new version.

@@ -64,6 +64,17 @@ def validate_header(key, data, entries):
     return pool
 
 
+class HeaderTransportExhausted(RuntimeError):
+    """Three header attempts consumed; must not be retried by the file loop."""
+
+
+def is_transient_file_error(error):
+    if isinstance(error, HeaderTransportExhausted):
+        return False
+    text=str(error).lower()
+    return '3011' not in text and any(s in text for s in ['timeout','timed out','connection','read failure','read failed'])
+
+
 def read_header(spec):
     for attempt in range(3):
         try:
@@ -77,8 +88,10 @@ def read_header(spec):
                             header_sha256=json_sha(spec['header']), reduced_header_sha256=json_sha({k:v.tolist() for k,v in a.items()}),
                             attempts=attempt+1)
         except OSError as e:
-            if '3011' in str(e) or 'No such file' in str(e) or attempt==2:
+            if '3011' in str(e) or 'No such file' in str(e):
                 raise
+            if attempt==2:
+                raise HeaderTransportExhausted(str(e)) from e
             print('HEADER_RETRY', spec['path'], attempt+1, repr(e), flush=True)
             time.sleep(2*(attempt+1))
 
@@ -171,6 +184,8 @@ def stage_usage(stage):
 
 def reserve(stage, folder, config):
     while True:
+        if (stage/'STOP_EXPANSION.json').exists():
+            raise RuntimeError('Input identity changed; source expansion stopped')
         with (stage/'budget.lock').open('a') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             usage = stage_usage(stage)
@@ -218,17 +233,22 @@ def worker(stage, phase, shard):
     checkdir=stage/'sessions'/session['id'];checkdir.mkdir()
     session['root_selftest']=root_selftest(ROOT,checkdir);checkdir.rmdir()
     session['startup_seconds'] = time.monotonic()-started
+    session['process_startup_seconds'] = time.time()-float(os.environ.get('NHIT_WORKER_BOOT_TIME',session['started_at']))
     atomic_json(stage/'sessions'/(session['id']+'.json'),session)
     all_tasks = json.loads((stage/'tasks.json').read_text())
     tasks = all_tasks['pilot'] if phase=='pilot' else all_tasks['production'][shard::4]
     processed, skipped = [], []
     for task in tasks:
-        if time.monotonic()-started > 8*3600:
+        if (stage/'STOP_EXPANSION.json').exists() or time.monotonic()-started > 8*3600:
             break  # Checkpoints allow a fresh job before the site's long walltime.
         folder = stage/phase/task['name']; folder.mkdir(parents=True,exist_ok=True)
         if any((folder/n).exists() for n in ['ack.json','ready.json','failed.json']):
             skipped.append(task['name']); continue
         # Exclusive shard lock owns these leftovers; ready/ack never enter this path.
+        leftovers=[dict(name=p.name,bytes=p.stat().st_size,mtime_ns=p.stat().st_mtime_ns)
+            for p in folder.iterdir() if p.name in ['hits.partial.root','candidate.partial.root','candidate.root','reservation.json']]
+        if leftovers:
+            atomic_json(folder/('restart-'+session['id']+'.json'),dict(session=session,leftovers=leftovers,action='remove only unconfirmed intermediates before retry'))
         for suffix in ['hits.partial.root','candidate.partial.root','candidate.root','reservation.json']:
             (folder/suffix).unlink(missing_ok=True)
         reserve(stage,folder,config)
@@ -244,11 +264,10 @@ def worker(stage, phase, shard):
                 attempts.append(failure); atomic_json(folder/'attempts.json',attempts)
                 print('FILE_ERROR',json.dumps(failure),flush=True)
                 # Data errors and missing headers are never guessed or retried.
-                text=str(e).lower()
-                transient=any(s in text for s in ['timeout','timed out','connection','read failure','read failed'])
+                transient=is_transient_file_error(e)
                 for n in ['hits.partial.root','candidate.partial.root','candidate.root']:
                     (folder/n).unlink(missing_ok=True)
-                if not transient or '3011' in text or attempt==2:
+                if not transient or attempt==2:
                     atomic_json(folder/'failed.json',failure); break
                 time.sleep(3*(attempt+1))
         (folder/'reservation.json').unlink(missing_ok=True)

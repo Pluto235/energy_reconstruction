@@ -163,3 +163,21 @@ tasks (3739311/3739312/3739314/3739315) for Jan01 hours 01–04. The fresh perso
 quota record shows about 6.43 GiB below the soft limit; the existing reservation
 and concurrency limits remain unchanged. At this checkpoint 3/681 files are
 accepted, no current v5 failures exist, and **the full month is not yet accepted**.
+
+## Jan01 hour 07 startup recovery, 2026-10-15 18:50 CST
+
+Condor 3739329.0 was assigned to slot126@bws0995 but remained without a Python
+START marker or any friend partial/ready file for about 19 minutes. The scheduler
+reported zero resource usage; GET_JOB_CONNECT_INFO returned `Failed to read
+address of starter for this job`. A bounded direct SSH diagnostic timed out.
+This localizes the observed problem to job startup/availability of its execution
+endpoint; it does not prove a specific CVMFS, filesystem or host fault.
+
+After verifying owner, executable, arguments and absence of output, the existing
+job's requirements were augmented to exclude bws0995, preserving site conditions.
+`condor_vacate_job -fast` acknowledged evacuation of **the same 3739329.0 job**;
+no new extraction job was submitted. The receiver and other source tasks continue
+unchanged, and this file must still pass the original complete acceptance checks.
+Diagnostic advertisements, action and response are preserved on both hosts under
+v5 `attempts/Esg20220101_07.root/startup_stall/`. Recovery is not certified merely
+by the evacuation acknowledgment; watch the same job and its eventual receipt.

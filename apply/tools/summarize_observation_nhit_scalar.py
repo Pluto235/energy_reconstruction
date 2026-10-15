@@ -23,7 +23,9 @@ def audit(state):
         raise RuntimeError('Receiver has not finished all remaining files')
     from transport import command, SSH, REMOTE
     config=json.loads((state/'config.json').read_text())
-    command(['rsync','-rt','--partial','--timeout=180','--exclude=*.root','-e',shlex.join(SSH),
+    # File-task directories themselves end in .root. Include directories before
+    # excluding ROOT payload files, or all per-file provenance silently vanishes.
+    command(['rsync','-rt','--partial','--timeout=180','--include=*/','--exclude=*.root','-e',shlex.join(SSH),
              REMOTE+':'+config['stage']+'/',str(state/'source_archive')+'/'])
     repairs = []
     bindings=[]
@@ -40,6 +42,8 @@ def audit(state):
             if sha256(repair/'config.json')!=binding['config_sha256'] or sha256(repair/'finished.json')!=binding['finished_sha256']:
                 raise ValueError('repair binding changed')
             repair_config=json.loads((repair/'config.json').read_text())
+            command(['rsync','-rt','--partial','--timeout=180','--include=*/','--exclude=*.root','-e',shlex.join(SSH),
+                     REMOTE+':'+repair_config['stage']+'/',str(repair/'source_archive')+'/'])
             repairs.append(dict(state=repair,config=repair_config,policy=load_policy(repair,repair_config)))
     manifest=json.loads((state/'manifest.json').read_text())
     gate=json.loads((state/'gate.json').read_text())
@@ -78,6 +82,8 @@ def audit(state):
                 saved=json.loads(proof.read_text())
                 if any(saved[k]!=v for k,v in source['native_header_probe'].items()):
                     raise ValueError('archived native header evidence differs')
+                if saved['evidence_binding']!=repair_policy['binding']:
+                    raise ValueError('archived native header evidence binding differs')
             if (prov['code']!=repair_config['code'] or prov['git_commit']!=repair_config['git_commit'] or
                 prov['contract']!=repair_config['contract'] or prov['run_id']!=repair_config['run_id'] or
                 prov['repair_policy']!=repair_policy['binding'] or prov['target_stamp']!=task['input'] or
@@ -192,7 +198,7 @@ def audit(state):
         header_verified_segments=segments-len(manual_rows),header_verified_events=sum(t['events'] for t in totals.values())-manual_events,
         repaired_files=repaired_names,
         source_boundary_scope='All PINC candidates for successfully accepted new files; any surplus is included in these source counters')
-    if len(rows)==681 and (result['events']!=69279369 or (repairs and (len(manual_rows)!=2 or len(repaired_names)!=4))):
+    if len(rows)==681 and (result['events']!=69279369 or (repairs and (len(manual_rows)!=2 or manual_events!=1803 or len(repaired_names)!=4))):
         raise ValueError('full-month event/exception coverage incomplete')
     atomic_json(state/'final_audit.json',result)
     with (state/'file_catalog.csv').open('w',newline='') as f:

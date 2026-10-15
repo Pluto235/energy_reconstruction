@@ -86,7 +86,11 @@ def main(specs_path, output):
     result=dict(specs=specs,directories=directories,host=os.uname().nodename,at=time.time(),
         script_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         scope='All 31 January raw/wcda directories and failed AI file metadata; no inference, Nhit recomputation or publication')
-    output.write_text(json.dumps(result,indent=2))
+    result['specs_sha256']=hashlib.sha256(specs_path.read_bytes()).hexdigest()
+    partial=output.with_name(output.name+'.partial')
+    with partial.open('w') as f:
+        json.dump(result,f,indent=2);f.flush();os.fsync(f.fileno())
+    os.replace(partial,output)
 
 
 if __name__=='__main__':

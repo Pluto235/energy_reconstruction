@@ -160,3 +160,15 @@ unchanged. Five synthetic groups pass in Slurm 66161, including a mocked header
 connection that is attempted exactly three times and cannot cascade to file retry.
 Original pilot/production receipts keep their actual code provenance; the code
 transition is explicit rather than relabelling old outputs as the new version.
+
+
+The final Slurm audit exports `final_audit.json`, `file_catalog.csv` and
+`failed_files.csv`, rechecking all published file digests, scalar keys/order/nv,
+segment mappings and current input snapshots. Its throughput clock includes
+production queueing, controlled restarts and receiver final checks. Source logs,
+per-file attempts and checkpoint cleanup records are copied into `source_archive/`.
+A dependent metadata-only HTCondor investigation searches all January reconstruction
+directories for failed headers, checks candidate identity/header uniqueness/ROOT
+UUID and records the raw AI file's available metadata. It cannot publish a friend
+or substitute a mismatched stream. Its evidence appears under
+`audit/header_fullmonth/`; execution is deferred until production is terminal.

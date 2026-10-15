@@ -1,5 +1,16 @@
 # January observation Nhit friends
 
+> **2026-10-15 continuation:** v5 is retired and its paused receiver is guarded
+> against restart. The sections below preserve the historical charge-carrying
+> workflow and its evidence. Current execution uses
+> `tools/observation_nhit_scalar/run.sbatch 20261015_january_v6_scalar`;
+> see [scalar continuation](OBS_JANUARY_NHIT_SCALAR_PRODUCTION.md) for the new
+> validation contract, persistent workers and current evidence. Published outputs
+> are mixed: inherited `legacy_with_charge` files remain byte-identical, while new
+> `scalar_only` files omit vqsamp. ETO does not independently recompute charge-based
+> Nhit or compare all 30 branches for new scalar files. Only a current-run
+> `completed.json` can certify all 681 files.
+
 Contract: preserve the existing 31-day / 681-file ETO observation event universe.
 No additional cuts, inference, MC processing, or restoration of discarded events.
 Nhit is `sum((vqsamp >= float32(0.3)) & (abs(vt) < 30))` over complete stored hit arrays.

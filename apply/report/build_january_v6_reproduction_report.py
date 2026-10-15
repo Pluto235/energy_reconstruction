@@ -241,7 +241,7 @@ def main():
     pars=lp['parameters']; err=lp['errors']
     section('final', 'Final v6 Fit Parameters · 最终诊断参数', table(['Parameter','Value','Conditional 1σ'],[[esc(k),fmt(v),fmt(err[k])] for k,v in pars.items()])+
         '<div class="callout"><strong>科学验收未通过。</strong>连续非负与正积分只证明数值有效；背景区间存在偏差与欠覆盖，谱的渐近拟合优度也未通过。上列谱参数和 SED 仅作诊断，不能作为已校准的正式 Crab 能谱。</div>')
-    css = re.search(r'<style>(.*?)</style>', TEMPLATE.read_text(), re.S).group(1)
+    css = re.search(r'<style>(.*?)</style>', TEMPLATE.read_text(), re.S).group(1).strip()
     css += '\n.table-wrap{max-width:100%;overflow-x:auto}td{overflow-wrap:anywhere}main{min-width:0}section{scroll-margin-top:18px}.figure{min-width:0}.figure a{display:block}.figgrid{grid-template-columns:repeat(auto-fit,minmax(min(100%,480px),1fr))}nav{display:flex;flex-wrap:wrap;gap:8px 18px;margin:18px 0;font-size:13px}a{color:var(--accent)}details{margin:16px 0}summary{cursor:pointer;font-weight:700}code{overflow-wrap:anywhere}.status{color:var(--fail);font-weight:700}@media(max-width:600px){main{padding:20px 12px}h1{font-size:25px}.grid{grid-template-columns:1fr 1fr}.metric .value{font-size:20px}th,td{white-space:nowrap}.figgrid{grid-template-columns:1fr}}'
     title='Crab SED v6 64748 · 2022 年 1 月复现报告'
     nav='<nav aria-label="章节目录">'+''.join(f'<a href="#{anchor}">{esc(title.split(" · ")[0])}</a>' for anchor,title,_ in sections)+'</nav>'

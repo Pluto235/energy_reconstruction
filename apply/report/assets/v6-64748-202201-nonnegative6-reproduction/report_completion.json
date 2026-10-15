@@ -1,7 +1,7 @@
 {
-  "result": "COMPLETED_PRESENTATION_DELIVERY",
+  "result": "PASS5_OVERLAY_UPDATE_COMPLETE_HSC_SOURCE_PENDING",
   "scientific_status": "DIAGNOSTIC_ONLY_UNCERTAINTY_NOT_CERTIFIED",
-  "source_commit": "8bcb9b5e61e78f814fba6813a01748fb0841e77f",
+  "source_commit": "bb101ea1ec8dae8528704f32ac68f32cd5fa791b",
   "slurm_jobs": [
     {
       "id": "66101",
@@ -29,10 +29,28 @@
       "elapsed": "00:00:02",
       "cpus": "2",
       "memory": "4G"
+    },
+    {
+      "id": "66104",
+      "name": "v6_sed_preview",
+      "state": "COMPLETED",
+      "exit": "0:0",
+      "elapsed": "00:00:02",
+      "cpus": "2",
+      "memory": "4G"
+    },
+    {
+      "id": "66105",
+      "name": "v6_sed_update",
+      "state": "COMPLETED",
+      "exit": "0:0",
+      "elapsed": "00:00:04",
+      "cpus": "2",
+      "memory": "4G"
     }
   ],
-  "report_sha256": "2c3b000db72fd430505affa8a77789d6d6dd30c2f81e258edabf96bce8b6abeb",
-  "validation_sha256": "ccff2d178c54fbcb8e309afbd8219b6cdf0aed6e4d9ebe62d629da020d41d08c",
+  "report_sha256": "7e6434cd222093c241bb7cbbc1c9723536efd1769ce0dc132b7d70fa18dab021",
+  "validation_sha256": "067ab977f4845f45ad7e3ab604ddf7b0ff09d7236de4235eff3f108f40523a1e",
   "source_git_blobs": "MATCH_GENERATION_SOURCE_COMMIT",
   "images": 25,
   "sections": 17,
@@ -49,7 +67,20 @@
     "normalized_ra_excess"
   ],
   "limitation": "Desktop/mobile rendered layout not certified; scientific uncertainty remains uncertified",
-  "final_html_job": "66103",
+  "final_html_job": "66105",
   "figure_generation_job": "66102",
-  "formatting_refresh": "Strip inherited trailing CSS whitespace; verify all25 image hashes, then invoke main with make_figures disabled in process; original analysis unchanged."
+  "formatting_refresh": "Strip inherited trailing CSS whitespace; verify all25 image hashes, then invoke main with make_figures disabled in process; original analysis unchanged.",
+  "sed_overlay_generation_job": "66105",
+  "changed_images": [
+    "sed_both_overlay.png",
+    "sed_nhit_overlay.png"
+  ],
+  "unchanged_other_images": 23,
+  "hsc_status": "Awaiting confirmation of proposed Official tutorial v0.99 WCDA data",
+  "plot_checks": [
+    "7 Pass5 points",
+    "Pass5 point-fit LogPar",
+    "no full-array PL",
+    "new SED overlay visually checked"
+  ]
 }

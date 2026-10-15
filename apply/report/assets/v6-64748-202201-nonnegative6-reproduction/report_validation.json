@@ -1,10 +1,10 @@
 {
   "result": "PASS_PRESENTATION_CHECKS",
   "scientific_status": "DIAGNOSTIC_ONLY_UNCERTAINTY_NOT_CERTIFIED",
-  "render_job": "66103",
+  "render_job": "66105",
   "render_job_status": "RUNNING_AT_WRITE; see report_completion.json",
-  "source_commit": "8bcb9b5e61e78f814fba6813a01748fb0841e77f",
-  "report_sha256": "2c3b000db72fd430505affa8a77789d6d6dd30c2f81e258edabf96bce8b6abeb",
+  "source_commit": "bb101ea1ec8dae8528704f32ac68f32cd5fa791b",
+  "report_sha256": "7e6434cd222093c241bb7cbbc1c9723536efd1769ce0dc132b7d70fa18dab021",
   "fixed_cells": 44,
   "sed_points_per_mode": 18,
   "sections": 17,
@@ -35,10 +35,11 @@
     "../output/v6_64748_202201_scheme_R_double_rayleigh_analytic_bon/background_diagnostic/background_signal_diagnostic.npz": "58924171438625da399337673f6ddb9108039130e1e650ce7cdfc9f09b8f4b5f"
   },
   "source_hashes": {
-    "apply/report/build_january_v6_reproduction_report.py": "fad8afdd39abedc1819e789f8452063d1f8d839e8f78888e5dd26985312c5d4d",
+    "apply/report/build_january_v6_reproduction_report.py": "310debd33c66fb57f86c1953020a7ba5432d2cecdcd07ee75376ff5771f6a8a1",
     "apply/stages/04_background.py": "57348b589b915b0639a6478ef469c36876d2f8a0360087cc9c1c64e4f1ec14c7",
     "apply/stages/06_fit.py": "441f3d1802dfd748528ac99abab0e79e56ca56c3a467e457dbfd24e4cf38df0e",
     "apply/stages/07_sed_points.py": "d4460ddadd77c6c67ef524c9467f6668ca72c64574d6fa7c3288124dff946549",
+    "apply/report/build_v6_64748_nhit100_highEplus1_report.py": "f69e61105b5d7499e81ba2fdb6763434023777ac371477ae2fafe3973c4f2ae4",
     "apply/report/prepare_v6_scheme_r_double_rayleigh_analytic_bon_report.py": "0bb417717718daddebf8415c99362b446dbab37be2b8e18cc77bdc95b502e9cd"
   },
   "reused_mc_images": {
@@ -64,9 +65,9 @@
     "pull_grid_propagated.png": "d53b90637e674c7165b17ba1a068af6f21d1afbce193678981edbce606a01fc0",
     "roi_counts_grid.png": "7df5deb8c927d04b4597b21f3f307c3dbfeac351aafd4896293d7597f7e84c63",
     "roi_excess_grid.png": "498707c7ffa999ccb877bb04dddae7123295d80c097aef8ab3391b3cdc22fec4",
-    "sed_both_overlay.png": "9aa7a41ebf95ab3aff0129327b15a0204b4e8cb151fc88a54c75ce7c4311278f",
+    "sed_both_overlay.png": "75dba48b38a2351f8bf4feb1bde99c8c9d7de775e771eeb9ea0bd3876b047a87",
     "sed_comparison.png": "12e746bf7401b34b2d8c538f23234e4c25ace2693a57704b319491a54fe975bb",
-    "sed_nhit_overlay.png": "520da0772a9fab39a0310840d65e2bc6e69decda2d8bc2d2cf9decef2407daad",
+    "sed_nhit_overlay.png": "f19f30c1fc1744c0c8e94cab962764d4c4c78e5ee9fa24198b65d69d2f8b8607",
     "sed_points_ratio.png": "d09c703f5aad0325d6ad8fe3f7fb9c5bc1e9139f15d308c7d9c23d70417e8f68",
     "signal_error_grid.png": "c89d03d7640694d80fd34674148aa0a8f52bb131752cd2736ed69a6da1e9ee88",
     "spectrum_pulls.png": "1464544a8130990baf4dc7fa0a3652bc5e5fa9a59a460bbc0d5847bbb2fb53d6",

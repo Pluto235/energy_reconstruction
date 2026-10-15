@@ -12,11 +12,12 @@ from common import atomic_json,require_slurm,sha256
 from transport import remote,remote_py,quota,transfer,REMOTE
 
 
-def run(state):
+def run(state, replicas=False):
     require_slurm()
-    work=state/'audit/header_io_v1';work.mkdir(parents=True,exist_ok=True)
+    version='v2' if replicas else 'v1'
+    work=state/('audit/header_io_'+version);work.mkdir(parents=True,exist_ok=True)
     lock=(work/'controller.lock').open('a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-    stage='/scratchfs2/lhaaso/liushijie/WCDA_nhit_20261016_header_io_v1'
+    stage='/scratchfs2/lhaaso/liushijie/WCDA_nhit_20261016_header_io_'+version
     result=state/'audit/header_fullmonth/source/result.json'
     expected=json.loads((state/'audit/header_fullmonth/completed.json').read_text())['result_sha256']
     if sha256(result)!=expected:raise ValueError('independent header evidence changed')
@@ -24,6 +25,13 @@ def run(state):
     matches=[m for m in spec['matches'] if m.get('reliable_header') and m['same_segment_stem']]
     if len(matches)!=1:raise ValueError('no unique earlier header evidence')
     atomic_json(work/'spec.json',dict(name=spec['name'],expected=matches[0],target_stamp=spec['target_stamp'],evidence_sha256=expected))
+    if replicas:
+        current=json.loads((work/'spec.json').read_text())
+        current['routes']=[dict(mode=mode,fsid=fsid,read_uri='root://eos01.ihep.ac.cn/'+matches[0]['path']+'?eos.forcefsid='+str(fsid))
+                           for fsid in [1300,40208] for mode in ['uproot','native_ROOT']]
+        atomic_json(work/'spec.json',current)
+        inventory=remote('eos root://eos01.ihep.ac.cn fileinfo '+shlex.quote(matches[0]['path']))
+        atomic_json(work/'eos_fileinfo.json',dict(output=inventory,at=time.time()))
     q=quota();atomic_json(work/'quota.json',q)
     if min(q['soft'],q['hard'])-q['used']<528*1024**2:raise RuntimeError('insufficient personal quota')
     script=Path(__file__).with_name('diagnose_observation_nhit_header_io.py')
@@ -68,4 +76,4 @@ print(json.dumps(dict(job=j,original=r,updated=n)))
 
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('state',type=Path);a=p.parse_args();run(a.state)
+    p=argparse.ArgumentParser();p.add_argument('state',type=Path);p.add_argument('--replicas',action='store_true');a=p.parse_args();run(a.state,a.replicas)

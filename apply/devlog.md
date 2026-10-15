@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-16 02:15 · [uncommitted] Metadata-only HTCondor3743346 reproduces both zero-filled and valid wcdah/StreamerInfo bytes for the same UUID; valid uproot and native ROOT reads agree. EOS inventories two replicas (fsid1300/eos40 and fsid40208/eos92). Add isolated per-replica read routing diagnostics and actual data-server recording; do not modify EOS or retry Nhit while source reliability is unresolved.
+
 - **energy** · 2026-10-16 02:10 · [uncommitted] Preserve native ROOT StreamerInfo/zombie failure before any Jan28 hit extraction; schedule bounded metadata-only reader/process/FUSE diagnostics against the previously observed real UUID and header. Keep 680 accepted results and both confirmed overrides intact; no third blind full-file retry or added default.
 
 - **energy** · 2026-10-16 01:40 · [uncommitted] Preserve 680 accepted friends and both Jan28 compression failures; add native ROOT header preflight with real UUID/integer/unique-header comparison to independent evidence, isolate the last unaccepted file in a new repair generation, and extend final audit across immutable repair states. Ten Slurm66169 fixtures pass; native ROOT fixture also runs before source extraction.

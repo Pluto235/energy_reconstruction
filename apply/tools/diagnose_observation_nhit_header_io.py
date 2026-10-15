@@ -13,7 +13,7 @@ FIELDS=['irun','ies','iseq','poolused']
 
 def one(spec, mode):
     expected=spec['expected'];path=expected['path']
-    uri=path if mode=='fuse_uproot' else 'root://eos01.ihep.ac.cn/'+path
+    uri=spec.get('read_uri',path if mode=='fuse_uproot' else 'root://eos01.ihep.ac.cn/'+path)
     result=dict(mode=mode,uri=uri,at=time.time(),host=os.uname().nodename)
     try:
         if mode in ['root_then_uproot','native_ROOT']:
@@ -38,6 +38,9 @@ def one(spec, mode):
             result['uproot_version']=uproot.__version__
             with uproot.open(uri,timeout=40,handler=uproot.source.xrootd.MultithreadedXRootDSource,num_workers=1) if mode!='fuse_uproot' else uproot.open(uri) as f:
                 result['uuid']=str(f.file.uuid);result['keys']=f.keys()
+                try:
+                    result['data_servers']=[resource._file.get_property('DataServer') for resource in f.file.source._resources]
+                except Exception as e:result['data_server_lookup_error']=repr(e)
                 # Record the byte locations and content hashes of metadata, not hit data.
                 key=f.key('wcdah')
                 result['metadata_offsets']=dict(wcdah=int(key.fSeekKey),wcdah_bytes=int(key.fNbytes),streamers=int(f.file.fSeekInfo),streamer_bytes=int(f.file.fNbytesInfo))
@@ -58,12 +61,18 @@ def one(spec, mode):
 def main(specpath, output):
     if not os.environ.get('_CONDOR_JOB_AD'):raise RuntimeError('HTCondor required')
     spec=json.loads(specpath.read_text());cases=[]
-    for mode in ['uproot','root_then_uproot','native_ROOT','fuse_uproot']:
+    routes = spec.get('routes', [dict(mode=m) for m in ['uproot','root_then_uproot','native_ROOT','fuse_uproot']])
+    for route in routes:
+        mode=route['mode']
+        case_spec=specpath
+        if 'read_uri' in route:
+            case_spec=output.parent/('case-'+str(route['fsid'])+'-'+mode+'.json')
+            case_spec.write_text(json.dumps(dict(spec,read_uri=route['read_uri'])))
         try:
-            p=subprocess.run([sys.executable,'-B',__file__,str(specpath),str(output),'--mode',mode],text=True,capture_output=True,timeout=75)
-            cases.append(dict(mode=mode,returncode=p.returncode,stdout=p.stdout,stderr=p.stderr))
+            p=subprocess.run([sys.executable,'-B',__file__,str(case_spec),str(output),'--mode',mode],text=True,capture_output=True,timeout=75)
+            cases.append(dict(route,returncode=p.returncode,stdout=p.stdout,stderr=p.stderr))
         except subprocess.TimeoutExpired as e:
-            cases.append(dict(mode=mode,timeout=True,stdout=str(e.stdout),stderr=str(e.stderr)))
+            cases.append(dict(route,timeout=True,stdout=str(e.stdout),stderr=str(e.stderr)))
     try:
         p=subprocess.run(['xrdfs','root://eos01.ihep.ac.cn','locate','-d',spec['expected']['path']],text=True,capture_output=True,timeout=30)
         locations=dict(returncode=p.returncode,stdout=p.stdout,stderr=p.stderr)

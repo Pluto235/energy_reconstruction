@@ -1,0 +1,21 @@
+{
+  "run_tag": "v6_64748_202201_scheme_R_double_rayleigh_analytic_bon_nonnegative6",
+  "frozen_before_spectral_results": true,
+  "bootstrap_replicates": 512,
+  "coverage_outer": 256,
+  "coverage_inner": 128,
+  "truth_shapes": ["constant", "positive_tilt", "interior_zero", "boundary_zero"],
+  "annulus_counts": [10, 1000],
+  "coverage_geometry": "cell62 original mask and aperture; other44 have conditional plugin diagnostics",
+  "intervals": "normal interval using plugin parametric Poisson bootstrap SD; lower endpoint max(0,lower); not a Hessian error",
+  "normalization": "original sum(counts)/sum(max(q_at_annulus_pixel_centers,0))",
+  "weights": "recomputed 1/sqrt(max(z,1)) for every realization",
+  "coverage_acceptance": "failure_rate<=0.01 and coverage>=nominal-0.03-3*sqrt(nominal*(1-nominal)/256), both 68% and 95%, all8scenarios; failures included in denominator",
+  "bias_acceptance": "abs(bias)/true_B_on<=0.10 in every independent truth scenario; no bias correction selected after results",
+  "spectral_replicates_per_truth": 256,
+  "spectral_truths": {"pl": {"phi0": 2.114e-12, "gamma": 2.69}, "logpar": {"phi0": 2.114e-12, "alpha": 2.69, "beta": 0.1}},
+  "spectral_design": "independent Poisson ON with frozen folded truth+plugin background; independent cell bootstrap B estimates; 256 samples, fit both models with legacy and propagated errors; conditional on observed bootstrap variances, not a full nested calibration of all44",
+  "scientific_acceptance": "data+numerics+positive finite B_on+all independent truth coverage/bias gates; fit quality separately requires valid PL/LogPar and preferred p>=0.01; spectral intervals remain conditional diagnostic",
+  "seed": "observed cells 647480000+index; coverage 202201+shape_index*10000+N_ann; spectra 20220164748",
+  "limits": ["Independent Poisson pixels and cells", "no detector deadtime correction", "no PSF/MC/exposure/systematic uncertainty", "finite truth families do not prove universal unbiasedness", "SED shape frozen as legacy; shape uncertainty assessed by conditional spectral ensemble only"]
+}

@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-15 22:10 · [uncommitted] Extend independent scalar friend audit with per-file phase timings, shared startup attribution and indexed transport/header/file retry and checkpoint recovery history; preserve frozen production code and inputs.
+
 - **energy** · 2026-10-15 21:07 · [uncommitted] Audit retry-ceiling update after draining 86 accepted files: prevent nested header/file retries exceeding three attempts, stop new source files on changed input, record interrupted checkpoint cleanup, and use verified site short/default classes. Scientific C++ and contract unchanged; five Slurm fixture groups pass.
 
 - **energy** · 2026-10-15 20:53 · [uncommitted] Pass all three optimized full-file Nhit pilots (582417 exact matches; 1.506x over prior scalar baseline), prove persistent execution/restart/duplicate exclusion, and automatically launch four production shards. Add Slurm input-change/site-class guard and independent mixed-schema final audit; retain missing es1 header as a data dependency.

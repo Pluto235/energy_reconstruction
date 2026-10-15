@@ -96,6 +96,18 @@ These runs used different hosts and do not control server/cache state; the gain
 is an observed workflow comparison, not a causal separation of each optimization.
 Detailed phases and actual transfer/ETO timings are in each pilot receipt.
 
+| File day | PINC scan / s | Hit read+compute / s | Header / s | Write / s | Readback / s | Transfer / s | ETO / s | Processing sum / s |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Jan01 | 22.393 | 127.664 | 2.856 | 0.433 | 0.062 | 1.896 | 2.077 | 158.764 |
+| Jan16 | 12.626 | 107.549 | 3.444 | 0.241 | 0.046 | 2.599 | 1.455 | 129.454 |
+| Jan31 | 6.254 | 63.344 | 2.791 | 0.157 | 0.031 | 2.629 | 1.164 | 76.846 |
+
+Processing sum is source elapsed + transfer + ETO elapsed; source elapsed also
+includes setup/bookkeeping within the file. The Python/ROOT startup is 2.064 s
+once for the shared pilot session, not once per row. Scheduler/environment startup
+is recorded separately in the pilot startup evidence. These sums exclude queueing
+and receiver polling delays and must not be presented as monthly wall throughput.
+
 HTCondor 3741346 processed all three in one process/session. Restart 3742229
 processed zero files and skipped all three durable checkpoints. Both sessions
 rejected a second process's attempt to acquire their worker lock and passed actual
@@ -162,11 +174,14 @@ Original pilot/production receipts keep their actual code provenance; the code
 transition is explicit rather than relabelling old outputs as the new version.
 
 
-The final Slurm audit exports `final_audit.json`, `file_catalog.csv` and
-`failed_files.csv`, rechecking all published file digests, scalar keys/order/nv,
+The final Slurm audit exports `final_audit.json`, `file_catalog.csv`,
+`file_timings.csv`, `operation_history.json` and `failed_files.csv`, rechecking all published file digests, scalar keys/order/nv,
 segment mappings and current input snapshots. Its throughput clock includes
 production queueing, controlled restarts and receiver final checks. Source logs,
 per-file attempts and checkpoint cleanup records are copied into `source_archive/`.
+The timing CSV identifies each persistent session and separates per-file stages
+from its shared startup; the operation history indexes file failures, recovered
+attempts, header retries, receiver transport failures and checkpoint cleanup.
 A dependent metadata-only HTCondor investigation searches all January reconstruction
 directories for failed headers, checks candidate identity/header uniqueness/ROOT
 UUID and records the raw AI file's available metadata. It cannot publish a friend

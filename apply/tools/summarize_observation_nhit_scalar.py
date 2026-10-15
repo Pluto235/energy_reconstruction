@@ -63,6 +63,37 @@ def audit(state):
     for p in sorted((state/'source_sessions').glob('*.json'),key=lambda p:p.name.endswith('.done.json')):
         row=json.loads(p.read_text());sessions[row['id']]=row
     attempts=list(sessions.values())
+    timings=[]
+    for r in sorted(generated,key=lambda r:r['name']):
+        source=r['source'];session=source['session'];phases=source['root']
+        row=dict(name=r['name'],events=r['entries'],source_candidates=source['entries'],
+                 session_id=session['id'],source_host=session['host'],
+                 source_seconds=source['elapsed_seconds'],
+                 scan_seconds=phases['scan_seconds'],hit_seconds=phases['hit_seconds'],
+                 header_seconds=source['header_seconds'],write_seconds=source['write_seconds'],
+                 readback_seconds=source['readback_seconds'],transfer_seconds=r['transfer_seconds'],
+                 eto_seconds=r['eto_seconds'],
+                 python_root_startup_seconds=session['startup_seconds'],
+                 process_startup_seconds=session.get('process_startup_seconds'),
+                 startup_scope='Shared once per persistent session; do not sum per file',
+                 git_commit=source['provenance']['git_commit'])
+        row['measured_processing_seconds']=sum(row[k] for k in ['source_seconds','transfer_seconds','eto_seconds'])
+        timings.append(row)
+    operation_history=dict(file_attempts=[],checkpoint_restarts=[],transport_failures=[],header_retries=[])
+    for p in sorted((state/'source_archive').glob('production/*/attempts.json')):
+        operation_history['file_attempts'].append(dict(path=str(p),records=json.loads(p.read_text())))
+    for p in sorted((state/'source_archive').glob('production/*/restart-*.json')):
+        operation_history['checkpoint_restarts'].append(dict(path=str(p),record=json.loads(p.read_text())))
+    for p in sorted(state.glob('controller-*.log')):
+        for number,line in enumerate(p.read_text(errors='replace').splitlines(),1):
+            if line.startswith('TRANSPORT_RETRY '):
+                operation_history['transport_failures'].append(dict(path=str(p),line=number,record=json.loads(line.split(' ',1)[1])))
+    for r in generated:
+        for segment in r['source']['segments']:
+            if segment.get('attempts',1)>1:
+                operation_history['header_retries'].append(dict(name=r['name'],segment=segment))
+    operation_history['scope']='Canonical production source archive and receiver logs, including successful recoveries; diagnostic header-probe setup failures are separately retained under audit/header_probe. Failed-file attempt lists also include non-retryable data failures.'
+    atomic_json(state/'operation_history.json',operation_history)
     submissions=[json.loads(p.read_text()) for p in (state/'jobs').glob('production-*.json')
         if not p.name.endswith(('.output.json','.policy.json'))]
     first=min([r['at'] for r in submissions],default=None)
@@ -80,6 +111,10 @@ def audit(state):
         stage_peak_observed_bytes=max([s['bytes'] for s in history]+[s['stage_bytes'] for s in source_history]),
         stage_peak_note='Apparent bytes observed by receiver polling and per-file source reservations; not an exact filesystem high-water counter; personal allocated quota checked independently',
         source_budget_bytes=2*1024**3,source_sessions=attempts,files_catalog=rows,final_audited_at=time.time(),
+        timing_catalog=str(state/'file_timings.csv'),operation_history=str(state/'operation_history.json'),
+        measured_file_processing_seconds=sum(r['measured_processing_seconds'] for r in timings),
+        timing_scope='Source processing + transfer + ETO alignment/readback per accepted new file; excludes startup, queueing, waiting for receiver polls and failed/restarted work. Actual wall throughput is reported separately.',
+        generated_over_4096_candidates=sum(r['source']['root']['over_4096'] for r in generated),
         audit_code_sha256=sha256(__file__),
         generated_code_versions=dict(Counter(r['source']['provenance']['git_commit'] for r in generated)),
         nhit_validation_scope='Exact independent comparison on three full pilots plus inherited original receipts. New production Nhit is source-calculated, digest/readback verified; ETO does not recompute charge or compare all 30 branches.',
@@ -90,6 +125,10 @@ def audit(state):
     with (state/'file_catalog.csv').open('w',newline='') as f:
         writer=csv.DictWriter(f,fieldnames=['name','kind','events','bytes','sha256','receipt','receipt_sha256'])
         writer.writeheader();writer.writerows(rows)
+    if timings:
+        with (state/'file_timings.csv').open('w',newline='') as f:
+            writer=csv.DictWriter(f,fieldnames=list(timings[0]))
+            writer.writeheader();writer.writerows(timings)
     with (state/'failed_files.csv').open('w',newline='') as f:
         writer=csv.DictWriter(f,fieldnames=['name','expected_events','required_header','error'])
         writer.writeheader()

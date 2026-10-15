@@ -6,6 +6,7 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy_reconstruction** · 2026-10-15 11:30 · [uncommitted] Complete nonnegative6 delivery66100:23tests,53artifact hashes,44cells/18SED points retained; document failed6/8uncertainty cases and poor spectral goodness, preserve diagnostic-only status and final report/receipt hashes.
 - **energy_reconstruction** · 2026-10-15 11:27 · [uncommitted] Complete Slurm66094–66098 and independent diagnostic-result audit; fix browser-confirmed wide-table overflow before regenerating report and delivery hashes.
 - **energy_reconstruction** · 2026-10-15 11:02 · [uncommitted] Verify constrained radial fixture against its independent closed-form boundary optimum and clarify successful-estimator conditioning of bias/RMSE in the uncertainty report.
 - **energy_reconstruction** · 2026-10-15 10:55 · [uncommitted] Add independent January nonnegative6 weighted-LS solver,23fixtures,source gates,Slurm D/E and frozen bootstrap/coverage/spectral diagnostics; preserve legacy failure and all44 cells.

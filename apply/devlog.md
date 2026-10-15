@@ -6,6 +6,8 @@ Detailed design rationale belongs in `report/` or `docs/`. Authoritative history
 
 ---
 
+- **energy** · 2026-10-15 19:25 · [uncommitted] Exclude recurrent bws0995 starter failures; audit controller-only v5 version transition and resume as Slurm 66149 without duplicate extraction or weakened acceptance.
+
 - **energy** · 2026-10-15 19:08 · [uncommitted] Record hour07 full acceptance and recover repeated missing-starter stall for hour19 by same-job evacuation; preserve both incident records.
 
 - **energy** · 2026-10-15 18:50 · [uncommitted] Diagnose Jan01 hour07 unavailable starter; preserve evidence and evacuate same Condor job 3739329 off bws0995 without duplicate submission or changed acceptance.

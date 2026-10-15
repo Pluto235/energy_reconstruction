@@ -25,7 +25,7 @@ REMOTE = 'liushijie@lxlogin.ihep.ac.cn'
 SSH = ['ssh', '-S', str(OLD/'ihep.sock'), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=30']
 PILOT = [f'Esg202201{d}_00.root' for d in ['01', '16', '31']]
 GIB = 1024**3
-EXCLUDED_MACHINE = 'lhws183.ihep.ac.cn'
+EXCLUDED_MACHINES = ['lhws183.ihep.ac.cn', 'bws0995.ihep.ac.cn']
 
 
 def command(args, timeout=1200):
@@ -144,15 +144,15 @@ base=['-name','scheduler@schedd11.ihep.ac.cn']; job={str(cluster)+'.0'!r}
 a=json.loads(subprocess.check_output(['condor_q']+base+[job,'-json','-attributes','Owner,Cmd,Requirements,JobStatus,RemoteHost'],text=True))[0]
 assert a['Owner']=='liushijie' and a['Cmd'].startswith({stage!r}+'/')
 old=a['Requirements']; assert old.startswith('/Expr(') and old.endswith(')/')
-new='('+old[6:-2]+') && (TARGET.Machine != '+json.dumps({EXCLUDED_MACHINE!r})+')'
+new='('+old[6:-2]+')'+''.join(' && (TARGET.Machine != '+json.dumps(host)+')' for host in {EXCLUDED_MACHINES!r})
 subprocess.run(['condor_qedit']+base+[job,'Requirements',new],check=True)
-if a.get('JobStatus')==2 and {EXCLUDED_MACHINE!r} in a.get('RemoteHost',''):
+if a.get('JobStatus')==2 and any(host in a.get('RemoteHost','') for host in {EXCLUDED_MACHINES!r}):
     subprocess.run(['condor_hold']+base+[job],check=True)
     raise RuntimeError('Excluded node already claimed job; held for inspection')
-print(json.dumps(dict(cluster={cluster},excluded_machine={EXCLUDED_MACHINE!r})))
+print(json.dumps(dict(cluster={cluster},excluded_machines={EXCLUDED_MACHINES!r})))
 '''
     adjusted = remote_py(adjust)
-    atomic_json(state/(name+'.scheduler_policy.json'), dict(output=adjusted, excluded_machine=EXCLUDED_MACHINE))
+    atomic_json(state/(name+'.scheduler_policy.json'), dict(output=adjusted, excluded_machines=EXCLUDED_MACHINES))
     atomic_json(state/(name+'.submitted.json'), dict(submitted_at=time.time(), cluster=int(m[1]),
                                                    reservation=task['reservation'], status='submitted'))
 
@@ -230,7 +230,7 @@ def run(args):
     source_code = Path(__file__).resolve().parent
     code = {p.name: sha256(p) for p in source_code.glob('*.py')}
     config = dict(stage=stage, code=code, contract=CONTRACT, max_concurrency=4,
-                  excluded_machine=EXCLUDED_MACHINE)
+                  excluded_machines=EXCLUDED_MACHINES)
     cfg = state/'config.json'
     if cfg.exists() and json.loads(cfg.read_text()) != config:
         raise ValueError('run code/config changed; preserve frozen run')

@@ -193,3 +193,24 @@ away from that host and fast-vacated, without a second submission. Both hosts
 retain the evidence in v5 attempts/Esg20220101_19.root/startup_stall/.
 Other files and full validation continue; the exact underlying host fault is
 unverified. This is a second startup incident, not a data acceptance failure.
+
+
+## Repeated-node exclusion, 2026-10-15 19:25 CST
+
+The same slot126@bws0995 missing-starter failure recurred for Jan02 hour03
+(3739411.0); no START or output existed after over 13 minutes. Its advertisement,
+starter diagnostic and same-job fast-vacate response are retained under v5
+attempts/Esg20220102_03.root/startup_stall/. No replacement job was submitted.
+
+To prevent recurring assignment, the controller now excludes both lhws183 and
+bws0995, preserving the site's requirements and existing race/hold protection.
+Receiver 66142 was stopped; source jobs remained managed by their existing IDs.
+A nonblocking receiver lock proved exclusive access for a documented migration:
+migrations/20261015_exclude_bws0995 stores the old/new configs, original run.py,
+progress snapshot and rationale. Only run.py changed among frozen Python hashes;
+the scientific contract, manifest, source extractor, verifier, existing task
+hashes and original friend provenance were preserved. Future task records carry
+the new controller hash. All six synthetic tests pass. Receiver **66149** resumes
+v5 normally, reconciles pending receipts and continues complete validation.
+This is an explicit controller-version transition, not an unrecorded rewrite of
+the run's original code snapshot.

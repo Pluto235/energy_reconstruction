@@ -88,7 +88,9 @@ def extract(work, name):
     if output.exists() or partial.exists():
         raise FileExistsError('stale output requires explicit recovery: ' + str(output))
     blocks = []
-    with uproot.open(source_uri(src), array_cache=None, timeout=60) as source:
+    # EOS rejects some fsspec vector reads; native bounded reads avoid that path.
+    with uproot.open(source_uri(src), array_cache=None, timeout=60,
+                     handler=uproot.source.xrootd.MultithreadedXRootDSource, num_workers=1) as source:
         tree = source['t_eventout']
         offset = 0
         for a in tree.iterate(KEYS, step_size=200000, library='np'):

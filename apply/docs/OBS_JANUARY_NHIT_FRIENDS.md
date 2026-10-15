@@ -24,7 +24,7 @@ Original `vt`, `vidmc`, `rmds` and other retained branches remain in WCDA_obs.
 
 ## Execution
 
-From ETO `apply/`, submit `sbatch tools/observation_nhit/run.sbatch 20261015_january_v4`.
+From ETO `apply/`, resume `sbatch tools/observation_nhit/run.sbatch 20261015_january_v5`.
 The Slurm receiver uses the existing IHEP ControlMaster socket and submits one
 IHEP HTCondor task per file (1 CPU / 4000 MB, site hep_sub). IHEP extraction is the
 user-authorized exception to ETO-only compute. ROOT/NumPy/Awkward/uproot are from
@@ -121,3 +121,24 @@ No full-month expansion is authorized by these two receipts alone.
 A thread heartbeat checks progress every 15 minutes, stays quiet on unchanged
 status, diagnoses failures and delivers the final report after complete acceptance.
 It does not replace the Slurm/Condor jobs or their receipt-based completion gate.
+
+## Native XRootD reader continuation, 2026-10-15
+
+The unchanged-code retry 3739291 on lhws306 reproduced the vector-read error
+after the same 20,000-event marker. The failure is reproducible across nodes;
+it cannot be treated as a single transient connection failure. The precise
+server/vector constraint remains unproven. Main raw-event reads now explicitly
+use uproot's native `MultithreadedXRootDSource` with one worker, whose resource
+reads individual byte ranges instead of the failing fsspec `vector_read` path.
+All scientific calculations, identity checks and acceptance tests are unchanged;
+all six synthetic tests pass on ETO. Actual source-read validation is pending.
+
+New frozen run **20261015_january_v5**, initial Slurm receiver **66142**, uses
+`energy/.recovery/2026-10-15/adopt_v4_into_v5.py` to fully revalidate the two
+already published friends in Slurm before adopting their receipts. Original
+source code hashes remain in those files and records; they are not relabelled
+as newly extracted. `adoption.json` records the old receipt and script hashes.
+The remaining pilot is extracted afresh into an isolated v5 IHEP directory.
+All v4 failure/partial evidence remains preserved. Subsequent restarts use the
+normal run.sbatch v5 command, not the one-time adoption script. Only v5's eventual
+`completed.json` certifies this continued full-month run; v4 stays incomplete.

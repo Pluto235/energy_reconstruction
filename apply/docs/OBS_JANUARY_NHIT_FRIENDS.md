@@ -95,3 +95,29 @@ full-file pilots and the remaining month are **not certified by this first resul
 The receiver automatically expands only after all three complete-file pilots pass.
 Read `manifests/20261015_january_v4/progress.json`, `summary.json` and `failures.json`
 for current status; only that run's `completed.json` certifies the complete month.
+
+## Pilot follow-up, 2026-10-15 18:08 CST
+
+The 0116 complete file also passed: 165,969 events. The two accepted files cover
+486,227 events and 324 segment headers; every Nhit agrees, every bin agrees,
+and all observed poolused values are 7. This remains partial-month evidence.
+
+The 0131 source task 3739265 scanned all 3,350,248 raw keys and checked 169
+segment headers, but failed during hit-content reading after the 20,000-event
+progress marker with XRootD `Read vector is invalid`. It did not produce an
+accepted friend. The receiver 66136 stopped at the pilot gate as intended.
+This is a read failure, not evidence of a scientific content mismatch; its cause
+is not yet established as transient or reproducible.
+
+After confirming the source task was absent from Condor, its partial output,
+stdout/stderr and failure record were moved into the source staging directory's
+`attempts/Esg20220131_00.root/attempt1/`. Corresponding ETO failure/submission
+records and retry rationale are preserved under the same relative path in the
+v4 manifest directory. Input requests, frozen code/config and both accepted
+files were preserved. Receiver **66141** submits the first unchanged-code retry,
+source task **3739291**; it still requires full IHEP readback and ETO validation.
+No full-month expansion is authorized by these two receipts alone.
+
+A thread heartbeat checks progress every 15 minutes, stays quiet on unchanged
+status, diagnoses failures and delivers the final report after complete acceptance.
+It does not replace the Slurm/Condor jobs or their receipt-based completion gate.

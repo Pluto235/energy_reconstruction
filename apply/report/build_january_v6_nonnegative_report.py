@@ -212,6 +212,8 @@ Cell62原 analytic B_on={cell62['old_B_on']:.12g}，本次={cell62['B_on']:.12g}
 ''']
     (ROOT/'report.md').write_text('\n'.join(body))
     subprocess.run([sys.executable,str(args.renderer),str(ROOT/'report.md'),'--output',str(ROOT/'report_202201_nonnegative6.html')],check=True)
+    html_path=ROOT/'report_202201_nonnegative6.html'
+    html_path.write_text(html_path.read_text().replace('</head>','<style>table{display:block;max-width:100%;overflow-x:auto}</style></head>'))
     logdir=ROOT/'logs';logdir.mkdir(exist_ok=True)
     for job in jobs:
         for suffix in ('out','err'):

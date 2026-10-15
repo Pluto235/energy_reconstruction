@@ -24,7 +24,7 @@ Original `vt`, `vidmc`, `rmds` and other retained branches remain in WCDA_obs.
 
 ## Execution
 
-From ETO `apply/`, submit `sbatch tools/observation_nhit/run.sbatch 20261015_january_v3`.
+From ETO `apply/`, submit `sbatch tools/observation_nhit/run.sbatch 20261015_january_v4`.
 The Slurm receiver uses the existing IHEP ControlMaster socket and submits one
 IHEP HTCondor task per file (1 CPU / 4000 MB, site hep_sub). IHEP extraction is the
 user-authorized exception to ETO-only compute. ROOT/NumPy/Awkward/uproot are from
@@ -37,6 +37,11 @@ The v2 pilot matched all source keys and all 160 segment headers, then failed on
 uproot 5.3.7's dictionary-of-strings writer. The source table now uses an Awkward
 record array; all six synthetic checks pass on both IHEP LCG and ETO py310.
 V2 failed output remains isolated; v3 starts the full-file gate afresh.
+V3 was assigned back to lhws183, which again never reached Python's start marker.
+After hold/release the scheduler retained its old execution claim. V4 uses a new
+source directory and excludes that node in each job's requirements, preserving
+all original site requirements. A submission race onto that node holds the job
+and stops for inspection instead of continuing blindly.
 
 The complete 0101/0116/0131 `_00` files run sequentially. All must pass before
 automatic expansion, capped at four producers. Fresh Lustre personal quota is

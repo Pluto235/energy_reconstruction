@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "authorization_id": "20261015_user_confirmed_two_missing_headers_pool7",
+  "confirmed_date": "2026-10-15",
+  "confirmed_timezone": "Asia/Shanghai",
+  "confirmed_by": "user",
+  "user_statement": "两个缺失的heeder，pooluesd默认为7，我已经私下核实过了。你记录上去就可以",
+  "evidence_basis": "User reports private verification; underlying private evidence was not independently inspected by this workflow.",
+  "scope": "Only the two named files and exact missing segment identities below. This is not a global poolused default.",
+  "poolused_source": "user_confirmed_override",
+  "missing_header_remains_missing": true,
+  "do_not_fabricate_reduced_header_uuid_or_digest": true,
+  "input_snapshot_digest_format": "SHA256 of UTF-8 json.dumps(input_snapshot, sort_keys=True) with Python default separators",
+  "records": [
+    {
+      "name": "Esg20220102_12.root",
+      "target_path": "/mnt/newdisk/shijie/WCDA_obs/0102/Esg20220102_12.root",
+      "target_uuid": "c5b12432-c6dc-11f1-a35f-f142a8c0beef",
+      "target_entries": 23522,
+      "target_header_sha256": "72a10ba6ed4c1a9f7a71a67f39b70ecfa206245e61c38c7eb12d7f6a508afa7a",
+      "input_snapshot_sha256": "9b765dc86a1e2baabd27f040a9303ff976c81066664bf4670265a318a9e12a2c",
+      "segment": {
+        "irun": 139579,
+        "ies": 1,
+        "iseq": 3336,
+        "poolused": 7,
+        "missing_reduced_path": "/eos/lhaaso/raw/wcda/2022/0102/ES.139579.WCDA_EVENT.P111MC30TH5400_M100_Z.es-1.20220102125702.3336.reduced.root"
+      }
+    },
+    {
+      "name": "Esg20220103_05.root",
+      "target_path": "/mnt/newdisk/shijie/WCDA_obs/0103/Esg20220103_05.root",
+      "target_uuid": "167fb7aa-c6da-11f1-bc52-f342a8c0beef",
+      "target_entries": 290630,
+      "target_header_sha256": "b5b9956ee34d6fd7b500d624e3f45d611aa3e9b6cfb67790ac3ab183b52457fb",
+      "input_snapshot_sha256": "0c9d6a378e59e5179b449327164b2bcfeb07e1b7346c04952bd6ba68c2d3d888",
+      "segment": {
+        "irun": 139579,
+        "ies": 2,
+        "iseq": 4700,
+        "poolused": 7,
+        "missing_reduced_path": "/eos/lhaaso/raw/wcda/2022/0103/ES.139579.WCDA_EVENT.P111MC30TH5400_M100_Z.es-2.20220103050320.4700.reduced.root"
+      }
+    }
+  ]
+}

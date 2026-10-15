@@ -5,6 +5,24 @@ and the previous benchmark. Its ETO state is
 `/mnt/newdisk/shijie/WCDA_obs_friends/nhit/manifests/20261015_january_v6_scalar/`;
 its IHEP stage is `/scratchfs2/lhaaso/liushijie/WCDA_nhit_20261015_january_v6_scalar/`.
 
+**User-confirmed exception, 2026-10-15:** the user subsequently confirmed that
+the two previously missing headers have poolused=7. The authoritative record is
+`apply/config/observation_nhit_poolused_overrides_20261015.json`, bound to the exact
+original input snapshots and segments (139579,1,3336) in Esg20220102_12.root and
+(139579,2,4700) in Esg20220103_05.root. This supersedes the earlier no-default rule
+only for those two missing segments. Record them as `user_confirmed_override`,
+with the authorization digest and missing-header fact; never invent a reduced
+header UUID/digest or describe these assignments as header-verified. The private
+verification is the user's attestation, not independently recovered evidence.
+Other segments retain the original header requirements. This entry records the
+authorization; it does not claim that the two failed files have already passed
+reprocessing. Apply the exception in isolated recovery after production, preserving
+old failure records and accepted outputs, then rerun the final audit.
+
+Esg20220123_00.root was separately quarantined for an unrecognized compression
+algorithm in its run140409/es1/seq9399 reduced header. It is outside this exception
+and requires independent investigation; do not extend poolused=7 to it.
+
 The authorized universe remains the 31-day / 681-file original WCDA_obs input
 snapshot, 69,279,369 events. Slurm 66152 checked the restoration receipts, current
 ROOT identity/size/mtime/header snapshot and the old manifest, then rechecked
